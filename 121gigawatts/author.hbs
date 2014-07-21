@@ -1,0 +1,54 @@
+{{!< default}}
+
+{{! The comment above "< default" means - insert everything in this file into
+    the {body} of the default.hbs template, which contains our header/footer. }}
+
+{{! The big featured header on the homepage, with the site logo and description }}
+<header class="main-header author-head" {{#if @blog.cover}}style="background-image: url({{author.cover}})"{{/if}}>
+    <nav class="main-nav overlay clearfix">
+        <a class="back-button icon-arrow-left" href="{{@blog.url}}">Home</a>
+        <a class="subscribe-button icon-feed" href="{{@blog.url}}/author/{{author.slug}}/rss/">{{author.name}}</a>
+    </nav>
+</header>
+
+<section class="author-profile inner">
+    {{#if author.image}}
+    <figure class="author-image">
+        <div class="img" style="background-image: url({{author.image}})"><span class="hidden">{{author.name}}'s Picture</span></div>
+    </figure>
+    {{/if}}
+    <h1 class="author-title">{{author.name}}</h1>
+    <h2 class="author-bio">{{author.bio}}</h2>
+    <div class="author-meta">
+        {{#if author.location}}<span class="author-location"><i class="icon-location"></i> {{author.location}}</span>{{/if}}
+        {{#if author.website}}<span class="author-link"><i class="icon-link"></i> <a href="{{author.website}}">{{author.website}}</a></span>{{/if}}
+        <span class="author-stats"><i class="icon-stats"></i> {{pagination.total}} posts</span>
+    </div>
+</section>
+
+{{! The main content area on the homepage }}
+<main class="content" role="main">
+
+    {{! Previous/next page links - only displayed on page 2+ }}
+    <div class="extra-pagination inner">
+        {{pagination}}
+    </div>
+
+    {{! Each post will be output using this markup }}
+    {{#foreach posts}}
+    <article class="{{post_class}}">
+        <header class="post-header">
+            <span class="post-meta"><time datetime="{{date format='YYYY-MM-DD'}}">{{date format="DD MMM YYYY"}}</time> {{tags prefix="on "}}</span>
+            <h2 class="post-title"><a href="{{url}}">{{{title}}}</a></h2>
+
+        </header>
+        <section class="post-excerpt">
+            <p>{{excerpt}} <a class="read-more" href="{{url}}">&raquo;</a></p>
+        </section>
+    </article>
+    {{/foreach}}
+
+    {{! After all the posts, we have the previous/next pagination links }}
+    {{pagination}}
+
+</main>
