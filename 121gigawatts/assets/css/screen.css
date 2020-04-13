@@ -303,6 +303,10 @@ body {
     display: flex;
 }
 
+.responsive-header-img {
+    height: 47vw;
+}
+
 .site-header-background:not(.responsive-header-img) .site-nav-left-wrapper:after,
 .site-nav-main .site-nav-left-wrapper:after {
     content: "";
@@ -892,10 +896,6 @@ make sure this only happens on large viewports / desktop-ish devices.
         margin-bottom: 1.5em;
         font-size: 1.8rem;
         line-height: 1.5em;
-    }
-
-    .responsive-header-img{
-        height: 850px;
     }
 }
 
