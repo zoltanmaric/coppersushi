@@ -893,6 +893,10 @@ make sure this only happens on large viewports / desktop-ish devices.
         font-size: 1.8rem;
         line-height: 1.5em;
     }
+
+    .responsive-header-img{
+        height: 850px;
+    }
 }
 
 
@@ -2870,7 +2874,7 @@ Usage (In Ghost editor):
     }
 
     .site-header-background:before {
-        background: rgba(0,0,0,0.6);
+        background: rgba(0,0,0,0.0);
     }
 
     .post-feed {
