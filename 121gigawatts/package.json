@@ -1,5 +1,5 @@
 {
-    "name": "casper",
+    "name": "121gigawatts",
     "description": "A clean, minimal default theme for the Ghost publishing platform",
     "demo": "https://demo.ghost.io",
     "version": "3.0.12",
@@ -44,7 +44,7 @@
         "url": "https://github.com/TryGhost/Casper.git"
     },
     "bugs": "https://github.com/TryGhost/Casper/issues",
-    "contributors": "https://github.com/TryGhost/Casper/graphs/contributors",
+    "contributors": ["https://github.com/TryGhost/Casper/graphs/contributors"],
     "devDependencies": {
         "@tryghost/release-utils": "0.6.0",
         "autoprefixer": "9.7.6",
