@@ -15,26 +15,26 @@ with a `no-image` class so we can style it accordingly.
 
 <style type="text/css">
     .responsive-header-img {
-        background-image: url('/assets/images/w2000/Gigawatts-Landscape.jpg');
+        background-image: url({{img_url background size='xl'}});
     }
 
     @media(max-width: 1000px) {
         .responsive-header-img {
-            background-image: url('/assets/images/w1000/Gigawatts-Landscape.jpg');
-            background-image: -webkit-image-set(url('/assets/images/w1000/Gigawatts-Landscape.jpg') 1x,
-                url('/assets/images/w2000/Gigawatts-Landscape.jpg') 2x);
-            background-image: image-set('/assets/images/w1000/Gigawatts-Landscape.jpg') 1x,
-                url('/assets/images/w2000/Gigawatts-Landscape.jpg') 2x);
+            background-image: url({{img_url background size='l'}});
+            background-image: -webkit-image-set(url({{img_url background size='l'}}) 1x,
+                url({{img_url background size='xl'}}) 2x);
+            background-image: image-set(url({{img_url background size='l'}}) 1x,
+                url({{img_url background size='xl'}}) 2x);
         }
     }
 
     @media(max-width: 600px) {
         .responsive-header-img {
-            background-image: url('/assets/images/w600/Gigawatts-Landscape.jpg');
-            background-image: -webkit-image-set(url('/assets/images/w600/Gigawatts-Landscape.jpg') 1x,
-                url('/assets/images/w1000/Gigawatts-Landscape.jpg') 2x);
-            background-image: image-set(url('/assets/images/w600/Gigawatts-Landscape.jpg') 1x,
-                url('/assets/images/w1000/Gigawatts-Landscape.jpg') 2x);
+            background-image: url({{img_url background size='m'}});
+            background-image: -webkit-image-set(url({{img_url background size='m'}}) 1x,
+                url({{img_url background size='l'}}) 2x);
+            background-image: image-set(url({{img_url background size='m'}}) 1x,
+                url({{img_url background size='l'}}) 2x);
         }
     }
 </style>
