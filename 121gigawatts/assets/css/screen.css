@@ -208,6 +208,31 @@ body {
     text-align: center;
 }
 
+.responsive-home-hero-banner {
+    height: 47vw;
+    background-image: url('/assets/images/w2000/Gigawatts-Landscape.jpg');
+}
+
+@media(max-width: 1000px) {
+    .responsive-home-hero-banner {
+        background-image: url('/assets/images/w1000/Gigawatts-Landscape.jpg');
+        background-image: -webkit-image-set(url('/assets/images/w1000/Gigawatts-Landscape.jpg') 1x,
+            url('/assets/images/w2000/Gigawatts-Landscape.jpg') 2x);
+        background-image: image-set('/assets/images/w1000/Gigawatts-Landscape.jpg') 1x,
+            url('/assets/images/w2000/Gigawatts-Landscape.jpg') 2x);
+    }
+}
+
+@media(max-width: 600px) {
+    .responsive-home-hero-banner {
+        background-image: url('/assets/images/w600/Gigawatts-Landscape.jpg');
+        background-image: -webkit-image-set(url('/assets/images/w600/Gigawatts-Landscape.jpg') 1x,
+            url('/assets/images/w1000/Gigawatts-Landscape.jpg') 2x);
+        background-image: image-set(url('/assets/images/w600/Gigawatts-Landscape.jpg') 1x,
+            url('/assets/images/w1000/Gigawatts-Landscape.jpg') 2x);
+    }
+}
+
 
 /* 4.2 Archive header (tag and author post lists)
 /* ---------------------------------------------------------- */
@@ -301,10 +326,6 @@ body {
     position: relative;
     flex: 1 0 auto;
     display: flex;
-}
-
-.responsive-header-img {
-    height: 47vw;
 }
 
 .site-header-background:not(.responsive-header-img) .site-nav-left-wrapper:after,
@@ -2872,10 +2893,6 @@ Usage (In Ghost editor):
 
     img {
         opacity: 0.9;
-    }
-
-    .site-header-background:before {
-        background: rgba(0,0,0,0.0);
     }
 
     .post-feed {
