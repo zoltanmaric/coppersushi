@@ -1263,20 +1263,6 @@ Usage (In Ghost editor):
     margin: 2em 0;
 }
 
-.post-full-content hr:after {
-    content: "";
-    position: absolute;
-    top: -15px;
-    left: 50%;
-    display: block;
-    margin-left: -10px;
-    width: 1px;
-    height: 30px;
-    background: color(var(--lightgrey) l(+10%));
-    box-shadow: #fff 0 0 0 5px;
-    transform: rotate(45deg);
-}
-
 .post-full-content hr + p {
     margin-top: 1.2em;
 }
