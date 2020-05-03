@@ -352,7 +352,7 @@ body {
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     margin-right: 10px;
-    padding: 10px 0 80px;
+    padding: 0 0 80px;
     font-weight: 500;
     letter-spacing: 0.2px;
     text-transform: uppercase;
@@ -395,7 +395,7 @@ The knock-on effect of this is ugly browser-scroll bars at the bottom, so 80px o
 .site-nav-logo img {
     display: block;
     width: auto;
-    height: 44px;
+    height: 64px;
 }
 
 .site-home-header .site-nav-logo {
@@ -405,6 +405,7 @@ The knock-on effect of this is ugly browser-scroll bars at the bottom, so 80px o
 .site-nav-content {
     position: relative;
     align-self: flex-start;
+    padding-top: 11px;
 }
 
 .nav {
@@ -471,6 +472,8 @@ The knock-on effect of this is ugly browser-scroll bars at the bottom, so 80px o
     opacity: 0;
     transition: all 1.0s cubic-bezier(0.19, 1, 0.22, 1);
     transform: translateY(175%);
+    line-height: 1.6em;
+    margin-top: 11px;
 }
 
 .nav-post-title.dash {
