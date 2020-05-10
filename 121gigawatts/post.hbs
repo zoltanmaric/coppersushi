@@ -110,11 +110,15 @@ into the {body} of the default.hbs template --}}
                 {{> subscribe-form}}
             {{/if}}
 
-            {{!--
             <section class="post-full-comments">
-                If you want to embed comments, this is a good place to do it!
+                <script defer src="https://cdn.commento.io/js/commento.js" data-auto-init="false"></script>
+                <script defer>
+                    window.addEventListener('load', function () {
+                      window.commento.main()
+                    })
+                </script>
+                <div id="commento"></div>
             </section>
-            --}}
 
         </article>
 
