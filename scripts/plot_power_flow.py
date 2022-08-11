@@ -1,3 +1,4 @@
+from collections.abc import Callable
 import pandas as pd
 import plotly.graph_objects as go
 import pypsa
@@ -36,8 +37,8 @@ def get_curtailed_power(n: pypsa.Network, snapshot, name: str) -> float:
     return curtailed_power.sum()
 
 
-def get_technology_power(n: pypsa.Network, technology: str) -> pd.Series:
-    p_by_generators = n.generators_t.p.filter(like=technology)
+def get_technology_power(n: pypsa.Network, technology: str = None) -> pd.Series:
+    p_by_generators = n.generators_t.p.filter(like=technology) if technology else n.generators_t.p
 
     # Rename generators columns to their corresponding bus names
     # This may result with multiple columns with the same name,
@@ -57,41 +58,27 @@ def get_loads_power(n: pypsa.Network, snapshot, name: str) -> float:
     return loads_t_p.sum()
 
 
-def create_traces(n: pypsa.Network, bus_colors: pd.Series) -> go.Trace:
-    # Create edges
-    edge_x = []
-    edge_y = []
-    for name, line in n.lines.iterrows():
-        bus0 = n.buses.loc[line.bus0]
-        bus1 = n.buses.loc[line.bus1]
-        x0, y0 = bus0.x, bus0.y
-        x1, y1 = bus1.x, bus1.y
-        edge_x.append(x0)
-        edge_x.append(x1)
-        edge_x.append(None)
-        edge_y.append(y0)
-        edge_y.append(y1)
-        edge_y.append(None)
+def get_line_edge(n, x_or_y) -> Callable[[pypsa.Network, str], list]:
+    return lambda line: [n.buses.loc[line.bus0][x_or_y], n.buses.loc[line.bus1][x_or_y], None]
 
+
+def create_traces(
+        nodes_x: pd.Series,
+        nodes_y: pd.Series,
+        edges_x: pd.Series,
+        edges_y: pd.Series,
+        node_values: pd.Series
+) -> go.Trace:
     edge_trace = go.Scattermapbox(
-        lon=edge_x, lat=edge_y,
+        lon=edges_x, lat=edges_y,
         line=dict(width=0.5, color='#888'),
         hoverinfo='none',
         mode='lines',
         visible=False
     )
 
-    node_x = n.buses.x.filter(bus_colors.index)
-    node_y = n.buses.y.filter(bus_colors.index)
-    print('{name}:'.format(value=node_x, name='node_x'))
-    display(node_x.to_frame().T)
-    print('{name}:'.format(value=node_y, name='node_y'))
-    display(node_y.to_frame().T)
-    print('{name}:'.format(value=bus_colors, name='bus_colors'))
-    display(bus_colors.to_frame().T)
-
     node_trace = go.Scattermapbox(
-        lon=node_x, lat=node_y,
+        lon=nodes_x, lat=nodes_y,
         mode='markers',
         hoverinfo='text',
         visible=False,
@@ -110,11 +97,13 @@ def create_traces(n: pypsa.Network, bus_colors: pd.Series) -> go.Trace:
                 title='Node Connections',
                 xanchor='left',
                 titleside='right'
-            )))
+            )
+        )
+    )
 
     # Color nodes
-    node_trace.marker.color = bus_colors
-    node_trace.text = bus_colors
+    node_trace.marker.color = node_values
+    node_trace.text = node_values
 
     return node_trace, edge_trace
 
@@ -138,12 +127,21 @@ def colored_network_figure(n: pypsa.Network) -> go.Figure:
 
     # Create and add slider
     steps = []
-    snapshots = n.snapshots[0:2]
+    snapshots = n.snapshots[0:6]
     display(snapshots)
-    bus_colors = get_technology_power(n, 'wind')
+    node_values = get_technology_power(n, 'wind')
+    print('{name}:'.format(value=node_values.head(), name='bus_colors.head()'))
+    display(node_values.head())
+
+    nodes_x = n.buses.x.filter(node_values.columns)
+    nodes_y = n.buses.y.filter(node_values.columns)
+
+    edges_x = n.lines.apply(get_line_edge(n, 'x'), axis='columns').explode()
+    edges_y = n.lines.apply(get_line_edge(n, 'y'), axis='columns').explode()
+
     for i, snapshot in enumerate(snapshots):
         print('{name}: {value}'.format(value=snapshot, name='snapshot'))
-        node_trace, edge_trace = create_traces(n, bus_colors.loc[snapshot])
+        node_trace, edge_trace = create_traces(nodes_x, nodes_y, edges_x, edges_y, node_values.loc[snapshot])
         fig.add_traces(data=[edge_trace, node_trace])
 
         step = dict(
