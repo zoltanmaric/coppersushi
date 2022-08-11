@@ -36,20 +36,18 @@ def get_curtailed_power(n: pypsa.Network, snapshot, name: str) -> float:
     return curtailed_power.sum()
 
 
-def get_technology_power(n: pypsa.Network, snapshot, name: str, technology: str) -> float:
-    # print('{name}: {value}'.format(value=name, name='name'))
-    generators_at_bus = n.generators.query(f'bus == "{name}"')
-    # print("generators_at_bus")
-    # display(generators_at_bus)
-    tech_specific_generators_at_bus = [g for g in generators_at_bus.index.to_list() if technology in g]
-    # print("tech specific generators at bus")
-    # display(tech_specific_generators_at_bus)
-    generators_t_p = n.generators_t.p.filter(tech_specific_generators_at_bus).loc[snapshot]
-    # print("generators_t_p")
-    # display(generators_t_p)
-    # print('{name}:'.format(value=generators_t_p.sum(), name='generators_t_p.sum()'))
-    # display(generators_t_p.sum())
-    return generators_t_p.sum()
+def get_technology_power(n: pypsa.Network, technology: str) -> pd.Series:
+    p_by_generators = n.generators_t.p.filter(like=technology)
+
+    # Rename generators columns to their corresponding bus names
+    # This may result with multiple columns with the same name,
+    # if multiple generators were matched on the same bus for the given technology
+    p_by_buses = p_by_generators.rename(n.generators.bus, axis='columns').rename_axis('Bus', axis='columns')
+
+    # Group and sum by bus, in case there's multiple generators for a tech substring
+    # (e.g. offwind and onwind for 'wind')
+    p_by_buses_sum = p_by_buses.groupby(by=lambda bus_name: bus_name, axis='columns').sum()
+    return p_by_buses_sum
 
 
 def get_loads_power(n: pypsa.Network, snapshot, name: str) -> float:
@@ -59,7 +57,7 @@ def get_loads_power(n: pypsa.Network, snapshot, name: str) -> float:
     return loads_t_p.sum()
 
 
-def create_traces(n: pypsa.Network, snapshot) -> go.Trace:
+def create_traces(n: pypsa.Network, bus_colors: pd.Series) -> go.Trace:
     # Create edges
     edge_x = []
     edge_y = []
@@ -83,16 +81,14 @@ def create_traces(n: pypsa.Network, snapshot) -> go.Trace:
         visible=False
     )
 
-    node_x = []
-    node_y = []
-    print('{name}: {value}'.format(value=snapshot, name='snapshot'))
-    bus_colors = []
-    for name, bus in n.buses.iterrows():
-        bus_color = get_technology_power(n, snapshot, name, 'onwind')
-        if bus_color:
-            node_x.append(bus.x)
-            node_y.append(bus.y)
-            bus_colors.append(bus_color)
+    node_x = n.buses.x.filter(bus_colors.index)
+    node_y = n.buses.y.filter(bus_colors.index)
+    print('{name}:'.format(value=node_x, name='node_x'))
+    display(node_x.to_frame().T)
+    print('{name}:'.format(value=node_y, name='node_y'))
+    display(node_y.to_frame().T)
+    print('{name}:'.format(value=bus_colors, name='bus_colors'))
+    display(bus_colors.to_frame().T)
 
     node_trace = go.Scattermapbox(
         lon=node_x, lat=node_y,
@@ -142,9 +138,12 @@ def colored_network_figure(n: pypsa.Network) -> go.Figure:
 
     # Create and add slider
     steps = []
-    snapshots = n.snapshots
+    snapshots = n.snapshots[0:2]
+    display(snapshots)
+    bus_colors = get_technology_power(n, 'wind')
     for i, snapshot in enumerate(snapshots):
-        node_trace, edge_trace = create_traces(n, snapshot)
+        print('{name}: {value}'.format(value=snapshot, name='snapshot'))
+        node_trace, edge_trace = create_traces(n, bus_colors.loc[snapshot])
         fig.add_traces(data=[edge_trace, node_trace])
 
         step = dict(
