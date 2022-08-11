@@ -12,27 +12,27 @@ def get_marginal_prices(n: pypsa.Network, snapshot, name: str) -> float:
 
 
 def get_curtailed_power(n: pypsa.Network, snapshot, name: str) -> float:
-    display(name)
-    # generators_at_bus = n.generators.query(f'bus == "{name}"')
-    generators_at_bus = n.generators.query(f'bus == "7421"')
-    display(generators_at_bus)
+    # display(name)
+    generators_at_bus = n.generators.query(f'bus == "{name}"')
+    # generators_at_bus = n.generators.query(f'bus == "7421"')
+    # display(generators_at_bus)
     generators_t_p = n.generators_t.p.filter(generators_at_bus.index).loc[snapshot]
-    print("generators_t_p")
-    display(generators_t_p.T)
-    generators_t_p_max_pu = n.generators_t.p_max_pu[generators_at_bus.index].loc[snapshot]
-    print("generators_t_p_max_pu")
-    display(generators_t_p_max_pu.T)
-    print("denominator")
-    display((generators_t_p_max_pu * generators_at_bus.p_nom).T)
-    curtailed_power_series = generators_t_p / (generators_t_p_max_pu * generators_at_bus.p_nom) * 100
-    rounded = curtailed_power_series.round(decimals=2)
-    print("rounded")
-    display(rounded.T)
-    curtailed_power = rounded
-    print("curtailed_power")
-    display(curtailed_power.T)
-    print("curtailed_power.sum")
-    display(curtailed_power.sum())
+    # print("generators_t_p")
+    # display(generators_t_p.T)
+    generators_t_p_max_pu = n.generators_t.p_max_pu.filter(generators_at_bus.index).loc[snapshot]
+    # print("generators_t_p_max_pu")
+    # display(generators_t_p_max_pu.T)
+    # print("denominator")
+    # display((generators_t_p_max_pu * generators_at_bus.p_nom).T)
+    usage_factor_series = generators_t_p / (generators_t_p_max_pu * generators_at_bus.p_nom) * 100
+    rounded_usage_factor = usage_factor_series.round(decimals=2)
+    # print("rounded")
+    # display(rounded_usage_factor.T)
+    curtailed_power = 100 - rounded_usage_factor
+    # print("curtailed_power")
+    # display(curtailed_power.T)
+    # print("curtailed_power.sum")
+    # display(curtailed_power.sum())
     return curtailed_power.sum()
 
 
@@ -59,7 +59,7 @@ def get_loads_power(n: pypsa.Network, snapshot, name: str) -> float:
     return loads_t_p.sum()
 
 
-def colored_network_figure(n: pypsa.Network) -> go.Figure:
+def create_traces(n: pypsa.Network, snapshot) -> go.Trace:
     # Create edges
     edge_x = []
     edge_y = []
@@ -79,17 +79,16 @@ def colored_network_figure(n: pypsa.Network) -> go.Figure:
         lon=edge_x, lat=edge_y,
         line=dict(width=0.5, color='#888'),
         hoverinfo='none',
-        mode='lines')
+        mode='lines',
+        visible=False
+    )
 
     node_x = []
     node_y = []
-    index = 331*8 + 4
-    # index = 6
-    snapshot = n.snapshots[index]
     print('{name}: {value}'.format(value=snapshot, name='snapshot'))
     bus_colors = []
     for name, bus in n.buses.iterrows():
-        bus_color = get_loads_power(n, snapshot, name)
+        bus_color = get_technology_power(n, snapshot, name, 'onwind')
         if bus_color:
             node_x.append(bus.x)
             node_y.append(bus.y)
@@ -99,6 +98,7 @@ def colored_network_figure(n: pypsa.Network) -> go.Figure:
         lon=node_x, lat=node_y,
         mode='markers',
         hoverinfo='text',
+        visible=False,
         marker=dict(
             showscale=True,
             # colorscale options
@@ -106,9 +106,9 @@ def colored_network_figure(n: pypsa.Network) -> go.Figure:
             # 'Reds' | 'Blues' | 'Picnic' | 'Rainbow' | 'Portland' | 'Jet' |
             # 'Hot' | 'Blackbody' | 'Earth' | 'Electric' | 'Viridis' |
             colorscale='YlGnBu',
-            reversescale=True,
+            reversescale=False,
             color=[],
-            size=10,
+            size=7,
             colorbar=dict(
                 thickness=15,
                 title='Node Connections',
@@ -120,9 +120,12 @@ def colored_network_figure(n: pypsa.Network) -> go.Figure:
     node_trace.marker.color = bus_colors
     node_trace.text = bus_colors
 
+    return node_trace, edge_trace
+
+
+def colored_network_figure(n: pypsa.Network) -> go.Figure:
     # Create Network Graph
-    fig = go.Figure(data=[edge_trace, node_trace],
-                    layout=go.Layout(
+    fig = go.Figure(layout=go.Layout(
                         title='<br>Network graph made with Python',
                         titlefont_size=16,
                         showlegend=False,
@@ -136,6 +139,36 @@ def colored_network_figure(n: pypsa.Network) -> go.Figure:
                         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
                         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False))
                     )
-    fig.update_layout(height=600, margin={"r": 0, "t": 0, "l": 0, "b": 0}, mapbox_style="open-street-map")
+
+    # Create and add slider
+    steps = []
+    snapshots = n.snapshots
+    for i, snapshot in enumerate(snapshots):
+        node_trace, edge_trace = create_traces(n, snapshot)
+        fig.add_traces(data=[edge_trace, node_trace])
+
+        step = dict(
+            label=str(snapshot),
+            method="update",
+            args=[{"visible": [False] * len(snapshots) * 2}],  # layout attribute
+        )
+        step["args"][0]["visible"][i*2] = True  # Toggle i'th trace to "visible"
+        step["args"][0]["visible"][i*2 + 1] = True  # Toggle i'th trace to "visible"
+        steps.append(step)
+
+    sliders = [dict(
+        active=0,
+        currentvalue={"prefix": "Snapshot: "},
+        pad={"t": 50},
+        steps=steps
+    )]
+    # Make first pair of traces (nodes & edges) visible
+    fig.data[0].visible = True
+    fig.data[1].visible = True
+
+    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0},
+                      mapbox_style="open-street-map",
+                      sliders=sliders
+                      )
 
     return fig
