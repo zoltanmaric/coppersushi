@@ -1,61 +1,33 @@
 from collections.abc import Callable
+
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import pypsa
 
 
-def get_marginal_prices(n: pypsa.Network, snapshot, name: str) -> float:
-    marginal_price = n.buses_t.marginal_price.loc[snapshot][name]
-    if -650 < marginal_price < 0:
-        return marginal_price
-    else:
-        return None
-
-
-def get_curtailed_power(n: pypsa.Network, snapshot, name: str) -> float:
-    # display(name)
-    generators_at_bus = n.generators.query(f'bus == "{name}"')
-    # generators_at_bus = n.generators.query(f'bus == "7421"')
-    # display(generators_at_bus)
-    generators_t_p = n.generators_t.p.filter(generators_at_bus.index).loc[snapshot]
-    # print("generators_t_p")
-    # display(generators_t_p.T)
-    generators_t_p_max_pu = n.generators_t.p_max_pu.filter(generators_at_bus.index).loc[snapshot]
-    # print("generators_t_p_max_pu")
-    # display(generators_t_p_max_pu.T)
-    # print("denominator")
-    # display((generators_t_p_max_pu * generators_at_bus.p_nom).T)
-    usage_factor_series = generators_t_p / (generators_t_p_max_pu * generators_at_bus.p_nom) * 100
-    rounded_usage_factor = usage_factor_series.round(decimals=2)
-    # print("rounded")
-    # display(rounded_usage_factor.T)
-    curtailed_power = 100 - rounded_usage_factor
-    # print("curtailed_power")
-    # display(curtailed_power.T)
-    # print("curtailed_power.sum")
-    # display(curtailed_power.sum())
-    return curtailed_power.sum()
-
-
-def get_technology_power(n: pypsa.Network, technology: str = None) -> pd.Series:
-    p_by_generators = n.generators_t.p.filter(like=technology) if technology else n.generators_t.p
+def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.Series, technology: str = None) -> pd.Series:
+    attribute_by_generators = generators_t_attr.filter(like=technology) if technology else generators_t_attr
 
     # Rename generators columns to their corresponding bus names
     # This may result with multiple columns with the same name,
     # if multiple generators were matched on the same bus for the given technology
-    p_by_buses = p_by_generators.rename(n.generators.bus, axis='columns').rename_axis('Bus', axis='columns')
+    attribute_by_buses = attribute_by_generators.rename(n.generators.bus, axis='columns').\
+        rename_axis('Bus', axis='columns')
 
     # Group and sum by bus, in case there's multiple generators for a tech substring
     # (e.g. offwind and onwind for 'wind')
-    p_by_buses_sum = p_by_buses.groupby(by=lambda bus_name: bus_name, axis='columns').sum()
-    return p_by_buses_sum
+    attribute_by_buses_sum = attribute_by_buses.groupby(by=lambda bus_name: bus_name, axis='columns').sum()
+    return attribute_by_buses_sum
 
 
-def get_loads_power(n: pypsa.Network, snapshot, name: str) -> float:
-    loads_t_p = n.loads_t.p_set.loc[snapshot].filter([name])
-    # print('{name}:'.format(value=loads_t_p, name='loads_t_p'))
-    # display(loads_t_p)
-    return loads_t_p.sum()
+def get_curtailed_power(n: pypsa.Network, technology: str = None) -> pd.Series:
+    usage_factor_series = n.generators_t.p / (n.generators_t.p_max_pu * n.generators.p_nom) * 100
+    rounded_usage_factor = usage_factor_series.round(decimals=2)
+    curtailed_power_per_generator = 100 - rounded_usage_factor
+    curtailed_power_per_bus = sum_generators_t_attribute_by_bus(
+        n, generators_t_attr=curtailed_power_per_generator, technology=technology)
+    return curtailed_power_per_bus
 
 
 def get_line_edge(n, x_or_y) -> Callable[[pypsa.Network, str], list]:
@@ -108,7 +80,18 @@ def create_traces(
     return node_trace, edge_trace
 
 
-def colored_network_figure(n: pypsa.Network) -> go.Figure:
+def remove_extremes(df: pd.DataFrame) -> pd.DataFrame:
+    q1 = np.quantile(df, 0.25)
+    q3 = np.quantile(df, 0.75)
+    iqr = q3 - q1
+
+    min = q1 - 1.5 * iqr
+    max = q3 + 1.5 * iqr
+
+    return df[min < df][df < max]
+
+
+def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) -> go.Figure:
     # Create Network Graph
     fig = go.Figure(layout=go.Layout(
                         title='<br>Network graph made with Python',
@@ -127,10 +110,24 @@ def colored_network_figure(n: pypsa.Network) -> go.Figure:
 
     # Create and add slider
     steps = []
-    snapshots = n.snapshots[0:6]
-    display(snapshots)
-    node_values = get_technology_power(n, 'wind')
-    print('{name}:'.format(value=node_values.head(), name='bus_colors.head()'))
+    snapshots = n.snapshots #[0:6]
+    if type(what) == pd.DataFrame:
+        node_values = what
+    elif what == 'load':
+        node_values = n.loads_t.p_set
+    elif what == 'generation':
+        node_values = sum_generators_t_attribute_by_bus(n, n.generators_t.p, technology)
+    elif what == 'curtailment':
+        node_values = get_curtailed_power(n, technology)
+    elif what == 'marginal_price':
+        node_values = n.buses_t.marginal_price
+    else:
+        raise Exception(f'Unknown what: "{what}"')
+
+    print('Removing extremes outside of Q1 - 1.5*IQR < x < Q3 + 1.5*IQR')
+    node_values = remove_extremes(node_values)
+
+    print('{name}:'.format(value=node_values.head(), name='node_values.head()'))
     display(node_values.head())
 
     nodes_x = n.buses.x.filter(node_values.columns)
@@ -140,7 +137,7 @@ def colored_network_figure(n: pypsa.Network) -> go.Figure:
     edges_y = n.lines.apply(get_line_edge(n, 'y'), axis='columns').explode()
 
     for i, snapshot in enumerate(snapshots):
-        print('{name}: {value}'.format(value=snapshot, name='snapshot'))
+        # print('{name}: {value}'.format(value=snapshot, name='snapshot'))
         node_trace, edge_trace = create_traces(nodes_x, nodes_y, edges_x, edges_y, node_values.loc[snapshot])
         fig.add_traces(data=[edge_trace, node_trace])
 
