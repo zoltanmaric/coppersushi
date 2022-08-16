@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import pypsa
+from IPython.display import display
 
 
 def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.Series, technology: str = None) -> pd.Series:
@@ -34,52 +35,31 @@ def get_line_edge(n, x_or_y) -> Callable[[pypsa.Network, str], list]:
     return lambda line: [n.buses.loc[line.bus0][x_or_y], n.buses.loc[line.bus1][x_or_y], None]
 
 
-def line_edge_arrows(n: pypsa.Network) -> list:
-    snapshot = n.snapshots[0]
-    annotations = []
-    for name, line in n.lines.iterrows():
-        if n.lines_t.p0.loc[snapshot][name] >= 0:
-            tail_bus = 'bus0'
-            head_bus = 'bus1'
-        else:
-            tail_bus = 'bus1'
-            head_bus = 'bus0'
-
-        annotation = go.layout.Annotation(
-            x=n.buses.loc[line[head_bus]].x,
-            y=n.buses.loc[line[head_bus]].y,
-            ax=n.buses.loc[line[tail_bus]].x,
-            ay=n.buses.loc[line[tail_bus]].y,
-            xref='x', yref='y',
-            axref='x', ayref='y',
-            text="",
-            showarrow=True,
-            arrowhead=3,
-            arrowwidth=1.5,
-            arrowcolor='rgb(255,51,0)'
-        )
-
-        annotations.append(annotation)
-
-    return annotations
-
-
 def create_traces(
         nodes_x: pd.Series,
         nodes_y: pd.Series,
         edges_x: pd.Series,
         edges_y: pd.Series,
         node_values: pd.Series,
-        edge_values: pd.Series
-) -> go.Trace:
-    # edge_trace = go.Scattermapbox(
-    #     lon=edges_x, lat=edges_y,
-    #     text=edge_values,
-    #     line=dict(width=0.5, color='#888'),
-    #     hoverinfo='none',
-    #     mode='lines',
-    #     visible=False
-    # )
+        edge_values: pd.Series,
+) -> (go.Trace, go.Trace, go.Trace):
+    loaded_filter = edge_values > 0.99
+
+    loaded_lines_trace = go.Scattermapbox(
+        lon=edges_x[loaded_filter].dropna().explode(), lat=edges_y[loaded_filter].dropna().explode(),
+        line=dict(width=4.0, color='red'),
+        hoverinfo='none',
+        mode='lines',
+        visible=False
+    )
+
+    easy_lines_trace = go.Scattermapbox(
+        lon=edges_x[(~loaded_filter)].dropna().explode(), lat=edges_y[(~loaded_filter)].dropna().explode(),
+        line=dict(width=0.5, color='gray'),
+        hoverinfo='none',
+        mode='lines',
+        visible=False
+    )
 
     node_trace = go.Scattermapbox(
         lon=nodes_x, lat=nodes_y,
@@ -106,7 +86,7 @@ def create_traces(
         )
     )
 
-    return node_trace # , edge_trace
+    return node_trace, loaded_lines_trace, easy_lines_trace
 
 
 def remove_extremes(df: pd.DataFrame) -> pd.DataFrame:
@@ -128,15 +108,17 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
                         showlegend=False,
                         hovermode='closest',
                         margin=dict(b=20, l=5, r=5, t=40),
-                        annotations=line_edge_arrows(n),
+                        annotations=[],
                         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
                         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False))
                     )
 
     steps = []
-    snapshots = n.snapshots #[0:6]
+    snapshots = n.snapshots  # [0:1]
     if type(what) == pd.DataFrame:
         node_values = what
+    elif what == 'net_power':
+        node_values = n.buses_t.p
     elif what == 'load':
         node_values = n.loads_t.p_set
     elif what == 'generation':
@@ -151,34 +133,33 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
     print('Removing extremes outside of Q1 - 1.5*IQR < x < Q3 + 1.5*IQR')
     node_values = remove_extremes(node_values)
 
-    print('{name}:'.format(value=node_values.head(), name='node_values.head()'))
-    display(node_values.head())
+    edge_values = abs(n.lines_t.p0) / (n.lines.s_nom_opt * n.lines.s_max_pu)
 
-    edge_values = abs(n.lines_t.p0) / n.lines.s_nom
-    print('{name}:'.format(value=edge_values.head(), name='edge_values.head()'))
-    display(edge_values.head())
+    print('{name}:'.format(value=edge_values.max(), name='edge_values.head()'))
+    display(edge_values.max(axis='columns'))
 
     nodes_x = n.buses.x.filter(node_values.columns)
     nodes_y = n.buses.y.filter(node_values.columns)
 
-    edges_x = n.lines.apply(get_line_edge(n, 'x'), axis='columns').explode()
-    edges_y = n.lines.apply(get_line_edge(n, 'y'), axis='columns').explode()
-
-
+    edges_x = n.lines.apply(get_line_edge(n, 'x'), axis='columns')
+    edges_y = n.lines.apply(get_line_edge(n, 'y'), axis='columns')
 
     # Create and add slider
     for i, snapshot in enumerate(snapshots):
         # print('{name}: {value}'.format(value=snapshot, name='snapshot'))
-        node_trace = create_traces(
+        node_trace, loaded_lines_trace, easy_lines_trace = create_traces(
             nodes_x, nodes_y, edges_x, edges_y, node_values.loc[snapshot], edge_values.loc[snapshot])
-        fig.add_traces(data=[node_trace])
+        # Node annotation pop-ups only show if `node_trace` is added last
+        fig.add_traces(data=[loaded_lines_trace, easy_lines_trace, node_trace])
 
         step = dict(
             label=str(snapshot),
             method="update",
-            args=[{"visible": [False] * len(snapshots) * 2}],  # layout attribute
+            args=[{"visible": [False] * len(snapshots) * 3}],  # Each snapshot has 1 node and 2 line traces
         )
-        step["args"][0]["visible"][i] = True  # Toggle i'th trace to "visible"
+        step["args"][0]["visible"][i*3] = True  # Toggle i'th trace to "visible"
+        step["args"][0]["visible"][i*3 + 1] = True  # Toggle i'th trace to "visible"
+        step["args"][0]["visible"][i*3 + 2] = True  # Toggle i'th trace to "visible"
         steps.append(step)
 
     sliders = [dict(
@@ -187,9 +168,10 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
         pad={"t": 50},
         steps=steps
     )]
-    # Make first pair of traces (nodes & edges) visible
+    # Make first triple of traces (nodes & edges) visible
     fig.data[0].visible = True
     fig.data[1].visible = True
+    fig.data[2].visible = True
 
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0},
                       mapbox_style="open-street-map",
@@ -197,3 +179,8 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
                       )
 
     return fig
+
+
+if __name__ == "__main__":
+    n = pypsa.Network("results/networks/elec_s_all_ec_lv1.1_2H.nc")
+    colored_network_figure(n, 'net_power')
