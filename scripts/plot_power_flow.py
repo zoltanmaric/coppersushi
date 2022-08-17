@@ -42,12 +42,14 @@ def create_traces(
         edges_y: pd.Series,
         node_values: pd.Series,
         edge_values: pd.Series,
+        cmax: float
 ) -> (go.Trace, go.Trace, go.Trace):
     loaded_filter = edge_values > 0.99
 
     loaded_lines_trace = go.Scattermapbox(
         lon=edges_x[loaded_filter].dropna().explode(), lat=edges_y[loaded_filter].dropna().explode(),
-        line=dict(width=4.0, color='red'),
+        # line=dict(width=4.0, color='#f52ad0'),  # pink
+        line=dict(width=4.0, color='#a72af5'),  # violet
         hoverinfo='none',
         mode='lines',
         visible=False
@@ -66,20 +68,19 @@ def create_traces(
         mode='markers',
         hoverinfo='text',
         visible=False,
-        text=node_values,
-        marker=dict(
+        text=round(node_values).astype(str) + ' MW',
+        marker=go.scattermapbox.Marker(
             showscale=True,
-            # colorscale options
-            # 'Greys' | 'YlGnBu' | 'Greens' | 'YlOrRd' | 'Bluered' | 'RdBu' |
-            # 'Reds' | 'Blues' | 'Picnic' | 'Rainbow' | 'Portland' | 'Jet' |
-            # 'Hot' | 'Blackbody' | 'Earth' | 'Electric' | 'Viridis' |
-            colorscale='YlGnBu',
-            reversescale=False,
+            # colorscale options https://plotly.com/python/builtin-colorscales/
+            colorscale='tropic',
+            reversescale=True,
             color=node_values,
-            size=7,
+            cmin=-cmax,
+            cmax=cmax,
+            size=10,
             colorbar=dict(
                 thickness=15,
-                title='Node Connections',
+                title='Net Power Feed-In at Node [MW]',
                 xanchor='left',
                 titleside='right'
             )
@@ -89,7 +90,7 @@ def create_traces(
     return node_trace, loaded_lines_trace, easy_lines_trace
 
 
-def remove_extremes(df: pd.DataFrame) -> pd.DataFrame:
+def get_interquartile_range(df: pd.DataFrame) -> pd.DataFrame:
     q1 = np.quantile(df, 0.25)
     q3 = np.quantile(df, 0.75)
     iqr = q3 - q1
@@ -97,14 +98,12 @@ def remove_extremes(df: pd.DataFrame) -> pd.DataFrame:
     min = q1 - 1.5 * iqr
     max = q3 + 1.5 * iqr
 
-    return df[min < df][df < max]
+    return min, max
 
 
 def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) -> go.Figure:
     # Create Network Graph
     fig = go.Figure(layout=go.Layout(
-                        title='<br>Network graph made with Python',
-                        titlefont_size=16,
                         showlegend=False,
                         hovermode='closest',
                         margin=dict(b=20, l=5, r=5, t=40),
@@ -130,13 +129,10 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
     else:
         raise Exception(f'Unknown what: "{what}"')
 
-    print('Removing extremes outside of Q1 - 1.5*IQR < x < Q3 + 1.5*IQR')
-    node_values = remove_extremes(node_values)
+    iqr_min, iqr_max = get_interquartile_range(node_values)
+    cmax = max(abs(iqr_min), abs(iqr_max))
 
     edge_values = abs(n.lines_t.p0) / (n.lines.s_nom_opt * n.lines.s_max_pu)
-
-    print('{name}:'.format(value=edge_values.max(), name='edge_values.head()'))
-    display(edge_values.max(axis='columns'))
 
     nodes_x = n.buses.x.filter(node_values.columns)
     nodes_y = n.buses.y.filter(node_values.columns)
@@ -148,7 +144,7 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
     for i, snapshot in enumerate(snapshots):
         # print('{name}: {value}'.format(value=snapshot, name='snapshot'))
         node_trace, loaded_lines_trace, easy_lines_trace = create_traces(
-            nodes_x, nodes_y, edges_x, edges_y, node_values.loc[snapshot], edge_values.loc[snapshot])
+            nodes_x, nodes_y, edges_x, edges_y, node_values.loc[snapshot], edge_values.loc[snapshot], cmax)
         # Node annotation pop-ups only show if `node_trace` is added last
         fig.add_traces(data=[loaded_lines_trace, easy_lines_trace, node_trace])
 
@@ -173,8 +169,14 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
     fig.data[1].visible = True
     fig.data[2].visible = True
 
+    # Register and get a free access token at https://www.mapbox.com/
+    mapbox_token = open(".secrets/.mapbox_token").read()
+
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0},
-                      mapbox_style="open-street-map",
+                      # Available maps: https://plotly.com/python/mapbox-layers#base-maps-in-layoutmapboxstyle
+                      mapbox_style="dark",
+                      # Only required for mapbox styles
+                      mapbox_accesstoken=mapbox_token,
                       sliders=sliders
                       )
 
