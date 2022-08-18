@@ -1,8 +1,7 @@
-from collections.abc import Callable
-
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import pyproj
 import pypsa
 from IPython.display import display
 
@@ -31,20 +30,57 @@ def get_curtailed_power(n: pypsa.Network, technology: str = None) -> pd.Series:
     return curtailed_power_per_bus
 
 
-def get_line_edge(n, x_or_y) -> Callable[[pypsa.Network, str], list]:
-    return lambda line: [n.buses.loc[line.bus0][x_or_y], n.buses.loc[line.bus1][x_or_y], None]
+def get_bus_coordinates(n: pypsa.Network, bus_name: str) -> pd.DataFrame:
+    return n.buses.loc[n.lines[bus_name]][['x', 'y']] \
+            .set_index(n.lines.index) \
+            .rename(dict(x=bus_name+'_x', y=bus_name+'_y'), axis='columns')
+
+
+def get_line_direction(line_info: pd.DataFrame) -> float:
+    """Line power flow direction angle (clockwise from North)"""
+
+    # Mercator projection, as used by MapBox: https://docs.mapbox.com/mapbox-gl-js/example/projections/
+    geodesic = pyproj.Geod(ellps='WGS84')
+    directions = line_info.apply(
+        lambda row: pd.Series(
+            list(geodesic.inv(row.bus0_x, row.bus0_y, row.bus1_x, row.bus1_y))[0:2],
+            index=['direction', 'inverse_direction']
+        ),
+        axis='columns'
+    )
+
+    return directions
+
+
+def get_line_info(n: pypsa.Network) -> pd.DataFrame:
+    """Builds a DataFrame with edge & middle point coordinates, power flow direction angles for each line."""
+    bus0_coordinates = get_bus_coordinates(n, 'bus0')
+    bus1_coordinates = get_bus_coordinates(n, 'bus1')
+    line_info = pd.concat([bus0_coordinates, bus1_coordinates], axis='columns')
+
+    line_info['mid_x'] = (line_info.bus1_x + line_info.bus0_x) / 2
+    line_info['mid_y'] = (line_info.bus1_y + line_info.bus0_y) / 2
+
+    line_info[['direction', 'inverse_direction']] = get_line_direction(line_info)
+
+    return line_info
+
+
+def get_line_edge(line_info: pd.DataFrame, x_or_y: str) -> pd.Series:
+    return line_info.apply(lambda row: [row['bus0_' + x_or_y], row['bus1_' + x_or_y], None], axis='columns')
 
 
 def create_traces(
         nodes_x: pd.Series,
         nodes_y: pd.Series,
-        edges_x: pd.Series,
-        edges_y: pd.Series,
         node_values: pd.Series,
+        line_info: pd.DataFrame,
         edge_values: pd.Series,
         cmax: float
 ) -> (go.Trace, go.Trace, go.Trace):
-    loaded_filter = edge_values > 0.99
+    loaded_filter = abs(edge_values) > 0.99
+    edges_x = get_line_edge(line_info, 'x')
+    edges_y = get_line_edge(line_info, 'y')
 
     loaded_lines_trace = go.Scattermapbox(
         lon=edges_x[loaded_filter].dropna().explode(), lat=edges_y[loaded_filter].dropna().explode(),
@@ -61,6 +97,27 @@ def create_traces(
         hoverinfo='none',
         mode='lines',
         visible=False
+    )
+
+    # Edge values will be positive if power is flowing from bus0 to bus1
+    edge_info = pd.concat([line_info, edge_values.rename('edge_value')], axis='columns')
+    edge_info['arrow_angle'] = edge_info.apply(
+        lambda row: row.direction if row.edge_value >= 0 else row.inverse_direction, axis='columns'
+    )
+
+    line_direction_trace = go.Scattermapbox(
+        lon=line_info.mid_x, lat=line_info.mid_y,
+        mode='markers',
+        hoverinfo='text',
+        visible=False,
+        text=abs(edge_info.edge_value),
+        marker=go.scattermapbox.Marker(
+            size=7,
+            # List of available markers:
+            # https://community.plotly.com/t/how-to-add-a-custom-symbol-image-inside-map/6641/2
+            symbol='triangle',
+            angle=edge_info.arrow_angle
+        )
     )
 
     node_trace = go.Scattermapbox(
@@ -87,7 +144,7 @@ def create_traces(
         )
     )
 
-    return node_trace, loaded_lines_trace, easy_lines_trace
+    return node_trace, loaded_lines_trace, easy_lines_trace, line_direction_trace
 
 
 def get_interquartile_range(df: pd.DataFrame) -> pd.DataFrame:
@@ -132,30 +189,40 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
     iqr_min, iqr_max = get_interquartile_range(node_values)
     cmax = max(abs(iqr_min), abs(iqr_max))
 
-    edge_values = abs(n.lines_t.p0) / (n.lines.s_nom_opt * n.lines.s_max_pu)
+    edge_values = n.lines_t.p0 / (n.lines.s_nom_opt * n.lines.s_max_pu)
 
     nodes_x = n.buses.x.filter(node_values.columns)
     nodes_y = n.buses.y.filter(node_values.columns)
 
-    edges_x = n.lines.apply(get_line_edge(n, 'x'), axis='columns')
-    edges_y = n.lines.apply(get_line_edge(n, 'y'), axis='columns')
+    line_info = get_line_info(n)
+
+    print('{name}:'.format(value=line_info.head(), name='line_info.head()'))
+    display(line_info.head())
+
+    num_traces = 4
 
     # Create and add slider
     for i, snapshot in enumerate(snapshots):
-        # print('{name}: {value}'.format(value=snapshot, name='snapshot'))
-        node_trace, loaded_lines_trace, easy_lines_trace = create_traces(
-            nodes_x, nodes_y, edges_x, edges_y, node_values.loc[snapshot], edge_values.loc[snapshot], cmax)
+        node_trace, loaded_lines_trace, easy_lines_trace, line_direction_trace = create_traces(
+            nodes_x,
+            nodes_y,
+            node_values.loc[snapshot],
+            line_info,
+            edge_values.loc[snapshot],
+            cmax
+        )
         # Node annotation pop-ups only show if `node_trace` is added last
-        fig.add_traces(data=[loaded_lines_trace, easy_lines_trace, node_trace])
+        fig.add_traces(data=[loaded_lines_trace, easy_lines_trace, line_direction_trace, node_trace])
 
         step = dict(
             label=str(snapshot),
             method="update",
-            args=[{"visible": [False] * len(snapshots) * 3}],  # Each snapshot has 1 node and 2 line traces
+            args=[{"visible": [False] * len(snapshots) * num_traces}],
         )
-        step["args"][0]["visible"][i*3] = True  # Toggle i'th trace to "visible"
-        step["args"][0]["visible"][i*3 + 1] = True  # Toggle i'th trace to "visible"
-        step["args"][0]["visible"][i*3 + 2] = True  # Toggle i'th trace to "visible"
+
+        for trace_idx in range(num_traces):
+            step["args"][0]["visible"][i * num_traces + trace_idx] = True  # Toggle i'th snapshot to "visible"
+
         steps.append(step)
 
     sliders = [dict(
@@ -164,12 +231,12 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
         pad={"t": 50},
         steps=steps
     )]
-    # Make first triple of traces (nodes & edges) visible
-    fig.data[0].visible = True
-    fig.data[1].visible = True
-    fig.data[2].visible = True
+    # Make first set of traces (nodes & edges) visible
+    for trace_idx in range(num_traces):
+        fig.data[trace_idx].visible = True
 
     # Register and get a free access token at https://www.mapbox.com/
+    # and paste it into a file at the path below
     mapbox_token = open(".secrets/.mapbox_token").read()
 
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0},
