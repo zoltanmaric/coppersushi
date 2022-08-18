@@ -1,0 +1,6 @@
+name: coppersushi
+dependencies:
+  - python >= 3.10
+  - dash
+  - pandas
+  - pypsa
