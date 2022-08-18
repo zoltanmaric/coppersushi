@@ -61,9 +61,21 @@ def get_line_info(n: pypsa.Network) -> pd.DataFrame:
     line_info['mid_x'] = (line_info.bus1_x + line_info.bus0_x) / 2
     line_info['mid_y'] = (line_info.bus1_y + line_info.bus0_y) / 2
 
+    line_info['s_max'] = n.lines.s_max_pu * n.lines.s_nom_opt
+
     line_info[['direction', 'inverse_direction']] = get_line_direction(line_info)
 
     return line_info
+
+
+def get_line_info_for_snapshot(n: pypsa.Network, line_info: pd.DataFrame, snapshot: str) -> pd.DataFrame:
+    line_info_t = pd.concat([line_info, n.lines_t.p0.loc[snapshot].rename('p0')], axis='columns')
+    line_info_t['line_loading'] = abs(line_info_t.p0) / line_info_t.s_max * 100
+    line_info_t['arrow_angle'] = line_info_t.apply(
+        lambda row: row.direction if row.p0 >= 0 else row.inverse_direction, axis='columns'
+    )
+
+    return line_info_t
 
 
 def get_line_edge(line_info: pd.DataFrame, x_or_y: str) -> pd.Series:
@@ -74,13 +86,12 @@ def create_traces(
         nodes_x: pd.Series,
         nodes_y: pd.Series,
         node_values: pd.Series,
-        line_info: pd.DataFrame,
-        edge_values: pd.Series,
+        line_info_t: pd.DataFrame,
         cmax: float
 ) -> (go.Trace, go.Trace, go.Trace):
-    loaded_filter = abs(edge_values) > 0.99
-    edges_x = get_line_edge(line_info, 'x')
-    edges_y = get_line_edge(line_info, 'y')
+    loaded_filter = line_info_t.line_loading > 99
+    edges_x = get_line_edge(line_info_t, 'x')
+    edges_y = get_line_edge(line_info_t, 'y')
 
     loaded_lines_trace = go.Scattermapbox(
         lon=edges_x[loaded_filter].dropna().explode(), lat=edges_y[loaded_filter].dropna().explode(),
@@ -99,24 +110,18 @@ def create_traces(
         visible=False
     )
 
-    # Edge values will be positive if power is flowing from bus0 to bus1
-    edge_info = pd.concat([line_info, edge_values.rename('edge_value')], axis='columns')
-    edge_info['arrow_angle'] = edge_info.apply(
-        lambda row: row.direction if row.edge_value >= 0 else row.inverse_direction, axis='columns'
-    )
-
     line_direction_trace = go.Scattermapbox(
-        lon=line_info.mid_x, lat=line_info.mid_y,
+        lon=line_info_t.mid_x, lat=line_info_t.mid_y,
         mode='markers',
         hoverinfo='text',
         visible=False,
-        text=abs(edge_info.edge_value),
+        text=abs(line_info_t.p0).astype(int).astype(str) + '/' + line_info_t.s_max.astype(int).astype(str) + ' MW',
         marker=go.scattermapbox.Marker(
             size=7,
             # List of available markers:
             # https://community.plotly.com/t/how-to-add-a-custom-symbol-image-inside-map/6641/2
             symbol='triangle',
-            angle=edge_info.arrow_angle
+            angle=line_info_t.arrow_angle
         )
     )
 
@@ -125,7 +130,7 @@ def create_traces(
         mode='markers',
         hoverinfo='text',
         visible=False,
-        text=round(node_values).astype(str) + ' MW',
+        text=node_values.astype(int).astype(str) + ' MW',
         marker=go.scattermapbox.Marker(
             showscale=True,
             # colorscale options https://plotly.com/python/builtin-colorscales/
@@ -189,8 +194,6 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
     iqr_min, iqr_max = get_interquartile_range(node_values)
     cmax = max(abs(iqr_min), abs(iqr_max))
 
-    edge_values = n.lines_t.p0 / (n.lines.s_nom_opt * n.lines.s_max_pu)
-
     nodes_x = n.buses.x.filter(node_values.columns)
     nodes_y = n.buses.y.filter(node_values.columns)
 
@@ -203,12 +206,13 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
 
     # Create and add slider
     for i, snapshot in enumerate(snapshots):
+        line_info_t = get_line_info_for_snapshot(n, line_info, snapshot)
+
         node_trace, loaded_lines_trace, easy_lines_trace, line_direction_trace = create_traces(
             nodes_x,
             nodes_y,
             node_values.loc[snapshot],
-            line_info,
-            edge_values.loc[snapshot],
+            line_info_t,
             cmax
         )
         # Node annotation pop-ups only show if `node_trace` is added last
