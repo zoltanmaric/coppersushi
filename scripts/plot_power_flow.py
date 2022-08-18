@@ -3,7 +3,6 @@ import pandas as pd
 import plotly.graph_objects as go
 import pyproj
 import pypsa
-from IPython.display import display
 
 
 def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.Series, technology: str = None) -> pd.Series:
@@ -198,9 +197,6 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
     nodes_y = n.buses.y.filter(node_values.columns)
 
     line_info = get_line_info(n)
-
-    print('{name}:'.format(value=line_info.head(), name='line_info.head()'))
-    display(line_info.head())
 
     num_traces = 4
 
