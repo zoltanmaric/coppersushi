@@ -4,9 +4,13 @@ import plotly.graph_objects as go
 import pypsa
 from dash import Dash, dcc, html, Input, Output
 
-df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/gapminderDataFiveYear.csv')
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-app = Dash(__name__)
+app = Dash(__name__, external_stylesheets=external_stylesheets)
+
+server = app.server
+
+df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/gapminderDataFiveYear.csv')
 
 app.layout = html.Div([
     dcc.Graph(id='graph-with-slider'),

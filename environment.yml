@@ -1,6 +1,8 @@
 name: coppersushi
+channels:
+  - conda-forge
 dependencies:
   - python >= 3.10
   - dash
-  - pandas
   - pypsa
+  - gunicorn  # For deploying to Heroku
