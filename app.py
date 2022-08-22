@@ -17,7 +17,7 @@ app.layout = html.Div([
         id='graph-with-slider',
         style={'height': '90vh'},
         figure=dict(layout=dict(autosize=True)),
-        config=dict(responsive=True)
+        config=dict(responsive=True, displayModeBar=False)
     ),
     html.Div(
         dcc.Slider(
@@ -35,7 +35,7 @@ app.layout = html.Div([
 n = pypsa.Network('networks/elec_s_all_ec_lv1.01_2H.nc')
 fig = ppf.colored_network_figure(n, 'net_power')
 fig.update_layout(
-    mapbox=dict(center=go.layout.mapbox.Center(lat=55, lon=12), zoom=3.3)
+    mapbox=dict(center=go.layout.mapbox.Center(lat=53, lon=9), zoom=3.9, pitch=60)
 )
 
 
