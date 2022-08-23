@@ -147,11 +147,18 @@ def create_traces(
             cmin=-cmax,
             cmax=cmax,
             size=10,
-            colorbar=dict(
+            colorbar=go.scattermapbox.marker.ColorBar(
                 thickness=15,
                 title='Net Power Feed-In at Node [MW]',
-                xanchor='left',
-                titleside='right'
+                orientation='h',
+                # Place colorbar at 0.02 times the height of the figure *below* the figure
+                # (negative value means below)
+                y=-0.02,
+                # The y-value is counted from the top of the colorbar
+                yanchor='top',
+                # Put the title of the colorbar *above* the colorbar
+                # (default is on the side)
+                titleside='top'
             )
         )
     )
