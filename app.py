@@ -1,12 +1,10 @@
-import pandas as pd
 import scripts.plot_power_flow as ppf
 import plotly.graph_objects as go
 import pypsa
 from dash import Dash, dcc, html, Input, Output
+import dash_bootstrap_components as dbc
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
-app = Dash(__name__, external_stylesheets=external_stylesheets)
+app = Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 
 server = app.server
 

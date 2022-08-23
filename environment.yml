@@ -4,5 +4,6 @@ channels:
 dependencies:
   - python >= 3.10
   - dash
+  - dash-bootstrap-components
   - pypsa
   - gunicorn  # For deploying to Heroku

@@ -3,11 +3,14 @@ import pandas as pd
 import plotly.graph_objects as go
 import pyproj
 import pypsa
+import plotly.io as pio
 
 # For each snapshot, a figure has 4 traces
 # (the nodes, the loaded lines, the non-loaded lines,
 # and the power flow direction arrows)
 NUM_TRACES_PER_SNAPSHOT = 4
+
+pio.templates.default = "plotly_dark"
 
 
 def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.Series, technology: str = None) -> pd.Series:
