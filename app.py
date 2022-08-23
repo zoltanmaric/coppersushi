@@ -10,48 +10,43 @@ app = Dash(__name__, external_stylesheets=external_stylesheets)
 
 server = app.server
 
-df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/gapminderDataFiveYear.csv')
-
-app.layout = html.Div([
-    dcc.Graph(
-        id='graph-with-slider',
-        style={'height': '90vh'},
-        figure=dict(layout=dict(autosize=True)),
-        config=dict(responsive=True, displayModeBar=False)
-    ),
-    html.Div(
-        dcc.Slider(
-            df['year'].min(),
-            df['year'].max(),
-            step=None,
-            value=df['year'].min(),
-            marks={str(year): str(year) for year in df['year'].unique()},
-            id='year-slider'
-        ),
-        hidden=True
-    )
-])
-
 n = pypsa.Network('networks/elec_s_all_ec_lv1.01_2H.nc')
 fig = ppf.colored_network_figure(n, 'net_power')
 fig.update_layout(
     mapbox=dict(center=go.layout.mapbox.Center(lat=53, lon=9), zoom=3.9, pitch=60)
 )
 
+app.layout = html.Div([
+    dcc.Graph(
+        id='map',
+        style={'height': '90vh'},
+        figure=dict(layout=dict(autosize=True)),
+        config=dict(responsive=True, displayModeBar=False)
+    ),
+    html.Div(
+        dcc.Slider(
+            0,
+            len(n.snapshots) - 1,
+            step=1,
+            value=0,
+            marks={
+                idx: dict(
+                    label=str(snapshot),
+                    style=dict(writingMode='vertical-rl')
+                ) for idx, snapshot in enumerate(n.snapshots)
+            },
+            id='snapshot-slider'
+        )
+    )
+])
+
 
 @app.callback(
-    Output('graph-with-slider', 'figure'),
-    Input('year-slider', 'value'))
-def update_figure(selected_year):
-    # filtered_df = df[df.year == selected_year]
-
-    # fig = px.scatter(filtered_df, x="gdpPercap", y="lifeExp",
-    #                  size="pop", color="continent", hover_name="country",
-    #                  log_x=True, size_max=55)
-    #
-    # fig.update_layout(transition_duration=500)
-
-    return fig
+    Output('map', 'figure'),
+    Input('snapshot-slider', 'value'))
+def update_figure(selected_snapshot_index: int) -> go.Figure:
+    figure = ppf.show_snapshot(fig, selected_snapshot_index)
+    return figure
 
 
 if __name__ == '__main__':

@@ -4,6 +4,11 @@ import plotly.graph_objects as go
 import pyproj
 import pypsa
 
+# For each snapshot, a figure has 4 traces
+# (the nodes, the loaded lines, the non-loaded lines,
+# and the power flow direction arrows)
+NUM_TRACES_PER_SNAPSHOT = 4
+
 
 def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.Series, technology: str = None) -> pd.Series:
     attribute_by_generators = generators_t_attr.filter(like=technology) if technology else generators_t_attr
@@ -162,18 +167,31 @@ def get_interquartile_range(df: pd.DataFrame) -> pd.DataFrame:
     return min, max
 
 
+def show_snapshot(fig: go.Figure, snapshot_index: int) -> go.Figure:
+    active_trace_id_start = snapshot_index * NUM_TRACES_PER_SNAPSHOT
+    active_trace_id_end = active_trace_id_start + NUM_TRACES_PER_SNAPSHOT
+    for trace_id in range(len(fig.data)):
+        if trace_id in range(active_trace_id_start, active_trace_id_end):
+            fig.update_traces(dict(visible=True), selector=trace_id)
+        else:
+            fig.update_traces(dict(visible=False), selector=trace_id)
+
+    return fig
+
+
 def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) -> go.Figure:
     # Create Network Graph
     fig = go.Figure(layout=go.Layout(
-                        showlegend=False,
-                        hovermode='closest',
-                        margin=dict(b=20, l=5, r=5, t=40),
-                        annotations=[],
-                        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False))
-                    )
+        showlegend=False,
+        hovermode='closest',
+        margin=dict(b=20, l=5, r=5, t=40),
+        annotations=[],
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        # This persists users' zoom between callbacks
+        uirevision=True
+    ))
 
-    steps = []
     snapshots = n.snapshots  # [0:1]
     if type(what) == pd.DataFrame:
         node_values = what
@@ -198,9 +216,7 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
 
     line_info = get_line_info(n)
 
-    num_traces = 4
-
-    # Create and add slider
+    # Create and add traces
     for i, snapshot in enumerate(snapshots):
         line_info_t = get_line_info_for_snapshot(n, line_info, snapshot)
 
@@ -214,26 +230,8 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
         # Node annotation pop-ups only show if `node_trace` is added last
         fig.add_traces(data=[loaded_lines_trace, easy_lines_trace, line_direction_trace, node_trace])
 
-        step = dict(
-            label=str(snapshot),
-            method="update",
-            args=[{"visible": [False] * len(snapshots) * num_traces}],
-        )
-
-        for trace_idx in range(num_traces):
-            step["args"][0]["visible"][i * num_traces + trace_idx] = True  # Toggle i'th snapshot to "visible"
-
-        steps.append(step)
-
-    sliders = [dict(
-        active=0,
-        currentvalue={"prefix": "Snapshot: "},
-        pad={"t": 50},
-        steps=steps
-    )]
     # Make first set of traces (nodes & edges) visible
-    for trace_idx in range(num_traces):
-        fig.data[trace_idx].visible = True
+    fig = show_snapshot(fig, snapshot_index=0)
 
     # Register and get a free access token at https://www.mapbox.com/
     # and paste it into a file at the path below
@@ -243,8 +241,7 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
                       # Available maps: https://plotly.com/python/mapbox-layers#base-maps-in-layoutmapboxstyle
                       mapbox_style="dark",
                       # Only required for mapbox styles
-                      mapbox_accesstoken=mapbox_token,
-                      sliders=sliders
+                      mapbox_accesstoken=mapbox_token
                       )
 
     return fig
