@@ -30,10 +30,10 @@ class NetworkSnapshot:
         self.n = network
         self.snapshot = snapshot
 
-        buses = self._buses()
+        self.buses = self._buses()
         self.loads = self._loads()
         self.generators = self._generators()
-        self.node_infos = self._to_node_info(buses, self.loads, self.generators)
+        # self.node_infos = self._to_node_info(buses, self.loads, self.generators)
         # self.generators_by_carrier_group = self._generators_by_carrier_group()
 
     def _buses(self) -> pd.DataFrame:
