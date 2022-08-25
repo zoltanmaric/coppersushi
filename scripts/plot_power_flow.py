@@ -133,28 +133,35 @@ def get_line_edge(line_info: pd.DataFrame, x_or_y: str) -> pd.Series:
     return line_info.apply(lambda row: [row['bus0_' + x_or_y], row['bus1_' + x_or_y], None], axis='columns')
 
 
-def to_html(node_info: NodeInfo) -> str:
-    if node_info.generator_info is None and node_info.load_info is None:
-        return f'Net power: {node_info.p:.2f} MW'
+def generators_to_html(group: pd.core.groupby.DataFrameGroupBy) -> 'pd.Series[str]':
+    rows = group.apply(lambda row: f'<b>{row.name[1]}</b>: {row.p:.2f} MW<br>', axis='columns')
+    generators_html = '<b>Generation:</b><br>' + '\n<b>+</b> '.join(rows)
 
-    if node_info.generator_info:
-        rows = [f'<b>{carrier}</b>: {gen.p:.2f} MW<br>' for carrier, gen in node_info.generator_info.items()]
-        generators_html = '<b>Generation:</b><br>' + '\n<b>+</b> '.join(rows)
+    return generators_html
+
+
+def combine_htmls(row: 'pd.Series[str]') -> str:
+    if pd.isna(row.generator) and pd.isna(row.load):
+        return row.net_p
     else:
-        generators_html = ''
-
-    load_info_html = f'<b>- Load</b>: {node_info.load_info.p:.2f} MW<br>' if node_info.load_info else ''
-
-    return f"""{generators_html}
+        return f"""{row.generator}
 --<br>
-{load_info_html}
+{row.load}
 ===<br>
-<b>= Net power: {node_info.p:.2f} MW</b>
+<b>= {row.net_p}</b>
 """
 
 
+def get_tooltip_htmls(ns: NetworkSnapshot) -> 'pd.Series[str]':
+    generator_htmls = ns.generators.groupby('Bus').apply(generators_to_html).rename('generator')
+    load_htmls = ns.loads.apply(lambda row: f'<b>- Load</b>: {row.p_load:.2f} MW<br>', axis='columns').rename('load')
+    net_power_htmls = ns.buses.apply(lambda row: f'Net power: {row.p:.2f} MW', axis='columns').rename('net_p')
+    htmls = pd.concat([generator_htmls, load_htmls, net_power_htmls], axis='columns').apply(combine_htmls, axis='columns')
+    return htmls
+
+
 def create_traces(
-        node_infos: 'pd.Series[NodeInfo]',
+        ns: NetworkSnapshot,
         line_info_t: pd.DataFrame,
         cmax: float
 ) -> (go.Trace, go.Trace, go.Trace, go.Trace):
@@ -194,15 +201,16 @@ def create_traces(
         )
     )
 
-    node_powers = node_infos.map(lambda ni: ni.p)
+    node_powers = ns.buses.apply(lambda bus: bus.p, axis='columns')
     node_sizes = node_powers.abs()
     node_max_size = 11
+    tooltips_htmls = get_tooltip_htmls(ns)
     node_trace = go.Scattermapbox(
-        lon=node_infos.map(lambda ni: ni.lon), lat=node_infos.map(lambda ni: ni.lat),
+        lon=ns.buses.apply(lambda bus: bus.x, axis='columns'), lat=ns.buses.apply(lambda bus: bus.y, axis='columns'),
         mode='markers',
         hoverinfo='text',
         visible=False,
-        text=node_infos.map(to_html),
+        text=tooltips_htmls,
         marker=go.scattermapbox.Marker(
             showscale=True,
             # colorscale options https://plotly.com/python/builtin-colorscales/
@@ -293,11 +301,11 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
 
     # Create and add traces
     for i, snapshot in enumerate(snapshots):
-        node_infos = NetworkSnapshot(n, snapshot).node_infos
+        ns = NetworkSnapshot(n, snapshot)
         line_info_t = get_line_info_for_snapshot(n, line_info, snapshot)
 
         node_trace, loaded_lines_trace, easy_lines_trace, line_direction_trace = create_traces(
-            node_infos,
+            ns,
             line_info_t,
             cmax
         )
