@@ -18,5 +18,8 @@ class GeneratorInfo:
 
 @dataclass
 class NodeInfo:
+    lon: float
+    lat: float
+    p: float
     load_info: LoadInfo
     generator_info: Dict[str, GeneratorInfo]

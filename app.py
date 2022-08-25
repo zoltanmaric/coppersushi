@@ -31,7 +31,7 @@ app.layout = html.Div([
             value=0,
             marks={
                 idx: dict(
-                    label=str(snapshot),
+                    label=str(snapshot.time()),
                     style=dict(writingMode='vertical-rl')
                 ) for idx, snapshot in enumerate(n.snapshots)
             },

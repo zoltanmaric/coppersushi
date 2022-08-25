@@ -133,10 +133,27 @@ def get_line_edge(line_info: pd.DataFrame, x_or_y: str) -> pd.Series:
     return line_info.apply(lambda row: [row['bus0_' + x_or_y], row['bus1_' + x_or_y], None], axis='columns')
 
 
+def to_html(node_info: NodeInfo) -> str:
+    if node_info.generator_info is None and node_info.load_info is None:
+        return f'Net power: {node_info.p:.2f} MW'
+
+    if node_info.generator_info:
+        rows = [f'<b>{carrier}</b>: {gen.p:.2f} MW<br>' for carrier, gen in node_info.generator_info.items()]
+        generators_html = '<b>Generation:</b><br>' + '\n<b>+</b> '.join(rows)
+    else:
+        generators_html = ''
+
+    load_info_html = f'<b>- Load</b>: {node_info.load_info.p:.2f} MW<br>' if node_info.load_info else ''
+
+    return f"""{generators_html}
+--<br>
+{load_info_html}
+===<br>
+<b>= Net power: {node_info.p:.2f} MW</b>
+"""
+
+
 def create_traces(
-        nodes_x: pd.Series,
-        nodes_y: pd.Series,
-        node_values: pd.Series,
         node_infos: 'pd.Series[NodeInfo]',
         line_info_t: pd.DataFrame,
         cmax: float
@@ -167,7 +184,7 @@ def create_traces(
         mode='markers',
         hoverinfo='text',
         visible=False,
-        text=abs(line_info_t.p0).astype(int).astype(str) + '/' + line_info_t.s_max.astype(int).astype(str) + ' MW',
+        text='<b>Flow:</b> ' + abs(line_info_t.p0).astype(int).astype(str) + '/' + line_info_t.s_max.astype(int).astype(str) + ' MW',
         marker=go.scattermapbox.Marker(
             size=7,
             # List of available markers:
@@ -177,32 +194,27 @@ def create_traces(
         )
     )
 
-    hovertemplate = '\n'.join([
-        '<b>Coal</b>: %{customdata.generator_info.coal.p:.2f} MW<br>',
-        '<b>CCGT</b>: %{customdata.generator_info.CCGT.p:.2f} MW<br>',
-        '<b>OCGT</b>: %{customdata.generator_info.OCGT.p:.2f} MW<br>',
-        '<b>onwind</b>: %{customdata.generator_info.onwind.p:.2f} MW<br>',
-        '<b>solar</b>: %{customdata.generator_info.solar.p:.2f} MW<br>',
-        '<b>Load</b>: %{customdata.load_info.p:.2f} MW<br>',
-    ])
-
+    node_powers = node_infos.map(lambda ni: ni.p)
+    node_sizes = node_powers.abs()
+    node_max_size = 11
     node_trace = go.Scattermapbox(
-        lon=nodes_x, lat=nodes_y,
+        lon=node_infos.map(lambda ni: ni.lon), lat=node_infos.map(lambda ni: ni.lat),
         mode='markers',
         hoverinfo='text',
-        customdata=np.array(node_infos.map(jsons.dump)),
-        hovertemplate=hovertemplate,
         visible=False,
-        # text=node_infos.map(jsons.dump), # node_values.astype(int).astype(str) + ' MW',
+        text=node_infos.map(to_html),
         marker=go.scattermapbox.Marker(
             showscale=True,
             # colorscale options https://plotly.com/python/builtin-colorscales/
             colorscale='tropic',
             reversescale=True,
-            color=node_values,
+            color=node_powers,
             cmin=-cmax,
             cmax=cmax,
-            size=10,
+            size=node_sizes,
+            sizemin=2.5,
+            sizemode='area',
+            sizeref=node_sizes.max() / node_max_size ** 2,
             colorbar=go.scattermapbox.marker.ColorBar(
                 thickness=15,
                 title='Net Power Feed-In at Node [MW]',
@@ -277,9 +289,6 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
     iqr_min, iqr_max = get_interquartile_range(node_values)
     cmax = max(abs(iqr_min), abs(iqr_max))
 
-    nodes_x = n.buses.x.filter(node_values.columns)
-    nodes_y = n.buses.y.filter(node_values.columns)
-
     line_info = get_line_info(n)
 
     # Create and add traces
@@ -288,9 +297,6 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
         line_info_t = get_line_info_for_snapshot(n, line_info, snapshot)
 
         node_trace, loaded_lines_trace, easy_lines_trace, line_direction_trace = create_traces(
-            nodes_x,
-            nodes_y,
-            node_values.loc[snapshot],
             node_infos,
             line_info_t,
             cmax
