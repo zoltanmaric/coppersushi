@@ -13,7 +13,7 @@ NUM_TRACES_PER_SNAPSHOT = 4
 pio.templates.default = "plotly_dark"
 
 
-def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.Series, technology: str = None) -> pd.Series:
+def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.DataFrame, technology: str = None) -> pd.Series:
     attribute_by_generators = generators_t_attr.filter(like=technology) if technology else generators_t_attr
 
     # Rename generators columns to their corresponding bus names
@@ -28,12 +28,12 @@ def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.Se
     return attribute_by_buses_sum
 
 
-def get_curtailed_power(n: pypsa.Network, technology: str = None) -> pd.Series:
+def get_curtailed_power(n: pypsa.Network, tech_regex: str = None) -> pd.Series:
     usage_factor_series = n.generators_t.p / (n.generators_t.p_max_pu * n.generators.p_nom) * 100
     rounded_usage_factor = usage_factor_series.round(decimals=2)
     curtailed_power_per_generator = 100 - rounded_usage_factor
     curtailed_power_per_bus = sum_generators_t_attribute_by_bus(
-        n, generators_t_attr=curtailed_power_per_generator, technology=technology)
+        n, generators_t_attr=curtailed_power_per_generator, tech_regex=tech_regex)
     return curtailed_power_per_bus
 
 
@@ -57,6 +57,45 @@ def get_line_direction(line_info: pd.DataFrame) -> float:
     )
 
     return directions
+
+
+def map_carrier(row: pd.Series) -> str:
+    grouping = {
+        'nuclear': 'nuclear',
+        'geothermal': 'geothermal',
+        'biomass': 'biomass',
+        'coal': 'fossil',
+        'CCGT': 'fossil',
+        'oil': 'fossil',
+        'lignite': 'fossil',
+        'hydro': 'hydro',
+        'offwind-ac': 'wind',
+        'offwind-dc': 'wind',
+        'onwind': 'wind',
+        'solar': 'solar',
+        'PHS': 'hydro',
+        'ror': 'hydro'
+    }
+
+    return grouping[row.carrier]
+
+
+def get_node_info(n: pypsa.Network) -> pd.DataFrame:
+    """Builds a DataFrame with static node info (e.g. max generation per technology, etc.)"""
+
+    node_info = n.buses[['x', 'y', 'country']].copy()
+    generators_p_max = n.generators.p_nom_opt * n.generators.p_max_pu
+    generators_weighted_marginal_cost = n.generators.marginal_cost * generators_p_max
+    node_info['p_max_wind'] = n.generators.groupby(by=map_carrier)
+
+    node_info['mid_x'] = (node_info.bus1_x + node_info.bus0_x) / 2
+    node_info['mid_y'] = (node_info.bus1_y + node_info.bus0_y) / 2
+
+    node_info['s_max'] = n.lines.s_max_pu * n.lines.s_nom_opt
+
+    node_info[['direction', 'inverse_direction']] = get_line_direction(node_info)
+
+    return node_info
 
 
 def get_line_info(n: pypsa.Network) -> pd.DataFrame:
@@ -95,7 +134,7 @@ def create_traces(
         node_values: pd.Series,
         line_info_t: pd.DataFrame,
         cmax: float
-) -> (go.Trace, go.Trace, go.Trace):
+) -> (go.Trace, go.Trace, go.Trace, go.Trace):
     loaded_filter = line_info_t.line_loading > 99
     edges_x = get_line_edge(line_info_t, 'x')
     edges_y = get_line_edge(line_info_t, 'y')
@@ -131,6 +170,12 @@ def create_traces(
             angle=line_info_t.arrow_angle
         )
     )
+
+    hovertemplate = '\n'.join([
+        '<b>Generation</b>: $%{y:.2f}',
+        '<br><b>X</b>: %{x}<br>',
+        '<b>%{text}</b>'
+    ])
 
     node_trace = go.Scattermapbox(
         lon=nodes_x, lat=nodes_y,
@@ -224,10 +269,12 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
     nodes_x = n.buses.x.filter(node_values.columns)
     nodes_y = n.buses.y.filter(node_values.columns)
 
+    # node_info = get_node_info(n)
     line_info = get_line_info(n)
 
     # Create and add traces
     for i, snapshot in enumerate(snapshots):
+        # node_info_t = get_node_info_for_snapshot(n, line_info, snapshot)
         line_info_t = get_line_info_for_snapshot(n, line_info, snapshot)
 
         node_trace, loaded_lines_trace, easy_lines_trace, line_direction_trace = create_traces(
