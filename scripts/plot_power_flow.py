@@ -1,13 +1,18 @@
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.io as pio
 import pyproj
 import pypsa
-import plotly.io as pio
+import jsons
+
+from scripts.network_snapshot import NetworkSnapshot
 
 # For each snapshot, a figure has 4 traces
 # (the nodes, the loaded lines, the non-loaded lines,
 # and the power flow direction arrows)
+from scripts.node_info import NodeInfo
+
 NUM_TRACES_PER_SNAPSHOT = 4
 
 pio.templates.default = "plotly_dark"
@@ -132,6 +137,7 @@ def create_traces(
         nodes_x: pd.Series,
         nodes_y: pd.Series,
         node_values: pd.Series,
+        node_infos: 'pd.Series[NodeInfo]',
         line_info_t: pd.DataFrame,
         cmax: float
 ) -> (go.Trace, go.Trace, go.Trace, go.Trace):
@@ -172,17 +178,22 @@ def create_traces(
     )
 
     hovertemplate = '\n'.join([
-        '<b>Generation</b>: $%{y:.2f}',
-        '<br><b>X</b>: %{x}<br>',
-        '<b>%{text}</b>'
+        '<b>Coal</b>: %{customdata.generator_info.coal.p:.2f} MW<br>',
+        '<b>CCGT</b>: %{customdata.generator_info.CCGT.p:.2f} MW<br>',
+        '<b>OCGT</b>: %{customdata.generator_info.OCGT.p:.2f} MW<br>',
+        '<b>onwind</b>: %{customdata.generator_info.onwind.p:.2f} MW<br>',
+        '<b>solar</b>: %{customdata.generator_info.solar.p:.2f} MW<br>',
+        '<b>Load</b>: %{customdata.load_info.p:.2f} MW<br>',
     ])
 
     node_trace = go.Scattermapbox(
         lon=nodes_x, lat=nodes_y,
         mode='markers',
         hoverinfo='text',
+        customdata=np.array(node_infos.map(jsons.dump)),
+        hovertemplate=hovertemplate,
         visible=False,
-        text=node_values.astype(int).astype(str) + ' MW',
+        # text=node_infos.map(jsons.dump), # node_values.astype(int).astype(str) + ' MW',
         marker=go.scattermapbox.Marker(
             showscale=True,
             # colorscale options https://plotly.com/python/builtin-colorscales/
@@ -269,18 +280,18 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
     nodes_x = n.buses.x.filter(node_values.columns)
     nodes_y = n.buses.y.filter(node_values.columns)
 
-    # node_info = get_node_info(n)
     line_info = get_line_info(n)
 
     # Create and add traces
     for i, snapshot in enumerate(snapshots):
-        # node_info_t = get_node_info_for_snapshot(n, line_info, snapshot)
+        node_infos = NetworkSnapshot(n, snapshot).node_infos
         line_info_t = get_line_info_for_snapshot(n, line_info, snapshot)
 
         node_trace, loaded_lines_trace, easy_lines_trace, line_direction_trace = create_traces(
             nodes_x,
             nodes_y,
             node_values.loc[snapshot],
+            node_infos,
             line_info_t,
             cmax
         )

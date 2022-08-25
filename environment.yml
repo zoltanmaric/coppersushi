@@ -4,6 +4,7 @@ channels:
 dependencies:
   - python >= 3.10
   - pytest
+  - jsons
   - dash
   - dash-bootstrap-components
   - pypsa

@@ -4,22 +4,23 @@ import pypsa
 from typing import Dict
 
 
-class NodesQuery:
+class NetworkSnapshot:
     CARRIER_GROUPING = {
+        'coal': 'fossil',
+        'CCGT': 'fossil',
+        'OCGT': 'fossil',
+        'oil': 'fossil',
+        'lignite': 'fossil',
         'nuclear': 'nuclear',
         'geothermal': 'geothermal',
         'biomass': 'biomass',
-        'coal': 'fossil',
-        'CCGT': 'fossil',
-        'oil': 'fossil',
-        'lignite': 'fossil',
         'hydro': 'hydro',
+        'PHS': 'hydro',
+        'ror': 'hydro',
         'offwind-ac': 'wind',
         'offwind-dc': 'wind',
         'onwind': 'wind',
         'solar': 'solar',
-        'PHS': 'hydro',
-        'ror': 'hydro'
     }
 
     def __init__(self, network: pypsa.Network, snapshot: pd.Timestamp):
@@ -49,7 +50,6 @@ class NodesQuery:
         # 1005 solar       13.412731  0.708857
         generators_t = pd.concat([p, p_max_pu], axis='columns')
 
-        generators = self.n.generators[['p_nom_opt', 'bus', 'carrier']].copy()
         # Combine static and time-dependent generator quantities,
         # rename the 'bus' column to 'Bus' to match the node index name,
         # name the columns-axis 'quantities' to distinguish it from the
@@ -63,8 +63,9 @@ class NodesQuery:
         # 1005 offwind-ac   0.586715  1005  offwind-ac  0.023185  0.039598
         # 1005 onwind      33.994279  1005      onwind  1.555266  0.045753
         # 1005 solar       18.921727  1005       solar  0.000000  0.000000
-        return generators.join(generators_t)\
-            .rename({'bus': 'Bus'}, axis='columns')\
+        generators = self.n.generators[['p_nom_opt', 'bus', 'carrier']].join(generators_t)
+        generators['p_max'] = generators.p_max_pu * generators.p_nom_opt
+        return generators.rename({'bus': 'Bus'}, axis='columns')\
             .rename_axis('quantities', axis='columns')
 
     def _generators(self) -> pd.DataFrame:
@@ -81,18 +82,8 @@ class NodesQuery:
         # by carrier and then by quantites.
         #
         # Example:
-        # carrier          CCGT                     ... solar
-        # quantities          p p_max_pu p_nom_opt  ...     p p_max_pu   p_nom_opt
-        # Bus                                       ...
-        # 1004              NaN      NaN       NaN  ...   0.0      0.0   46.245459
-        # 1005              NaN      NaN       NaN  ...   0.0      0.0   18.921727
-        # 1007              NaN      NaN       NaN  ...   0.0      0.0   19.428718
-        # 1208        40.017872      NaN     476.0  ...   0.0      0.0  187.525893
-        # 1209         2.634353      NaN     400.0  ...   0.0      0.0  259.487093
-        return flat_generators.set_index(['Bus', 'carrier'])\
-            .unstack()\
-            .reorder_levels(['carrier', 'quantities'], axis='columns')\
-            .sort_index(axis='columns')
+        # TODO
+        return flat_generators.set_index(['Bus', 'carrier'])
 
     def _generators_by_carrier_group(self) -> pd.DataFrame:
         """Groups individual carriers by NodesQuery.CARRIER_GROUPING"""
@@ -104,7 +95,13 @@ class NodesQuery:
 
     @classmethod
     def _row_to_generators_info(cls, row):
-        return LoadInfo(row.p_load)
+        _bus, carrier = row.name
+        return carrier, GeneratorInfo(row.p, row.p_max_pu, row.p_nom_opt, row.p_max)
+
+    @classmethod
+    def _group_to_generators_dict(cls, group):
+        generator_infos_series = group.apply(cls._row_to_generators_info, axis='columns')
+        return dict(generator_infos_series.to_list())
 
     @classmethod
     def _to_node_info(cls, loads: pd.DataFrame, generators: pd.DataFrame) -> 'pd.Series[NodeInfo]':
@@ -114,12 +111,9 @@ class NodesQuery:
         :param generators: The local generators DataFrame
         :return: A pandas series of NodeInfo objects
         """
-        loads_infos: pd.Series[LoadInfo] = loads.apply(cls._row_to_load_info, axis='columns')
-        generators_infos: Dict[str, GeneratorInfo] = generators.apply(cls._row_to_generators_info, axis='columns')
-        return loads_infos.map(lambda load_info: NodeInfo(load_info, generators_infos))
-
-
-class NetworkQuery:
-    def __init__(self, network: pypsa.Network, snapshot: pd.Timestamp):
-        self.n = network
-        self.nodes = NodesQuery(network, snapshot)
+        load_infos: pd.Series[LoadInfo] = loads.apply(cls._row_to_load_info, axis='columns').rename('load_info')
+        generator_infos: pd.Series[Dict[str, GeneratorInfo]] =\
+            generators.groupby(level='Bus').apply(cls._group_to_generators_dict).rename('generator_info')
+        node_infos = pd.DataFrame([load_infos, generator_infos]).\
+            apply(lambda row: NodeInfo(row.load_info, row.generator_info))
+        return node_infos

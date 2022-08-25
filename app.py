@@ -11,12 +11,10 @@ app = Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 server = app.server
 
 n = pypsa.Network('networks/elec_s_all_ec_lv1.01_2H.nc')
-fig = ppf.colored_network_figure(n, 'generation')
+fig = ppf.colored_network_figure(n, 'net_power')
 fig.update_layout(
     mapbox=dict(center=go.layout.mapbox.Center(lat=53, lon=9), zoom=3.9, pitch=60)
 )
-
-pd.DataFrame
 
 app.layout = html.Div([
     dcc.Graph(
