@@ -8,3 +8,4 @@ dependencies:
   - dash-bootstrap-components
   - pypsa
   - gunicorn  # For deploying to Heroku
+  - snakeviz  # For visualising cProfile results
