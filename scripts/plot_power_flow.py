@@ -132,8 +132,7 @@ def get_line_edge(line_info: pd.DataFrame, x_or_y: str) -> pd.Series:
     return line_info.apply(lambda row: [row['bus0_' + x_or_y], row['bus1_' + x_or_y], None], axis='columns')
 
 
-def generators_to_html(group: pd.core.groupby.DataFrameGroupBy) -> 'pd.Series[str]':
-    rows = group.apply(lambda row: f'<b>{row.name[1]}</b>: {row.p:.2f} MW<br>', axis='columns')
+def generators_to_html(rows: 'pd.Series[str]') -> str:
     generators_html = '<b>Generation:</b><br>' + '\n<b>+</b> '.join(rows)
 
     return generators_html
@@ -152,7 +151,8 @@ def combine_htmls(row: 'pd.Series[str]') -> str:
 
 
 def get_tooltip_htmls(ns: NetworkSnapshot) -> 'pd.Series[str]':
-    generator_htmls = ns.generators.groupby('Bus').apply(generators_to_html).rename('generator')
+    generator_htmls = ns.generators.apply(lambda row: f'<b>{row.name[1]}</b>: {row.p:.2f} MW<br>', axis='columns')\
+        .groupby('Bus').aggregate(generators_to_html).rename('generator')
     load_htmls = ns.loads.apply(lambda row: f'<b>- Load</b>: {row.p_load:.2f} MW<br>', axis='columns').rename('load')
     net_power_htmls = ns.buses.apply(lambda row: f'Net power: {row.p:.2f} MW', axis='columns').rename('net_p')
     htmls = pd.concat([generator_htmls, load_htmls, net_power_htmls], axis='columns').apply(combine_htmls, axis='columns')
