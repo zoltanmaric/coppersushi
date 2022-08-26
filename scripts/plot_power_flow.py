@@ -200,7 +200,7 @@ def create_traces(
         )
     )
 
-    node_powers = ns.buses.apply(lambda bus: bus.p, axis='columns')
+    node_powers = ns.buses.sort_index().apply(lambda bus: bus.p, axis='columns')
     node_sizes = node_powers.abs()
     node_max_size = 11
     tooltips_htmls = get_tooltip_htmls(ns)
@@ -209,7 +209,7 @@ def create_traces(
         mode='markers',
         hoverinfo='text',
         visible=False,
-        text=tooltips_htmls,
+        text=tooltips_htmls.sort_index(),
         marker=go.scattermapbox.Marker(
             showscale=True,
             # colorscale options https://plotly.com/python/builtin-colorscales/
