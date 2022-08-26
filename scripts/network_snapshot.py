@@ -63,7 +63,8 @@ class NetworkSnapshot:
         generators = self.n.generators[['p_nom_opt', 'bus', 'carrier']].join(generators_t)
         generators['p_max'] = generators.p_max_pu * generators.p_nom_opt
         # Map the carriers to a nice name
-        generators['carrier'] = generators.carrier.map(lambda c: self.n.carriers.loc[c].nice_name)
+        nice_name_mapping = self.n.carriers['nice_name'].to_dict()
+        generators['carrier'] = generators.carrier.map(nice_name_mapping)
 
         # Rename the 'bus' column to 'Bus' to match the node index name,
         # name the columns-axis 'quantities' to distinguish it from the
