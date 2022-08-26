@@ -1,6 +1,6 @@
 # Copper Sushi 🍣
 ## A Power System Analysis and Visualisation Tool
-![](copper-sushi-screenshot.png)
+![](assets/coppersushi-gif.gif)
 
 A simple Plotly/Dash web app for visualising power flow optimisation
 solutions  from [`pypsa-eur`](https://github.com/PyPSA/pypsa-eur).
