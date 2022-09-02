@@ -151,6 +151,7 @@ def combine_htmls(row: 'pd.Series[str]') -> str:
         generator = '' if pd.isna(row.generator) else row.generator
         load = '<b>- Load</b>: 0 MW<br>' if pd.isna(row.load) else row.load
         return ''.join([
+            f'<b>Node {row.name}</b><br>',
             generator,
             '--<br>',
             load,
@@ -163,7 +164,8 @@ def get_tooltip_htmls(ns: NetworkSnapshot) -> 'pd.Series[str]':
     generator_htmls = ns.generators.apply(lambda row: f'<b>{row.name[1]}</b>: {row.p:.2f} MW<br>', axis='columns')\
         .groupby('Bus').aggregate(generators_to_html).rename('generator')
     load_htmls = ns.loads.apply(lambda row: f'<b>- Load</b>: {row.p_load:.2f} MW<br>', axis='columns').rename('load')
-    net_power_htmls = ns.buses.apply(lambda row: f'Net power: {row.p:.2f} MW', axis='columns').rename('net_p')
+    net_power_htmls = ns.buses.apply(lambda row: f'Net power: {row.p:.2f} MW | {row.y}, {row.x}', axis='columns')\
+        .rename('net_p')
     htmls = pd.concat([generator_htmls, load_htmls, net_power_htmls], axis='columns').apply(combine_htmls, axis='columns').rename('html')
     return htmls
 
@@ -194,12 +196,14 @@ def create_traces(
         visible=False
     )
 
+    lit = line_info_t
+    coordinates = 'bus0: ' + lit.bus0_y.astype(str) + ', ' + lit.bus0_x.astype(str) + '<br>bus1: ' + lit.bus1_y.astype(str) + ', ' + lit.bus1_x.astype(str) + '<br>'
     line_direction_trace = go.Scattermapbox(
         lon=line_info_t.mid_x, lat=line_info_t.mid_y,
         mode='markers',
         hoverinfo='text',
         visible=False,
-        text='<b>Flow:</b> ' + abs(line_info_t.p0).astype(int).astype(str) + '/' + line_info_t.s_max.astype(int).astype(str) + ' MW',
+        text='<b>Line ' + lit.index + '</b><br>' + coordinates + ' <b>Flow:</b> ' + abs(line_info_t.p0).astype(int).astype(str) + '/' + line_info_t.s_max.astype(int).astype(str) + ' MW',
         marker=go.scattermapbox.Marker(
             size=7,
             # List of available markers:
