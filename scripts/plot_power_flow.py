@@ -142,12 +142,15 @@ def combine_htmls(row: 'pd.Series[str]') -> str:
     if pd.isna(row.generator) and pd.isna(row.load):
         return row.net_p
     else:
-        return f"""{row.generator}
---<br>
-{row.load}
-===<br>
-<b>= {row.net_p}</b>
-"""
+        generator = '' if pd.isna(row.generator) else row.generator
+        load = '<b>- Load</b>: 0 MW<br>' if pd.isna(row.load) else row.load
+        return ''.join([
+            generator,
+            '--<br>',
+            load,
+            '===<br>',
+            f'<b>= {row.net_p}</b>'
+        ])
 
 
 def get_tooltip_htmls(ns: NetworkSnapshot) -> 'pd.Series[str]':
