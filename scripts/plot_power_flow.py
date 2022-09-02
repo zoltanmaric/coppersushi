@@ -128,6 +128,12 @@ def get_line_info_for_snapshot(n: pypsa.Network, line_info: pd.DataFrame, snapsh
     return line_info_t
 
 
+def get_node_info_for_snapshot(n: pypsa.Network, snapshot: pd.Timestamp) -> pd.DataFrame:
+    ns = NetworkSnapshot(n, snapshot)
+    tooltips_htmls = get_tooltip_htmls(ns)
+    return pd.concat([ns.buses, tooltips_htmls], axis='columns')
+
+
 def get_line_edge(line_info: pd.DataFrame, x_or_y: str) -> pd.Series:
     return line_info.apply(lambda row: [row['bus0_' + x_or_y], row['bus1_' + x_or_y], None], axis='columns')
 
@@ -158,12 +164,12 @@ def get_tooltip_htmls(ns: NetworkSnapshot) -> 'pd.Series[str]':
         .groupby('Bus').aggregate(generators_to_html).rename('generator')
     load_htmls = ns.loads.apply(lambda row: f'<b>- Load</b>: {row.p_load:.2f} MW<br>', axis='columns').rename('load')
     net_power_htmls = ns.buses.apply(lambda row: f'Net power: {row.p:.2f} MW', axis='columns').rename('net_p')
-    htmls = pd.concat([generator_htmls, load_htmls, net_power_htmls], axis='columns').apply(combine_htmls, axis='columns')
+    htmls = pd.concat([generator_htmls, load_htmls, net_power_htmls], axis='columns').apply(combine_htmls, axis='columns').rename('html')
     return htmls
 
 
 def create_traces(
-        ns: NetworkSnapshot,
+        node_info_t: pd.DataFrame,
         line_info_t: pd.DataFrame,
         cmax: float
 ) -> (go.Trace, go.Trace, go.Trace, go.Trace):
@@ -203,28 +209,25 @@ def create_traces(
         )
     )
 
-    node_powers = ns.buses.sort_index().apply(lambda bus: bus.p, axis='columns')
-    node_sizes = node_powers.abs()
     node_max_size = 11
-    tooltips_htmls = get_tooltip_htmls(ns)
     node_trace = go.Scattermapbox(
-        lon=ns.buses.apply(lambda bus: bus.x, axis='columns'), lat=ns.buses.apply(lambda bus: bus.y, axis='columns'),
+        lon=node_info_t.x, lat=node_info_t.y,
         mode='markers',
         hoverinfo='text',
         visible=False,
-        text=tooltips_htmls.sort_index(),
+        text=node_info_t.html,
         marker=go.scattermapbox.Marker(
             showscale=True,
             # colorscale options https://plotly.com/python/builtin-colorscales/
             colorscale='tropic',
             reversescale=True,
-            color=node_powers,
+            color=node_info_t.p,
             cmin=-cmax,
             cmax=cmax,
-            size=node_sizes,
+            size=node_info_t.p.abs(),
             sizemin=2.5,
             sizemode='area',
-            sizeref=node_sizes.max() / node_max_size ** 2,
+            sizeref=node_info_t.p.abs().max() / node_max_size ** 2,
             colorbar=go.scattermapbox.marker.ColorBar(
                 thickness=15,
                 title='Net Power Feed-In at Node [MW]',
@@ -303,11 +306,11 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
 
     # Create and add traces
     for i, snapshot in enumerate(snapshots):
-        ns = NetworkSnapshot(n, snapshot)
+        node_info_t = get_node_info_for_snapshot(n, snapshot)
         line_info_t = get_line_info_for_snapshot(n, line_info, snapshot)
 
         node_trace, loaded_lines_trace, easy_lines_trace, line_direction_trace = create_traces(
-            ns,
+            node_info_t,
             line_info_t,
             cmax
         )
