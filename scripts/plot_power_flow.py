@@ -42,12 +42,12 @@ def get_curtailed_power(n: pypsa.Network, tech_regex: str = None) -> pd.Series:
 
 
 def get_bus_coordinates(n: pypsa.Network, bus_name: str) -> pd.DataFrame:
-    return n.buses.loc[n.lines[bus_name]][['x', 'y']] \
-            .set_index(n.lines.index) \
+    return n.buses.loc[n.branches()[bus_name]][['x', 'y']] \
+            .set_index(n.branches().index) \
             .rename(dict(x=bus_name+'_x', y=bus_name+'_y'), axis='columns')
 
 
-def get_line_direction(line_info: pd.DataFrame) -> float:
+def get_branch_direction(line_info: pd.DataFrame) -> float:
     """Line power flow direction angle (clockwise from North)"""
 
     # Mercator projection, as used by MapBox: https://docs.mapbox.com/mapbox-gl-js/example/projections/
@@ -95,37 +95,42 @@ def get_node_info(n: pypsa.Network) -> pd.DataFrame:
     node_info['mid_x'] = (node_info.bus1_x + node_info.bus0_x) / 2
     node_info['mid_y'] = (node_info.bus1_y + node_info.bus0_y) / 2
 
-    node_info['s_max'] = n.lines.s_max_pu * n.lines.s_nom_opt
-
-    node_info[['direction', 'inverse_direction']] = get_line_direction(node_info)
+    node_info[['direction', 'inverse_direction']] = get_branch_direction(node_info)
 
     return node_info
 
 
-def get_line_info(n: pypsa.Network) -> pd.DataFrame:
+def get_branch_info(n: pypsa.Network) -> pd.DataFrame:
     """Builds a DataFrame with edge & middle point coordinates, power flow direction angles for each line."""
     bus0_coordinates = get_bus_coordinates(n, 'bus0')
     bus1_coordinates = get_bus_coordinates(n, 'bus1')
-    line_info = pd.concat([bus0_coordinates, bus1_coordinates], axis='columns')
+    branch_info = pd.concat([bus0_coordinates, bus1_coordinates], axis='columns')
 
-    line_info['mid_x'] = (line_info.bus1_x + line_info.bus0_x) / 2
-    line_info['mid_y'] = (line_info.bus1_y + line_info.bus0_y) / 2
+    branch_info['mid_x'] = (branch_info.bus1_x + branch_info.bus0_x) / 2
+    branch_info['mid_y'] = (branch_info.bus1_y + branch_info.bus0_y) / 2
 
-    line_info['s_max'] = n.lines.s_max_pu * n.lines.s_nom_opt
+    # Lines have apparent power (s) set
+    branch_info['p_max'] = n.branches().s_max_pu * n.branches().s_nom_opt
+    # Links have real power (p) set
+    branch_info.p_max.fillna(n.branches().p_max_pu * n.branches().p_nom_opt, inplace=True)
 
-    line_info[['direction', 'inverse_direction']] = get_line_direction(line_info)
+    branch_info[['direction', 'inverse_direction']] = get_branch_direction(branch_info)
 
-    return line_info
+    return branch_info
 
 
-def get_line_info_for_snapshot(n: pypsa.Network, line_info: pd.DataFrame, snapshot: str) -> pd.DataFrame:
-    line_info_t = pd.concat([line_info, n.lines_t.p0.loc[snapshot].rename('p0')], axis='columns')
-    line_info_t['line_loading'] = abs(line_info_t.p0) / line_info_t.s_max * 100
-    line_info_t['arrow_angle'] = line_info_t.apply(
+def get_branch_info_for_snapshot(n: pypsa.Network, branch_info: pd.DataFrame, snapshot: str) -> pd.DataFrame:
+    branch_info_t = branch_info.copy()
+    lines_t_p0 = n.lines_t.p0.loc[snapshot]
+    branch_info_t.loc[('Line', lines_t_p0.index), 'p0'] = lines_t_p0.values
+    links_t_p0 = n.links_t.p0.loc[snapshot]
+    branch_info_t.loc[('Link', links_t_p0.index), 'p0'] = links_t_p0.values
+    branch_info_t['branch_loading'] = abs(branch_info_t.p0) / branch_info_t.p_max * 100
+    branch_info_t['arrow_angle'] = branch_info_t.apply(
         lambda row: row.direction if row.p0 >= 0 else row.inverse_direction, axis='columns'
     )
 
-    return line_info_t
+    return branch_info_t
 
 
 def get_node_info_for_snapshot(n: pypsa.Network, snapshot: pd.Timestamp) -> pd.DataFrame:
@@ -134,7 +139,7 @@ def get_node_info_for_snapshot(n: pypsa.Network, snapshot: pd.Timestamp) -> pd.D
     return pd.concat([ns.buses, tooltips_htmls], axis='columns')
 
 
-def get_line_edge(line_info: pd.DataFrame, x_or_y: str) -> pd.Series:
+def get_branch_edge(line_info: pd.DataFrame, x_or_y: str) -> pd.Series:
     return line_info.apply(lambda row: [row['bus0_' + x_or_y], row['bus1_' + x_or_y], None], axis='columns')
 
 
@@ -170,14 +175,14 @@ def get_tooltip_htmls(ns: NetworkSnapshot) -> 'pd.Series[str]':
 
 def create_traces(
         node_info_t: pd.DataFrame,
-        line_info_t: pd.DataFrame,
+        branch_info_t: pd.DataFrame,
         cmax: float
 ) -> (go.Trace, go.Trace, go.Trace, go.Trace):
-    loaded_filter = line_info_t.line_loading > 99
-    edges_x = get_line_edge(line_info_t, 'x')
-    edges_y = get_line_edge(line_info_t, 'y')
+    loaded_filter = branch_info_t.branch_loading > 99
+    edges_x = get_branch_edge(branch_info_t, 'x')
+    edges_y = get_branch_edge(branch_info_t, 'y')
 
-    loaded_lines_trace = go.Scattermapbox(
+    loaded_branches_trace = go.Scattermapbox(
         lon=edges_x[loaded_filter].dropna().explode(), lat=edges_y[loaded_filter].dropna().explode(),
         # line=dict(width=4.0, color='#f52ad0'),  # pink
         line=dict(width=4.0, color='#a72af5'),  # violet
@@ -186,7 +191,7 @@ def create_traces(
         visible=False
     )
 
-    easy_lines_trace = go.Scattermapbox(
+    easy_branches_trace = go.Scattermapbox(
         lon=edges_x[(~loaded_filter)].dropna().explode(), lat=edges_y[(~loaded_filter)].dropna().explode(),
         line=dict(width=0.5, color='gray'),
         hoverinfo='none',
@@ -194,18 +199,18 @@ def create_traces(
         visible=False
     )
 
-    line_direction_trace = go.Scattermapbox(
-        lon=line_info_t.mid_x, lat=line_info_t.mid_y,
+    branch_direction_trace = go.Scattermapbox(
+        lon=branch_info_t.mid_x, lat=branch_info_t.mid_y,
         mode='markers',
         hoverinfo='text',
         visible=False,
-        text='<b>Flow:</b> ' + abs(line_info_t.p0).astype(int).astype(str) + '/' + line_info_t.s_max.astype(int).astype(str) + ' MW',
+        text='<b>Flow:</b> ' + abs(branch_info_t.p0).astype(int).astype(str) + '/' + branch_info_t.p_max.astype(int).astype(str) + ' MW',
         marker=go.scattermapbox.Marker(
             size=7,
             # List of available markers:
             # https://community.plotly.com/t/how-to-add-a-custom-symbol-image-inside-map/6641/2
             symbol='triangle',
-            angle=line_info_t.arrow_angle
+            angle=branch_info_t.arrow_angle
         )
     )
 
@@ -244,7 +249,7 @@ def create_traces(
         )
     )
 
-    return node_trace, loaded_lines_trace, easy_lines_trace, line_direction_trace
+    return node_trace, loaded_branches_trace, easy_branches_trace, branch_direction_trace
 
 
 def get_interquartile_range(df: pd.DataFrame) -> pd.DataFrame:
@@ -302,20 +307,20 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
     iqr_min, iqr_max = get_interquartile_range(node_values)
     cmax = max(abs(iqr_min), abs(iqr_max))
 
-    line_info = get_line_info(n)
+    branch_info = get_branch_info(n)
 
     # Create and add traces
     for i, snapshot in enumerate(snapshots):
         node_info_t = get_node_info_for_snapshot(n, snapshot)
-        line_info_t = get_line_info_for_snapshot(n, line_info, snapshot)
+        branch_info_t = get_branch_info_for_snapshot(n, branch_info, snapshot)
 
-        node_trace, loaded_lines_trace, easy_lines_trace, line_direction_trace = create_traces(
+        node_trace, loaded_branches_trace, easy_branches_trace, branch_direction_trace = create_traces(
             node_info_t,
-            line_info_t,
+            branch_info_t,
             cmax
         )
         # Node annotation pop-ups only show if `node_trace` is added last
-        fig.add_traces(data=[loaded_lines_trace, easy_lines_trace, line_direction_trace, node_trace])
+        fig.add_traces(data=[loaded_branches_trace, easy_branches_trace, branch_direction_trace, node_trace])
 
     # Make first set of traces (nodes & edges) visible
     fig = show_snapshot(fig, snapshot_index=0)

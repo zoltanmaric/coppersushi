@@ -12,17 +12,32 @@ class TestPlotPowerFlow:
     def n(self):
         return pypsa.Network('networks/elec_s_all_ec_lv1.01_2H.nc')
 
-    def test_get_line_info(self, n):
-        line_info = ppf.get_line_info(n)
-        line = line_info.loc['11274']
+    def test_get_branch_info_for_snapshot(self, n):
+        branch_info = ppf.get_branch_info(n)
+        snapshot = n.snapshots[6]  # Midday
+        branch_info_t = ppf.get_branch_info_for_snapshot(n, branch_info, snapshot)
+
+        line = branch_info_t.loc['Line', '11274']
         assert line.bus0_x == approx(10.2997, abs=0.0001)
         assert line.bus0_y == approx(52.2867, abs=0.0001)
 
         assert line.bus1_x == approx(10.4521, abs=0.0001)
         assert line.bus1_y == approx(52.2589, abs=0.0001)
 
-        # s_max should equal s_nom_opt * s_max_pu
-        assert line.s_max == approx(3396.21 * 0.7, abs=0.01)
+        # p_max should equal s_nom_opt * s_max_pu for lines,
+        # and p_nom_opt * p_max_pu for links
+        assert line.p_max == approx(3396.21 * 0.7, abs=0.01)
+
+        link = branch_info_t.loc['Link', 'T22']
+        assert link.bus0_x == approx(0.7636, abs=0.0001)
+        assert link.bus0_y == approx(51.4035, abs=0.0001)
+
+        assert link.bus1_x == approx(8.0008, abs=0.0001)
+        assert link.bus1_y == approx(53.5558, abs=0.0001)
+
+        # p_max should equal s_nom_opt * s_max_pu for lines,
+        # and p_nom_opt * p_max_pu for links
+        assert link.p_max == approx(0.0002 * 1.0, abs=0.0001)
 
     def test_get_node_info_for_snapshot(self, n):
         node_info_t = ppf.get_node_info_for_snapshot(n, n.snapshots[6])
