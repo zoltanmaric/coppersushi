@@ -28,7 +28,7 @@ app.layout = html.Div([
             0,
             len(n.snapshots) - 1,
             step=1,
-            value=0,
+            value=6,  # Use the midday snapshot by default
             marks={
                 idx: dict(
                     label=str(snapshot.time()),
