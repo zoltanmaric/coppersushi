@@ -90,12 +90,19 @@ def get_branch_info(n: pypsa.Network) -> pd.DataFrame:
     return branch_info
 
 
-def get_branch_info_for_snapshot(n: pypsa.Network, branch_info: pd.DataFrame, snapshot: str) -> pd.DataFrame:
-    branch_info_t = branch_info.copy()
-    lines_t_p0 = n.lines_t.p0.loc[snapshot]
-    branch_info_t.loc[('Line', lines_t_p0.index), 'p0'] = lines_t_p0.values
-    links_t_p0 = n.links_t.p0.loc[snapshot]
-    branch_info_t.loc[('Link', links_t_p0.index), 'p0'] = links_t_p0.values
+def to_branches_by_component_and_name(
+        branches: pd.DataFrame, snapshot: pd.Timestamp, component: str, quantity: str) -> pd.DataFrame:
+    """Indexes the given series by component (Link or Line) and branch name"""
+    df = branches[quantity].loc[snapshot].rename(quantity).rename_axis('name').to_frame()
+    df['component'] = component
+    return df.set_index('component', append=True).reorder_levels(['component', 'name'])
+
+
+def get_branch_info_for_snapshot(n: pypsa.Network, branch_info: pd.DataFrame, snapshot: pd.Timestamp) -> pd.DataFrame:
+    lines_t_p0 = to_branches_by_component_and_name(n.lines_t, snapshot, 'Line', 'p0')
+    links_t_p0 = to_branches_by_component_and_name(n.links_t, snapshot, 'Link', 'p0')
+    branch_info_t = branch_info.join(pd.concat([lines_t_p0, links_t_p0]))
+
     branch_info_t['branch_loading'] = abs(branch_info_t.p0) / branch_info_t.p_max * 100
     branch_info_t['arrow_angle'] = branch_info_t.apply(
         lambda row: row.direction if row.p0 >= 0 else row.inverse_direction, axis='columns'

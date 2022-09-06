@@ -1,6 +1,6 @@
 # Copper Sushi 🍣
 ## A Power System Analysis and Visualisation Tool
-![](assets/coppersushi-gif.gif)
+[![](assets/coppersushi-gif.gif)](https://121gigawatts.org/copper-sushi-power-flow-european-grid/)
 
 A simple Plotly/Dash web app for visualising power flow optimisation
 solutions  from [`pypsa-eur`](https://github.com/PyPSA/pypsa-eur).
@@ -40,3 +40,13 @@ heroku container:push web
 heroku container:release web
 ```
 (based on https://github.com/heroku-examples/python-miniconda)
+
+
+## Performance Profiling
+Run the following to show a [`snakeviz`](https://jiffyclub.github.io/snakeviz/) chart
+of function call durations in your browser.
+```bash
+PYTHONPATH=. python profiling/profiling.py
+snakeviz profiling/plot.prof
+```
+![](assets/Profiling.png)
