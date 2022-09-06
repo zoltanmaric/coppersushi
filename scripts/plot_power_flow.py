@@ -10,8 +10,6 @@ from scripts.network_snapshot import NetworkSnapshot
 # For each snapshot, a figure has 4 traces
 # (the nodes, the loaded lines, the non-loaded lines,
 # and the power flow direction arrows)
-from scripts.node_info import NodeInfo
-
 NUM_TRACES_PER_SNAPSHOT = 4
 
 pio.templates.default = "plotly_dark"
@@ -47,57 +45,31 @@ def get_bus_coordinates(n: pypsa.Network, bus_name: str) -> pd.DataFrame:
             .rename(dict(x=bus_name+'_x', y=bus_name+'_y'), axis='columns')
 
 
-def get_branch_direction(line_info: pd.DataFrame) -> float:
-    """Line power flow direction angle (clockwise from North)"""
-
-    # Mercator projection, as used by MapBox: https://docs.mapbox.com/mapbox-gl-js/example/projections/
-    geodesic = pyproj.Geod(ellps='WGS84')
-    directions = line_info.apply(
-        lambda row: pd.Series(
-            list(geodesic.inv(row.bus0_x, row.bus0_y, row.bus1_x, row.bus1_y))[0:2],
-            index=['direction', 'inverse_direction']
-        ),
-        axis='columns'
-    )
-
-    return directions
+# Mercator projection, as used by MapBox: https://docs.mapbox.com/mapbox-gl-js/example/projections/
+epsg3857 = pyproj.Proj('epsg:3857')
 
 
-def map_carrier(row: pd.Series) -> str:
-    grouping = {
-        'nuclear': 'nuclear',
-        'geothermal': 'geothermal',
-        'biomass': 'biomass',
-        'coal': 'fossil',
-        'CCGT': 'fossil',
-        'oil': 'fossil',
-        'lignite': 'fossil',
-        'hydro': 'hydro',
-        'offwind-ac': 'wind',
-        'offwind-dc': 'wind',
-        'onwind': 'wind',
-        'solar': 'solar',
-        'PHS': 'hydro',
-        'ror': 'hydro'
-    }
+def get_branch_midpoint(branch: pd.Series) -> pd.Series:
+    """Project lat/lon of branch buses to x/y coordinates,
+    calculate mid-point between them,
+    project mid-point back to lat/lon coordinates."""
 
-    return grouping[row.carrier]
+    x0, y0 = epsg3857(longitude=branch.bus0_x, latitude=branch.bus0_y)
+    x1, y1 = epsg3857(longitude=branch.bus1_x, latitude=branch.bus1_y)
+    mid_x = (x0 + x1) / 2
+    mid_y = (y0 + y1) / 2
+    mid_lon, mid_lat = epsg3857(longitude=mid_x, latitude=mid_y, inverse=True)
+
+    return pd.Series([mid_lon, mid_lat], index=['mid_x', 'mid_y'])
 
 
-def get_node_info(n: pypsa.Network) -> pd.DataFrame:
-    """Builds a DataFrame with static node info (e.g. max generation per technology, etc.)"""
+geodesic = pyproj.Geod(ellps='WGS84')
 
-    node_info = n.buses[['x', 'y', 'country']].copy()
-    generators_p_max = n.generators.p_nom_opt * n.generators.p_max_pu
-    generators_weighted_marginal_cost = n.generators.marginal_cost * generators_p_max
-    node_info['p_max_wind'] = n.generators.groupby(by=map_carrier)
 
-    node_info['mid_x'] = (node_info.bus1_x + node_info.bus0_x) / 2
-    node_info['mid_y'] = (node_info.bus1_y + node_info.bus0_y) / 2
-
-    node_info[['direction', 'inverse_direction']] = get_branch_direction(node_info)
-
-    return node_info
+def get_branch_direction(branch: pd.Series) -> pd.Series:
+    """Branch power flow direction angle (clockwise from North)"""
+    [direction, inverse_direction, _] = geodesic.inv(branch.bus0_x, branch.bus0_y, branch.bus1_x, branch.bus1_y)
+    return pd.Series([direction, inverse_direction], index=['direction', 'inverse_direction'])
 
 
 def get_branch_info(n: pypsa.Network) -> pd.DataFrame:
@@ -106,15 +78,14 @@ def get_branch_info(n: pypsa.Network) -> pd.DataFrame:
     bus1_coordinates = get_bus_coordinates(n, 'bus1')
     branch_info = pd.concat([bus0_coordinates, bus1_coordinates], axis='columns')
 
-    branch_info['mid_x'] = (branch_info.bus1_x + branch_info.bus0_x) / 2
-    branch_info['mid_y'] = (branch_info.bus1_y + branch_info.bus0_y) / 2
+    branch_info[['mid_x', 'mid_y']] = branch_info.apply(get_branch_midpoint, axis='columns')
 
     # Lines have apparent power (s) set
     branch_info['p_max'] = n.branches().s_max_pu * n.branches().s_nom_opt
     # Links have real power (p) set
     branch_info.p_max.fillna(n.branches().p_max_pu * n.branches().p_nom_opt, inplace=True)
 
-    branch_info[['direction', 'inverse_direction']] = get_branch_direction(branch_info)
+    branch_info[['direction', 'inverse_direction']] = branch_info.apply(get_branch_direction, axis='columns')
 
     return branch_info
 
@@ -335,6 +306,7 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
                       # Only required for mapbox styles
                       mapbox_accesstoken=mapbox_token
                       )
+    fig.update_geos(projection_type='mercator')
 
     return fig
 
