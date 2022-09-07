@@ -45,19 +45,25 @@ class NetworkSnapshot:
         power_series = self.n.loads_t.p.loc[self.snapshot].rename('p_load')
         return pd.DataFrame(power_series).rename_axis('Bus', axis='index')
 
-    def _flat_generators(self):
+    def _flat_generators(self) -> pd.DataFrame:
         p = self.n.generators_t.p.loc[self.snapshot].rename('p')
-        p_max_pu = self.n.generators_t.p_max_pu.loc[self.snapshot].rename('p_max_pu')
+        # Conventional (fuel-based) generators have a static `p_max_pu` defined in `n.generators`
+        generators_t = pd.concat([p, self.n.generators.p_max_pu], axis='columns')
+        # Stochastic (variable max-output) generators have time-varying `p_max_pu`
+        p_max_pu_t = self.n.generators_t.p_max_pu.loc[self.snapshot].rename('p_max_pu')
         # Collect time-dependent quantities into a single dataframe
         # Example:
-        #                          p  p_max_pu
+        #                           p  p_max_pu
         # Generator
-        # 1004 onwind       0.000000  0.000000
-        # 1004 solar       32.479277  0.702325
-        # 1005 offwind-ac   0.032157  0.054890
-        # 1005 onwind       2.965762  0.087245
-        # 1005 solar       13.412731  0.708857
-        generators_t = pd.concat([p, p_max_pu], axis='columns')
+        # 1005 offwind-ac    0.032157  0.054890
+        # 1005 onwind        2.965762  0.087245
+        # 1005 solar        13.412731  0.708857
+        # 1007 onwind        0.475238  0.030851
+        # 1007 solar        13.695209  0.704899
+        # 1208 CCGT        475.987540  1.000000
+        # 1208 offwind-ac    0.000000  0.276911
+        # 1208 offwind-dc    0.000000  0.753669
+        generators_t.update(p_max_pu_t)
 
         # Combine static and time-dependent generator quantities
         generators = self.n.generators[['p_nom_opt', 'bus', 'carrier']].join(generators_t)

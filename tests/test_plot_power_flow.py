@@ -41,15 +41,19 @@ class TestPlotPowerFlow:
 
     def test_get_node_info_for_snapshot(self, n):
         node_info_t = ppf.get_node_info_for_snapshot(n, n.snapshots[6])
-        node = node_info_t.loc['4977']
-        assert node.x == approx(0.9586, abs=0.0001)
-        assert node.y == approx(51.0595, abs=0.0001)
-        assert node.p == approx(2636.09, abs=0.01)
-        assert re.search(r'Nuclear.*750.40 MW', node.html) is not None
-        assert re.search(r'Offshore Wind.*0.04 MW', node.html) is not None
-        assert re.search(r'Onshore Wind.*0.69 MW', node.html) is not None
-        assert re.search(r'Solar[^$]*37.73 MW', node.html) is not None
-        assert re.search(r'Load[^$]*131.57 MW', node.html) is not None
+        node = node_info_t.loc['5624']
+
+        assert node.x == approx(11.3187, abs=0.0001)
+        assert node.y == approx(55.5504, abs=0.0001)
+        assert node.p == approx(485.24, abs=0.01)
+
+        assert re.search(r'Coal.*127.35/147.00 MW', node.html) is not None
+        assert re.search(r'Offshore Wind \(AC\).*1.93/1.93 MW', node.html) is not None
+        assert re.search(r'Offshore Wind \(DC\).*1.92/1.92 MW', node.html) is not None
+        assert re.search(r'Onshore Wind.*95.20/95.20 MW', node.html) is not None
+        assert re.search(r'Solar.*86.32/86.32 MW', node.html) is not None
+
+        assert re.search(r'Load.*204.94 MW', node.html) is not None
 
     def test_colored_network_figure(self, n):
         fig = ppf.colored_network_figure(n, 'net_power')
