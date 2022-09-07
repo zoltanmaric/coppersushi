@@ -1,3 +1,5 @@
+from typing import Tuple, Any
+
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -49,27 +51,28 @@ def get_bus_coordinates(n: pypsa.Network, bus_name: str) -> pd.DataFrame:
 epsg3857 = pyproj.Proj('epsg:3857')
 
 
-def get_branch_midpoint(branch: pd.Series) -> pd.Series:
+def get_branch_midpoint(branch_info: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
     """Project lat/lon of branch buses to x/y coordinates,
     calculate mid-point between them,
     project mid-point back to lat/lon coordinates."""
 
-    x0, y0 = epsg3857(longitude=branch.bus0_x, latitude=branch.bus0_y)
-    x1, y1 = epsg3857(longitude=branch.bus1_x, latitude=branch.bus1_y)
+    x0, y0 = epsg3857(longitude=branch_info.bus0_x, latitude=branch_info.bus0_y)
+    x1, y1 = epsg3857(longitude=branch_info.bus1_x, latitude=branch_info.bus1_y)
     mid_x = (x0 + x1) / 2
     mid_y = (y0 + y1) / 2
     mid_lon, mid_lat = epsg3857(longitude=mid_x, latitude=mid_y, inverse=True)
 
-    return pd.Series([mid_lon, mid_lat], index=['mid_x', 'mid_y'])
+    return mid_lon, mid_lat
 
 
 geodesic = pyproj.Geod(ellps='WGS84')
 
 
-def get_branch_direction(branch: pd.Series) -> pd.Series:
+def get_branch_direction(branch_info: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
     """Branch power flow direction angle (clockwise from North)"""
-    [direction, inverse_direction, _] = geodesic.inv(branch.bus0_x, branch.bus0_y, branch.bus1_x, branch.bus1_y)
-    return pd.Series([direction, inverse_direction], index=['direction', 'inverse_direction'])
+    [direction, inverse_direction, _] = \
+        geodesic.inv(branch_info.bus0_x, branch_info.bus0_y, branch_info.bus1_x, branch_info.bus1_y)
+    return direction, inverse_direction
 
 
 def get_branch_info(n: pypsa.Network) -> pd.DataFrame:
@@ -78,14 +81,14 @@ def get_branch_info(n: pypsa.Network) -> pd.DataFrame:
     bus1_coordinates = get_bus_coordinates(n, 'bus1')
     branch_info = pd.concat([bus0_coordinates, bus1_coordinates], axis='columns')
 
-    branch_info[['mid_x', 'mid_y']] = branch_info.apply(get_branch_midpoint, axis='columns')
+    branch_info['mid_x'], branch_info['mid_y'] = get_branch_midpoint(branch_info)
 
     # Lines have apparent power (s) set
     branch_info['p_max'] = n.branches().s_max_pu * n.branches().s_nom_opt
     # Links have real power (p) set
     branch_info.p_max.fillna(n.branches().p_max_pu * n.branches().p_nom_opt, inplace=True)
 
-    branch_info[['direction', 'inverse_direction']] = branch_info.apply(get_branch_direction, axis='columns')
+    branch_info['direction'], branch_info['inverse_direction'] = get_branch_direction(branch_info)
 
     return branch_info
 
