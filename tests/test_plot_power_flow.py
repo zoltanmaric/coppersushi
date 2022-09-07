@@ -47,13 +47,15 @@ class TestPlotPowerFlow:
         assert node.y == approx(55.5504, abs=0.0001)
         assert node.p == approx(485.24, abs=0.01)
 
-        assert re.search(r'Coal.*127.35/147.00 MW', node.html) is not None
+        assert re.search(r'Coal.*127.35/147.0 MW', node.html) is not None
         assert re.search(r'Offshore Wind \(AC\).*1.93/1.93 MW', node.html) is not None
         assert re.search(r'Offshore Wind \(DC\).*1.92/1.92 MW', node.html) is not None
-        assert re.search(r'Onshore Wind.*95.20/95.20 MW', node.html) is not None
+        assert re.search(r'Onshore Wind.*95.2/95.2 MW', node.html) is not None
         assert re.search(r'Solar.*86.32/86.32 MW', node.html) is not None
 
         assert re.search(r'Load.*204.94 MW', node.html) is not None
+
+        assert re.search(r'Net power.*485.24 MW', node.html) is not None
 
     def test_colored_network_figure(self, n):
         fig = ppf.colored_network_figure(n, 'net_power')

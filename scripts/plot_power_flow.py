@@ -122,35 +122,25 @@ def get_branch_edge(line_info: pd.DataFrame, x_or_y: str) -> pd.Series:
 
 
 def generators_to_html(rows: 'pd.Series[str]') -> str:
-    generators_html = '<b>Generation:</b><br>' + '\n<b>+</b> '.join(rows)
-
-    return generators_html
-
-
-def combine_htmls(row: 'pd.Series[str]') -> str:
-    if pd.isna(row.generator) and pd.isna(row.load):
-        return row.net_p
-    else:
-        generator = '' if pd.isna(row.generator) else row.generator
-        load = '<b>- Load</b>: 0 MW<br>' if pd.isna(row.load) else row.load
-        return ''.join([
-            generator,
-            '--<br>',
-            load,
-            '===<br>',
-            f'<b>= {row.net_p}</b>'
-        ])
+    return '<b>Generation:</b><br>' + '\n<b>+</b> '.join(rows) + '--<br>'
 
 
 def get_tooltip_htmls(ns: NetworkSnapshot) -> 'pd.Series[str]':
-    generator_htmls = ns.generators.apply(
-        lambda row: f'<b>{row.name[1]}</b>: {row.p:.2f}/{row.p_max:.2f} MW<br>', axis='columns'
-    ).groupby('Bus').aggregate(generators_to_html).rename('generator')
-    load_htmls = ns.loads.apply(lambda row: f'<b>- Load</b>: {row.p_load:.2f} MW<br>', axis='columns').rename('load')
-    net_power_htmls = ns.buses.apply(lambda row: f'Net power: {row.p:.2f} MW', axis='columns').rename('net_p')
-    htmls = pd.concat([generator_htmls, load_htmls, net_power_htmls], axis='columns')\
-        .apply(combine_htmls, axis='columns').rename('html')
-    return htmls
+    p = round(ns.generators.p, 2).astype(str)
+    p_max = round(ns.generators.p_max, 2).astype(str)
+    technologies = ns.generators.index.get_level_values(1)
+    flat_generator_htmls = '<b>' + technologies + '</b>: ' + p + '/' + p_max + ' MW<br>'
+    generator_htmls = flat_generator_htmls.groupby('Bus').aggregate(generators_to_html).rename('generator')
+
+    p_load = round(ns.loads.p_load, 2).astype(str)
+    load_htmls = ('<b>- Load</b>: ' + p_load + ' MW<br>===<br>').rename('load')
+
+    net_p = round(ns.buses.p, 2).astype(str)
+    net_power_htmls = ('<b>= Net power: ' + net_p + ' MW</b>').rename('net_p')
+
+    htmls = pd.concat([generator_htmls, load_htmls, net_power_htmls], axis='columns').fillna('')
+
+    return (htmls.generator + htmls.load + htmls.net_p).rename('html')
 
 
 def create_traces(
