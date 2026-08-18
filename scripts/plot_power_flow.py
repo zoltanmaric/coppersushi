@@ -1,5 +1,3 @@
-from typing import Tuple, Any
-
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -30,15 +28,6 @@ def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.Da
     # (e.g. offwind and onwind for 'wind')
     attribute_by_buses_sum = attribute_by_buses.groupby(by=lambda bus_name: bus_name, axis='columns').sum()
     return attribute_by_buses_sum
-
-
-def get_curtailed_power(n: pypsa.Network, tech_regex: str = None) -> pd.Series:
-    usage_factor_series = n.generators_t.p / (n.generators_t.p_max_pu * n.generators.p_nom) * 100
-    rounded_usage_factor = usage_factor_series.round(decimals=2)
-    curtailed_power_per_generator = 100 - rounded_usage_factor
-    curtailed_power_per_bus = sum_generators_t_attribute_by_bus(
-        n, generators_t_attr=curtailed_power_per_generator, tech_regex=tech_regex)
-    return curtailed_power_per_bus
 
 
 def get_bus_coordinates(n: pypsa.Network, bus_name: str) -> pd.DataFrame:
@@ -157,7 +146,6 @@ def create_traces(
 
     loaded_branches_trace = go.Scattermapbox(
         lon=edges_x[loaded_filter].dropna().explode(), lat=edges_y[loaded_filter].dropna().explode(),
-        # line=dict(width=4.0, color='#f52ad0'),  # pink
         line=dict(width=4.0, color='#a72af5'),  # violet
         hoverinfo='none',
         mode='lines',
@@ -270,8 +258,6 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
         node_values = n.loads_t.p_set
     elif what == 'generation':
         node_values = sum_generators_t_attribute_by_bus(n, n.generators_t.p, technology)
-    elif what == 'curtailment':
-        node_values = get_curtailed_power(n, technology)
     elif what == 'marginal_price':
         node_values = n.buses_t.marginal_price
     else:
