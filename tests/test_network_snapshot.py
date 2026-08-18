@@ -6,7 +6,7 @@ from scripts.network_snapshot import NetworkSnapshot
 
 class TestNetworkSnapshot:
     def test_node_infos(self):
-        n = pypsa.Network('../networks/elec_s_all_ec_lv1.01_2H.nc')
+        n = pypsa.Network('networks/elec_s_all_ec_lv1.01_2H.nc')
         ns = NetworkSnapshot(n, n.snapshots[6])
         assert len(ns.buses) == 3534
 

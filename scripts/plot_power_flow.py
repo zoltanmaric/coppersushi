@@ -75,7 +75,7 @@ def get_branch_info(n: pypsa.Network) -> pd.DataFrame:
     # Lines have apparent power (s) set
     branch_info['p_max'] = n.branches().s_max_pu * n.branches().s_nom_opt
     # Links have real power (p) set
-    branch_info.p_max.fillna(n.branches().p_max_pu * n.branches().p_nom_opt, inplace=True)
+    branch_info['p_max'] = branch_info['p_max'].fillna(n.branches().p_max_pu * n.branches().p_nom_opt)
 
     branch_info['direction'], branch_info['inverse_direction'] = get_branch_direction(branch_info)
 
@@ -196,16 +196,15 @@ def create_traces(
             sizeref=node_info_t.p.abs().max() / node_max_size ** 2,
             colorbar=go.scattermapbox.marker.ColorBar(
                 thickness=15,
-                title='Net Power Feed-In at Node [MW]',
+                # Put the title of the colorbar *above* the colorbar
+                # (default is on the side)
+                title=dict(text='Net Power Feed-In at Node [MW]', side='top'),
                 orientation='h',
                 # Place colorbar at 0.02 times the height of the figure *below* the figure
                 # (negative value means below)
                 y=-0.02,
                 # The y-value is counted from the top of the colorbar
-                yanchor='top',
-                # Put the title of the colorbar *above* the colorbar
-                # (default is on the side)
-                titleside='top'
+                yanchor='top'
             )
         )
     )
