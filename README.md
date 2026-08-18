@@ -11,7 +11,7 @@ along with an explanation of the main features.
 
 The `pypsa-eur` configuration used for the network plotted here can be
 found in my fork of the `pypsa-eur` repo:
-[`zoltanmaric/pypsa-eur`](https://github.com/PyPSA/pypsa-eur)
+[`zoltanmaric/pypsa-eur`](https://github.com/zoltanmaric/pypsa-eur)
 
 
 ## Local Installation
@@ -26,12 +26,24 @@ conda env create -f environment.yml
 conda activate coppersushi
 ```
 
+### Mapbox Token
+The map background requires a (free) Mapbox access token.
+Register at [mapbox.com](https://www.mapbox.com/), then paste your token into
+a file at `.secrets/.mapbox_token` (no trailing newline). The app will not
+start without it.
+
 Then you can start the server by running
 ```bash
 python app.py
 ```
 
 Once the server starts, the web app will be available at http://localhost:8050
+
+## Running the Tests
+```bash
+pytest
+```
+The tests run against the bundled solved network in `networks/`.
 
 ## Installation on Heroku
 After creating the Heroku app, run the following to deploy it:
