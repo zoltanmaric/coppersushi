@@ -1,0 +1,2 @@
+converter_id,bus0,bus1,voltage,p_nom,geometry
+c1,b1,d1,320,1000,'LINESTRING (2.0 42.0, 2.0 42.0)'

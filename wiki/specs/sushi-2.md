@@ -12,12 +12,12 @@ In-place rewrite on main (v1 = the `v1` release). Iterative: only the next steps
 
 ## Next steps (detailed)
 
-1. **Grid**: build the network from osm-prebuilt **v0.7** CSVs (Zenodo 18619025) — no prebuilt `.nc` exists; run/replicate the PyPSA-Eur `base_network` slice. Sanity-check the ES–FR corridor (4 AC lines + 2 GW INELFE HVDC).
-2. **Injections, measured**: per-unit actuals for 2026-08-12 via `entsoe-py` (token in `.secrets/.entsoe_api_token`; `query_generation_per_plant` broken upstream since Nov 2025 — issue #480, budget a workaround); geolocate via `powerplantmatching`; measure per-unit coverage vs zonal totals as a diagnostic (known gaps, e.g. French run-of-river).
+1. **Injections, measured**: per-unit actuals for 2026-08-12 via `entsoe-py` (token in `.secrets/.entsoe_api_token`; `query_generation_per_plant` broken upstream since Nov 2025 — issue #480, budget a workaround); geolocate via `powerplantmatching`; measure per-unit coverage vs zonal totals as a diagnostic (known gaps, e.g. French run-of-river).
+2. **Zonal actuals**: per-type generation + load per zone for the day (needed for the remainder split and coverage diagnostic).
 
 ## Later (coarse, re-plan after each landing)
 
-3. Remainder injections (registry pro-rata) + NUTS3 load split → 4. `lpf()`, decide slack/imbalance handling from what the first run shows → 5. Compare to measured cross-border flows (12.1.G), explore, calibrate, report → 6. Viz (deferred decision; default: v1's Dash path + Scattermapbox→Scattermap migration) → 7. Host (trivial, last).
+3. Remainder injections (registry pro-rata) + NUTS3 load split → 4. `lpf()`, decide slack/imbalance handling from what the first run shows → 5. Compare to measured cross-border flows (12.1.G), explore, calibrate, report → 6. Viz (deferred decision; default: v1's Dash path. Caution: a topology smoke render froze Chrome with MapLibre `Scattermap` at full-network volume, while `Scattermapbox` + token-free `open-street-map` style rendered fine) → 7. Host (trivial, last).
 
 ## Acceptance criteria
 

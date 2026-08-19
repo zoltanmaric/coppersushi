@@ -1,0 +1,6 @@
+bus_id,voltage,dc,symbol,under_construction,tags,x,y,country,geometry
+b1,400,f,Substation,f,,2.0,42.0,ES,POINT (2.0 42.0)
+b2,400,f,Substation,f,,2.9,42.5,FR,POINT (2.9 42.5)
+b3,225,f,Substation,f,,2.9,42.6,FR,POINT (2.9 42.6)
+d1,320,t,Substation,f,,2.0,42.0,ES,POINT (2.0 42.0)
+d2,320,t,Substation,f,,2.9,42.5,FR,POINT (2.9 42.5)
