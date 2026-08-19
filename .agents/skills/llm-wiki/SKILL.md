@@ -67,6 +67,12 @@ questions and sources.
   entry with a consistent, grep-able prefix:
   `## [2026-04-02] ingest | Article Title`
 
+## Conciseness
+
+Conciseness is of utmost importance. The human's attention is the bottleneck:
+wiki pages exist to be read fast, so write only what carries knowledge — no
+filler, no restating what a linked page or the README already says.
+
 ## This repo's wiki
 
 The wiki lives in `wiki/` at the repo top level and is committed to git.

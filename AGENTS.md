@@ -8,4 +8,6 @@
 
 4. **The user dictates via voice mode.** Messages are often transcribed speech and may contain garbled words, homophones, or mis-transcriptions (e.g. a wrong-but-similar-sounding word). Read for intent rather than literally; when a word seems out of place, infer the likely intended word from context, and ask only if the meaning is genuinely ambiguous.
 
-5. **Rely heavily on git — delete code with a heavy hand.** Git history is the archive. Never keep commented-out code, unused functions, "just in case" branches, or half-finished experiments in the tree; delete them and recover from history if ever needed. Prefer discarding stale uncommitted work over carrying it along.
+5. **Conciseness is of utmost importance.** The bottleneck of agent-driven development is the human's comprehension and attention. Say only what needs to be said — so the human has the will to read it, can read it fast, and can therefore move fast. This applies to chat replies, documents, and wiki pages alike.
+
+6. **Rely heavily on git — delete code with a heavy hand.** Git history is the archive. Never keep commented-out code, unused functions, "just in case" branches, or half-finished experiments in the tree; delete them and recover from history if ever needed. Prefer discarding stale uncommitted work over carrying it along.
