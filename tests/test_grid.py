@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from sushi import grid
+from pipeline import grid
 
 # Minimal checked-in dataset in the osm-prebuilt schema, exercising its quirks:
 # single-quote-quoted multiline geometry, t/f booleans, meter lengths.
