@@ -12,8 +12,8 @@ In-place rewrite on main (v1 = the `v1` release). Iterative: only the next steps
 
 ## Next steps (detailed)
 
-1. **Grid**: build the network from osm-prebuilt **v0.7** CSVs (Zenodo 18619025) — no prebuilt `.nc` exists; run/replicate the PyPSA-Eur `base_network` slice. Sanity-check the ES–FR corridor (4 AC lines + 2 GW INELFE HVDC).
-2. **Injections, measured**: per-unit actuals for 2026-08-12 via `entsoe-py` (token in `.secrets/.entsoe_api_token`; `query_generation_per_plant` broken upstream since Nov 2025 — issue #480, budget a workaround); geolocate via `powerplantmatching`; measure per-unit coverage vs zonal totals as a diagnostic (known gaps, e.g. French run-of-river).
+1. **Injections, measured**: per-unit actuals for 2026-08-12 via `entsoe-py` (token in `.secrets/.entsoe_api_token`; `query_generation_per_plant` broken upstream since Nov 2025 — issue #480, budget a workaround); geolocate via `powerplantmatching`; measure per-unit coverage vs zonal totals as a diagnostic (known gaps, e.g. French run-of-river).
+2. **Zonal actuals**: per-type generation + load per zone for the day (needed for the remainder split and coverage diagnostic).
 
 ## Later (coarse, re-plan after each landing)
 
