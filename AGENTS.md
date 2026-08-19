@@ -11,3 +11,11 @@
 5. **Conciseness is of utmost importance.** The bottleneck of agent-driven development is the human's comprehension and attention. Say only what needs to be said — so the human has the will to read it, can read it fast, and can therefore move fast. This applies to chat replies, documents, and wiki pages alike.
 
 6. **Rely heavily on git — delete code with a heavy hand.** Git history is the archive. Never keep commented-out code, unused functions, "just in case" branches, or half-finished experiments in the tree; delete them and recover from history if ever needed. Prefer discarding stale uncommitted work over carrying it along.
+
+7. **Design-first for non-trivial work.**
+   - When an ask is ambiguous, interrogate before implementing (`grill` skill), scaling depth to the ambiguity.
+   - Before non-trivial work, ask whether this is the right question at all.
+   - For large or multi-session tasks, use a spec (`spec` skill) — create one when obviously needed, suggest it in the gray zone.
+   - When a spec or design has grown load-bearing, suggest a goldfish review (`goldfish` skill); the user pulls the trigger.
+
+8. **Keep agent rules and skills minimal — ablate, don't accumulate.** Every line here and in `.agents/skills/` is read on every run and must earn its place through an observed, repeated stumble — never a predicted one. As models improve, old corrective lines go stale: re-ablate occasionally by deleting lines and seeing what actually breaks. If nothing ever needs adding back, the deleting wasn't aggressive enough.
