@@ -1,27 +1,27 @@
-# Spec: Copper Sushi 2 — hackathon cut (burn-down)
+# Spec: Copper Sushi 2 (burn-down)
 
-Working memory for the build. Architecture and rationale: [sushi-2.md](../sushi-2.md). Validation commitments: [sushi-2-pre-registration.md](../sushi-2-pre-registration.md).
+Working memory. Architecture: [sushi-2.md](../sushi-2.md).
 
 ## Problem
 
-Build the smallest impressive cut of the nodal map: **August 12, 2026** (the eclipse price-divergence day — €274/MWh ES-vs-Core spread while the Pyrenees interconnector ran at 499 MW of 2.8 GW nominal), European grid scope, ES–FR validation focus. Target: **done in days**; Sep 11 (demo day) is the absolute deadline.
+The smallest impressive cut of the nodal-flows-from-actuals map. Demo day: **2026-08-12** (eclipse day; headline figures from the Electricity Maps newsletter — verify against ENTSO-E/OMIE before using them anywhere). Target: days; Sep 11 absolute deadline.
 
 ## Approach
 
-In-place rewrite on main (v1 preserved as the `v1` release). Pipeline first, viz last. Date is a parameter, never hard-coded. Rejected for this cut: CNEC/flow-based modeling, OPF counterfactual, carbon layer, better-than-NUTS3 load split (revisit only if validation points at it), 15-min resolution (hourly acceptable, 15-min if free).
+In-place rewrite on main (v1 = the `v1` release). Iterative: only the next steps are detailed; later items stay coarse and are re-planned after each landing. 15-min resolution (native since the Oct 2025 MTU switch). Validation is exploratory, not pre-registered: compute, compare to measured flows, investigate discrepancies, report calibrations honestly. HVDC links are pinned to measured values (stated openly) — physics is genuinely tested only on AC corridors, so **FR–DE is the falsifiable comparison; ES–FR is the narrated case study**. Validation days: a small smart mix — a few boring high-flow days + a couple of eventful ones incl. the demo day. Rejected for this cut: CNEC modeling, OPF counterfactual, carbon layer, better-than-NUTS3 load split, reconciliation QP (proportional rescaling suffices until a bound binds), irradiance-weighted small-solar split (capacity-pro-rata first; CAMS/SARAH likely don't model eclipse obscuration — check before investing).
 
-## Remaining work (burn down)
+## Next steps (detailed)
 
-1. **Grid**: load PyPSA-Eur prebuilt OSM network; sanity-check ES–FR corridor topology/capacities against known 2.8 GW nominal.
-2. **Injections, measured**: ENTSO-E per-unit actuals for 2026-08-12 via `entsoe-py`; geolocate with `powerplantmatching`; pin to nodes. Zonal per-type actuals for all EPEX-coupled zones.
-3. **Injections, estimated**: sub-100 MW remainder by registry layout × CAMS/SARAH-3 irradiance; load by NUTS3 pop/GDP prior.
-4. **Flows**: `lpf()` on full injections; then reconciliation QP (HiGHS).
-5. **Validate**: evaluate pre-registration (a)/(b)/(c); calibrate per policy; report.
-6. **Viz**: decide stack from remaining time; render the day with v1's signal family + hour slider; iframe-able page.
+1. **Grid**: build the network from osm-prebuilt **v0.7** CSVs (Zenodo 18619025) — no prebuilt `.nc` exists; run/replicate the PyPSA-Eur `base_network` slice. Sanity-check the ES–FR corridor (4 AC lines + 2 GW INELFE HVDC).
+2. **Injections, measured**: per-unit actuals for 2026-08-12 via `entsoe-py` (token in `.secrets/.entsoe_api_token`; `query_generation_per_plant` broken upstream since Nov 2025 — issue #480, budget a workaround); geolocate via `powerplantmatching`; measure per-unit coverage vs zonal totals as a diagnostic (known gaps, e.g. French run-of-river).
+
+## Later (coarse, re-plan after each landing)
+
+3. Remainder injections (registry pro-rata) + NUTS3 load split → 4. `lpf()`, decide slack/imbalance handling from what the first run shows → 5. Compare to measured cross-border flows (12.1.G), explore, calibrate, report → 6. Viz (deferred decision; default: v1's Dash path + Scattermapbox→Scattermap migration) → 7. Host (trivial, last).
 
 ## Acceptance criteria
 
-- [ ] One command computes the full day for a given date argument (laptop-scale).
-- [ ] Pre-registration criteria evaluated and reported in the wiki (results page linked from the pre-registration page).
-- [ ] Map of 2026-08-12 renders with net power nodes, branch loadings, direction arrows, tooltips, hour slider; usable in an iframe.
-- [ ] Spec burned down to nothing; durable findings distilled into the wiki; this file deleted.
+- [ ] One command computes a given day (laptop-scale).
+- [ ] Flow-vs-measured comparison for the validation days written up in the wiki, calibrations individually reported.
+- [ ] Map of 2026-08-12: net power nodes, branch loadings, direction arrows, tooltips, time slider.
+- [ ] Spec burned to nothing; durable findings distilled to the wiki; this file deleted.

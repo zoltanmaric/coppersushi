@@ -6,7 +6,6 @@
 
 ## Entities
 - [sushi-2.md](sushi-2.md) — Copper Sushi 2: measured injections + linear power flow on the 2025 OSM grid; architecture and cut lines
-- [sushi-2-pre-registration.md](sushi-2-pre-registration.md) — validation criteria and tolerances, committed before first computation
 - [copper-sushi-app.md](copper-sushi-app.md) — what the app shows, the OPF behind it, data provenance and caveats
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026
 

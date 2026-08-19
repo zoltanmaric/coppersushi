@@ -59,6 +59,12 @@ public sources and one design conversation.
   ordering). Comprehension tests *reachability from fresh context* (repo, wiki, links),
   not self-containment. *Rejected:* accelerate/automate facets (execution-phase, not
   review lenses) and the fixed 3-reviewers × 3-rounds procedure.
+- **Iterative depth (amended 2026-08-19, Zoltán, after the first goldfish run):**
+  specs detail only the next step or two; goldfish findings weigh toward the next
+  action and direction-validity, not failure modes of far-future steps. Observed
+  stumble: the Sushi 2 goldfish surfaced step-five tolerance minutiae at planning
+  time; the pre-registration structure itself was dropped as shoehorning an
+  open-ended exploration into a rigid frame.
 - **Ablation doctrine (rule 8, self-referential):** every rule/skill line earns its
   place by observed stumble; re-ablate as models improve; occasional add-backs are the
   proof of aggressive-enough deletion.

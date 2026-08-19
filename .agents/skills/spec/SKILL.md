@@ -26,6 +26,8 @@ Guardrails:
   mistake burn-down state for settled knowledge.
 - Link to the wiki rather than restating it — divergent copies rot.
 - Burn it down: as pieces land and verify, delete them from the spec.
+- Detail only the next step or two; keep later items coarse and re-plan after each
+  landing — once step one lands, step five as currently imagined often no longer exists.
 
 Exit: when the acceptance criteria verify, distill anything worth keeping into the
 wiki (the llm-wiki skill decides what and in what shape), then delete the spec file —

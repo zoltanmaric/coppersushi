@@ -1,6 +1,6 @@
 # Codebase v1 — architecture & state
 
-Dash/Plotly app, ~400 lines of Python across three modules. Written 2022, modernized to 2026 deps in Aug 2026 (green tests, working app). A ground-up **v2 rewrite is planned** in a `v2/` folder, to eventually replace v1.
+Dash/Plotly app, ~400 lines of Python across three modules. Written 2022, modernized to 2026 deps in Aug 2026 (green tests, working app). Being superseded **in place** by [Copper Sushi 2](sushi-2.md); this v1 state is preserved as the `v1` GitHub release.
 
 ## Structure
 
