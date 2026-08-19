@@ -17,7 +17,7 @@ In-place rewrite on main (v1 = the `v1` release). Iterative: only the next steps
 
 ## Later (coarse, re-plan after each landing)
 
-3. Remainder injections (registry pro-rata) + NUTS3 load split → 4. `lpf()`, decide slack/imbalance handling from what the first run shows → 5. Compare to measured cross-border flows (12.1.G), explore, calibrate, report → 6. Viz (deferred decision; default: v1's Dash path + Scattermapbox→Scattermap migration) → 7. Host (trivial, last).
+3. Remainder injections (registry pro-rata) + NUTS3 load split → 4. `lpf()`, decide slack/imbalance handling from what the first run shows → 5. Compare to measured cross-border flows (12.1.G), explore, calibrate, report → 6. Viz (deferred decision; default: v1's Dash path. Caution: a topology smoke render froze Chrome with MapLibre `Scattermap` at full-network volume, while `Scattermapbox` + token-free `open-street-map` style rendered fine) → 7. Host (trivial, last).
 
 ## Acceptance criteria
 
