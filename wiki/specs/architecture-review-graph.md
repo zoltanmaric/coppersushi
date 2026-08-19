@@ -23,14 +23,13 @@ Scope is new Python Sushi 2 code. `app.py` and the old `scripts/` implementation
 
 ## Next steps
 
-1. Add the compact DAG and PR-body convention, then define the smallest explicit I/O boundary that catches the existing inline grid reads without claiming universal purity enforcement.
-2. Use the surface on the next three real Sushi 2 PRs that add or rewire sources or transformations. The user reviews the diagram/delta without reading the full diff; an independent agent audits the full diff for omitted architectural facts.
+Use the surface on the next three real Sushi 2 PRs that add or rewire sources or transformations. The user reviews the diagram/delta without reading the full diff; an independent agent audits the full diff for omitted architectural facts.
 
 ## Acceptance criteria
 
-- [ ] The rendered DAG is readable at GitHub's default view and its source gives each artifact and dependency one stable, reviewable identity.
+- [x] The rendered DAG is readable at GitHub's default view and its source gives each artifact and dependency one stable, reviewable identity.
 - [ ] Every pilot PR states its architecture delta and updates the DAG when topology changes.
-- [ ] The finite I/O-boundary test passes on adapters and demonstrably fails for a covered I/O operation in a transformation.
+- [x] The finite I/O-boundary test passes on adapters and demonstrably fails for a covered I/O operation in a transformation.
 - [ ] Across three qualifying PRs, the architecture-only verdict survives the independent full-diff audit in at least two; every omission is recorded.
 - [ ] After the third PR, explicitly choose to discard the experiment, retain the manual surface, or spec automation from the observed failures.
 - [ ] Durable findings are distilled into the wiki and this spec is deleted.

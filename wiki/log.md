@@ -19,3 +19,6 @@ Distilled the design conversation behind AGENTS.md rules 7–8 and the three new
 
 ## [2026-08-19] decision | Specs may live in wiki/specs/
 Large specs may burn down in committed wiki/specs/ (indexed as working memory, never as settled knowledge); gitignored specs/ stays the default. Skill + agent-workflow-design amended.
+
+## [2026-08-19] decision | Lightweight architecture-review pilot begins
+Added an implemented-only Mermaid dataflow to the Sushi 2 architecture page, an Architecture delta PR convention, and a finite direct-I/O boundary for source/sink adapters. Planned topology stays prose until it lands; automatic extraction and graph CI await evidence from three real PRs.

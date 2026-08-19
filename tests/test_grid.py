@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from pipeline import grid
+from pipeline.sources import osm
 
 # Minimal checked-in dataset in the osm-prebuilt schema, exercising its quirks:
 # single-quote-quoted multiline geometry, t/f booleans, meter lengths.
@@ -10,7 +11,7 @@ OSM_TINY = Path(__file__).parent / "fixtures" / "osm-tiny"
 
 
 def test_build_network():
-    n = grid.build_network(OSM_TINY)
+    n = grid.build_network(osm.load_tables(OSM_TINY))
 
     assert n.buses.carrier.to_dict() == {
         "b1": "AC", "b2": "AC", "b3": "AC", "d1": "DC", "d2": "DC"
@@ -34,7 +35,7 @@ def test_build_network():
 
 
 def test_cross_border():
-    n = grid.build_network(OSM_TINY)
+    n = grid.build_network(osm.load_tables(OSM_TINY))
     assert grid.cross_border(n, "Line", "ES", "FR").index.tolist() == ["l1"]
     assert grid.cross_border(n, "Line", "FR", "ES").index.tolist() == ["l1"]
     assert grid.cross_border(n, "Link", "ES", "FR").index.tolist() == ["dc1"]
