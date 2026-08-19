@@ -10,3 +10,6 @@ Both posts fetched from 121gigawatts.org (text via RSS, figures reviewed in brow
 
 ## [2026-08-19] ingest | Agent workflow design (grill/spec/goldfish)
 Distilled the design conversation behind AGENTS.md rules 7–8 and the three new skills into agent-workflow-design. Sources (linked, not copied — copyrighted): Rensin's Elephant-Goldfish, Hirschfeld's lifetime layering, Cherny's YC talk (Jul 2026), Musk's five-step algorithm. Includes rejected alternatives per the design's own doctrine.
+
+## [2026-08-19] decision | Specs may live in wiki/specs/
+Large specs may burn down in committed wiki/specs/ (indexed as working memory, never as settled knowledge); gitignored specs/ stays the default. Skill + agent-workflow-design amended.

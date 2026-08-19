@@ -19,11 +19,15 @@ No file-by-file implementation plan — that lives in the working session and di
 
 Guardrails:
 
-- Lives in `specs/` (gitignored). Never lands on main; committing one into a PR branch
-  is an explicit opt-in, and it still dies before merge.
+- Two homes, chosen by weight. Default: `specs/` (gitignored, dies with the task,
+  never lands on main). A spec big enough that its burn-down history or surviving
+  slivers have long-term value lives in `wiki/specs/` instead — committed, and listed
+  in the wiki index under a separate "Specs (working memory)" section so queries never
+  mistake burn-down state for settled knowledge.
 - Link to the wiki rather than restating it — divergent copies rot.
 - Burn it down: as pieces land and verify, delete them from the spec.
 
-Exit: when the acceptance criteria verify, offer to distill anything worth keeping into
-the wiki (the llm-wiki skill decides what and in what shape), then delete the file.
-A leftover file in `specs/` is a visible signal of an unfinished task.
+Exit: when the acceptance criteria verify, distill anything worth keeping into the
+wiki (the llm-wiki skill decides what and in what shape), then delete the spec file —
+git keeps the history; a wiki-resident sliver may survive as (or merge into) a durable
+page. A leftover spec is a visible signal of an unfinished task.

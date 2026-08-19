@@ -44,7 +44,11 @@ public sources and one design conversation.
   the requirement; right question → proceed silently. *Rejected:* requiring every
   challenge to come with a concrete alternative — it would incentivize confabulated
   alternatives and suppress honest "smells wrong because X" signal.
-- **Spec = task-scoped burn-down file in gitignored `specs/`.** Resolves
+- **Spec = task-scoped burn-down file; two homes by weight** (amended 2026-08-19,
+  Zoltán). Default: gitignored `specs/`. Large specs whose burn-down history or
+  surviving slivers have long-term value live in committed `wiki/specs/`, indexed
+  under a separate "Specs (working memory)" section so they're never read as settled
+  knowledge — the rot risk is mislabeling, not location. Resolves
   Rensin-vs-Hirschfeld: re-bootstrap and shared-intent benefits without committed-doc
   rot. Lifetime is the task, not a PR (repo is solo, main-push). Acceptance criteria
   are the load-bearing section; no file-by-file plan. Links to the wiki instead of
