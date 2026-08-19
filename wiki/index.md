@@ -11,6 +11,7 @@
 
 ## Specs (working memory — burn-down state, not settled knowledge)
 - [specs/sushi-2.md](specs/sushi-2.md) — the hackathon cut: remaining work and acceptance criteria
+- [specs/architecture-review-graph.md](specs/architecture-review-graph.md) — pilot for reviewing agent PRs through enforced architectural graph deltas
 
 ## Raw sources (immutable)
 - [raw/the-copper-plate-must-die.md](raw/the-copper-plate-must-die.md) — blog post, Jun 2022
