@@ -2,4 +2,4 @@
 __pycache__/
 .secrets/
 .DS_Store
-specs/
+/specs/
