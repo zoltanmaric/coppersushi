@@ -1,36 +1,36 @@
-# Spec: architecture-first agent review (burn-down)
+# Spec: lightweight architecture review experiment (burn-down)
 
 Working memory for a Copper Sushi 2 pilot. Domain architecture: [sushi-2.md](../sushi-2.md).
 
 ## Problem
 
-Agent PRs can contain too much code for sustainable line-by-line human review. The primary review surface should instead expose architectural change: new data sources, artifacts, dependencies, branches, bypasses, cycles, and sinks. Tests and agent review remain responsible for logical correctness.
+Large agent PRs have been costly to review elsewhere, but Copper Sushi has not yet exhibited that failure. Test the cheapest useful form of architectural review compression on real Sushi 2 work without delaying the Sep 11 cut. This surface covers architectural shape only; tests and independent agent review cover implementation correctness.
 
 ## Approach
 
-Model Sushi 2 as a compact DAG whose nodes are stable domain artifacts and whose edges mean “required to produce.” Producer functions are pure; file, network, and database I/O exists only in declared source/sink adapters. The graph is extracted deterministically from the implementation and compared with a small, committed, default-deny architecture policy—the software-reflexion-model pattern. The policy is an enforceable allowlist, not a manually synchronized diagram.
+Keep one small, explicit Mermaid DAG in the durable Sushi 2 architecture page. Nodes are domain artifacts; an edge means “required to produce.” The diagram is deliberately human-maintained: its small diff, plus an **Architecture delta** section in every PR body (`None` is valid), is the review surface. No framework, extractor, policy language, graph bot, or required graph check until real use proves those costs worthwhile.
 
-Every GitHub PR gets a merge-base-versus-head graph delta with unchanged context muted and architectural changes emphasized. CI fails on any unapproved node or edge, forbidden dependency, cycle, undeclared I/O, or unmatched production component. A legitimate change updates the policy in the same PR, making the architecture decision explicit for human review. Changed nodes link back to their producer/contracts; private helpers stay below the default zoom level.
+Add one narrow enforcement mechanism now: external I/O belongs in named source/sink adapters, while transformations do not perform it directly. Enforce a documented finite set of imports/calls with Import Linter or a small AST-based test. This is not a claim to detect dynamic or transitive I/O, nor to prove referential transparency; PyPSA's in-memory mutation remains allowed.
 
-Scope is Python Sushi 2 only. `app.py` and the old `scripts/` implementation remain frozen legacy until replaced. No attempt at logical-error detection or a language-independent framework.
+Scope is new Python Sushi 2 code. `app.py` and the old `scripts/` implementation remain frozen legacy until replaced.
 
-Rejected for the pilot: a documentation-only diagram (will drift); a raw function/file graph (too detailed); CodeSee alone (file-level rather than domain ontology); Dagster (operational orchestration beyond the review need). Do not assume Hamilton: compare it with Kedro and a minimal project-owned implementation first.
+## Deliberately deferred
 
-## Next step (detailed)
+- **Hamilton, Kedro, or Dagster:** no framework until execution needs or repeated manifest maintenance justify one; none supplies the whole review workflow.
+- **Automatic extraction and exact-graph CI:** reconsider only if a pilot PR omits or misstates an architectural change. An agent can update a graph lock alongside its code, so extraction proves correspondence but does not replace review.
+- **Automatic PR rendering or a bot:** reconsider only if the Mermaid page plus PR-body section proves too hard to find or use.
+- **Universal hidden-I/O or purity detection:** dropped as unsound for dynamic Python. Enforce only the finite, documented boundary above.
 
-Build the same tiny vertical slice—`osm_grid_files → european_grid`—three ways: Hamilton, Kedro, and a lightweight typed node/adapter declaration plus extractor. For each, produce the default graph, a graph diff after adding a second source/branch, and a failing conformance check. Compare only what matters here: semantic granularity, collapsibility, source/sink visibility, type/schema metadata, merge-base diff support, GitHub rendering, enforceability, implementation ceremony, and dependency/maintenance cost. Choose the smallest option that satisfies the review workflow; delete the other spikes.
+## Next steps
 
-## Later (coarse; re-plan after the spike)
-
-Define the initial approved Sushi 2 graph and ontology → enforce pure producers and declared adapters → publish graph deltas as a required GitHub check → exercise the system on real Sushi 2 work and adjust granularity once from evidence.
+1. Add the compact DAG and PR-body convention, then define the smallest explicit I/O boundary that catches the existing inline grid reads without claiming universal purity enforcement.
+2. Use the surface on the next three real Sushi 2 PRs that add or rewire sources or transformations. The user reviews the diagram/delta without reading the full diff; an independent agent audits the full diff for omitted architectural facts.
 
 ## Acceptance criteria
 
-- [ ] One command deterministically emits both a human-readable graph and a machine-readable graph from Sushi 2 code.
-- [ ] The default PR view remains readable without expansion and shows only domain artifacts, edges, sources/sinks, and changed context.
-- [ ] An implementation-only change with identical topology produces no architectural delta.
-- [ ] Adding or removing any top-level node or edge fails CI until the approved model is deliberately updated.
-- [ ] A hidden I/O call, forbidden bypass, cycle, or unclassified production module fails CI with a useful explanation.
-- [ ] The GitHub PR surface highlights added/removed nodes and edges and links changed nodes to their implementation and contract.
-- [ ] A real Sushi 2 PR can be architecturally accepted or rejected from this surface without reading its full diff.
+- [ ] The rendered DAG is readable at GitHub's default view and its source gives each artifact and dependency one stable, reviewable identity.
+- [ ] Every pilot PR states its architecture delta and updates the DAG when topology changes.
+- [ ] The finite I/O-boundary test passes on adapters and demonstrably fails for a covered I/O operation in a transformation.
+- [ ] Across three qualifying PRs, the architecture-only verdict survives the independent full-diff audit in at least two; every omission is recorded.
+- [ ] After the third PR, explicitly choose to discard the experiment, retain the manual surface, or spec automation from the observed failures.
 - [ ] Durable findings are distilled into the wiki and this spec is deleted.
