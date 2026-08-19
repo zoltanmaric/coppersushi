@@ -14,7 +14,8 @@ OSM_PREBUILT_DIR = Path(__file__).parent.parent / "data" / "osm-prebuilt-v0.7"
 ZENODO_URL = "https://zenodo.org/records/18619025/files/{}?download=1"
 CSV_NAMES = ["buses", "lines", "links", "converters", "transformers"]
 
-# osm-prebuilt has no transformer impedances; PyPSA-Eur's default
+# osm-prebuilt has no transformer impedances; PyPSA-Eur's default (r stays 0,
+# same as PyPSA-Eur — harmless for linear power flow, which ignores resistance)
 TRANSFORMER_X = 0.1
 
 
@@ -25,7 +26,11 @@ def download(data_dir: Path = OSM_PREBUILT_DIR) -> None:
     for name in CSV_NAMES:
         target = data_dir / f"{name}.csv"
         if not target.exists():
-            urllib.request.urlretrieve(ZENODO_URL.format(f"{name}.csv"), target)
+            # download to a temp path and rename atomically, so an interrupted
+            # transfer is never mistaken for a complete file on the next run
+            partial = target.with_suffix(".csv.part")
+            urllib.request.urlretrieve(ZENODO_URL.format(f"{name}.csv"), partial)
+            partial.replace(target)
 
 
 def build_network(data_dir: Path = OSM_PREBUILT_DIR) -> pypsa.Network:
@@ -34,6 +39,7 @@ def build_network(data_dir: Path = OSM_PREBUILT_DIR) -> pypsa.Network:
     buses, lines, links, converters, transformers = map(read, CSV_NAMES)
 
     n = pypsa.Network()
+    n.add("Carrier", ["AC", "DC", "converter"])
     n.add(
         "Bus",
         buses.index,
@@ -53,6 +59,7 @@ def build_network(data_dir: Path = OSM_PREBUILT_DIR) -> pypsa.Network:
         b=lines.b,
         s_nom=lines.s_nom,
         length=lines.length / 1e3,
+        carrier="AC",
         type="",  # explicit parameters above take precedence
     )
     # HVDC links and AC/DC converters are both controllable, bidirectional Links

@@ -23,6 +23,10 @@ def test_build_network():
     assert line.x == 2.0
     assert line.length == pytest.approx(90.0)  # meters converted to km
 
+    # carriers are defined and assigned (PyPSA consistency)
+    assert {"AC", "DC", "converter"} <= set(n.carriers.index)
+    assert (n.lines.carrier == "AC").all()
+
     # HVDC links and converters are bidirectional
     assert (n.links.p_min_pu == -1).all()
     assert n.links.loc["dc1", "p_nom"] == 1000
