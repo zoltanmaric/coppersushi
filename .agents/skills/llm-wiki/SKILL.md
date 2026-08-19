@@ -67,6 +67,16 @@ questions and sources.
   entry with a consistent, grep-able prefix:
   `## [2026-04-02] ingest | Article Title`
 
+## This repo's wiki
+
+The wiki lives in `wiki/` at the repo top level and is committed to git.
+Before writing anything into it, read `wiki/AGENTS.md` and honor its rules —
+most importantly its content policy: the wiki holds knowledge about this
+codebase and project only, never personal information about the user. Raw
+sources, when the wiki needs them, go in `wiki/raw/` (immutable — read, never
+modify). The special files `wiki/index.md` and `wiki/log.md` exist and must be
+kept current as described above.
+
 ## Instantiating a wiki
 
 The pattern is intentionally abstract — directory layout, page formats, and
