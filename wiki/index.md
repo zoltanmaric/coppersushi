@@ -2,6 +2,7 @@
 
 ## Concepts
 - [copper-plate-problem.md](copper-plate-problem.md) — the EU market-design argument motivating this project (copper plate, redispatch, co-optimisation, locational pricing)
+- [agent-workflow-design.md](agent-workflow-design.md) — rationale and sources behind rules 7–8 and the grill/spec/goldfish skills
 
 ## Entities
 - [copper-sushi-app.md](copper-sushi-app.md) — what the app shows, the OPF behind it, data provenance and caveats
