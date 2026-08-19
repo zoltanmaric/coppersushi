@@ -2,10 +2,14 @@ name: coppersushi
 channels:
   - conda-forge
 dependencies:
-  - python >= 3.10
-  - pytest
-  - dash
-  - dash-bootstrap-components
-  - pypsa
-  - gunicorn  # For deploying to Heroku
-  - snakeviz  # For visualising cProfile results
+  # Pinned exactly (2026-08) for long-term reproducibility
+  - python =3.14.6
+  - pytest =9.1.1
+  - dash =4.4.1
+  - dash-bootstrap-components =2.0.4
+  - pypsa =1.2.4
+  - pandas =3.0.5
+  - plotly =6.9.0
+  - numpy =2.5.2
+  - gunicorn =26.0.0  # For deploying to Heroku
+  - snakeviz =2.2.2  # For visualising cProfile results
