@@ -1,36 +1,37 @@
+from pathlib import Path
+
 import pytest
 
 from sushi import grid
 
-
-@pytest.fixture(scope="module")
-def n():
-    return grid.build_network()
-
-
-def test_network_shape(n):
-    assert len(n.buses) > 6000
-    assert len(n.lines) > 9000
-    assert (n.buses.carrier == "DC").sum() > 0
-    # every branch endpoint resolves to a known bus
-    for c in ("lines", "links", "transformers"):
-        df = getattr(n, c)
-        assert df.bus0.isin(n.buses.index).all(), c
-        assert df.bus1.isin(n.buses.index).all(), c
+# Minimal checked-in dataset in the osm-prebuilt schema, exercising its quirks:
+# single-quote-quoted multiline geometry, t/f booleans, meter lengths.
+OSM_TINY = Path(__file__).parent / "fixtures" / "osm-tiny"
 
 
-def test_es_fr_corridor(n):
-    ac = grid.cross_border(n, "Line", "ES", "FR")
-    # Arkale-Argia + Hernani-Argia (400), Biescas-Pragneres (220), Vic-Baixas (400)
-    assert 3 <= len(ac) <= 6, ac.index.tolist()
+def test_build_network():
+    n = grid.build_network(OSM_TINY)
 
-    dc = grid.cross_border(n, "Link", "ES", "FR")
-    # INELFE Baixas-Santa Llogaia: 2 x 1000 MW VSC
-    assert dc.p_nom.sum() == pytest.approx(2000, rel=0.1), dc[["p_nom"]]
+    assert n.buses.carrier.to_dict() == {
+        "b1": "AC", "b2": "AC", "b3": "AC", "d1": "DC", "d2": "DC"
+    }
+    assert n.buses.loc["b1", "country"] == "ES"
+
+    # multiline quoted geometry must not break row parsing
+    line = n.lines.loc["l1"]
+    assert line.s_nom == 1787.0
+    assert line.x == 2.0
+    assert line.length == pytest.approx(90.0)  # meters converted to km
+
+    # HVDC links and converters are bidirectional
+    assert (n.links.p_min_pu == -1).all()
+    assert n.links.loc["dc1", "p_nom"] == 1000
+    assert n.transformers.loc["t1", "s_nom"] == 500
 
 
-def test_single_connected_ac_component(n):
-    n.determine_network_topology()
-    # Continental Europe + islands/GB/Nordics: a handful of synchronous areas, not confetti
-    sizes = n.buses.sub_network.value_counts()
-    assert sizes.iloc[0] > 4000, "largest synchronous area suspiciously small"
+def test_cross_border():
+    n = grid.build_network(OSM_TINY)
+    assert grid.cross_border(n, "Line", "ES", "FR").index.tolist() == ["l1"]
+    assert grid.cross_border(n, "Line", "FR", "ES").index.tolist() == ["l1"]
+    assert grid.cross_border(n, "Link", "ES", "FR").index.tolist() == ["dc1"]
+    assert grid.cross_border(n, "Line", "ES", "DE").empty

@@ -1,0 +1,2 @@
+transformer_id,bus0,bus1,voltage_bus0,voltage_bus1,s_nom,geometry
+t1,b2,b3,400,225,500,'LINESTRING (2.9 42.5, 2.9 42.6)'

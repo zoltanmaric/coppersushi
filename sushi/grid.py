@@ -83,6 +83,10 @@ def build_network(data_dir: Path = OSM_PREBUILT_DIR) -> pypsa.Network:
         s_nom=transformers.s_nom,
         x=TRANSFORMER_X,
     )
+
+    for branches in (n.lines, n.links, n.transformers):
+        dangling = branches[~branches.bus0.isin(n.buses.index) | ~branches.bus1.isin(n.buses.index)]
+        assert dangling.empty, f"branches reference unknown buses: {dangling.index.tolist()[:5]}"
     return n
 
 

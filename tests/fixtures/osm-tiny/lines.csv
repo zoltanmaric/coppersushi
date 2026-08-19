@@ -1,0 +1,3 @@
+line_id,bus0,bus1,voltage,i_nom,circuits,s_nom,r,x,b,length,underground,under_construction,type,tags,geometry
+l1,b1,b2,400,1.29,1,1787.0,0.5,2.0,1e-05,90000.0,f,f,Some type 380.0,,'LINESTRING (2.0 42.0,
+2.9 42.5)'
