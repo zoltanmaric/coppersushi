@@ -10,6 +10,22 @@ The in-place successor of [v1](copper-sushi-app.md). v1 visualized a *model's* o
 4. **Signal**: v1's family unchanged — net power per node, loaded-vs-easy branches, direction arrows, per-node tooltips — driven by actuals.
 5. **Web tool**: Python core; viz stack deliberately open (pipeline first, viz decided from remaining time).
 
+## Implemented dataflow
+
+This graph shows landed Sushi 2 production paths, not planned topology. Node IDs are stable domain-artifact identities; each arrow means “required to produce.” PRs update it only when implementation changes the topology.
+
+```mermaid
+flowchart LR
+    zenodo_osm_prebuilt[("zenodo_osm_prebuilt<br/>external CSV dataset")]
+    osm_grid_tables["osm_grid_tables<br/>GridTables"]
+    european_grid["european_grid<br/>pypsa.Network"]
+
+    zenodo_osm_prebuilt --> osm_grid_tables
+    osm_grid_tables --> european_grid
+```
+
+External I/O belongs in `pipeline/sources/` or `pipeline/sinks/`; transformations exchange in-memory values. The architecture test checks a finite set of direct I/O APIs and deliberately does not claim to detect dynamic or transitive I/O.
+
 ## Deliberately out (this phase)
 
 Flow-traced nodal carbon intensity (first future chapter); OPF counterfactual mode; JAO CNEC/flow-based-domain modeling (spot-check validation only); forecasting; article copy; hosting (trivial, decided at the end).
