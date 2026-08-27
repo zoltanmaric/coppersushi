@@ -15,7 +15,22 @@ found in my fork of the `pypsa-eur` repo:
 
 
 ## Local Installation
-Installing the dependencies requires Conda, but I recommend installing
+Two supported ways to install the pinned dependencies; both give the same
+versions.
+
+### With `uv`
+[`uv`](https://docs.astral.sh/uv/) manages the interpreter, the virtual
+environment and the packages in one tool, no Conda needed:
+```bash
+./scripts/uv-install.sh
+source .venv/bin/activate
+```
+The script reads the interpreter and the pins out of `environment.yml`, which
+stays the single source of dependency versions. It is idempotent, so re-run it
+after a dependency change.
+
+### With Conda / Mamba
+Installing this way requires Conda, but I recommend installing
 [`Mamba`](https://mamba.readthedocs.io/en/latest/installation.html)
 (a fully compatible, but better implementation of Conda).
 
@@ -25,6 +40,12 @@ environment by running
 conda env create -f environment.yml
 conda activate coppersushi
 ```
+
+### `direnv` (optional)
+The repo ships an `.envrc` that puts `.venv/` on your `PATH` when you enter the
+directory, so the `uv` environment activates itself. With
+[`direnv`](https://direnv.net/) installed, run `direnv allow` once. It does
+nothing when there is no `.venv/`, so Conda users are unaffected.
 
 ### Mapbox Token
 The map background requires a (free) Mapbox access token.
