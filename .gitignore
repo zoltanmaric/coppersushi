@@ -6,3 +6,5 @@ __pycache__/
 /worktrees/
 /data/
 /wiki/.obsidian/
+.venv/
+.direnv/
