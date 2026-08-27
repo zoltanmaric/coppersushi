@@ -1,42 +1,33 @@
-"""Build a PyPSA network from the osm-prebuilt European grid (Xiong et al. 2025).
+"""Pure PyPSA network transformations for the European grid."""
 
-Data: https://zenodo.org/records/18619025 (v0.7, 220-750 kV, ODbL).
-The CSVs ship with electrical parameters (r, x, b, s_nom) precomputed,
-so this is assembly, not parameter estimation.
-"""
-
-from pathlib import Path
+from dataclasses import dataclass
 
 import pandas as pd
 import pypsa
-
-OSM_PREBUILT_DIR = Path(__file__).parent.parent / "data" / "osm-prebuilt-v0.7"
-ZENODO_URL = "https://zenodo.org/records/18619025/files/{}?download=1"
-CSV_NAMES = ["buses", "lines", "links", "converters", "transformers"]
 
 # osm-prebuilt has no transformer impedances; PyPSA-Eur's default (r stays 0,
 # same as PyPSA-Eur — harmless for linear power flow, which ignores resistance)
 TRANSFORMER_X = 0.1
 
 
-def download(data_dir: Path = OSM_PREBUILT_DIR) -> None:
-    import urllib.request
+@dataclass(frozen=True)
+class GridTables:
+    """In-memory osm-prebuilt tables consumed by the grid transformation."""
 
-    data_dir.mkdir(parents=True, exist_ok=True)
-    for name in CSV_NAMES:
-        target = data_dir / f"{name}.csv"
-        if not target.exists():
-            # download to a temp path and rename atomically, so an interrupted
-            # transfer is never mistaken for a complete file on the next run
-            partial = target.with_suffix(".csv.part")
-            urllib.request.urlretrieve(ZENODO_URL.format(f"{name}.csv"), partial)
-            partial.replace(target)
+    buses: pd.DataFrame
+    lines: pd.DataFrame
+    links: pd.DataFrame
+    converters: pd.DataFrame
+    transformers: pd.DataFrame
 
 
-def build_network(data_dir: Path = OSM_PREBUILT_DIR) -> pypsa.Network:
-    # geometry fields are single-quote-quoted and span multiple lines
-    read = lambda name: pd.read_csv(data_dir / f"{name}.csv", index_col=0, quotechar="'")
-    buses, lines, links, converters, transformers = map(read, CSV_NAMES)
+def build_network(tables: GridTables) -> pypsa.Network:
+    """Assemble precomputed electrical tables into a PyPSA network."""
+    buses = tables.buses
+    lines = tables.lines
+    links = tables.links
+    converters = tables.converters
+    transformers = tables.transformers
 
     n = pypsa.Network()
     n.add("Carrier", ["AC", "DC", "converter"])
@@ -105,9 +96,3 @@ def cross_border(n: pypsa.Network, component: str, country0: str, country1: str)
     forward = (c0 == country0) & (c1 == country1)
     backward = (c0 == country1) & (c1 == country0)
     return df[forward | backward]
-
-
-if __name__ == "__main__":
-    download()
-    n = build_network()
-    print(n)
