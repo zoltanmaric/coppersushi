@@ -13,7 +13,7 @@ class NetworkSnapshot:
 
     def _buses(self) -> pd.DataFrame:
         buses_t = pd.DataFrame(self.n.buses_t.p.loc[self.snapshot].rename('p'))
-        buses = self.n.buses[['x', 'y']].join(buses_t)
+        buses = self.n.buses[['x', 'y', 'country', 'v_nom']].join(buses_t)
         return buses
 
     def _loads(self) -> pd.DataFrame:

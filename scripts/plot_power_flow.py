@@ -72,10 +72,14 @@ def get_branch_info(n: pypsa.Network) -> pd.DataFrame:
 
     branch_info['mid_x'], branch_info['mid_y'] = get_branch_midpoint(branch_info)
 
+    branches = n.branches()
+    # Capacities fall back to nominal when no expansion optimization ran
+    s_nom = branches.s_nom_opt.where(branches.s_nom_opt > 0, branches.s_nom)
+    p_nom = branches.p_nom_opt.where(branches.p_nom_opt > 0, branches.p_nom)
     # Lines have apparent power (s) set
-    branch_info['p_max'] = n.branches().s_max_pu * n.branches().s_nom_opt
+    branch_info['p_max'] = branches.s_max_pu * s_nom
     # Links have real power (p) set
-    branch_info['p_max'] = branch_info['p_max'].fillna(n.branches().p_max_pu * n.branches().p_nom_opt)
+    branch_info['p_max'] = branch_info['p_max'].fillna(branches.p_max_pu * p_nom)
 
     branch_info['direction'], branch_info['inverse_direction'] = get_branch_direction(branch_info)
 
@@ -93,7 +97,8 @@ def to_branches_by_component_and_name(
 def get_branch_info_for_snapshot(n: pypsa.Network, branch_info: pd.DataFrame, snapshot: pd.Timestamp) -> pd.DataFrame:
     lines_t_p0 = to_branches_by_component_and_name(n.lines_t, snapshot, 'Line', 'p0')
     links_t_p0 = to_branches_by_component_and_name(n.links_t, snapshot, 'Link', 'p0')
-    branch_info_t = branch_info.join(pd.concat([lines_t_p0, links_t_p0]))
+    transformers_t_p0 = to_branches_by_component_and_name(n.transformers_t, snapshot, 'Transformer', 'p0')
+    branch_info_t = branch_info.join(pd.concat([lines_t_p0, links_t_p0, transformers_t_p0]))
 
     branch_info_t['branch_loading'] = abs(branch_info_t.p0) / branch_info_t.p_max * 100
     branch_info_t['arrow_angle'] = branch_info_t.apply(
@@ -118,6 +123,10 @@ def generators_to_html(rows: 'pd.Series[str]') -> str:
 
 
 def get_tooltip_htmls(ns: NetworkSnapshot) -> 'pd.Series[str]':
+    buses = ns.buses
+    header_htmls = ('<b>' + buses.index.to_series() + '</b> · ' + buses.country + ' · '
+                    + buses.v_nom.astype(int).astype(str) + ' kV<br>').rename('header')
+
     p = round(ns.generators.p, 2).astype(str)
     p_max = round(ns.generators.p_max, 2).astype(str)
     technologies = ns.generators.index.get_level_values(1)
@@ -130,9 +139,9 @@ def get_tooltip_htmls(ns: NetworkSnapshot) -> 'pd.Series[str]':
     net_p = round(ns.buses.p, 2).astype(str)
     net_power_htmls = ('<b>= Net power: ' + net_p + ' MW</b>').rename('net_p')
 
-    htmls = pd.concat([generator_htmls, load_htmls, net_power_htmls], axis='columns').fillna('')
+    htmls = pd.concat([header_htmls, generator_htmls, load_htmls, net_power_htmls], axis='columns').fillna('')
 
-    return (htmls.generator + htmls.load + htmls.net_p).rename('html')
+    return (htmls.header + htmls.generator + htmls.load + htmls.net_p).rename('html')
 
 
 def create_traces(
@@ -160,18 +169,20 @@ def create_traces(
         visible=False
     )
 
+    # A direction arrow on a branch without flow is meaningless
+    flowing = branch_info_t[branch_info_t.p0.abs() > 0.5]
     branch_direction_trace = go.Scattermapbox(
-        lon=branch_info_t.mid_x, lat=branch_info_t.mid_y,
+        lon=flowing.mid_x, lat=flowing.mid_y,
         mode='markers',
         hoverinfo='text',
         visible=False,
-        text='<b>Flow:</b> ' + abs(branch_info_t.p0).astype(int).astype(str) + '/' + branch_info_t.p_max.astype(int).astype(str) + ' MW',
+        text='<b>Flow:</b> ' + abs(flowing.p0).astype(int).astype(str) + '/' + flowing.p_max.astype(int).astype(str) + ' MW',
         marker=go.scattermapbox.Marker(
             size=7,
             # List of available markers:
             # https://community.plotly.com/t/how-to-add-a-custom-symbol-image-inside-map/6641/2
             symbol='triangle',
-            angle=branch_info_t.arrow_angle
+            angle=flowing.arrow_angle
         )
     )
 
@@ -193,7 +204,7 @@ def create_traces(
             size=node_info_t.p.abs(),
             sizemin=2.5,
             sizemode='area',
-            sizeref=node_info_t.p.abs().max() / node_max_size ** 2,
+            sizeref=(node_info_t.p.abs().max() or 1.0) / node_max_size ** 2,
             colorbar=go.scattermapbox.marker.ColorBar(
                 thickness=15,
                 # Put the title of the colorbar *above* the colorbar
@@ -263,7 +274,7 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
         raise Exception(f'Unknown what: "{what}"')
 
     iqr_min, iqr_max = get_interquartile_range(node_values)
-    cmax = max(abs(iqr_min), abs(iqr_max))
+    cmax = max(abs(iqr_min), abs(iqr_max)) or 1.0
 
     branch_info = get_branch_info(n)
 

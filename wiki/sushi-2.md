@@ -19,9 +19,11 @@ flowchart LR
     zenodo_osm_prebuilt[("zenodo_osm_prebuilt<br/>external CSV dataset")]
     osm_grid_tables["osm_grid_tables<br/>GridTables"]
     european_grid["european_grid<br/>pypsa.Network"]
+    net_power_map["net_power_map<br/>go.Figure (Dash app)"]
 
     zenodo_osm_prebuilt --> osm_grid_tables
     osm_grid_tables --> european_grid
+    european_grid --> net_power_map
 ```
 
 External I/O belongs in `pipeline/sources/` or `pipeline/sinks/`; transformations exchange in-memory values. The architecture test checks a finite set of direct I/O APIs and deliberately does not claim to detect dynamic or transitive I/O.
