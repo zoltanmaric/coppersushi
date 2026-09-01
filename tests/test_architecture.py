@@ -5,6 +5,7 @@ from pathlib import Path
 
 PIPELINE_ROOT = Path(__file__).parents[1] / "pipeline"
 ILLEGAL_TRANSFORM = Path(__file__).parent / "fixtures" / "io-boundary" / "illegal_transform.py"
+NAIVE_TIME = Path(__file__).parent / "fixtures" / "naive-time" / "naive_time.py"
 ADAPTER_DIRECTORIES = {"sources", "sinks"}
 
 # These are the direct APIs the project currently promises to keep in adapters.
@@ -63,3 +64,37 @@ def test_transformations_do_not_perform_direct_io():
 
 def test_io_boundary_detects_a_covered_call():
     assert direct_io_violations(ILLEGAL_TRANSFORM) == ["illegal_transform.py:7: call read_csv"]
+
+
+# Timestamp constructors state their timezone explicitly (tz=/tzinfo=/utc=).
+# tz=None declares deliberate naiveness at a forced third-party boundary
+# (PyPSA snapshots); these calls can never be made aware and are banned outright:
+ALWAYS_NAIVE_CALLS = {"today", "utcnow", "utcfromtimestamp"}
+TIME_CONSTRUCTORS = {"Timestamp", "DatetimeIndex", "date_range", "to_datetime", "datetime", "now", "fromtimestamp"}
+TZ_KEYWORDS = {"tz", "tzinfo", "utc"}
+
+
+def implicit_timezone_violations(path: Path) -> list[str]:
+    tree = ast.parse(path.read_text(), filename=str(path))
+    violations = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        name = node.func.attr if isinstance(node.func, ast.Attribute) else getattr(node.func, "id", None)
+        keywords = {keyword.arg for keyword in node.keywords}
+        if name in ALWAYS_NAIVE_CALLS or (name in TIME_CONSTRUCTORS and not keywords & TZ_KEYWORDS):
+            violations.append(f"{path.name}:{node.lineno}: naive {name}")
+    return violations
+
+
+def test_timestamps_state_their_timezone():
+    violations = [
+        violation
+        for path in PIPELINE_ROOT.rglob("*.py")
+        for violation in implicit_timezone_violations(path)
+    ]
+    assert violations == []
+
+
+def test_timezone_check_detects_a_naive_constructor():
+    assert implicit_timezone_violations(NAIVE_TIME) == ["naive_time.py:7: naive Timestamp"]
