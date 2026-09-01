@@ -1,3 +1,5 @@
+import logging
+
 import pandas as pd
 
 import scripts.plot_power_flow as ppf
@@ -6,31 +8,17 @@ import pypsa
 from dash import Dash, dcc, html, Input, Output, ctx
 import dash_bootstrap_components as dbc
 
-from pipeline import grid
+from pipeline import flows, grid
 from pipeline.sources import osm
 
 app = Dash(__name__, title='Copper Sushi 🍣', external_stylesheets=[dbc.themes.DARKLY])
 
 server = app.server
 
-
-def load_v1() -> pypsa.Network:
-    return pypsa.Network('networks/elec_s_all_ec_lv1.01_2H.nc')
-
-
-def load_osm() -> pypsa.Network:
-    """The 2025 OSM-based grid, with zero flows on a placeholder snapshot
-    until measured injections land."""
-    n = grid.build_network(osm.load_tables())
-    n.set_snapshots(pd.DatetimeIndex([pd.Timestamp('2026-08-12 12:00')], name='snapshot'))
-    n.buses_t.p = pd.DataFrame(0.0, index=n.snapshots, columns=n.buses.index)
-    n.lines_t.p0 = pd.DataFrame(0.0, index=n.snapshots, columns=n.lines.index)
-    n.links_t.p0 = pd.DataFrame(0.0, index=n.snapshots, columns=n.links.index)
-    n.transformers_t.p0 = pd.DataFrame(0.0, index=n.snapshots, columns=n.transformers.index)
-    return n
-
-
-NETWORK_LOADERS = {'v1': load_v1, 'osm': load_osm}
+NETWORK_LOADERS = {
+    'v1': lambda: pypsa.Network('networks/elec_s_all_ec_lv1.01_2H.nc'),
+    'osm': lambda: flows.zero_placeholder(grid.build_network(osm.load_tables(osm.download()))),
+}
 _cache: dict[str, tuple[go.Figure, pd.Index]] = {}
 
 
@@ -92,4 +80,5 @@ def update_figure(pathname: str, snapshot_index: int):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     app.run(debug=True)
