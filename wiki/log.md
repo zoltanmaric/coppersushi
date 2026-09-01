@@ -22,3 +22,6 @@ Large specs may burn down in committed wiki/specs/ (indexed as working memory, n
 
 ## [2026-08-19] decision | Lightweight architecture-review pilot begins
 Added an implemented-only Mermaid dataflow to the Sushi 2 architecture page, an Architecture delta PR convention, and a finite direct-I/O boundary for source/sink adapters. Planned topology stays prose until it lands; automatic extraction and graph CI await evidence from three real PRs.
+
+## [2026-09-01] ingest | Timezone handling: explicit-timezones rationale and the PyPSA boundary
+PyPSA rejects tz-aware snapshots at every version — numpy datetime64 → xarray → netCDF/CF, none carry a zone — so snapshots are naive meaning UTC, converted only in pipeline/flows.py. Performance myth debunked (the zone is dtype metadata; tz_convert is O(1)); Arrow/Polars unsupported upstream (coerced away on import). Created timezone-handling.
