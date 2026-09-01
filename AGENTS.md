@@ -21,3 +21,5 @@
 8. **Keep agent rules and skills minimal — ablate, don't accumulate.** Every line here and in `.agents/skills/` is read on every run and must earn its place through an observed, repeated stumble — never a predicted one. As models improve, old corrective lines go stale: re-ablate occasionally by deleting lines and seeing what actually breaks. If nothing ever needs adding back, the deleting wasn't aggressive enough.
 
 9. **Isolate conflicting concurrent work.** Multiple agents commonly work in this repository at once. Create worktrees under the gitignored `worktrees/` directory. If another agent's changes conflict with yours, offer to move your work to a worktree rather than overwrite or discard either set of changes.
+
+10. **Declare the architecture delta in every PR.** Every PR body carries an "Architecture delta" section: "None", or one line per change to the implemented dataflow. If the topology changed, update the Mermaid graph in `wiki/sushi-2.md` in the same PR.
