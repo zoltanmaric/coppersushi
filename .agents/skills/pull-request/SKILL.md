@@ -17,6 +17,9 @@ GitHub-native stacked PRs (public preview since 2026-07): an ordered chain of br
 
 ## Command map (`gh stack`, official extension `github/gh-stack`)
 
+Prerequisite: `gh extension install github/gh-stack` — official, but not bundled with `gh`.
+`submit`, `push`, `sync`, `link`, and `merge` write to the remote: the root `no-push` rule applies — ask the user first.
+
 - `init [branches...] [--base <trunk>]` — start a stack, or adopt existing branches listed bottom→top.
 - `add <branch>` / `add -Am "<msg>"` — new layer on top; `-Am` stages, commits, and creates the branch in one step.
 - `submit` — push all branches and create/update PRs with correct bases (opens an editor; `--auto` skips it but creates new PRs as drafts; `--open` marks them ready).
