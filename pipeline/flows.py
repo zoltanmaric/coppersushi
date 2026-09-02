@@ -1,8 +1,7 @@
 """Flow computation on the European grid.
 
-Currently only a zero-flow placeholder; measured injections and ``lpf()``
-replace it as they land.
-"""
+Currently only a zero-flow placeholder so the OSM topology can be drawn; the
+solved network from the PyPSA-Eur fork replaces this path (wiki/specs/sushi-2.md)."""
 import pandas as pd
 import pypsa
 

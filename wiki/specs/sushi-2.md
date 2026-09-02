@@ -4,32 +4,33 @@ Working memory. Architecture: [sushi-2.md](../sushi-2.md).
 
 ## Problem
 
-A v1-style optimal power flow for one recent day on the 2025 OSM grid, produced by today's PyPSA-Eur, with measured data calibrating and constraining it. Demo day: the newest day whose data fetches comfortably — 2025 or 2026, chosen while fetching, not researched. Deadline: **Sep 11**.
+A v1-style optimal power flow for one recent day on the 2025 OSM grid, produced by today's PyPSA-Eur, with measured data calibrating and constraining it. Demo day: **a 2024 day** — upstream's data stack ends there (prebuilt cutout `europe-1940-2024-era5`, `nuclear_p_max_pu.csv` last column 2024, renewable capacity year 2024, demand archive to 2026-02); 2025/26 would cost a CDS cutout build, a nuclear-series extension and `entsoe_electricity_demand.source: build`. Stretch only. Deadline: **Sep 11**.
 
 Scrapped 2026-09-02: the measured-injections + `lpf()` statement. Load has no sub-zonal measurement anywhere, and the cross-border check cannot separate a load-spreading error from a generation-spreading error. An OPF with measured constraints keeps what was measurable and lets the optimiser fill what was not.
 
 ## Approach
 
 - **Pipeline lives in the fork** ([zoltanmaric/pypsa-eur](https://github.com/zoltanmaric/pypsa-eur)): `master` mirrors upstream; branch `coppersushi-opf` carries `config/coppersushi.yaml` plus the enhancement scripts; solver HiGHS. Template: upstream's `config/examples/config.validation.yaml` (fixed capacities, no CO₂ cap, plants filtered by commissioning date).
-- **Coppersushi is the viewer** of the solved `.nc`, as v1 was, plus thin post-processing. `pipeline/` OSM grid assembly is deleted once the fork produces a network — PyPSA-Eur's `base_network` builds the same grid from the same CSVs.
-- Resolution: 2-hourly for the smoke run; hourly for the demo day if solve time allows (ERA5 is hourly, so 15-min is out).
-- Validation exploratory: computed vs measured cross-border flows, FR–DE falsifiable, ES–FR narrated; HVDC pinned to measured values.
+- **Coppersushi is the viewer** of the solved `.nc`, as v1 was, plus thin post-processing. Solved networks are copied into `networks/` and committed like v1's (fall back to a release asset if over GitHub's size limit). `pipeline/` OSM grid assembly stays until after Sep 11 — deleting it is a refactor with no demo value; it is then redundant with PyPSA-Eur's `base_network`, which builds the same grid from the same CSVs.
+- Resolution: 2-hourly throughout, as v1 (12 snapshots). Hourly is available (ERA5, ENTSO-E) but adds solve risk for no demo value.
+- Validation exploratory: computed vs measured cross-border flows, FR–DE falsifiable, ES–FR narrated. HVDC is *not* pinned before step 5 — an OPF dispatches links; pinning them to actuals is one of the measured constraints, and only AC flows are compared.
+- Config is written against `config/schema.default.json`, not copied from `config/examples/config.validation.yaml`, which is stale (`scenario.ll` and `clustering.simplify_network.exclude_carriers` are silently ignored today; the live keys are `electricity.transmission_limit` and `clustering.exclude_carriers`).
 - Out: carbon layer, CNEC modelling, forecasting, article copy; hosting last.
 
 ## Steps
 
-1. **Fork refresh**: old master → `legacy-2022`; master = upstream; pixi env; HiGHS. *(Sep 2–3)*
-2. **2013 day on the OSM grid**: `clusters: all`, 2H, `transmission_limit: v1.01`, prebuilt cutout. Proves the toolchain; the app draws it as a third network. **Guaranteed demo fallback.** *(Sep 3–4)*
-3. **Demo day**: new ERA5 cutout via CDS; load via upstream's ENTSO-E retrieval; check fuel-price and nuclear-availability series reach the day, else static fallbacks. *(Sep 4–6)*
-4. **Renewable calibration**: scale each zone's per-type availability so the modelled sum matches ENTSO-E zonal per-type actuals (16.1.B) — upstream's own validation reports over-estimated wind/solar. *(Sep 6–7)*
-5. **Measured units as constraints**: fix every reported unit ≥ 100 MW (16.1.A) to its actual output; OPF dispatches the rest. Geolocation join: JRC-PPDB-OPEN + Global Energy Monitor ([survey](../nodal-disaggregation.md)). *(Sep 7–9)*
+1. **Fork refresh**: old master → `legacy-2022`; master = upstream; branch `coppersushi-opf` off master; pixi env. No 2022 commits are carried (the cherry-pick experiment showed 41 of 46 conflict and the rest are trivia). *(Sep 2–3)*
+2. **2013-07-17 (v1's day) on the OSM grid**: `clusters: all` (note: `simplify_network` always runs first — lifted to 380 kV, stubs removed — so this is the simplified bus set, as v1's was, not the raw 6864-bus OSM layer), 2H, `transmission_limit: v1.0` (genuinely fixed lines; `v1.01` sets every line extendable — use it, or `load_shedding`, only if `v1.0` is infeasible), HiGHS with `threads` raised from the profile's 1, `transmission_losses: 0`, `noisy_costs: false`, `dynamic_fuel_price: false` (the monthly-price reindex yields all-NaN costs for a window not starting on a month boundary — ledgered upstream). Prebuilt cutout. Proves the toolchain; the app draws it as a third network. **Guaranteed demo fallback**; if `all` will not solve within a day, drop to a few hundred clusters. *(Sep 3–4)*
+3. **Demo day (2024)**: same config, snapshots moved; prebuilt cutout and demand archive cover it; plants filtered by commissioning date (`powerplants_filter`). *(Sep 4–5)*
+4. **Renewable calibration**: scale each zone's per-type availability so the modelled sum matches ENTSO-E zonal per-type actuals (16.1.B) — upstream's own validation reports over-estimated wind/solar. *(Sep 5–6)*
+5. **Measured units as constraints**: fix every reported unit ≥ 100 MW (16.1.A) to its actual output; OPF dispatches the rest; HVDC links pinned to measured flows. Mechanics: `clustering.exclude_carriers` keeps the fixed carriers as per-plant generators (no aggregate to carve capacity out of, so nothing is dispatched twice); match ENTSO-E units to them by name, capacity and coordinates — the EIC does not survive PyPSA-Eur's generator naming; apply via the supported `solving.options.custom_extra_functionality` hook, no core edits. entsoe-py: `include_eic=True` keeps EICs; per-plant query broken upstream ([ledger](../upstream-contributions.md)). *(Sep 6–9)*
 6. **Validation** vs measured cross-border flows (12.1.G); calibrations reported individually. *(Sep 9–10)*
-7. **Viz + hosting**: `Scattermapbox` pinned ([codebase-v1](../codebase-v1.md)); host last. *(Sep 10–11)*
+7. **Hosting** (viz landed in step 2; `Scattermapbox` pinned, [codebase-v1](../codebase-v1.md)). *(Sep 10–11)*
 
 ## Acceptance criteria
 
-- [ ] One command in the fork solves a given day on the OSM grid with HiGHS.
+- [ ] One command in the fork solves a given 2013 or 2024 day on the OSM grid with HiGHS.
 - [ ] The app shows the demo day: net power nodes, branch loadings, direction arrows, tooltips, time slider.
-- [ ] Units ≥ 100 MW dispatch at measured output; zonal renewables match measured totals.
+- [ ] Units ≥ 100 MW dispatch at measured output, HVDC at measured flows; zonal renewables match measured totals.
 - [ ] Flow-vs-measured comparison written up in the wiki.
 - [ ] Spec burned to nothing; durable findings distilled; this file deleted.

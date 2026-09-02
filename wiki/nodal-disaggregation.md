@@ -17,8 +17,8 @@ What is known about splitting national measurements into per-node injections, an
 
 ## PyPSA-Eur has no "historical day with actual dispatch" mode
 
-`solve_operations_network` is *optimal* dispatch at fixed capacities, hourly. `config/examples/config.validation.yaml` optimises 2019 and then compares against ENTSO-E; [doc/validation.md](https://github.com/PyPSA/pypsa-eur/blob/master/doc/validation.md) lists the misses (wind/solar overestimated, nuclear outages missed, run-of-river misclassified). Measured injections through `lpf()` are novel in this ecosystem.
+`solve_operations_network` is *optimal* dispatch at fixed capacities, hourly. `config/examples/config.validation.yaml` optimises 2019 and then compares against ENTSO-E; [doc/validation.md](https://github.com/PyPSA/pypsa-eur/blob/master/doc/validation.md) lists the misses (wind/solar overestimated, nuclear outages missed, run-of-river misclassified). Fixing measured dispatch inside the OPF would be new here ([ledger](upstream-contributions.md)).
 
 ## Unverified
 
-Whether every bidding zone publishes 15-min load and generation for 2026-08-12 after the [Oct 2025 SDAC switch](https://www.epexspot.com/en/news/successful-implementation-15-minute-market-time-unit-mtu-sdac) (GB stays 30-min): probe per zone before designing around it. No published work reconstructs European nodal flows from JAO flow-based data validated against measured flows.
+No published work reconstructs European nodal flows from JAO flow-based data validated against measured flows.
