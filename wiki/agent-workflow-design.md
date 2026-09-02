@@ -1,6 +1,6 @@
 # Agent workflow design (grill / spec / goldfish)
 
-Design rationale for this repo's agent tooling: `AGENTS.md` rules 7–8 and the skills
+Design rationale for this repo's agent tooling: the `AGENTS.md` rules `design-first` and `ablation`, and the skills
 `grill`, `spec`, `goldfish` (in `.agents/skills/`). Distilled 2026-08-19 from four
 public sources and one design conversation.
 
@@ -36,7 +36,7 @@ public sources and one design conversation.
 - **Three independent skills, composed by offer, never auto-chained.** The parts have
   different frequencies and trigger owners; a pipeline protocol was the predecessor
   pattern's main flaw.
-- **Interrogation trigger lives in `AGENTS.md` (rule 7), body in the `grill` skill.**
+- **Interrogation trigger lives in `AGENTS.md` (`design-first`), body in the `grill` skill.**
   Rules are always in context so the *default behavior* fires reliably; skills load on
   demand. Depth is left to agent discretion, scaled to ambiguity.
 - **Question zero, three-verdict ladder** (in grill, reused by goldfish's deleter
@@ -65,7 +65,7 @@ public sources and one design conversation.
   stumble: the Sushi 2 goldfish surfaced step-five tolerance minutiae at planning
   time; the pre-registration structure itself was dropped as shoehorning an
   open-ended exploration into a rigid frame.
-- **Ablation doctrine (rule 8, self-referential):** every rule/skill line earns its
+- **Ablation doctrine (`ablation`, self-referential):** every rule/skill line earns its
   place by observed stumble; re-ablate as models improve; occasional add-backs are the
   proof of aggressive-enough deletion.
 - **Wiki symbiosis:** spec = working memory (dies at task end), wiki = durable
