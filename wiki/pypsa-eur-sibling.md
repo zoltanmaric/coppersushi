@@ -16,7 +16,7 @@ Needs: a versioned pin tying our config to the workflow code it targets; no vend
 
 ## Dataflow: from raw data to the solved day
 
-What PyPSA-Eur does with our config, in reader's terms (first run 2026-09-02: 56 rules, ~35 min of downloads and preprocessing, HiGHS 90 s for 12 snapshots × 4160 buses). Edges name the data handed over; the table below maps each stage to upstream's rule names for anyone who needs the code.
+What PyPSA-Eur does with our config, in reader's terms (first run 2026-09-02: 56 rules, ~35 min of downloads and preprocessing; with Ukraine and Moldova 4390 buses, HiGHS 213 s for 12 snapshots). Edges name the data handed over; the table below maps each stage to upstream's rule names for anyone who needs the code.
 
 ```mermaid
 flowchart TD
@@ -69,7 +69,7 @@ flowchart TD
 | Cut out the day | `prepare_network` → `base_s_all_elec_.nc` |
 | Optimise | `solve_network` → `results/coppersushi/networks/base_s_all_elec_.nc` |
 
-Known traps, verified in upstream `563f22f6`: `clusters: all` is barely travelled upstream — three scripts assumed clustered bus names or clustered region sets and are patched on the pinned fork branch ([ledger](upstream-contributions.md)); a `powerplants_filter` on commissioning dates must be checked against the registry's date coverage or it silently empties the fleet; `transmission_limit: v1.01` makes every line extendable (`v1.0` keeps them fixed); `dynamic_fuel_price: true` gives all-NaN costs for a window not starting on a month boundary; `nuclear_p_max_pu.csv` ends 2024 and a later year raises `KeyError`; `highs-default` pins one thread. Ledger: [upstream-contributions](upstream-contributions.md).
+Known traps, verified in upstream `563f22f6`: `clusters: all` is barely travelled upstream — three scripts assumed clustered bus names or clustered region sets and are patched on the pinned fork branch ([ledger](upstream-contributions.md)); a `powerplants_filter` on commissioning dates must be checked against the registry's date coverage or it silently empties the fleet; `transmission_limit: v1.01` makes every line extendable (`v1.0` keeps them fixed); `dynamic_fuel_price: true` gives all-NaN costs for a window not starting on a month boundary; `nuclear_p_max_pu.csv` ends 2024 and a later year raises `KeyError`; `highs-default` pins one thread; the Internet Archive copy of the 4 GB WDPA file (Ukraine/Moldova path) stalls at exactly 2 GiB on resumed downloads — `data.wdpa.source: primary` fetches the current month's file from the publisher instead. Ledger: [upstream-contributions](upstream-contributions.md).
 
 ## Fork refs (remote `fork`)
 
