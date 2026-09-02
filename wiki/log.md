@@ -28,3 +28,21 @@ PyPSA rejects tz-aware snapshots at every version — numpy datetime64 → xarra
 
 ## [2026-09-02] ingest | Map engine: plotly's MapLibre path is unusable at our volumes
 Rendered v1 and the OSM topology through the same figure code on `Scattermap` + Carto Dark Matter: >45 s main-thread block on first render for both, instant on the Mapbox path; Carto look rejected. Recorded in codebase-v1 with deck.gl on Mapbox Dark as the keep-the-look exit; spec caution replaced.
+
+## [2026-09-02] ingest | Nodal disaggregation survey
+PyPSA-Eur's 60/40 GDP/population load split is superseded by its own JRC Energy Atlas adoption (v2026.02.0) and by Mu et al. 2026 (metered validation); ENTSO-E per-unit actuals need a JRC-PPDB-OPEN + GEM geolocation join because powerplantmatching yields no coordinates; no historical-dispatch mode exists in PyPSA-Eur. Created nodal-disaggregation; architecture item 2 and spec steps 1/3 revised.
+
+## [2026-09-02] decision | Pivot: OPF constrained by measurements replaces measured injections + lpf
+Load is unobservable below the bidding zone and the border check cannot separate load from generation errors, so Sushi 2 becomes a v1-style OPF on the OSM grid run from the refreshed PyPSA-Eur fork (HiGHS), with zonal actuals calibrating renewables and per-unit actuals fixed as constraints. Architecture page and spec rewritten; demo day = newest comfortably fetchable.
+
+## [2026-09-02] setup | Upstream-contributions ledger
+Started upstream-contributions: entsoe-py #480/#534, a PyPSA-Eur hindcast mode, and stale historical series as candidates; atlite #257/#261 as precedent.
+
+## [2026-09-02] ingest | PyPSA-Eur fork layout and hygiene
+Fork master becomes a pristine upstream mirror (superseded the same day by the pinned-sibling decision below); 2022 history archived as `legacy-2022` and the `coppersushi-v1` tag. Created pypsa-eur-sibling.
+
+## [2026-09-02] decision | Working OPF first; true-up to actuals later; PyPSA-Eur as pinned sibling
+Review (Ljube): drop validation and all true-up steps from the Sep 11 cut — a working OPF for a 2024 day, drawn and hosted. PyPSA-Eur runs from a sibling checkout pinned by a file in this repo (submodule rejected: per-worktree clones and data).
+
+## [2026-09-02] decision | Dataflow graph carries planned parts, dashed
+The architecture graph was implemented-only; plans lived in prose. It now holds planned nodes and edges as dashed `planned`-class parts that feature PRs turn solid. Rule `architecture-delta` and the review-graph spec amended.

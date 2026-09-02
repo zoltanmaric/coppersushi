@@ -24,4 +24,4 @@
 
 - **worktrees** — Isolate conflicting concurrent work. Multiple agents commonly work in this repository at once. Create worktrees under the gitignored `worktrees/` directory. If another agent's changes conflict with yours, offer to move your work to a worktree rather than overwrite or discard either set of changes.
 
-- **architecture-delta** — Declare the architecture delta in every PR. Every PR body carries an "Architecture delta" section: "None", or one line per change to the implemented dataflow. If the topology changed, update the Mermaid graph in `wiki/sushi-2.md` in the same PR.
+- **architecture-delta** — Declare the architecture delta in every PR. Every PR body carries an "Architecture delta" section: "None", or one line per change to the dataflow graph in `wiki/sushi-2.md`, updated in the same PR. The graph holds implemented parts (solid) and planned parts (dashed, class `planned`): a plan PR adds or removes dashed parts, a feature PR turns them solid — reviewers see what was fleshed out.

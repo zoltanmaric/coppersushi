@@ -8,7 +8,7 @@ Large agent PRs have been costly to review elsewhere, but Copper Sushi has not y
 
 ## Approach
 
-Keep one small, explicit Mermaid DAG in the durable Sushi 2 architecture page. Nodes are domain artifacts; an edge means “required to produce.” The diagram is deliberately human-maintained: its small diff, plus an **Architecture delta** section in every PR body (`None` is valid), is the review surface. No framework, extractor, policy language, graph bot, or required graph check until real use proves those costs worthwhile.
+Keep one small, explicit Mermaid DAG in the durable Sushi 2 architecture page. Nodes are domain artifacts; an edge means “required to produce.” Since 2026-09-02 the graph also carries **planned** parts, dashed (`classDef planned`): a plan PR adds or removes them, a feature PR turns them solid, so a review reads as “which dashed parts got fleshed out” rather than a fresh drawing each time. The diagram is deliberately human-maintained: its small diff, plus an **Architecture delta** section in every PR body (`None` is valid), is the review surface. No framework, extractor, policy language, graph bot, or required graph check until real use proves those costs worthwhile.
 
 Add one narrow enforcement mechanism now: external I/O belongs in named source/sink adapters, while transformations do not perform it directly. Enforce a documented finite set of imports/calls with Import Linter or a small AST-based test. This is not a claim to detect dynamic or transitive I/O, nor to prove referential transparency; PyPSA's in-memory mutation remains allowed.
 

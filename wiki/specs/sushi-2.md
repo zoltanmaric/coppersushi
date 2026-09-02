@@ -4,24 +4,28 @@ Working memory. Architecture: [sushi-2.md](../sushi-2.md).
 
 ## Problem
 
-The smallest impressive cut of the nodal-flows-from-actuals map. Demo day: **2026-08-12** (eclipse day; headline figures from the Electricity Maps newsletter — verify against ENTSO-E/OMIE before using them anywhere). Target: days; Sep 11 absolute deadline.
+A working v1-style optimal power flow for one 2024 day on the 2025 OSM grid, produced by today's PyPSA-Eur with HiGHS and drawn in the app. Deadline: **Sep 11**. Start small: a working OPF first; truing it up to measured data comes after.
+
+Demo day is 2024 because upstream's data stack ends there (prebuilt cutout `europe-1940-2024-era5`, `nuclear_p_max_pu.csv` last column 2024, renewable capacity year 2024). Later years cost a CDS cutout build and a nuclear-series extension.
 
 ## Approach
 
-In-place rewrite on main (v1 = the `v1` release). Iterative: only the next steps are detailed; later items stay coarse and are re-planned after each landing. 15-min resolution (native since the Oct 2025 MTU switch). Validation is exploratory, not pre-registered: compute, compare to measured flows, investigate discrepancies, report calibrations honestly. HVDC links are pinned to measured values (stated openly) — physics is genuinely tested only on AC corridors, so **FR–DE is the falsifiable comparison; ES–FR is the narrated case study**. Validation days: a small smart mix — a few boring high-flow days + a couple of eventful ones incl. the demo day. Rejected for this cut: CNEC modeling, OPF counterfactual, carbon layer, better-than-NUTS3 load split, reconciliation QP (proportional rescaling suffices until a bound binds), irradiance-weighted small-solar split (capacity-pro-rata first; CAMS/SARAH likely don't model eclipse obscuration — check before investing).
+- **PyPSA-Eur is a pinned sibling checkout** ([design](../pypsa-eur-sibling.md)): `pypsa-eur.pin` in this repo records URL + commit; a small runner checks the sibling out at the pin and runs Snakemake with `--configfile config/coppersushi.yaml`. One checkout, one data directory, shared by every worktree.
+- **This repo owns** the pin, the runner, the config and the solved networks (committed to `networks/` like v1's; release asset if over GitHub's size limit). `pipeline/` OSM grid assembly stays until a solved network exists, then goes — redundant with PyPSA-Eur's `base_network`.
+- **Config** is written against `config/schema.default.json`, not copied from `config/examples/config.validation.yaml`, which carries keys today's code ignores (`scenario.ll`, `clustering.simplify_network.exclude_carriers`; live: `electricity.transmission_limit`, `clustering.exclude_carriers`).
+- Non-goals for this cut: true-up to actuals (calibration, measured constraints, validation), carbon layer, modelling of critical network elements and contingencies, forecasting, article copy, hosting.
 
-## Next steps (detailed)
+## Next steps
 
-1. **Injections, measured**: per-unit actuals for 2026-08-12 via `entsoe-py` (token in `.secrets/.entsoe_api_token`; `query_generation_per_plant` broken upstream since Nov 2025 — issue #480, budget a workaround); geolocate via `powerplantmatching`; measure per-unit coverage vs zonal totals as a diagnostic (known gaps, e.g. French run-of-river).
-2. **Zonal actuals**: per-type generation + load per zone for the day (needed for the remainder split and coverage diagnostic).
-
-## Later (coarse, re-plan after each landing)
-
-3. Remainder injections (registry pro-rata) + NUTS3 load split → 4. `lpf()`, decide slack/imbalance handling from what the first run shows → 5. Compare to measured cross-border flows (12.1.G), explore, calibrate, report → 6. Viz (deferred decision; default: v1's Dash path on `Scattermapbox`. plotly's MapLibre path is ruled out and deck.gl is the upgrade path — see [codebase-v1](../codebase-v1.md) § Known weaknesses) → 7. Host (trivial, last).
+1. **Solve 2013-07-17 (v1's day) on the OSM grid and draw it**: pin file + runner + `config/coppersushi.yaml`; the app loads the solved network alongside the two it draws today. Config: `clusters: all` (`simplify_network` always runs first — lifted to 380 kV, stubs removed — so this is the simplified bus set, as v1's was, not the raw 6864-bus OSM layer), `transmission_limit: v1.0` (genuinely fixed lines; `v1.01` sets every line extendable — use it, or `load_shedding`, only if `v1.0` is infeasible), HiGHS with `threads` raised from the profile's 1, `transmission_losses: 0`, `noisy_costs: false`, `dynamic_fuel_price: false` (the monthly-price reindex yields all-NaN costs for a window not starting on a month boundary — [ledgered](../upstream-contributions.md)). Temporal resolution: decide from the first solve time. If `all` will not solve within a day, drop to a few hundred clusters.
+2. **The 2024 day**: same config, snapshots moved; plants filtered by commissioning date (`powerplants_filter`).
 
 ## Acceptance criteria
 
-- [ ] One command computes a given day (laptop-scale).
-- [ ] Flow-vs-measured comparison for the validation days written up in the wiki, calibrations individually reported.
-- [ ] Map of 2026-08-12: net power nodes, branch loadings, direction arrows, tooltips, time slider.
-- [ ] Spec burned to nothing; durable findings distilled to the wiki; this file deleted.
+- [ ] One command here solves a given 2013 or 2024 day on the OSM grid with HiGHS via the pinned sibling.
+- [ ] The app shows the 2024 day: net power nodes, branch loadings, direction arrows, tooltips, time slider.
+- [ ] Spec burned to nothing; durable findings distilled; this file deleted.
+
+## Future chapters (settled facts, not planned work)
+
+True-up to actuals, in order: zonal per-type equality on renewable dispatch (ENTSO-E 16.1.B) via `custom_extra_functionality`; measured units ≥ 100 MW (16.1.A) fixed and HVDC pinned — `clustering.exclude_carriers` keeps them per-plant, matching by name/capacity/coordinates since the EIC does not survive PyPSA-Eur's generator naming, fixed-unit output netted out of zonal targets; validation against measured cross-border flows (12.1.G). Evidence: [nodal-disaggregation](../nodal-disaggregation.md). Then carbon layer, OPF counterfactuals, hosting.
