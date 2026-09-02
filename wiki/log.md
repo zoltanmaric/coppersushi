@@ -34,3 +34,6 @@ PyPSA-Eur's 60/40 GDP/population load split is superseded by its own JRC Energy 
 
 ## [2026-09-02] decision | Pivot: OPF constrained by measurements replaces measured injections + lpf
 Load is unobservable below the bidding zone and the border check cannot separate load from generation errors, so Sushi 2 becomes a v1-style OPF on the OSM grid run from the refreshed PyPSA-Eur fork (HiGHS), with zonal actuals calibrating renewables and per-unit actuals fixed as constraints. Architecture page and spec rewritten; demo day = newest comfortably fetchable.
+
+## [2026-09-02] setup | Upstream-contributions ledger
+Started upstream-contributions: entsoe-py #480/#534, a PyPSA-Eur hindcast mode, and stale historical series as candidates; atlite #257/#261 as precedent.
