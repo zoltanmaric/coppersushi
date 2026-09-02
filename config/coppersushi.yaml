@@ -9,6 +9,15 @@ scenario:
   clusters: [all]
   opts: [""]
 
+# Upstream's default list plus Ukraine and Moldova, which the OSM grid covers.
+countries: [AL, AT, BA, BE, BG, CH, CZ, DE, DK, EE, ES, FI, FR, GB, GR, HR, HU, IE, IT, LT, LU, LV, MD, ME, MK, NL, "NO", PL, PT, RO, RS, SE, SI, SK, UA, XK]
+
+# The World Database on Protected Areas (needed for UA/MD availability) from its primary source:
+# upstream's pinned Internet Archive copy stalls at exactly 2 GiB on resumed downloads.
+data:
+  wdpa:
+    source: primary
+
 snapshots:
   start: "2013-07-17"
   end: "2013-07-18"
@@ -37,7 +46,7 @@ solving:
   options:
     transmission_losses: 0
     noisy_costs: false
-    # Fixed lines + fixed plants made the 2013 day infeasible at presolve; shedding at 100 k€/MWh
-    # keeps the LP feasible and shows where demand cannot be met.
+    # Insurance: shedding at 100 k€/MWh keeps the LP feasible and shows where demand cannot be
+    # met. The solved 2013 day sheds nothing.
     load_shedding:
       enable: true
