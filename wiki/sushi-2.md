@@ -5,7 +5,7 @@ The in-place successor of [v1](copper-sushi-app.md). v1 visualized a *model's* o
 ## Architecture (settled 2026-08-19)
 
 1. **Grid**: PyPSA-Eur's prebuilt OSM-based European network (Xiong et al., *Nature Scientific Data* 2025, Tom Brown's group).
-2. **Injections**: ENTSO-E Actual Generation per Generating Unit (≥100 MW, hourly, via `entsoe-py`) geolocated with `powerplantmatching`; sub-100 MW remainder distributed by registry capacity layout × satellite irradiance actuals (CAMS/SARAH-3); load = zonal actuals split by NUTS3 population/GDP prior (kept until validation proves it the binding problem).
+2. **Injections** (revised 2026-09-02, [survey](nodal-disaggregation.md)): ENTSO-E Actual Generation per Generating Unit (≥100 MW, via `entsoe-py`) geolocated through JRC-PPDB-OPEN + Global Energy Monitor (ENTSO-E units carry no coordinates; `powerplantmatching` cannot supply them); sub-100 MW remainder = zonal totals per type minus per-unit actuals, allocated over geolocated registries (MaStR, osm-powerplants, GEM), or over measured sub-national feed-in where it exists; load = zonal actuals split by the JRC Energy Atlas 1 km consumption raster (PyPSA-Eur's own replacement for the NUTS3 GDP/population split).
 3. **Physics**: linear power flow (`network.lpf()`) for AC; HVDC link flows are *pinned to measured values* (lpf doesn't solve them — stated openly, so physics is genuinely tested only on AC corridors). Estimated splits reconciled to zonal totals by proportional rescaling.
 4. **Signal**: v1's family unchanged — net power per node, loaded-vs-easy branches, direction arrows, per-node tooltips — driven by actuals.
 5. **Web tool**: Python core; viz stack deliberately open (pipeline first, viz decided from remaining time).

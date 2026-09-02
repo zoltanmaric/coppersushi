@@ -3,6 +3,7 @@
 ## Concepts
 - [copper-plate-problem.md](copper-plate-problem.md) — the EU market-design argument motivating this project (copper plate, redispatch, co-optimisation, locational pricing)
 - [agent-workflow-design.md](agent-workflow-design.md) — rationale and sources behind the `design-first` and `ablation` rules and the grill/spec/goldfish skills
+- [nodal-disaggregation.md](nodal-disaggregation.md) — survey: splitting measured national load and generation into per-node injections; what superseded PyPSA-Eur's approach
 - [timezone-handling.md](timezone-handling.md) — the `explicit-timezones` convention, its rationale, and the PyPSA naive-UTC boundary
 
 ## Entities
