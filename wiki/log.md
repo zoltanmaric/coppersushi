@@ -43,3 +43,6 @@ Fork master becomes a pristine upstream mirror (superseded the same day by the p
 
 ## [2026-09-02] decision | Working OPF first; true-up to actuals later; PyPSA-Eur as pinned sibling
 Review (Ljube): drop validation and all true-up steps from the Sep 11 cut — a working OPF for a 2024 day, drawn and hosted. PyPSA-Eur runs from a sibling checkout pinned by a file in this repo (submodule rejected: per-worktree clones and data).
+
+## [2026-09-02] decision | Dataflow graph carries planned parts, dashed
+The architecture graph was implemented-only; plans lived in prose. It now holds planned nodes and edges as dashed `planned`-class parts that feature PRs turn solid. Rule `architecture-delta` and the review-graph spec amended.

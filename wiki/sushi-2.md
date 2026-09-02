@@ -12,23 +12,33 @@ The in-place successor of [v1](copper-sushi-app.md). v1 visualized a *model's* o
 
 Why the pivot: load has no sub-zonal measurement anywhere, so "measured injections" were always going to be zonal measurements spread by static keys, and the cross-border check could not separate load errors from generation errors. Full rationale in [specs/sushi-2.md](specs/sushi-2.md).
 
-## Implemented dataflow
+## Dataflow
 
-This graph shows landed Sushi 2 production paths, not planned topology. The OSM grid assembly path becomes redundant once the fork produces solved networks and is deleted after Sep 11. Node IDs are stable domain-artifact identities; each arrow means “required to produce.” PRs update it only when implementation changes the topology.
+Solid nodes and edges are implemented; **dashed (class `planned`) are planned** and turn solid in the PR that lands them. Node IDs are stable domain-artifact identities; each arrow means "required to produce." PyPSA-Eur's internal rule chain is upstream's topology and is drawn on [pypsa-eur-sibling](pypsa-eur-sibling.md), not here.
 
 ```mermaid
 flowchart LR
+    classDef planned stroke-dasharray: 5 5,stroke:#888,color:#888,fill:none
+
     zenodo_osm_prebuilt[("zenodo_osm_prebuilt<br/>external CSV dataset")]
     osm_grid_tables["osm_grid_tables<br/>GridTables"]
     european_grid["european_grid<br/>pypsa.Network"]
     net_power_map["net_power_map<br/>go.Figure (Dash app)"]
 
+    pypsa_eur_pin["pypsa_eur_pin<br/>pypsa-eur.pin + config/coppersushi.yaml"]:::planned
+    pypsa_eur_run["pypsa_eur_run<br/>Snakemake in ../pypsa-eur (HiGHS)"]:::planned
+    solved_network["solved_network<br/>networks/*.nc"]:::planned
+
     zenodo_osm_prebuilt --> osm_grid_tables
     osm_grid_tables --> european_grid
     european_grid --> net_power_map
+
+    pypsa_eur_pin -.-> pypsa_eur_run
+    pypsa_eur_run -.-> solved_network
+    solved_network -.-> net_power_map
 ```
 
-External I/O belongs in `pipeline/sources/` or `pipeline/sinks/`; transformations exchange in-memory values. The architecture test checks a finite set of direct I/O APIs and deliberately does not claim to detect dynamic or transitive I/O.
+The `zenodo_osm_prebuilt → european_grid` path is deleted after Sep 11, once `solved_network` exists: PyPSA-Eur's `base_network` builds the same grid from the same CSVs. External I/O belongs in `pipeline/sources/` or `pipeline/sinks/`; transformations exchange in-memory values. The architecture test checks a finite set of direct I/O APIs and deliberately does not claim to detect dynamic or transitive I/O.
 
 ## Deliberately out (this phase)
 
