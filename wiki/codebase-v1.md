@@ -4,7 +4,7 @@ Dash/Plotly app, ~400 lines of Python across three modules. Written 2022, modern
 
 ## Structure
 
-- `app.py` — Dash app: loads one solved PyPSA network (`networks/*.nc`), builds the full figure at startup, snapshot slider toggles trace visibility.
+- `app.py` — Dash app: loads solved PyPSA networks (`networks/*.nc`, Git LFS objects), builds the full figure at startup, snapshot slider toggles trace visibility.
 - `scripts/plot_power_flow.py` — builds the map figure: 4 traces per snapshot (nodes, loaded lines >99%, easy lines, direction triangles at geodesic branch midpoints via pyproj). Node color/size = net power, IQR-clamped colorscale. Also supports coloring by load/generation/marginal price (never exposed in UI).
 - `scripts/network_snapshot.py` — extracts per-snapshot bus/load/generator DataFrames, joins static + time-varying quantities.
 

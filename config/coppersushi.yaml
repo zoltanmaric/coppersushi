@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=../../pypsa-eur/config/schema.default.json
+# Copper Sushi's PyPSA-Eur configuration: only what deviates from config.default.yaml.
+# Passed with --configfile by pipeline/sources/pypsa_eur.py; design in wiki/pypsa-eur-sibling.md.
+
+run:
+  name: coppersushi
+
+scenario:
+  clusters: [all]
+  opts: [""]
+
+snapshots:
+  start: "2013-07-17"
+  end: "2013-07-18"
+  inclusive: left
+
+electricity:
+  transmission_limit: v1.0
+  extendable_carriers:
+    Generator: []
+    StorageUnit: []
+    Store: []
+    Link: []
+
+clustering:
+  temporal:
+    resolution_elec: 2h
+
+solving:
+  solver:
+    name: highs
+    options: highs-default
+  solver_options:
+    highs-default:
+      threads: 8
+      run_crossover: "on"  # the profile's IPM-only solution violated tolerances (status Unknown)
+  options:
+    transmission_losses: 0
+    noisy_costs: false
+    # Fixed lines + fixed plants made the 2013 day infeasible at presolve; shedding at 100 k€/MWh
+    # keeps the LP feasible and shows where demand cannot be met.
+    load_shedding:
+      enable: true

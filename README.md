@@ -55,6 +55,24 @@ pytest
 The tests run against small checked-in fixtures under `tests/fixtures/`, never against the
 networks; the one figure test skips without a Mapbox token.
 
+## Solving a day with PyPSA-Eur
+The networks in `networks/` are produced by [PyPSA-Eur](https://github.com/PyPSA/pypsa-eur),
+run from a **sibling checkout** at `../pypsa-eur` pinned by `pypsa-eur.pin` (repository URL and
+commit) with the configuration in `config/coppersushi.yaml`. Set it up once:
+```bash
+git clone https://github.com/PyPSA/pypsa-eur.git ../pypsa-eur
+brew install pixi            # PyPSA-Eur's environment manager
+(cd ../pypsa-eur && pixi install)
+```
+Then, from this repository:
+```bash
+python -m pipeline.sources.pypsa_eur
+```
+checks the sibling out at the pinned commit, runs the workflow (a first run downloads about
+20 GB and takes an hour on a fast connection; later runs take minutes) and copies the solved network into `networks/` as `opf-<day>.nc`. Set `PYPSA_EUR_DIR` to
+use a checkout elsewhere. Why a sibling rather than a submodule, and what the workflow does:
+[`wiki/pypsa-eur-sibling.md`](wiki/pypsa-eur-sibling.md).
+
 ## Installation on Heroku
 After creating the Heroku app, run the following to deploy it:
 ```bash

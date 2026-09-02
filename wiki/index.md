@@ -5,7 +5,7 @@
 - [agent-workflow-design.md](agent-workflow-design.md) — rationale and sources behind the `design-first` and `ablation` rules and the grill/spec/goldfish skills
 - [rule-provenance.md](rule-provenance.md) — the observed stumble behind each `AGENTS.md` rule and skill line; the `ablation` rule's lookup table
 - [nodal-disaggregation.md](nodal-disaggregation.md) — survey: splitting measured national load and generation into per-node injections; what superseded PyPSA-Eur's approach
-- [upstream-contributions.md](upstream-contributions.md) — how we contribute upstream (fork rehearsal, PyPSA-Eur's rules) and the ledger of dependency bugs we need fixed
+- [upstream-contributions.md](upstream-contributions.md) — dependency bugs we need fixed: candidates for upstream PRs, and the record of ones made
 - [timezone-handling.md](timezone-handling.md) — the `explicit-timezones` convention, its rationale, and the PyPSA naive-UTC boundary
 
 ## Entities
