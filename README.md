@@ -9,12 +9,18 @@ The web app is deployed
 [**here**](https://121gigawatts.org/copper-sushi-power-flow-european-grid/),
 along with an explanation of the main features.
 
-The bundled network `networks/elec_s_all_ec_lv1.01_2H.nc` is a solved
-PyPSA-Eur 0.5.0 optimal power flow (one day, 2013-07-17, 2-hour snapshots,
+v1's network `networks/elec_s_all_ec_lv1.01_2H.nc` is a solved PyPSA-Eur 0.5.0 optimal power flow (one day, 2013-07-17, 2-hour snapshots,
 lines expandable to 1.01× current volume). The exact configuration that
 produced it is tagged
 [`coppersushi-v1`](https://github.com/zoltanmaric/pypsa-eur/tree/coppersushi-v1)
 in my fork of `pypsa-eur`; see its `config.yaml` and README.
+
+Networks are versioned with [Git LFS](https://git-lfs.com). Install `git-lfs` system-wide (`brew install git-lfs`)
+so git works from any shell or IDE, run `git lfs install` once to register the filters that turn pointers into
+files, then `git lfs pull`. The conda environment ships `git-lfs` too, for shells without it.
+Clone with `GIT_LFS_SKIP_SMUDGE=1` to skip the files, e.g. to run only the tests.
+Deploys must ship the real files: a local container build does (`ADD .`), while GitHub tarballs and
+`git push heroku` deliver LFS pointers.
 
 
 ## Local Installation
@@ -46,7 +52,8 @@ Once the server starts, the web app will be available at http://localhost:8050
 ```bash
 pytest
 ```
-The tests run against the bundled solved network in `networks/`.
+The tests run against small checked-in fixtures under `tests/fixtures/`, never against the
+networks; the one figure test skips without a Mapbox token.
 
 ## Installation on Heroku
 After creating the Heroku app, run the following to deploy it:

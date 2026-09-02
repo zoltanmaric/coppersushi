@@ -13,3 +13,4 @@ dependencies:
   - numpy =2.5.2
   - gunicorn =26.0.0  # For deploying to Heroku
   - snakeviz =2.2.2  # For visualising cProfile results
+  - git-lfs =3.8.0  # Networks are LFS-tracked; run `git lfs install` once after creating the env

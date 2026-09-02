@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 
 import pypsa
 import pytest
@@ -10,7 +11,7 @@ import scripts.plot_power_flow as ppf
 class TestPlotPowerFlow:
     @pytest.fixture
     def n(self):
-        return pypsa.Network('networks/elec_s_all_ec_lv1.01_2H.nc')
+        return pypsa.Network('tests/fixtures/networks/v1-sample.nc')
 
     def test_get_branch_info_for_snapshot(self, n):
         branch_info = ppf.get_branch_info(n)
@@ -57,6 +58,7 @@ class TestPlotPowerFlow:
 
         assert re.search(r'Net power.*485.24 MW', node.html) is not None
 
+    @pytest.mark.skipif(not Path('.secrets/.mapbox_token').exists(), reason='needs a Mapbox token (README)')
     def test_colored_network_figure(self, n):
         fig = ppf.colored_network_figure(n, 'net_power')
 
