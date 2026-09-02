@@ -9,6 +9,7 @@
 
 ## Entities
 - [sushi-2.md](sushi-2.md) — Copper Sushi 2: optimal power flow on the 2025 OSM grid via today's PyPSA-Eur, constrained by measurements; architecture
+- [pypsa-eur-fork.md](pypsa-eur-fork.md) — the PyPSA-Eur fork hosting the Sushi 2 pipeline: branch layout, hygiene rules, refresh procedure
 - [copper-sushi-app.md](copper-sushi-app.md) — what the app shows, the OPF behind it, data provenance and caveats
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026
 

@@ -5,7 +5,7 @@ The in-place successor of [v1](copper-sushi-app.md). v1 visualized a *model's* o
 ## Architecture (settled 2026-09-02; supersedes the 2026-08-19 measured-injections design)
 
 1. **Grid**: PyPSA-Eur's OSM-based European network (Xiong et al., *Nature Scientific Data* 2025), built by PyPSA-Eur's own `base_network`.
-2. **Workflow**: today's PyPSA-Eur, run from the [fork](https://github.com/zoltanmaric/pypsa-eur) on branch `coppersushi-opf` with a committed config, HiGHS as solver. Load disaggregation, plant matching and renewable profiles are upstream's (JRC Energy Atlas, powerplantmatching, atlite).
+2. **Workflow**: today's PyPSA-Eur, run from the [fork](pypsa-eur-fork.md) on branch `coppersushi-opf` with a committed config, HiGHS as solver. Load disaggregation, plant matching and renewable profiles are upstream's (JRC Energy Atlas, powerplantmatching, atlite).
 3. **Measurements in**: ENTSO-E zonal per-type actuals calibrate renewable availability; per-unit actuals (≥ 100 MW, geolocated via JRC-PPDB-OPEN + Global Energy Monitor) are fixed as constraints, HVDC flows pinned to actuals. See [nodal-disaggregation](nodal-disaggregation.md) for what is and is not measurable.
 4. **Signal**: v1's family unchanged — net power per node, loaded-vs-easy branches, direction arrows, per-node tooltips.
 5. **Web tool**: this repo, the viewer of the solved network; `Scattermapbox` pinned ([codebase-v1](codebase-v1.md)).

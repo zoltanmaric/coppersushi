@@ -37,3 +37,6 @@ Load is unobservable below the bidding zone and the border check cannot separate
 
 ## [2026-09-02] setup | Upstream-contributions ledger
 Started upstream-contributions: entsoe-py #480/#534, a PyPSA-Eur hindcast mode, and stale historical series as candidates; atlite #257/#261 as precedent.
+
+## [2026-09-02] ingest | PyPSA-Eur fork layout and hygiene
+Fork master becomes a pristine upstream mirror; work on `coppersushi-opf`; 2022 history archived as `legacy-2022` and the `coppersushi-v1` tag. Created pypsa-eur-fork.
