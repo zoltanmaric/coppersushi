@@ -310,5 +310,5 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
 
 
 if __name__ == "__main__":
-    n = pypsa.Network("results/networks/elec_s_all_ec_lv1.1_2H.nc")
+    n = pypsa.Network("networks/elec_s_all_ec_lv1.01_2H.nc")
     colored_network_figure(n, 'net_power')

@@ -9,9 +9,12 @@ The web app is deployed
 [**here**](https://121gigawatts.org/copper-sushi-power-flow-european-grid/),
 along with an explanation of the main features.
 
-The `pypsa-eur` configuration used for the network plotted here can be
-found in my fork of the `pypsa-eur` repo:
-[`zoltanmaric/pypsa-eur`](https://github.com/zoltanmaric/pypsa-eur)
+The bundled network `networks/elec_s_all_ec_lv1.01_2H.nc` is a solved
+PyPSA-Eur 0.5.0 optimal power flow (one day, 2013-07-17, 2-hour snapshots,
+lines expandable to 1.01× current volume). The exact configuration that
+produced it is tagged
+[`coppersushi-v1`](https://github.com/zoltanmaric/pypsa-eur/tree/coppersushi-v1)
+in my fork of `pypsa-eur`; see its `config.yaml` and README.
 
 
 ## Local Installation
