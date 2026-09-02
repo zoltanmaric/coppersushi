@@ -14,65 +14,60 @@ Needs: a versioned pin tying our config to the workflow code it targets; no vend
 - **Data** stays in the sibling: `data/`, `cutouts/`, `resources/`, `results/`. Prebuilt cutout `europe-1940-2024-era5` and the osm-prebuilt grid are retrieved by upstream rules; nothing is fetched by us.
 - **Environment**: pixi in the sibling (`pixi install`, `pixi shell`), upstream's preferred method.
 
-## Target dataflow: from raw data to the solved OPF (planned topology, not implemented)
+## Target dataflow: from raw data to the solved day (planned topology, not implemented)
 
-Upstream rules in order for the electricity-only path with the OSM grid; our inputs are the config and the pin, our output is the copied network. Every box is an upstream rule or file unless marked *ours*.
+What PyPSA-Eur does with our config, in reader's terms. Edges name the data handed over; the table below maps each stage to upstream's rule names for anyone who needs the code.
 
 ```mermaid
 flowchart TD
-    subgraph inputs["inputs (ours)"]
-        pin["pypsa-eur.pin"]
-        cfg["config/coppersushi.yaml"]
-    end
-    subgraph grid["grid"]
-        osm[("osm-prebuilt CSVs<br/>retrieve_osm_archive")]
-        shapes["country / offshore / NUTS3 shapes<br/>build_shapes"]
-        base["base_network → base.nc"]
-        ext["add_transmission_projects_and_dlr → base_extended.nc"]
-        simp["simplify_network → base_s.nc<br/>lift to 380 kV, drop stubs"]
-        clus["cluster_network → base_s_all.nc + regions<br/>clusters: all"]
-    end
-    subgraph injections["injections"]
-        ppm[("powerplantmatching<br/>retrieve_powerplants")]
-        pp["build_powerplants → powerplants_s_all.csv"]
-        cut[("ERA5 cutout<br/>retrieve_cutout")]
-        avail["determine_availability_matrix"]
-        ren["build_renewable_profiles → profile_{tech}.nc"]
-        hyd["build_hydro_profile"]
-        dem[("national demand<br/>retrieve_electricity_demand_*")]
-        atlas[("JRC Energy Atlas raster<br/>retrieve_electricity_demand_energy_atlas")]
-        demb["build_electricity_demand_base → per-bus load"]
-        costs[("technology-data costs<br/>retrieve_cost_data")]
-    end
-    subgraph opf["optimisation"]
-        add["add_electricity → base_s_all_elec.nc<br/>generators, loads, costs"]
-        prep["prepare_network → base_s_all_elec_.nc<br/>2h resolution, transmission_limit v1.0"]
-        solve["solve_network (HiGHS)<br/>results/coppersushi/networks/base_s_all_elec_.nc"]
-    end
-    net["networks/*.nc (ours) → Dash app"]
+    classDef ours fill:#fdf6e3,stroke:#b58900
+    classDef src fill:#eee,stroke:#888
 
-    pin --> base
-    cfg --> prep
-    cfg --> solve
-    osm --> base
-    shapes --> base
-    base --> ext --> simp --> clus
-    clus --> pp
-    ppm --> pp
-    cut --> avail --> ren
-    clus --> avail
-    cut --> hyd
-    dem --> demb
-    atlas --> demb
-    clus --> demb
-    clus --> add
-    pp --> add
-    ren --> add
-    hyd --> add
-    demb --> add
-    costs --> add
-    add --> prep --> solve --> net
+    osm[("OpenStreetMap grid extract<br/>prebuilt, Zenodo")]:::src
+    plants[("Power plant registry")]:::src
+    weather[("ERA5 weather for the year<br/>prebuilt cutout")]:::src
+    demand[("National electricity demand<br/>hourly, ENTSO-E archive")]:::src
+    atlas[("JRC Energy Atlas<br/>1 km electricity-consumption map")]:::src
+    costs[("Technology costs<br/>fuel, CO₂, operation")]:::src
+    cfg["config/coppersushi.yaml + pypsa-eur.pin"]:::ours
+
+    grid["Build the grid<br/>lift to 380 kV, drop dead-end stubs, one region per bus"]
+    place["Place conventional plants on buses"]
+    avail["Wind, solar and hydro availability<br/>per region and hour"]
+    split["Split national demand onto buses"]
+    assemble["Assemble the model<br/>generators, loads and costs on the grid"]
+    day["Cut out the day<br/>snapshots, time resolution, fixed line limits"]
+    solve["Optimise dispatch with HiGHS<br/>least cost, all demand met, no line overloaded"]
+    out["networks/*.nc → the map"]:::ours
+
+    osm -- "substations, AC lines, HVDC links" --> grid
+    grid -- "buses + their regions" --> place
+    grid -- "regions" --> avail
+    grid -- "regions" --> split
+    plants -- "fuel, capacity, coordinates" --> place
+    weather -- "wind speed, irradiance, runoff" --> avail
+    demand -- "MW per country and hour" --> split
+    atlas -- "where consumption sits" --> split
+    grid -- "the network" --> assemble
+    place -- "plants per bus" --> assemble
+    avail -- "max output per generator and hour" --> assemble
+    split -- "load per bus and hour" --> assemble
+    costs -- "€/MWh per fuel" --> assemble
+    cfg -- "which day, which limits" --> day
+    assemble -- "full-year model" --> day
+    day -- "one-day model" --> solve
+    solve -- "flow per line, output per plant, price per bus" --> out
 ```
+
+| Stage | Upstream rules |
+|---|---|
+| Build the grid | `retrieve_osm_archive`, `build_shapes`, `base_network`, `add_transmission_projects_and_dlr`, `simplify_network`, `cluster_network` (`clusters: all`) |
+| Place conventional plants | `retrieve_powerplants` (powerplantmatching), `build_powerplants` |
+| Availability | `retrieve_cutout`, `determine_availability_matrix`, `build_renewable_profiles`, `build_hydro_profile` |
+| Split demand | `retrieve_electricity_demand_*`, `retrieve_electricity_demand_energy_atlas`, `build_electricity_demand`, `build_electricity_demand_base` |
+| Assemble | `retrieve_cost_data`, `add_electricity` → `base_s_all_elec.nc` |
+| Cut out the day | `prepare_network` → `base_s_all_elec_.nc` |
+| Optimise | `solve_network` → `results/coppersushi/networks/base_s_all_elec_.nc` |
 
 Known traps, verified in upstream `563f22f6`: `transmission_limit: v1.01` makes every line extendable (`v1.0` keeps them fixed); `dynamic_fuel_price: true` gives all-NaN costs for a window not starting on a month boundary; `nuclear_p_max_pu.csv` ends 2024 and a later year raises `KeyError`; `highs-default` pins one thread. Ledger: [upstream-contributions](upstream-contributions.md).
 
