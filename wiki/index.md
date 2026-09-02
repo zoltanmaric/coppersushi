@@ -3,6 +3,7 @@
 ## Concepts
 - [copper-plate-problem.md](copper-plate-problem.md) — the EU market-design argument motivating this project (copper plate, redispatch, co-optimisation, locational pricing)
 - [agent-workflow-design.md](agent-workflow-design.md) — rationale and sources behind the `design-first` and `ablation` rules and the grill/spec/goldfish skills
+- [timezone-handling.md](timezone-handling.md) — the `explicit-timezones` convention, its rationale, and the PyPSA naive-UTC boundary
 
 ## Entities
 - [sushi-2.md](sushi-2.md) — Copper Sushi 2: measured injections + linear power flow on the 2025 OSM grid; architecture and cut lines
