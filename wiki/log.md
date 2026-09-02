@@ -46,3 +46,6 @@ Review (Ljube): drop validation and all true-up steps from the Sep 11 cut — a 
 
 ## [2026-09-02] decision | Dataflow graph carries planned parts, dashed
 The architecture graph was implemented-only; plans lived in prose. It now holds planned nodes and edges as dashed `planned`-class parts that feature PRs turn solid. Rule `architecture-delta` and the review-graph spec amended.
+
+## [2026-09-02] ingest | How we contribute upstream
+Digested PyPSA-Eur's contributing guide and PR template (AI-contribution rule, release notes, pre-commit) and the fork-rehearsal process settled while preparing three `clusters: all` fixes; added to upstream-contributions.
