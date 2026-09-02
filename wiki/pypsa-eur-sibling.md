@@ -9,14 +9,14 @@ Needs: a versioned pin tying our config to the workflow code it targets; no vend
 ## How we configure and reuse it (planned)
 
 - **`pypsa-eur.pin`**: two lines, `https://github.com/PyPSA/pypsa-eur.git` and a commit SHA. Bumping = editing the SHA and re-running.
-- **Runner** (`pipeline/pypsa_eur.py`, planned): locates the sibling from git's common directory — the main checkout's parent, so it resolves identically from any worktree under `worktrees/` — overridable by `PYPSA_EUR_DIR`; reads the pin; refuses a dirty checkout; fetches and checks the pinned commit out detached; verifies HEAD equals the pin; runs `pixi run snakemake -call solve_elec_networks --configfile <abs path>/config/coppersushi.yaml`; copies `results/coppersushi/networks/base_s_all_elec_.nc` into `networks/`. Slow steps narrate themselves (`narrate-slow-ops`).
+- **Runner** (`pipeline/sources/pypsa_eur.py`): locates the sibling from git's common directory — the main checkout's parent, so it resolves identically from any worktree under `worktrees/` — overridable by `PYPSA_EUR_DIR`; reads the pin; refuses a dirty checkout; fetches and checks the pinned commit out detached; verifies HEAD equals the pin; runs `pixi run snakemake -call solve_elec_networks --configfile <abs path>/config/coppersushi.yaml`; copies `results/coppersushi/networks/base_s_all_elec_.nc` to `networks/opf-<day>.nc`, versioned with Git LFS. Slow steps narrate themselves (`narrate-slow-ops`).
 - **`config/coppersushi.yaml`**: only what deviates from `config/config.default.yaml`, written against `config/schema.default.json`: `run.name`, `scenario` (`clusters: [all]`, `opts: [""]`), `snapshots` (one day), `countries`, `electricity.transmission_limit: v1.0`, empty `extendable_carriers`, `co2limit_enable: false`, `clustering.temporal.resolution_elec: 2h`, `solving.solver.name: highs` + `highs-default` with more threads, `transmission_losses: 0`, `noisy_costs: false`, `conventional.dynamic_fuel_price: false`. Upstream's `config/examples/config.validation.yaml` is *not* the template — it carries keys today's code ignores.
 - **Data** stays in the sibling: `data/`, `cutouts/`, `resources/`, `results/`. Prebuilt cutout `europe-1940-2024-era5` and the osm-prebuilt grid are retrieved by upstream rules; nothing is fetched by us.
 - **Environment**: pixi in the sibling (`pixi install`, `pixi shell`), upstream's preferred method.
 
-## Target dataflow: from raw data to the solved day (planned topology, not implemented)
+## Dataflow: from raw data to the solved day
 
-What PyPSA-Eur does with our config, in reader's terms. Edges name the data handed over; the table below maps each stage to upstream's rule names for anyone who needs the code.
+What PyPSA-Eur does with our config, in reader's terms (first run 2026-09-02: 56 rules, ~35 min of downloads and preprocessing, HiGHS 90 s for 12 snapshots × 4160 buses). Edges name the data handed over; the table below maps each stage to upstream's rule names for anyone who needs the code.
 
 ```mermaid
 flowchart TD
@@ -69,7 +69,7 @@ flowchart TD
 | Cut out the day | `prepare_network` → `base_s_all_elec_.nc` |
 | Optimise | `solve_network` → `results/coppersushi/networks/base_s_all_elec_.nc` |
 
-Known traps, verified in upstream `563f22f6`: `transmission_limit: v1.01` makes every line extendable (`v1.0` keeps them fixed); `dynamic_fuel_price: true` gives all-NaN costs for a window not starting on a month boundary; `nuclear_p_max_pu.csv` ends 2024 and a later year raises `KeyError`; `highs-default` pins one thread. Ledger: [upstream-contributions](upstream-contributions.md).
+Known traps, verified in upstream `563f22f6`: `clusters: all` is barely travelled upstream — three scripts assumed clustered bus names or clustered region sets and are patched on the pinned fork branch ([ledger](upstream-contributions.md)); a `powerplants_filter` on commissioning dates must be checked against the registry's date coverage or it silently empties the fleet; `transmission_limit: v1.01` makes every line extendable (`v1.0` keeps them fixed); `dynamic_fuel_price: true` gives all-NaN costs for a window not starting on a month boundary; `nuclear_p_max_pu.csv` ends 2024 and a later year raises `KeyError`; `highs-default` pins one thread. Ledger: [upstream-contributions](upstream-contributions.md).
 
 ## Fork refs (remote `fork`)
 

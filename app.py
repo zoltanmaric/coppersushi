@@ -9,7 +9,7 @@ from dash import Dash, dcc, html, Input, Output, ctx
 import dash_bootstrap_components as dbc
 
 from pipeline import flows, grid
-from pipeline.sources import networks, osm
+from pipeline.sources import networks, osm, pypsa_eur
 
 app = Dash(__name__, title='Copper Sushi 🍣', external_stylesheets=[dbc.themes.DARKLY])
 
@@ -18,6 +18,7 @@ server = app.server
 NETWORK_LOADERS = {
     'v1': lambda: networks.load(Path('networks/elec_s_all_ec_lv1.01_2H.nc')),
     'osm': lambda: flows.zero_placeholder(grid.build_network(osm.load_tables(osm.download()))),
+    'opf-2013': lambda: networks.load(pypsa_eur.solved_network('2013-07-17')),
 }
 _cache: dict[str, tuple[go.Figure, pd.Index]] = {}
 
@@ -34,7 +35,8 @@ def figure_for(network_key: str) -> tuple[go.Figure, pd.Index]:
 
 
 def network_key_from_path(pathname: str) -> str:
-    return 'osm' if (pathname or '').rstrip('/').endswith('osm') else 'v1'
+    key = (pathname or '').strip('/')
+    return key if key in NETWORK_LOADERS else 'v1'
 
 
 app.layout = html.Div([
@@ -42,7 +44,8 @@ app.layout = html.Div([
     html.Div(
         [
             dcc.Link('2013 model (v1)', href='/', style={'marginRight': '1em'}),
-            dcc.Link('2025 OSM grid', href='/osm'),
+            dcc.Link('2025 OSM grid', href='/osm', style={'marginRight': '1em'}),
+            dcc.Link('2013 OPF on the 2025 grid', href='/opf-2013'),
         ],
         style={'padding': '0.4em 1em'}
     ),
