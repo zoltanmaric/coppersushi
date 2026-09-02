@@ -14,7 +14,7 @@
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026
 
 ## Specs (working memory — burn-down state, not settled knowledge)
-- [specs/sushi-2.md](specs/sushi-2.md) — the hackathon cut: remaining work and acceptance criteria
+- [specs/sushi-2.md](specs/sushi-2.md) — the Sep 11 cut: next steps and acceptance criteria
 - [specs/architecture-review-graph.md](specs/architecture-review-graph.md) — lightweight architecture-review experiment: manual DAG, PR deltas, and an I/O-boundary test
 
 ## Raw sources (immutable)
