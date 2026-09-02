@@ -1,6 +1,6 @@
 # Nodal load and generation from measured data — literature survey (2026-09-02)
 
-What is known about splitting national measurements into per-node injections, and how it changes the Sushi 2 plan. Web survey; items marked *unverified* were not checked against primary data.
+What is known about splitting national measurements into per-node injections, and how it changes the Sushi 2 plan. Written for the measured-injections design; after the [2026-09-02 pivot](specs/sushi-2.md) the load findings are covered by PyPSA-Eur itself and the geolocation join serves the measured-unit constraints. Web survey; items marked *unverified* were not checked against primary data.
 
 ## Load: the GDP/population split is superseded
 

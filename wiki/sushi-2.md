@@ -1,18 +1,20 @@
-# Copper Sushi 2 — nodal flows from actual data
+# Copper Sushi 2 — optimal power flow on the 2025 grid, constrained by measurements
 
-The in-place successor of [v1](copper-sushi-app.md). v1 visualized a *model's* optimal power flow on the 2013 GridKit grid ("the math is real, the data is not"). Sushi 2 inverts the caveat: **measured injections through grid physics on the 2025 OSM-based grid — the data is real too**. No optimization of dispatch, no predictions: with injections set, flows are determined.
+The in-place successor of [v1](copper-sushi-app.md). v1 visualized a *model's* optimal power flow on the 2013 GridKit grid ("the math is real, the data is not"). Sushi 2 keeps the OPF and makes the data as real as it can be: **a recent day on the 2025 OSM-based grid, with measured generation fixed wherever it is measured and the optimiser filling only what is not.**
 
-## Architecture (settled 2026-08-19)
+## Architecture (settled 2026-09-02; supersedes the 2026-08-19 measured-injections design)
 
-1. **Grid**: PyPSA-Eur's prebuilt OSM-based European network (Xiong et al., *Nature Scientific Data* 2025, Tom Brown's group).
-2. **Injections** (revised 2026-09-02, [survey](nodal-disaggregation.md)): ENTSO-E Actual Generation per Generating Unit (≥100 MW, via `entsoe-py`) geolocated through JRC-PPDB-OPEN + Global Energy Monitor (ENTSO-E units carry no coordinates; `powerplantmatching` cannot supply them); sub-100 MW remainder = zonal totals per type minus per-unit actuals, allocated over geolocated registries (MaStR, osm-powerplants, GEM), or over measured sub-national feed-in where it exists; load = zonal actuals split by the JRC Energy Atlas 1 km consumption raster (PyPSA-Eur's own replacement for the NUTS3 GDP/population split).
-3. **Physics**: linear power flow (`network.lpf()`) for AC; HVDC link flows are *pinned to measured values* (lpf doesn't solve them — stated openly, so physics is genuinely tested only on AC corridors). Estimated splits reconciled to zonal totals by proportional rescaling.
-4. **Signal**: v1's family unchanged — net power per node, loaded-vs-easy branches, direction arrows, per-node tooltips — driven by actuals.
-5. **Web tool**: Python core; viz stack deliberately open (pipeline first, viz decided from remaining time).
+1. **Grid**: PyPSA-Eur's OSM-based European network (Xiong et al., *Nature Scientific Data* 2025), built by PyPSA-Eur's own `base_network`.
+2. **Workflow**: today's PyPSA-Eur, run from the [fork](https://github.com/zoltanmaric/pypsa-eur) on branch `coppersushi-opf` with a committed config, HiGHS as solver. Load disaggregation, plant matching and renewable profiles are upstream's (JRC Energy Atlas, powerplantmatching, atlite).
+3. **Measurements in**: ENTSO-E zonal per-type actuals calibrate renewable availability; per-unit actuals (≥ 100 MW, geolocated via JRC-PPDB-OPEN + Global Energy Monitor) are fixed as constraints; HVDC flows pinned. See [nodal-disaggregation](nodal-disaggregation.md) for what is and is not measurable.
+4. **Signal**: v1's family unchanged — net power per node, loaded-vs-easy branches, direction arrows, per-node tooltips.
+5. **Web tool**: this repo, the viewer of the solved network; `Scattermapbox` pinned ([codebase-v1](codebase-v1.md)).
+
+Why the pivot: load has no sub-zonal measurement anywhere, so "measured injections" were always going to be zonal measurements spread by static keys, and the cross-border check could not separate load errors from generation errors. Full rationale in [specs/sushi-2.md](specs/sushi-2.md).
 
 ## Implemented dataflow
 
-This graph shows landed Sushi 2 production paths, not planned topology. Node IDs are stable domain-artifact identities; each arrow means “required to produce.” PRs update it only when implementation changes the topology.
+This graph shows landed Sushi 2 production paths, not planned topology. The OSM grid assembly path is slated for deletion once the fork produces solved networks. Node IDs are stable domain-artifact identities; each arrow means “required to produce.” PRs update it only when implementation changes the topology.
 
 ```mermaid
 flowchart LR
