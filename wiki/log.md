@@ -25,3 +25,6 @@ Added an implemented-only Mermaid dataflow to the Sushi 2 architecture page, an 
 
 ## [2026-09-01] ingest | Timezone handling: explicit-timezones rationale and the PyPSA boundary
 PyPSA rejects tz-aware snapshots at every version — numpy datetime64 → xarray → netCDF/CF, none carry a zone — so snapshots are naive meaning UTC, converted only in pipeline/flows.py. Performance myth debunked (the zone is dtype metadata; tz_convert is O(1)); Arrow/Polars unsupported upstream (coerced away on import). Created timezone-handling.
+
+## [2026-09-02] ingest | Map engine: plotly's MapLibre path is unusable at our volumes
+Rendered v1 and the OSM topology through the same figure code on `Scattermap` + Carto Dark Matter: >45 s main-thread block on first render for both, instant on the Mapbox path; Carto look rejected. Recorded in codebase-v1 with deck.gl on Mapbox Dark as the keep-the-look exit; spec caution replaced.
