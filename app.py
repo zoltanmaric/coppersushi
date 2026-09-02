@@ -50,7 +50,7 @@ app.layout = html.Div([
         id='map',
         style={'height': '90vh'},
         figure=dict(layout=dict(autosize=True)),
-        config=dict(responsive=True, displayModeBar=False)
+        config=dict(responsive=True, displayModeBar=False, scrollZoom=True)
     ),
     html.Div(
         dcc.Slider(
