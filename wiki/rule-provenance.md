@@ -17,4 +17,5 @@ The stumble behind each line in `AGENTS.md` and `.agents/skills/`. Rules and ski
 | `public-repo` | A private repository path was cited as a source in a skill and a PR body |
 | `vendor-guidelines` (`.agents/skills/AGENTS.md`) | A skill's first draft carried an incident log and a source citation; the vendor pages forbid both |
 | `pull-request` ledger verdicts | A separable layer was listed as a piggyback without a chop offer; a goldfish critic flagged it |
+| `pull-request` new layer via `gh stack add` | Two layers were opened with `gh pr create` and rebased by hand; GitHub showed a two-PR stack with the new PRs outside it until `gh stack link` repaired it |
 | `pull-request` critic reads the vendor guidelines | A skill draft with an incident log and a source citation passed two automated reviews; the user caught it |

@@ -51,5 +51,6 @@ Prerequisite: `gh extension install github/gh-stack` — official, but not bundl
 ### Recipes
 
 - **Chop an oversized PR into a stack**: create layer branches off the trunk, distribute the existing commits bottom→top (entangled commits need re-slicing), `gh stack init <b1> <b2> …` to adopt them, then `gh stack submit` — it retargets the existing PR's base onto its new lower layer.
+- **New layer on an existing stack**: `gh stack add <branch>`, commit, `gh stack submit`. Never `gh pr create` or a hand `git rebase --onto` inside a stack: the PR gets the right base but joins no stack, and the tracking desyncs — repair with `gh stack link <bottom> … <top>`.
 - **Fix a lower layer**: `gh stack checkout <layer>`, commit, `gh stack rebase`, `gh stack push`.
 - **After a partial merge**: `gh stack sync --prune`.
