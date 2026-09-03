@@ -20,6 +20,11 @@ NETWORK_LOADERS = {
     'osm': lambda: flows.zero_placeholder(grid.build_network(osm.load_tables(osm.download()))),
     'opf-2013': lambda: networks.load(pypsa_eur.solved_network('2013-07-17')),
 }
+# Unsanctioned solves are viewable at /candidates/<file stem>
+NETWORK_LOADERS.update({
+    f'candidates/{path.stem}': (lambda path=path: networks.load(path))
+    for path in sorted(pypsa_eur.CANDIDATES_DIR.glob('*.nc'))
+})
 _cache: dict[str, tuple[go.Figure, pd.Index]] = {}
 
 

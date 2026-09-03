@@ -6,3 +6,6 @@ __pycache__/
 /worktrees/
 /data/
 /wiki/.obsidian/
+
+# Unsanctioned solves; `python -m pipeline.sources.pypsa_eur promote <file>` moves one into networks/ (LFS).
+networks/candidates/
