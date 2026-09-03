@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -28,10 +29,15 @@ NETWORK_LOADERS.update({
 _cache: dict[str, tuple[go.Figure, pd.Index]] = {}
 
 
+def mapbox_token() -> str:
+    """From the environment (deploys) or the gitignored secrets file (README: Mapbox token)."""
+    return os.environ.get('MAPBOX_TOKEN') or Path('.secrets/.mapbox_token').read_text().strip()
+
+
 def figure_for(network_key: str) -> tuple[go.Figure, pd.Index]:
     if network_key not in _cache:
         n = NETWORK_LOADERS[network_key]()
-        fig = ppf.colored_network_figure(n, 'net_power')
+        fig = ppf.colored_network_figure(n, 'net_power', mapbox_token())
         fig.update_layout(
             mapbox=dict(center=go.layout.mapbox.Center(lat=53, lon=9), zoom=3.9, pitch=60)
         )

@@ -19,8 +19,6 @@ Networks are versioned with [Git LFS](https://git-lfs.com). Install `git-lfs` sy
 so git works from any shell or IDE, run `git lfs install` once to register the filters that turn pointers into
 files, then `git lfs pull`. The conda environment ships `git-lfs` too, for shells without it.
 Clone with `GIT_LFS_SKIP_SMUDGE=1` to skip the files, e.g. to run only the tests.
-Deploys must ship the real files: a local container build does (`ADD .`), while GitHub tarballs and
-`git push heroku` deliver LFS pointers.
 
 
 ## Local Installation
@@ -38,8 +36,8 @@ conda activate coppersushi
 ### Mapbox Token
 The map background requires a (free) Mapbox access token.
 Register at [mapbox.com](https://www.mapbox.com/), then paste your token into
-a file at `.secrets/.mapbox_token` (no trailing newline). The app will not
-start without it.
+a file at `.secrets/.mapbox_token`, or export it as `MAPBOX_TOKEN`. The app will
+not draw a map without it.
 
 Then you can start the server by running
 ```bash
@@ -80,8 +78,10 @@ committed version is a Git LFS object kept forever. Set `PYPSA_EUR_DIR` to use a
 [`wiki/pypsa-eur-sibling.md`](wiki/pypsa-eur-sibling.md).
 
 ## Installation on Heroku
-After creating the Heroku app, run the following to deploy it:
+The image is built from your working tree, so `git lfs pull` first: the build refuses LFS
+pointers. The token travels as a config var, never in the image (`.secrets/` is docker-ignored).
 ```bash
+heroku config:set MAPBOX_TOKEN=<token>
 heroku container:push web
 heroku container:release web
 ```
