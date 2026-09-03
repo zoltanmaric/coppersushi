@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -26,8 +27,8 @@ _cache: dict[str, tuple[go.Figure, pd.Index]] = {}
 
 
 def mapbox_token() -> str:
-    """From the gitignored secrets file (README: Mapbox token)."""
-    return Path('.secrets/.mapbox_token').read_text().strip()
+    """From the environment (deploys) or the gitignored secrets file (README: Mapbox token)."""
+    return os.environ.get('MAPBOX_TOKEN') or Path('.secrets/.mapbox_token').read_text().strip()
 
 
 def figure_for(network_key: str) -> tuple[go.Figure, pd.Index]:

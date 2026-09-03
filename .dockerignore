@@ -1,0 +1,11 @@
+# The image gets the code, the config and the LFS-pulled networks; nothing else.
+.git
+.idea
+.secrets
+__pycache__
+data
+specs
+worktrees
+wiki
+tests
+networks/candidates
