@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 
 import plotly.graph_objects as go
-from dash import Dash, dcc, html, Input, Output, ctx
+from dash import Dash, dcc, html, Input, Output, ctx, no_update
 import dash_bootstrap_components as dbc
 
 from coppersushi import networks, power_flow
@@ -55,11 +55,16 @@ app.layout = html.Div([
         ],
         style={'padding': '0.4em 1em'}
     ),
-    dcc.Graph(
-        id='map',
-        style={'height': '90vh'},
-        figure=dict(layout=dict(autosize=True)),
-        config=dict(responsive=True, displayModeBar=False, scrollZoom=True)
+    dbc.Alert(id='status', color='danger', is_open=False, style={'margin': '0 1em'}),
+    dcc.Loading(
+        dcc.Graph(
+            id='map',
+            style={'height': '100%'},
+            figure=dict(layout=dict(autosize=True)),
+            config=dict(responsive=True, displayModeBar=False, scrollZoom=True)
+        ),
+        type='circle', delay_show=300, parent_style={'height': '90vh'},
+        overlay_style={'visibility': 'visible', 'opacity': 0.4},
     ),
     html.Div(
         dcc.Slider(
@@ -70,22 +75,34 @@ app.layout = html.Div([
 ])
 
 
-@app.callback(
-    Output('map', 'figure'),
-    Output('snapshot-slider', 'max'),
-    Output('snapshot-slider', 'marks'),
-    Output('snapshot-slider', 'value'),
-    Input('url', 'pathname'),
-    Input('snapshot-slider', 'value'))
-def update_figure(pathname: str, snapshot_index: int):
-    fig, snapshots = figure_for(network_key_from_path(pathname))
-    if ctx.triggered_id != 'snapshot-slider' or snapshot_index >= len(snapshots):
+def render(pathname: str, snapshot_index: int, slider_moved: bool) -> tuple:
+    """Figure, slider state and status banner for one view; a failed load becomes the banner."""
+    network_key = network_key_from_path(pathname)
+    try:
+        fig, snapshots = figure_for(network_key)
+    except Exception as e:  # noqa: BLE001 — every loader failure must reach the page
+        logging.exception('Loading %s failed', network_key)
+        return no_update, no_update, no_update, no_update, f'Could not load {network_key}: {e}', True
+    if not slider_moved or snapshot_index >= len(snapshots):
         snapshot_index = min(6, len(snapshots) - 1)  # Midday by default
     marks = {
         idx: dict(label=str(snapshot.time()), style=dict(writingMode='vertical-rl'))
         for idx, snapshot in enumerate(snapshots)
     }
-    return power_flow.show_snapshot(fig, snapshot_index), len(snapshots) - 1, marks, snapshot_index
+    return power_flow.show_snapshot(fig, snapshot_index), len(snapshots) - 1, marks, snapshot_index, '', False
+
+
+@app.callback(
+    Output('map', 'figure'),
+    Output('snapshot-slider', 'max'),
+    Output('snapshot-slider', 'marks'),
+    Output('snapshot-slider', 'value'),
+    Output('status', 'children'),
+    Output('status', 'is_open'),
+    Input('url', 'pathname'),
+    Input('snapshot-slider', 'value'))
+def update_figure(pathname: str, snapshot_index: int):
+    return render(pathname, snapshot_index, ctx.triggered_id == 'snapshot-slider')
 
 
 if __name__ == '__main__':
