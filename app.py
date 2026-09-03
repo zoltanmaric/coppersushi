@@ -1,22 +1,22 @@
 import logging
+from pathlib import Path
 
 import pandas as pd
 
 import scripts.plot_power_flow as ppf
 import plotly.graph_objects as go
-import pypsa
 from dash import Dash, dcc, html, Input, Output, ctx
 import dash_bootstrap_components as dbc
 
 from pipeline import flows, grid
-from pipeline.sources import osm
+from pipeline.sources import networks, osm
 
 app = Dash(__name__, title='Copper Sushi 🍣', external_stylesheets=[dbc.themes.DARKLY])
 
 server = app.server
 
 NETWORK_LOADERS = {
-    'v1': lambda: pypsa.Network('networks/elec_s_all_ec_lv1.01_2H.nc'),
+    'v1': lambda: networks.load(Path('networks/elec_s_all_ec_lv1.01_2H.nc')),
     'osm': lambda: flows.zero_placeholder(grid.build_network(osm.load_tables(osm.download()))),
 }
 _cache: dict[str, tuple[go.Figure, pd.Index]] = {}

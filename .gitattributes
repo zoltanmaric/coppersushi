@@ -1,0 +1,2 @@
+# Solved PyPSA networks are tens of MB each and change with every solve: Git LFS, not blobs (README: Solving a day).
+networks/**/*.nc filter=lfs diff=lfs merge=lfs -text
