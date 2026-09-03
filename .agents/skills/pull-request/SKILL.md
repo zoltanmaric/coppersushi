@@ -16,9 +16,10 @@ description: Use when creating a pull request, when scope grows inside an open o
 - **At PR creation** and **before marking ready for review**, apply the fission tests:
   - *The and-test*: if one plain title cannot cover every commit without "and", it is at least two PRs.
   - *The piggyback test*: any change that entered as "while we're at it" is a candidate layer.
-- **When scope grows inside an open PR** (a piggyback lands), record it immediately as a candidate layer in a "Piggybacks" note in the PR body — the fission decision at ready-time then reads off a ledger instead of anyone's memory.
+- **When scope grows inside an open PR** (a piggyback lands), record it immediately in a "Piggybacks" ledger in the PR body, one line per item **stating the verdict**: "rides — must be understood with the feature: <reason>" or "separable — chop offered". The fission decision at ready-time then reads off the ledger instead of anyone's memory.
 - When a test fires, **offer the chop** into a stack (mechanics below); the user decides. Layers split by "must be understood together", never by file type: a rule or doc whose evidence is the feature's code rides with the feature.
 - Every PR body carries an "Architecture delta" section (root `architecture-delta` rule).
+- When a goldfish reviews a PR touching `.agents/` or any `AGENTS.md`, the critic reads `.agents/skills/AGENTS.md` and the vendor guidelines it links before the diff.
 
 ## Stacks
 

@@ -2,6 +2,8 @@
 
 - **cross-agent** — Support Codex and Claude Code (at minimum). Agent instruction files must always be created in pairs: an `AGENTS.md` holding the actual content, and a `CLAUDE.md` next to it containing only an import of it (`@AGENTS.md`). Apply the same rule to any subdirectory that gets its own agent instructions (e.g. `wiki/`). The same principle applies to skills: skills live in `.agents/skills/` (the cross-agent location), and `.claude/skills` is a symlink to that folder so Claude Code sees the identical skill set.
 
+- **public-repo** — Everything here is public: code, wiki, commit messages, PR bodies, review comments. Nothing enters that isn't already public — no secrets, no private repositories or their paths, no employer or client material, no personal information. When knowledge came from a private source, carry the idea, never the pointer. Secrets live in the gitignored `.secrets/`.
+
 - **no-push** — Never push without asking. Always ask the user before pushing to any remote.
 
 - **commit-cadence** — Commit deliberately, not per turn. Don't commit after every instruction — the user often adjusts what they just asked for, and those adjustments belong in the same commit as the original change, not in a follow-up. Let work accumulate across a few turns, then group it into atomic, cohesive commits when a piece of work has settled.
@@ -18,9 +20,15 @@
   - For large or multi-session tasks, use a spec (`spec` skill) — create one when obviously needed, suggest it in the gray zone.
   - When a spec or design has grown load-bearing, suggest a goldfish review (`goldfish` skill); the user pulls the trigger.
 
-- **ablation** — Keep agent rules and skills minimal — ablate, don't accumulate. Every line here and in `.agents/skills/` is read on every run and must earn its place through an observed, repeated stumble — never a predicted one. As models improve, old corrective lines go stale: re-ablate occasionally by deleting lines and seeing what actually breaks. If nothing ever needs adding back, the deleting wasn't aggressive enough.
+- **ablation** — Keep agent rules and skills minimal — ablate, don't accumulate. Every line here and in `.agents/skills/` is read on every run and must earn its place through an observed, repeated stumble — never a predicted one — recorded in `wiki/rule-provenance.md`. As models improve, old corrective lines go stale: re-ablate occasionally by deleting lines and seeing what actually breaks. If nothing ever needs adding back, the deleting wasn't aggressive enough.
 
 - **fix-the-generator** — Fix the generator, not the instance. Before patching a flagged problem, ask what produced it; prefer the fix that ends the class — restructure the code, restate the rule's principle — over the one that closes the single case. A second occurrence of anything is conclusive: the local level was the wrong level.
+
+- **absolute-paths** — Never `cd` inside a command chain: the working directory persists across `&&` and `;`, so every later step silently runs elsewhere. Use absolute paths, `git -C`, and put any `cd` inside the subshell that needs it.
+
+- **named-adds** — Stage named paths, never `git add -A` or `git add .`: untracked files you didn't mean to commit ride along silently.
+
+- **watch-long-runs** — Watch long runs from the first second. Anything that may run beyond a minute goes through the `job-supervision` skill before launch.
 
 - **worktrees** — Isolate conflicting concurrent work. Multiple agents commonly work in this repository at once. Create worktrees under the gitignored `worktrees/` directory. If another agent's changes conflict with yours, offer to move your work to a worktree rather than overwrite or discard either set of changes.
 
