@@ -1,6 +1,8 @@
 import subprocess
 from pathlib import Path
 
+import pandas as pd
+import pypsa
 import pytest
 
 from pipeline.sources import pypsa_eur
@@ -66,3 +68,24 @@ def test_promote_copies_the_candidate_to_the_days_network(monkeypatch, tmp_path)
     assert promoted == networks / "opf-2013-07-17.nc" and promoted.read_bytes() == b"net"
     staged = subprocess.run(["git", "diff", "--cached", "--name-only"], cwd=tmp_path, capture_output=True, text=True).stdout
     assert "networks/opf-2013-07-17.nc" in staged
+
+
+def _network_with_shedder(shed_mw: float) -> pypsa.Network:
+    n = pypsa.Network()
+    n.set_snapshots(pd.date_range("2024-07-17", periods=2, freq="2h"))
+    n.snapshot_weightings.loc[:, :] = 2.0
+    n.add("Bus", "b1")
+    n.add("Generator", "b1 load", bus="b1", carrier="load", p_nom=1e9)
+    n.add("Generator", "b1 gas", bus="b1", carrier="gas", p_nom=100)
+    n.generators_t.p = pd.DataFrame({"b1 load": [shed_mw, 0.0], "b1 gas": [50.0, 50.0]}, index=n.snapshots)
+    return n
+
+
+def test_shed_energy_is_weighted_mwh_per_bus():
+    assert pypsa_eur.shed_energy(_network_with_shedder(3.0)).to_dict() == {"b1": 6.0}
+
+
+def test_reject_shedding_names_the_bus():
+    with pytest.raises(RuntimeError, match="b1: 6 MWh"):
+        pypsa_eur.reject_shedding(_network_with_shedder(3.0))
+    pypsa_eur.reject_shedding(_network_with_shedder(0.0))

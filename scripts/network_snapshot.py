@@ -43,16 +43,12 @@ class NetworkSnapshot:
         # Combine static and time-dependent generator quantities. Generators that
         # do not exist at the node (zero capacity) stay out of the tooltips;
         # idle or derated ones stay in. PyPSA-Eur's load-shedding pseudo-generator
-        # (infinite capacity) shows only when it actually sheds.
+        # (carrier `load`) is dropped: the runner rejects any network that sheds.
         generators = self.n.generators[['p_nom_opt', 'bus', 'carrier']].join(generators_t)
-        exists = generators.p_nom_opt > 0
-        unused_shedding = (generators.carrier == 'load') & (generators.p == 0)
-        generators = generators[exists & ~unused_shedding]
+        generators = generators[(generators.p_nom_opt > 0) & (generators.carrier != 'load')]
         generators['p_max'] = generators.p_max_pu * generators.p_nom_opt
         # Map the carriers to a nice name; carriers without one keep their id
-        # (PyPSA-Eur's load-shedding carrier is called `load` and has none)
         nice_names = self.n.carriers['nice_name'].replace('', None).to_dict()
-        nice_names.setdefault('load', 'Load shedding')
         generators['carrier'] = generators.carrier.map(lambda c: nice_names.get(c) or c)
 
         # Rename the 'bus' column to 'Bus' to match the node index name,

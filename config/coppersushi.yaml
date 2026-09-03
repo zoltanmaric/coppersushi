@@ -46,7 +46,7 @@ solving:
   options:
     transmission_losses: 0
     noisy_costs: false
-    # Insurance: shedding at 100 k€/MWh keeps the LP feasible and shows where demand cannot be
-    # met. The solved 2013 day sheds nothing.
+    # Diagnostic, not tolerance: shedding at 100 k€/MWh keeps an infeasible day solvable so the
+    # network shows where demand cannot be met; the runner rejects any candidate that sheds.
     load_shedding:
       enable: true
