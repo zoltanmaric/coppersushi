@@ -12,6 +12,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+import pandas as pd
+import pypsa
 import yaml
 
 
@@ -75,8 +77,26 @@ def solve(config: Path = CONFIG, target: str = "solve_elec_networks") -> Path:
     CANDIDATES_DIR.mkdir(parents=True, exist_ok=True)
     candidate = CANDIDATES_DIR / candidate_filename(cfg["snapshots"]["start"], pin.sha)
     target = Path(shutil.copy2(solved[0], candidate))
+    reject_shedding(pypsa.Network(target))
     logger.info("pypsa-eur: done — candidate %s; sanction it with `promote` to make it the day's network", target.name)
     return target
+
+
+def shed_energy(n: pypsa.Network) -> pd.Series:
+    """Energy served by PyPSA-Eur's load-shedding pseudo-generators, in MWh per bus."""
+    shedders = n.generators.index[n.generators.carrier == "load"]
+    per_snapshot = n.generators_t.p.reindex(columns=shedders, fill_value=0.0)
+    hours = n.snapshot_weightings.generators.reindex(per_snapshot.index, fill_value=1.0)
+    return per_snapshot.mul(hours, axis=0).sum().groupby(n.generators.bus).sum()
+
+
+def reject_shedding(n: pypsa.Network) -> None:
+    """Fail loudly on any load shedding: a shed day is a misposed problem, not a result."""
+    shed = shed_energy(n)
+    shed = shed[shed > 0].sort_values(ascending=False)
+    if not shed.empty:
+        worst = ", ".join(f"{bus}: {mwh:,.0f} MWh" for bus, mwh in shed.head(5).items())
+        raise RuntimeError(f"load shed at {len(shed)} buses, {shed.sum():,.0f} MWh in total — worst: {worst}")
 
 
 def promote(candidate: Path) -> Path:
