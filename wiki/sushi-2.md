@@ -23,7 +23,7 @@ flowchart LR
     net_power_map["net_power_map<br/>go.Figure (Dash app)"]
 
     pypsa_eur_pin["pypsa_eur_pin<br/>pypsa-eur.pin + config/coppersushi.yaml"]
-    pypsa_eur_run["pypsa_eur_run<br/>pipeline.sources.pypsa_eur → Snakemake in ../pypsa-eur (HiGHS)"]
+    pypsa_eur_run["pypsa_eur_run<br/>pipeline.sinks.solved_networks → Snakemake in ../pypsa-eur (HiGHS)"]
     solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
 
     zenodo_osm_prebuilt --> osm_grid_tables

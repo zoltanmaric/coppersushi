@@ -66,14 +66,14 @@ brew install pixi            # PyPSA-Eur's environment manager
 ```
 Then, from this repository:
 ```bash
-python -m pipeline.sources.pypsa_eur
+python -m pipeline.sinks.solved_networks solve
 ```
 checks the sibling out at the pinned commit, runs the workflow (a first run downloads about
 20 GB and takes an hour on a fast connection; later runs take minutes) and writes the solved
 network to the gitignored `networks/candidates/opf-<day>-<pin>.nc`, viewable in the app at
 `/candidates/<file stem>`. Iterate as often as you like; when a solve is the one to keep,
 ```bash
-python -m pipeline.sources.pypsa_eur promote networks/candidates/opf-<day>-<pin>.nc
+python -m pipeline.sinks.solved_networks promote networks/candidates/opf-<day>-<pin>.nc
 ```
 copies it to `networks/opf-<day>.nc` and stages it — committing is the sanction, and each
 committed version is a Git LFS object kept forever. Set `PYPSA_EUR_DIR` to use a checkout elsewhere. Why a sibling rather than a submodule, and what the workflow does:
