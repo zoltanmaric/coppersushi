@@ -49,3 +49,6 @@ The architecture graph was implemented-only; plans lived in prose. It now holds 
 
 ## [2026-09-02] ingest | How we contribute upstream
 Digested PyPSA-Eur's contributing guide and PR template (AI-contribution rule, release notes, pre-commit) and the fork-rehearsal process settled while preparing three `clusters: all` fixes; added to upstream-contributions.
+
+## [2026-09-03] decision | Rule provenance as the ablation lookup
+Rule and skill lines record the observed stumble that earned them in rule-provenance, kept out of the rules and skills so those stay imperative; the `ablation` rule points there.
