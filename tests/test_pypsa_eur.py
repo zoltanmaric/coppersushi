@@ -45,3 +45,24 @@ def test_solved_network_is_named_by_its_day():
     assert pypsa_eur.network_filename("2013-07-17") == "opf-2013-07-17.nc"
 
 
+
+
+def test_candidate_filename_carries_day_and_pin():
+    assert pypsa_eur.candidate_filename("2013-07-17", "bccf56e8d5e8cf69") == "opf-2013-07-17-bccf56e8.nc"
+
+
+def test_promote_copies_the_candidate_to_the_days_network(monkeypatch, tmp_path):
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    networks = tmp_path / "networks"
+    networks.mkdir()
+    candidate = networks / "candidates" / "opf-2013-07-17-bccf56e8.nc"
+    candidate.parent.mkdir()
+    candidate.write_bytes(b"net")
+    monkeypatch.setattr(pypsa_eur, "REPO", tmp_path)
+    monkeypatch.setattr(pypsa_eur, "NETWORKS_DIR", networks)
+
+    promoted = pypsa_eur.promote(candidate)
+
+    assert promoted == networks / "opf-2013-07-17.nc" and promoted.read_bytes() == b"net"
+    staged = subprocess.run(["git", "diff", "--cached", "--name-only"], cwd=tmp_path, capture_output=True, text=True).stdout
+    assert "networks/opf-2013-07-17.nc" in staged

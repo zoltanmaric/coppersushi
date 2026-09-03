@@ -21,6 +21,7 @@ REPO = Path(__file__).parents[2]
 PIN_FILE = REPO / "pypsa-eur.pin"
 CONFIG = REPO / "config" / "coppersushi.yaml"
 NETWORKS_DIR = REPO / "networks"
+CANDIDATES_DIR = NETWORKS_DIR / "candidates"  # gitignored; promote() sanctions a candidate into NETWORKS_DIR
 
 
 @dataclass(frozen=True)
@@ -71,10 +72,25 @@ def solve(config: Path = CONFIG, target: str = "solve_elec_networks") -> Path:
     solved = sorted((sibling / "results" / cfg["run"]["name"] / "networks").glob("*.nc"))
     if len(solved) != 1:
         raise RuntimeError(f"expected exactly one solved network, found {solved}")
-    NETWORKS_DIR.mkdir(exist_ok=True)
-    target = Path(shutil.copy2(solved[0], NETWORKS_DIR / network_filename(cfg["snapshots"]["start"])))
-    logger.info("pypsa-eur: done — %s copied to %s", solved[0].name, target)
+    CANDIDATES_DIR.mkdir(parents=True, exist_ok=True)
+    candidate = CANDIDATES_DIR / candidate_filename(cfg["snapshots"]["start"], pin.sha)
+    target = Path(shutil.copy2(solved[0], candidate))
+    logger.info("pypsa-eur: done — candidate %s; sanction it with `promote` to make it the day's network", target.name)
     return target
+
+
+def promote(candidate: Path) -> Path:
+    """Sanction a candidate: copy it to ``networks/opf-<day>.nc`` (a Git LFS object once committed) and stage it."""
+    day = candidate.stem.split("-", 1)[1].rsplit("-", 1)[0]
+    target = Path(shutil.copy2(candidate, NETWORKS_DIR / network_filename(day)))
+    subprocess.run(["git", "add", str(target)], cwd=REPO, check=True)
+    logger.info("promoted %s to %s (staged; committing sanctions it)", candidate.name, target.name)
+    return target
+
+
+def candidate_filename(snapshot_start: str, sha: str) -> str:
+    """Candidates carry the day and the pin they came from, e.g. ``opf-2013-07-17-bccf56e8.nc``."""
+    return f"opf-{snapshot_start}-{sha[:8]}.nc"
 
 
 def network_filename(snapshot_start: str) -> str:
@@ -92,5 +108,10 @@ def _git(cwd: Path, *args: str) -> str:
 
 
 if __name__ == "__main__":
+    import sys
+
     logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
-    solve()
+    if len(sys.argv) == 3 and sys.argv[1] == "promote":
+        promote(Path(sys.argv[2]))
+    else:
+        solve()
