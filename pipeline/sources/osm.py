@@ -6,12 +6,12 @@ assembles their in-memory representation.
 """
 
 import logging
-import urllib.request
 from pathlib import Path
 
 import pandas as pd
 
 from pipeline.grid import GridTables
+from pipeline.sources.download import download as fetch
 
 logger = logging.getLogger(__name__)
 
@@ -27,29 +27,10 @@ def download(data_dir: Path = OSM_PREBUILT_DIR) -> Path:
     if missing:
         logger.info("osm-prebuilt: fetching %s from Zenodo into %s", ", ".join(missing), data_dir)
     for name in missing:
-        target = data_dir / f"{name}.csv"
-        partial = target.with_suffix(".csv.part")
-        urllib.request.urlretrieve(ZENODO_URL.format(f"{name}.csv"), partial, _log_progress(f"{name}.csv"))
-        partial.replace(target)
-        logger.info("%s.csv: done (%.1f MB)", name, target.stat().st_size / 1e6)
+        fetch(ZENODO_URL.format(f"{name}.csv"), data_dir / f"{name}.csv")
     if missing:
         logger.info("osm-prebuilt: all %d files present in %s", len(CSV_NAMES), data_dir)
     return data_dir
-
-
-def _log_progress(filename: str, step: float = 0.25):
-    """`urlretrieve` hook logging progress at coarse milestones."""
-    milestone = step
-
-    def hook(blocks: int, block_size: int, total_size: int) -> None:
-        nonlocal milestone
-        if total_size <= 0:
-            return
-        while milestone < 1 and blocks * block_size / total_size >= milestone:
-            logger.info("%s: %.0f%% of %.1f MB", filename, milestone * 100, total_size / 1e6)
-            milestone += step
-
-    return hook
 
 
 def load_tables(data_dir: Path = OSM_PREBUILT_DIR) -> GridTables:

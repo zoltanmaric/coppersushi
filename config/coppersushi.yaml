@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=../../pypsa-eur/config/schema.default.json
+# Copper Sushi's PyPSA-Eur configuration: only what deviates from config.default.yaml.
+# Passed with --configfile by pipeline/sources/pypsa_eur.py; design in wiki/pypsa-eur-sibling.md.
+
+run:
+  name: coppersushi
+
+scenario:
+  clusters: [all]
+  opts: [""]
+
+# Upstream's default list plus Ukraine and Moldova, which the OSM grid covers.
+countries: [AL, AT, BA, BE, BG, CH, CZ, DE, DK, EE, ES, FI, FR, GB, GR, HR, HU, IE, IT, LT, LU, LV, MD, ME, MK, NL, "NO", PL, PT, RO, RS, SE, SI, SK, UA, XK]
+
+# The World Database on Protected Areas (needed for UA/MD availability) from its primary source:
+# upstream's pinned Internet Archive copy stalls at exactly 2 GiB on resumed downloads.
+data:
+  wdpa:
+    source: primary
+
+snapshots:
+  start: "2013-07-17"
+  end: "2013-07-18"
+  inclusive: left
+
+electricity:
+  transmission_limit: v1.0
+  extendable_carriers:
+    Generator: []
+    StorageUnit: []
+    Store: []
+    Link: []
+
+clustering:
+  temporal:
+    resolution_elec: 2h
+
+solving:
+  solver:
+    name: highs
+    options: highs-default
+  solver_options:
+    highs-default:
+      threads: 8
+      run_crossover: "on"  # the profile's IPM-only solution violated tolerances (status Unknown)
+  options:
+    transmission_losses: 0
+    noisy_costs: false
+    # Diagnostic, not tolerance: shedding at 100 k€/MWh keeps an infeasible day solvable so the
+    # network shows where demand cannot be met; the runner rejects any candidate that sheds.
+    load_shedding:
+      enable: true

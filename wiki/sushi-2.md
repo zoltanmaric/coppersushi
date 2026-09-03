@@ -22,17 +22,17 @@ flowchart LR
     european_grid["european_grid<br/>pypsa.Network"]
     net_power_map["net_power_map<br/>go.Figure (Dash app)"]
 
-    pypsa_eur_pin["pypsa_eur_pin<br/>pypsa-eur.pin + config/coppersushi.yaml"]:::planned
-    pypsa_eur_run["pypsa_eur_run<br/>Snakemake in ../pypsa-eur (HiGHS)"]:::planned
-    solved_network["solved_network<br/>networks/*.nc"]:::planned
+    pypsa_eur_pin["pypsa_eur_pin<br/>pypsa-eur.pin + config/coppersushi.yaml"]
+    pypsa_eur_run["pypsa_eur_run<br/>pipeline.sinks.solved_networks → Snakemake in ../pypsa-eur (HiGHS)"]
+    solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
 
     zenodo_osm_prebuilt --> osm_grid_tables
     osm_grid_tables --> european_grid
     european_grid --> net_power_map
 
-    pypsa_eur_pin -.-> pypsa_eur_run
-    pypsa_eur_run -.-> solved_network
-    solved_network -.-> net_power_map
+    pypsa_eur_pin --> pypsa_eur_run
+    pypsa_eur_run --> solved_network
+    solved_network --> net_power_map
 ```
 
 The `zenodo_osm_prebuilt → european_grid` path is deleted once `solved_network` exists: PyPSA-Eur's `base_network` builds the same grid from the same CSVs. External I/O belongs in `pipeline/sources/` or `pipeline/sinks/`; transformations exchange in-memory values. The architecture test checks a finite set of direct I/O APIs and deliberately does not claim to detect dynamic or transitive I/O.
