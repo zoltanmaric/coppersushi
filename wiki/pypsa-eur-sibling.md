@@ -31,7 +31,7 @@ flowchart TD
     costs[("Technology costs<br/>fuel, CO₂, operation")]:::src
     cfg["config/coppersushi.yaml + pypsa-eur.pin"]:::ours
 
-    grid["Build the grid<br/>lift to 380 kV, drop dead-end stubs, one region per bus"]
+    grid["Build the grid<br/>lift to 380 kV, drop dead-end stubs, draw a catchment region around every bus (onshore, and offshore for coastal ones)"]
     place["Place conventional plants on buses"]
     avail["Wind, solar and hydro availability<br/>per region and hour"]
     split["Split national demand onto buses"]
