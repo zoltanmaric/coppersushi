@@ -1,12 +1,14 @@
 """The shelf of solved networks under ``networks/`` (Git LFS objects): where they are, and how to open them."""
 
+import re
 from pathlib import Path
 
 import pypsa
 
 REPO = Path(__file__).parents[1]
 NETWORKS_DIR = REPO / "networks"
-CANDIDATES_DIR = NETWORKS_DIR / "candidates"  # gitignored; pypsa_eur.promote() sanctions a candidate into NETWORKS_DIR
+CANDIDATES_DIR = NETWORKS_DIR / "candidates"  # gitignored
+_CANDIDATE = re.compile(r"opf-(\d{4}-\d{2}-\d{2})-[0-9a-f]{8}")
 
 
 def solved(day: str) -> Path:
@@ -17,6 +19,13 @@ def solved(day: str) -> Path:
 def candidate(day: str, sha: str) -> Path:
     """An unsanctioned solve, named by its day and the PyPSA-Eur pin it came from: ``opf-2013-07-17-bccf56e8.nc``."""
     return CANDIDATES_DIR / f"opf-{day}-{sha[:8]}.nc"
+
+
+def day_of(candidate: Path) -> str:
+    """The day a candidate covers, read back from its name."""
+    if not (match := _CANDIDATE.fullmatch(candidate.stem)):
+        raise ValueError(f"{candidate.name} is not a candidate name (opf-<day>-<pin>.nc)")
+    return match[1]
 
 
 def load(path: Path) -> pypsa.Network:

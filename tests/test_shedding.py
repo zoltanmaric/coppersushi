@@ -16,11 +16,7 @@ def _network_with_shedder(shed_mw: float) -> pypsa.Network:
     return n
 
 
-def test_shed_energy_is_weighted_mwh_per_bus():
-    assert shedding.per_bus(_network_with_shedder(3.0)).to_dict() == {"b1": 6.0}
-
-
-def test_reject_names_the_bus():
+def test_reject_names_the_bus_with_weighted_mwh():
     with pytest.raises(RuntimeError, match="b1: 6 MWh"):
         shedding.reject(_network_with_shedder(3.0))
     shedding.reject(_network_with_shedder(0.0))

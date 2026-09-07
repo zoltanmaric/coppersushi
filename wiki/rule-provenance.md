@@ -14,6 +14,7 @@ The stumble behind each line in `AGENTS.md` and `.agents/skills/`. Rules and ski
 | `job-supervision`: kill the process group | `pkill -f` missed a download script's subshell; a second `curl` wrote the same file beside the new one |
 | `absolute-paths` | Twice, a `cd` at the start of a command chain sent a pin edit and a launch into the sibling repo |
 | `named-adds` | `git add -A` during a merge swept two tokens from an unignored `.secrets/` into a local commit; GitHub push protection caught it. Again on a rules-only branch: a 31 MB candidate network rode along and had to be amended out |
+| `sanction-by-hand` (`networks/AGENTS.md`) | A 31 MB solve was about to be committed as the day's network by an agent, with no human having looked at it |
 | `public-repo` | A private repository path was cited as a source in a skill and a PR body |
 | `vendor-guidelines` (`.agents/skills/AGENTS.md`) | A skill's first draft carried an incident log and a source citation; the vendor pages forbid both |
 | `pull-request` ledger verdicts | A separable layer was listed as a piggyback without a chop offer; a goldfish critic flagged it |

@@ -304,7 +304,3 @@ def colored_network_figure(n: pypsa.Network, what: str, mapbox_token: str | None
 
     return fig
 
-
-if __name__ == "__main__":
-    n = pypsa.Network("networks/elec_s_all_ec_lv1.01_2H.nc")
-    colored_network_figure(n, 'net_power')

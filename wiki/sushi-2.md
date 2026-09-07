@@ -28,7 +28,7 @@ flowchart LR
     solved_network --> net_power_map
 ```
 
-Code is one package, `coppersushi/`, organised by domain noun; only `networks` (the shelf of solved networks) and `pypsa_eur` (the upstream workflow) touch the world, and every other module exchanges in-memory values. The architecture test checks a finite set of direct I/O APIs and deliberately does not claim to detect dynamic or transitive I/O.
+Code is one package, `coppersushi/`, organised by domain noun; `io-boundary` in `coppersushi/AGENTS.md` names the two modules that touch the world.
 
 ## Future chapters
 

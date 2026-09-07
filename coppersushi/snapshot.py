@@ -40,10 +40,7 @@ class NetworkSnapshot:
         # 1208 offwind-dc    0.000000  0.753669
         generators_t.update(p_max_pu_t)
 
-        # Combine static and time-dependent generator quantities. Generators that
-        # do not exist at the node (zero capacity) stay out of the tooltips;
-        # idle or derated ones stay in. PyPSA-Eur's load-shedding pseudo-generator
-        # (carrier `load`) is dropped: the runner rejects any network that sheds.
+        # Static and time-dependent quantities together; generators absent at the node and the load-shedding pseudo-generator stay out.
         generators = self.n.generators[['p_nom_opt', 'bus', 'carrier']].join(generators_t)
         generators = generators[(generators.p_nom_opt > 0) & (generators.carrier != 'load')]
         generators['p_max'] = generators.p_max_pu * generators.p_nom_opt

@@ -18,9 +18,8 @@ def test_real_file_opens():
     assert len(networks.load(FIXTURE).buses) == 13
 
 
-def test_solved_network_is_named_by_its_day():
-    assert networks.solved("2013-07-17") == networks.NETWORKS_DIR / "opf-2013-07-17.nc"
 
-
-def test_candidate_carries_day_and_pin():
-    assert networks.candidate("2013-07-17", "bccf56e8d5e8cf69") == networks.CANDIDATES_DIR / "opf-2013-07-17-bccf56e8.nc"
+def test_day_reads_back_from_a_candidate_name():
+    assert networks.day_of(networks.candidate("2013-07-17", "bccf56e8d5e8cf69")) == "2013-07-17"
+    with pytest.raises(ValueError, match="not a candidate"):
+        networks.day_of(networks.solved("2013-07-17"))

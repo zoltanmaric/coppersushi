@@ -48,6 +48,8 @@ def test_promote_copies_the_candidate_to_the_days_network(monkeypatch, tmp_path)
     candidate = networks_dir / "candidates" / "opf-2013-07-17-bccf56e8.nc"
     candidate.parent.mkdir()
     candidate.write_bytes(b"net")
+    monkeypatch.setattr(pypsa_eur.shedding, "reject", lambda n: None)
+    monkeypatch.setattr(pypsa_eur.networks, "load", lambda path: path)
     monkeypatch.setattr(pypsa_eur, "REPO", tmp_path)
     monkeypatch.setattr(networks, "NETWORKS_DIR", networks_dir)
 

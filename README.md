@@ -38,8 +38,8 @@ conda activate coppersushi
 ### Mapbox Token
 The map background requires a (free) Mapbox access token.
 Register at [mapbox.com](https://www.mapbox.com/), then paste your token into
-a file at `.secrets/.mapbox_token` (no trailing newline). The app will not
-start without it.
+a file at `.secrets/.mapbox_token` (no trailing newline). The first map
+load fails without it.
 
 Then you can start the server by running
 ```bash
@@ -60,7 +60,7 @@ The networks in `networks/` are produced by [PyPSA-Eur](https://github.com/PyPSA
 run from a **sibling checkout** at `../pypsa-eur` pinned by `pypsa-eur.pin` (repository URL and
 commit) with the configuration in `config/coppersushi.yaml`. Set it up once:
 ```bash
-git clone https://github.com/PyPSA/pypsa-eur.git ../pypsa-eur
+git clone https://github.com/PyPSA/pypsa-eur.git ../pypsa-eur  # the runner fetches the pinned commit from the URL in pypsa-eur.pin
 brew install pixi            # PyPSA-Eur's environment manager
 (cd ../pypsa-eur && pixi install)
 ```
@@ -71,13 +71,12 @@ python -m coppersushi.pypsa_eur solve
 checks the sibling out at the pinned commit, runs the workflow (a first run downloads about
 20 GB and takes an hour on a fast connection; later runs take minutes) and writes the solved
 network to the gitignored `networks/candidates/opf-<day>-<pin>.nc`, viewable in the app at
-`/candidates/<file stem>`. Iterate as often as you like; when a solve is the one to keep,
+`/candidates/<file stem>` (after an app restart). Iterate as often as you like; when a solve is the one to keep,
 ```bash
 python -m coppersushi.pypsa_eur promote networks/candidates/opf-<day>-<pin>.nc
 ```
 copies it to `networks/opf-<day>.nc` and stages it — committing is the sanction, and each
-committed version is a Git LFS object kept forever. Set `PYPSA_EUR_DIR` to use a checkout elsewhere. Why a sibling rather than a submodule, and what the workflow does:
-[`wiki/pypsa-eur-sibling.md`](wiki/pypsa-eur-sibling.md).
+committed version is a Git LFS object kept forever. Set `PYPSA_EUR_DIR` to use a checkout elsewhere. Design: [`wiki/pypsa-eur-sibling.md`](wiki/pypsa-eur-sibling.md).
 
 ## Installation on Heroku
 After creating the Heroku app, run the following to deploy it:
@@ -86,13 +85,3 @@ heroku container:push web
 heroku container:release web
 ```
 (based on https://github.com/heroku-examples/python-miniconda)
-
-
-## Performance Profiling
-Run the following to show a [`snakeviz`](https://jiffyclub.github.io/snakeviz/) chart
-of function call durations in your browser.
-```bash
-PYTHONPATH=. python profiling/profiling.py
-snakeviz profiling/plot.prof
-```
-![](assets/Profiling.png)

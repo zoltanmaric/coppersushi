@@ -1,16 +1,11 @@
-"""Produces solved networks: runs PyPSA-Eur in the pinned sibling checkout and sanctions candidates.
-
-PyPSA-Eur runs from ``../pypsa-eur`` next to the *main* checkout — resolved through
-git's common directory, so every worktree shares one checkout and one data directory —
-at the commit named in ``pypsa-eur.pin``. Design: wiki/pypsa-eur-sibling.md.
-"""
+"""Runs PyPSA-Eur in the pinned sibling checkout and sanctions candidates. Design: wiki/pypsa-eur-sibling.md."""
 
 import logging
 import os
 import shutil
 import subprocess
-from dataclasses import dataclass
 from pathlib import Path
+from typing import NamedTuple
 
 import yaml
 
@@ -21,23 +16,22 @@ logger = logging.getLogger(__name__)
 
 PIN_FILE = REPO / "pypsa-eur.pin"
 CONFIG = REPO / "config" / "coppersushi.yaml"
+TARGET = "solve_elec_networks"
 
 
-@dataclass(frozen=True)
-class Pin:
+class Pin(NamedTuple):
     url: str
     sha: str
 
 
-def solve(config: Path = CONFIG, target: str = "solve_elec_networks") -> Path:
-    """Run PyPSA-Eur to ``target`` with ``config``; the solved network becomes a candidate, rejected if it sheds load."""
+def solve() -> Path:
+    """Run PyPSA-Eur with our config; the solved network becomes a candidate, kept but rejected if it sheds load."""
     pin, sibling = _read_pin(), _sibling_dir()
     _checkout(pin, sibling)
     logger.info("pypsa-eur: snakemake %s with %s in %s — a first run downloads ~20 GB and takes about an hour; "
-                "snakemake narrates each rule", target, config.name, sibling)
-    subprocess.run(["pixi", "run", "snakemake", "-call", target, "--configfile", str(config.resolve())],
-                   cwd=sibling, check=True)
-    cfg = yaml.safe_load(config.read_text())
+                "snakemake narrates each rule", TARGET, CONFIG.name, sibling)
+    subprocess.run(["pixi", "run", "snakemake", "-call", TARGET, "--configfile", str(CONFIG)], cwd=sibling, check=True)
+    cfg = yaml.safe_load(CONFIG.read_text())
     solved = sorted((sibling / "results" / cfg["run"]["name"] / "networks").glob("*.nc"))
     if len(solved) != 1:
         raise RuntimeError(f"expected exactly one solved network, found {solved}")
@@ -51,7 +45,8 @@ def solve(config: Path = CONFIG, target: str = "solve_elec_networks") -> Path:
 
 def promote(candidate: Path) -> Path:
     """Sanction a candidate: copy it to ``networks/opf-<day>.nc`` (a Git LFS object once committed) and stage it."""
-    day = candidate.stem.split("-", 1)[1].rsplit("-", 1)[0]
+    day = networks.day_of(candidate)
+    shedding.reject(networks.load(candidate))
     target = Path(shutil.copy2(candidate, networks.solved(day)))
     subprocess.run(["git", "add", str(target)], cwd=REPO, check=True)
     logger.info("promoted %s to %s (staged; committing sanctions it)", candidate.name, target.name)
