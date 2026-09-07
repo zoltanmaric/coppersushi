@@ -3,12 +3,11 @@ from pathlib import Path
 
 import pandas as pd
 
-import scripts.plot_power_flow as ppf
 import plotly.graph_objects as go
 from dash import Dash, dcc, html, Input, Output, ctx
 import dash_bootstrap_components as dbc
 
-from pipeline.sources import networks, pypsa_eur
+from coppersushi import networks, power_flow
 
 app = Dash(__name__, title='Copper Sushi 🍣', external_stylesheets=[dbc.themes.DARKLY])
 
@@ -16,20 +15,25 @@ server = app.server
 
 NETWORK_LOADERS = {
     'v1': lambda: networks.load(Path('networks/elec_s_all_ec_lv1.01_2H.nc')),
-    'opf-2013': lambda: networks.load(pypsa_eur.solved_network('2013-07-17')),
+    'opf-2013': lambda: networks.load(networks.solved('2013-07-17')),
 }
 # Unsanctioned solves are viewable at /candidates/<file stem>
 NETWORK_LOADERS.update({
     f'candidates/{path.stem}': (lambda path=path: networks.load(path))
-    for path in sorted(pypsa_eur.CANDIDATES_DIR.glob('*.nc'))
+    for path in sorted(networks.CANDIDATES_DIR.glob('*.nc'))
 })
 _cache: dict[str, tuple[go.Figure, pd.Index]] = {}
+
+
+def mapbox_token() -> str:
+    """From the gitignored secrets file (README: Mapbox token)."""
+    return Path('.secrets/.mapbox_token').read_text().strip()
 
 
 def figure_for(network_key: str) -> tuple[go.Figure, pd.Index]:
     if network_key not in _cache:
         n = NETWORK_LOADERS[network_key]()
-        fig = ppf.colored_network_figure(n, 'net_power')
+        fig = power_flow.colored_network_figure(n, 'net_power', mapbox_token())
         fig.update_layout(
             mapbox=dict(center=go.layout.mapbox.Center(lat=53, lon=9), zoom=3.9, pitch=60)
         )
@@ -81,7 +85,7 @@ def update_figure(pathname: str, snapshot_index: int):
         idx: dict(label=str(snapshot.time()), style=dict(writingMode='vertical-rl'))
         for idx, snapshot in enumerate(snapshots)
     }
-    return ppf.show_snapshot(fig, snapshot_index), len(snapshots) - 1, marks, snapshot_index
+    return power_flow.show_snapshot(fig, snapshot_index), len(snapshots) - 1, marks, snapshot_index
 
 
 if __name__ == '__main__':

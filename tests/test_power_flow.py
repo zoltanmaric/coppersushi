@@ -1,11 +1,10 @@
 import re
-from pathlib import Path
 
 import pypsa
 import pytest
 from pytest import approx
 
-import scripts.plot_power_flow as ppf
+from coppersushi import power_flow as ppf
 
 
 class TestPlotPowerFlow:
@@ -58,7 +57,6 @@ class TestPlotPowerFlow:
 
         assert re.search(r'Net power.*485.24 MW', node.html) is not None
 
-    @pytest.mark.skipif(not Path('.secrets/.mapbox_token').exists(), reason='needs a Mapbox token (README)')
     def test_colored_network_figure(self, n):
         fig = ppf.colored_network_figure(n, 'net_power')
 

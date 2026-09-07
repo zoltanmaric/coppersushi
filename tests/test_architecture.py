@@ -3,10 +3,10 @@
 import ast
 from pathlib import Path
 
-PIPELINE_ROOT = Path(__file__).parents[1] / "pipeline"
+PACKAGE_ROOT = Path(__file__).parents[1] / "coppersushi"
 ILLEGAL_TRANSFORM = Path(__file__).parent / "fixtures" / "io-boundary" / "illegal_transform.py"
 NAIVE_TIME = Path(__file__).parent / "fixtures" / "naive-time" / "naive_time.py"
-ADAPTER_DIRECTORIES = {"sources", "sinks"}
+IO_MODULES = {"networks", "pypsa_eur"}  # the only modules allowed to touch the world
 
 # These are the direct APIs the project currently promises to keep in adapters.
 # Dynamic calls and transitive third-party I/O are intentionally outside the check.
@@ -28,9 +28,8 @@ IO_CALLS = {
 }
 
 
-def is_adapter(path: Path) -> bool:
-    relative_parts = path.relative_to(PIPELINE_ROOT).parts
-    return bool(relative_parts) and relative_parts[0] in ADAPTER_DIRECTORIES
+def is_boundary(path: Path) -> bool:
+    return path.stem in IO_MODULES
 
 
 def direct_io_violations(path: Path) -> list[str]:
@@ -55,8 +54,8 @@ def direct_io_violations(path: Path) -> list[str]:
 def test_transformations_do_not_perform_direct_io():
     violations = [
         violation
-        for path in PIPELINE_ROOT.rglob("*.py")
-        if not is_adapter(path)
+        for path in PACKAGE_ROOT.rglob("*.py")
+        if not is_boundary(path)
         for violation in direct_io_violations(path)
     ]
     assert violations == []
@@ -90,7 +89,7 @@ def implicit_timezone_violations(path: Path) -> list[str]:
 def test_timestamps_state_their_timezone():
     violations = [
         violation
-        for path in PIPELINE_ROOT.rglob("*.py")
+        for path in PACKAGE_ROOT.rglob("*.py")
         for violation in implicit_timezone_violations(path)
     ]
     assert violations == []

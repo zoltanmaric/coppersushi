@@ -20,7 +20,7 @@ flowchart LR
     net_power_map["net_power_map<br/>go.Figure (Dash app)"]
 
     pypsa_eur_pin["pypsa_eur_pin<br/>pypsa-eur.pin + config/coppersushi.yaml"]
-    pypsa_eur_run["pypsa_eur_run<br/>pipeline.sinks.solved_networks → Snakemake in ../pypsa-eur (HiGHS)"]
+    pypsa_eur_run["pypsa_eur_run<br/>coppersushi.pypsa_eur → Snakemake in ../pypsa-eur (HiGHS)"]
     solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
 
     pypsa_eur_pin --> pypsa_eur_run
@@ -28,7 +28,7 @@ flowchart LR
     solved_network --> net_power_map
 ```
 
-External I/O belongs in `pipeline/sources/` or `pipeline/sinks/`; transformations exchange in-memory values. The architecture test checks a finite set of direct I/O APIs and deliberately does not claim to detect dynamic or transitive I/O.
+Code is one package, `coppersushi/`, organised by domain noun; only `networks` (the shelf of solved networks) and `pypsa_eur` (the upstream workflow) touch the world, and every other module exchanges in-memory values. The architecture test checks a finite set of direct I/O APIs and deliberately does not claim to detect dynamic or transitive I/O.
 
 ## Future chapters
 
