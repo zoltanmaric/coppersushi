@@ -11,7 +11,7 @@ Demo day is 2024 because upstream's data stack ends there (prebuilt cutout `euro
 ## Approach
 
 - **PyPSA-Eur is a pinned sibling checkout** ([design](../pypsa-eur-sibling.md)): `pypsa-eur.pin` in this repo records URL + commit; a small runner checks the sibling out at the pin and runs Snakemake with `--configfile config/coppersushi.yaml`. One checkout, one data directory, shared by every worktree.
-- **This repo owns** the pin, the runner, the config and the solved networks (`networks/opf-<day>.nc`, versioned with Git LFS; Zenodo for the published demo artifact). `pipeline/` OSM grid assembly stays until a solved network exists, then goes — redundant with PyPSA-Eur's `base_network`.
+- **This repo owns** the pin, the runner, the config and the solved networks (`networks/opf-<day>.nc`, versioned with Git LFS; Zenodo for the published demo artifact). The `pipeline/` OSM grid assembly went with the first solved network: PyPSA-Eur's `base_network` builds the same grid from the same CSVs.
 - **Config** is written against `config/schema.default.json`, not copied from `config/examples/config.validation.yaml`, which carries keys today's code ignores (`scenario.ll`, `clustering.simplify_network.exclude_carriers`; live: `electricity.transmission_limit`, `clustering.exclude_carriers`).
 - Non-goals for this cut: true-up to actuals (calibration, measured constraints, validation), carbon layer, modelling of critical network elements and contingencies, forecasting, article copy, hosting.
 
