@@ -2,6 +2,8 @@
 
 The stumble behind each line in `AGENTS.md` and `.agents/skills/`. Rules and skills stay imperative; this table is where the `ablation` rule looks before deleting a line, and where a new line records the occurrence that earned it.
 
+Rules older than this page carry no row and are the first ablation candidates.
+
 | Line | Stumble |
 |---|---|
 | `design-first`, `ablation`, `grill`/`spec`/`goldfish` skills | Design conversation, see [agent-workflow-design](agent-workflow-design.md) |

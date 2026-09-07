@@ -1,6 +1,6 @@
 # Timezone handling
 
-**Convention**: no timestamp without a named zone. Time constructors always pass `tz=`/`tzinfo=`/`utc=`; `tz=None` only where a third party forces naiveness, declared at the conversion point. Nothing in this repo constructs a timestamp today (PyPSA-Eur's snapshots arrive naive, meaning UTC), so the `explicit-timezones` rule and its AST check retired with that code; they return with the first module that builds one.
+**Convention** (`explicit-timezones` in `coppersushi/AGENTS.md`): no timestamp without a named zone. Time constructors always pass `tz=`/`tzinfo=`/`utc=`; `tz=None` only where a third party forces naiveness, declared at the conversion point. Enforced by a finite AST check in `tests/test_architecture.py`; today no module in this repo constructs a timestamp, and the check waits for the first that does.
 
 **Principle:** the zone must live somewhere — in the dtype, or in a convention declared at a boundary — never in someone's head.
 
