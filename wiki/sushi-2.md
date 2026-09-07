@@ -24,7 +24,7 @@ flowchart LR
     solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
 
     zonal_prices["zonal_prices<br/>country-bus re-solve of solved_network (HiGHS)"]:::planned
-    day_ahead_prices["day_ahead_prices<br/>pipeline.sources.electricity_maps → networks/prices-&lt;day&gt;.csv"]:::planned
+    day_ahead_prices["day_ahead_prices<br/>coppersushi.electricity_maps → networks/prices-&lt;day&gt;.csv"]:::planned
     price_anatomy["price_anatomy<br/>go.Figure + zone panel (Dash app)"]:::planned
 
     pypsa_eur_pin --> pypsa_eur_run
