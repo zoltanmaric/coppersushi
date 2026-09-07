@@ -36,4 +36,4 @@ Evidence there is something to show, from the 2013-07-17 solve at noon (€/MWh)
 
 ## Open
 
-- Electricity Maps key with price access before Friday — the full API opens at the event. Fallback: ENTSO-E day-ahead prices via `entsoe-py` (not yet a dependency).
+- Electricity Maps access before Friday: the 14-day trial (no payment details) gives production keys, but real-time products carry three months of trailing history, so 2024-08-29 is out of reach until the event's key. Plan: build the client on the trial against a recent day; take the 2024-08-29 numbers from ENTSO-E Transparency (`entsoe-py`, not yet a dependency; same source Electricity Maps publishes for Europe); re-fetch from Electricity Maps at the event.
