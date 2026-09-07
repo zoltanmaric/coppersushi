@@ -16,6 +16,7 @@
 
 ## Specs (working memory — burn-down state, not settled knowledge)
 - [specs/sushi-2.md](specs/sushi-2.md) — the Sep 11 cut: next steps and acceptance criteria
+- [specs/price-anatomy.md](specs/price-anatomy.md) — the hackathon cut: actual vs. model-zonal vs. nodal prices per zone, what the copper plate hides
 - [specs/architecture-review-graph.md](specs/architecture-review-graph.md) — lightweight architecture-review experiment: manual DAG, PR deltas, and an I/O-boundary test
 
 ## Raw sources (immutable)

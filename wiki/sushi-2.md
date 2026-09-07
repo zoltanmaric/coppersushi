@@ -23,9 +23,17 @@ flowchart LR
     pypsa_eur_run["pypsa_eur_run<br/>coppersushi.pypsa_eur → Snakemake in ../pypsa-eur (HiGHS)"]
     solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
 
+    zonal_prices["zonal_prices<br/>country-bus re-solve of solved_network (HiGHS)"]:::planned
+    day_ahead_prices["day_ahead_prices<br/>pipeline.sources.electricity_maps → networks/prices-&lt;day&gt;.csv"]:::planned
+    price_anatomy["price_anatomy<br/>go.Figure + zone panel (Dash app)"]:::planned
+
     pypsa_eur_pin --> pypsa_eur_run
     pypsa_eur_run --> solved_network
     solved_network --> net_power_map
+    solved_network -.-> zonal_prices
+    solved_network -.-> price_anatomy
+    zonal_prices -.-> price_anatomy
+    day_ahead_prices -.-> price_anatomy
 ```
 
 Code is one package, `coppersushi/`, organised by domain noun; `io-boundary` in `coppersushi/AGENTS.md` names the two modules that touch the world.
