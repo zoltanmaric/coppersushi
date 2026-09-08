@@ -17,6 +17,7 @@ server = app.server
 NETWORK_LOADERS = {
     'v1': lambda: networks.load(networks.NETWORKS_DIR / 'opf-2013-07-17-v1.nc'),
     'opf-2013': lambda: networks.load(networks.solved('2013-07-17')),
+    'opf-2024': lambda: networks.load(networks.solved('2024-08-29')),
 }
 # Unsanctioned solves are viewable at /candidates/<file stem>
 NETWORK_LOADERS.update({
