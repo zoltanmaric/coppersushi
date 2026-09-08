@@ -4,15 +4,15 @@ Dash/Plotly app, ~400 lines of Python across three modules. Written 2022, modern
 
 ## Structure
 
-- `app.py` — Dash app: loads one solved PyPSA network (`networks/*.nc`), builds the full figure at startup, snapshot slider toggles trace visibility.
-- `scripts/plot_power_flow.py` — builds the map figure: 4 traces per snapshot (nodes, loaded lines >99%, easy lines, direction triangles at geodesic branch midpoints via pyproj). Node color/size = net power, IQR-clamped colorscale. Also supports coloring by load/generation/marginal price (never exposed in UI).
-- `scripts/network_snapshot.py` — extracts per-snapshot bus/load/generator DataFrames, joins static + time-varying quantities.
+- `app.py` — Dash app: loads solved PyPSA networks (`networks/*.nc`, Git LFS objects), builds the full figure at startup, snapshot slider toggles trace visibility.
+- `coppersushi/power_flow.py` — builds the map figure: 4 traces per snapshot (nodes, loaded lines >99%, easy lines, direction triangles at geodesic branch midpoints via pyproj). Node color/size = net power, IQR-clamped colorscale. Also supports coloring by load/generation/marginal price (never exposed in UI).
+- `coppersushi/snapshot.py` — extracts per-snapshot bus/load/generator DataFrames, joins static + time-varying quantities.
 
 ## Known weaknesses (v2 targets)
 
 - **All-snapshots-precomputed mega-figure**: 12 × 4 traces built eagerly and shipped to the browser at once → ~10s+ first paint; `NUM_TRACES_PER_SNAPSHOT` coupling is brittle.
 - **Map engine** (measured 2026-09-01): plotly deprecates its Mapbox integration, not Mapbox. Its MapLibre path (`Scattermap`) blocks the browser's main thread for >45 s on first render for *both* v1 (3.5k nodes, 48 traces) and the OSM topology (10k segments, 4 traces), then runs at ~61 fps; the Mapbox path renders the same figures instantly. Token-free Carto Dark Matter also looks flat next to Mapbox Dark. So: stay on `Scattermapbox` with plotly pinned (drift costs occasional one-liners, e.g. plotly.js 3 dropped `mapbox` from default `scrollZoom`). The keep-the-look, WebGL-fast exit is deck.gl (pydeck / dash-deck) on the Mapbox Dark basemap: trace builders rewritten as layers, data prep reusable.
-- Chained-assignment warnings remain in `network_snapshot.py` under pandas Copy-on-Write.
+- Chained-assignment warnings remain in `snapshot.py` under pandas Copy-on-Write.
 
 ## Lineage
 

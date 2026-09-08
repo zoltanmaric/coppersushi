@@ -1,7 +1,7 @@
 import pypsa
 from pytest import approx
 
-from scripts.network_snapshot import NetworkSnapshot
+from coppersushi.snapshot import NetworkSnapshot
 
 
 class TestNetworkSnapshot:

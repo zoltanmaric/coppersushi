@@ -5,7 +5,7 @@ import plotly.io as pio
 import pyproj
 import pypsa
 
-from scripts.network_snapshot import NetworkSnapshot
+from coppersushi.snapshot import NetworkSnapshot
 
 # For each snapshot, a figure has 4 traces
 # (the nodes, the loaded lines, the non-loaded lines,
@@ -246,7 +246,7 @@ def show_snapshot(fig: go.Figure, snapshot_index: int) -> go.Figure:
     return fig
 
 
-def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) -> go.Figure:
+def colored_network_figure(n: pypsa.Network, what: str, mapbox_token: str | None = None, technology: str = None) -> go.Figure:
     # Create Network Graph
     fig = go.Figure(layout=go.Layout(
         showlegend=False,
@@ -294,21 +294,13 @@ def colored_network_figure(n: pypsa.Network, what: str, technology: str = None) 
     # Make first set of traces (nodes & edges) visible
     fig = show_snapshot(fig, snapshot_index=0)
 
-    # Register and get a free access token at https://www.mapbox.com/
-    # and paste it into a file at the path below
-    mapbox_token = open(".secrets/.mapbox_token").read()
-
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0},
                       # Available maps: https://plotly.com/python/mapbox-layers#base-maps-in-layoutmapboxstyle
                       mapbox_style="dark",
-                      # Only required for mapbox styles
+                      # Only required for mapbox styles; without a token the figure builds but draws no tiles
                       mapbox_accesstoken=mapbox_token
                       )
     fig.update_geos(projection_type='mercator')
 
     return fig
 
-
-if __name__ == "__main__":
-    n = pypsa.Network("networks/elec_s_all_ec_lv1.01_2H.nc")
-    colored_network_figure(n, 'net_power')

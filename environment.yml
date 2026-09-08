@@ -12,5 +12,5 @@ dependencies:
   - plotly =6.9.0
   - numpy =2.5.2
   - gunicorn =26.0.0  # For deploying to Heroku
-  - snakeviz =2.2.2  # For visualising cProfile results
+  - pyyaml =6.0.3
   - git-lfs =3.8.0  # Networks are LFS-tracked; run `git lfs install` once after creating the env
