@@ -3,6 +3,8 @@
 Append-only chronology of wiki operations (ingests, queries, lints).
 Entry format: `## [YYYY-MM-DD] <operation> | <title>`
 
+## [2026-09-08] backtest | One day scored against JAO and settled prices
+2024-08-29 solved on the OSM grid and compared with JAO's 78 binding CNECs and settled Core prices. Zone-pair rank correlation went -0.03 -> +0.29 and price bias -119 -> -60 EUR/MWh across four runs; the whole gain came from pricing CO2 (Instrat daily EUA), with dynamic fuel prices and the 2025 cost vintage worth about a point each. Congestion *location* never correlated (rho ~0) — that is jao-grid's lever, not a cost one. New page backtest-2024-08-29; two upstream bugs found and patched on the fork.
 ## [2026-09-08] lint | Cutout naming corrected: the weather year follows the day
 `europe-1940-2024-era5` appeared in pypsa-eur-sibling and the sushi-2 spec as the prebuilt cutout in play. It is neither: it names a CDS build recipe in upstream's `cutouts:` map (404 as a file), while `atlite.default_cutout` is `europe-2013-sarah3-era5`. Cutouts are one calendar year, so the 2024-08-29 day needs `europe-2024-sarah3-era5`. Upstream already rejects a mismatch (`sel(time=...)` raises), but only after the 6.7 GB download and without naming the cause, so a config test now checks the two years agree up front. Found by dry-running the 2024 day: the DAG resolved `retrieve_cutout` to the 2013 file. Sushi-2 step 2 gains the cutout as its third change.
 
