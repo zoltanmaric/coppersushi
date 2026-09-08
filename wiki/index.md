@@ -11,7 +11,7 @@
 - [timezone-handling.md](timezone-handling.md) — the `explicit-timezones` convention, its rationale, and the PyPSA naive-UTC boundary
 
 ## Entities
-- [sushi-2.md](sushi-2.md) — Copper Sushi 2: optimal power flow on the 2025 OSM grid via today's PyPSA-Eur; architecture
+- [sushi-2.md](sushi-2.md) — Copper Sushi 2: optimal power flow on the 2025 OSM grid via the 2026 PyPSA-Eur; architecture
 - [pypsa-eur-sibling.md](pypsa-eur-sibling.md) — PyPSA-Eur as a pinned sibling checkout: why not a submodule, fork refs and rules, the 2026-09-02 refresh record
 - [copper-sushi-app.md](copper-sushi-app.md) — what the app shows, the OPF behind it, data provenance and caveats
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026

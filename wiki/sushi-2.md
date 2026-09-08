@@ -1,11 +1,11 @@
 # Copper Sushi 2 — optimal power flow on the 2025 grid
 
-The in-place successor of [v1](copper-sushi-app.md). v1 visualized a *model's* optimal power flow on the 2013 GridKit grid ("the math is real, the data is not"). Sushi 2 keeps the OPF and moves it to **today's PyPSA-Eur on the 2025 OSM-based grid, for a 2024 day** — a working OPF first; truing it up to measured data comes after.
+The in-place successor of [v1](copper-sushi-app.md). v1 visualized a *model's* optimal power flow on the 2013 GridKit grid ("the math is real, the data is not"). Sushi 2 keeps the OPF and moves it to **the 2026 PyPSA-Eur on the 2025 OSM-based grid, for a 2024 day** — a working OPF first; truing it up to measured data comes after.
 
 ## Architecture (settled 2026-09-02)
 
 1. **Grid**: PyPSA-Eur's OSM-based European network (Xiong et al., *Nature Scientific Data* 2025), built by PyPSA-Eur's own `base_network`.
-2. **Workflow**: today's PyPSA-Eur, run from a [pinned sibling checkout](pypsa-eur-sibling.md) with a config committed here, HiGHS as solver. Load disaggregation, plant matching and renewable profiles are upstream's (JRC Energy Atlas, powerplantmatching, atlite).
+2. **Workflow**: the 2026 PyPSA-Eur, run from a [pinned sibling checkout](pypsa-eur-sibling.md) with a config committed here, HiGHS as solver. Load disaggregation, plant matching and renewable profiles are upstream's (JRC Energy Atlas, powerplantmatching, atlite).
 3. **Signal**: v1's family unchanged — net power per node, loaded-vs-easy branches, direction arrows, per-node tooltips.
 4. **Web tool**: this repo, the viewer of the solved network; `Scattermapbox` pinned ([codebase-v1](codebase-v1.md)).
 
