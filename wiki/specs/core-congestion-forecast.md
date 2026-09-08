@@ -12,21 +12,17 @@ The full product (planned outages, phase shifters, the TSOs' exact procedure, ca
 
 ```mermaid
 flowchart LR
-    classDef src stroke:#4a6fa5,stroke-width:2px
-    classDef xform stroke-dasharray: 3 3
-    classDef truth stroke:#4a8a4a,stroke-width:2px
-    classDef view stroke:#a54a4a,stroke-width:2px
 
-    em_forecast[("Electricity Maps forecast, 72 h<br/>electricity-mix, total-load, electricity-flows, price-day-ahead<br/>per zone, hourly")]:::src
-    em_actual[("Electricity Maps actual<br/>price-day-ahead/actual, history")]:::truth
-    jao[("jao_elements (specs/jao-grid)<br/>JAO's elements matched to our lines: limits, checked pairs, shadow prices")]:::truth
-    proxy[("Proxy day: the solved OSM network<br/>networks/opf-2013-07-17.nc, bounds and availability series intact")]:::src
+    em_forecast[("Electricity Maps forecast, 72 h<br/>electricity-mix, total-load, electricity-flows, price-day-ahead<br/>per zone, hourly")]
+    em_actual[("Electricity Maps actual<br/>price-day-ahead/actual, history")]
+    jao[("jao_elements (specs/jao-grid)<br/>JAO's elements matched to our lines: limits, checked pairs, shadow prices")]
+    proxy[("Proxy day: the solved OSM network<br/>networks/opf-2013-07-17.nc, bounds and availability series intact")]
 
-    capture["capture_forecast<br/>daily 09:00 CET → data/forecasts/‹D+1›/*.json (committed)"]:::xform
-    pin["pin_zonal_totals<br/>per country & hour, as zonal equalities: load, wind, solar, run-of-river, nuclear<br/>non-Core borders capped at the forecast exchange; Core borders free<br/>thermal and hydro dispatch on PyPSA-Eur costs"]:::xform
-    solve["solve<br/>HiGHS, lines fixed, shedder as diagnostic<br/>security: proxy (0.7 × limit) or n-1 (JAO's checked pairs via outage factors)"]:::xform
-    predict["predict<br/>loading at the 70 % cap → binding lines<br/>load-weighted nodal price → zonal price, zone-pair gaps"]:::xform
-    score["score<br/>zone pairs ranked by gap vs ranked by settled spread<br/>binding lines vs JAO CNECs (matched)<br/>thermal dispatch vs EM mix forecast (validation)"]:::xform
+    capture["capture_forecast<br/>daily 09:00 CET → data/forecasts/‹D+1›/*.json (committed)"]
+    pin["pin_zonal_totals<br/>per country & hour, as zonal equalities: load, wind, solar, run-of-river, nuclear<br/>non-Core borders capped at the forecast exchange; Core borders free<br/>thermal and hydro dispatch on PyPSA-Eur costs"]
+    solve["solve<br/>HiGHS, lines fixed, shedder as diagnostic<br/>security: proxy (0.7 × limit) or n-1 (JAO's checked pairs via outage factors)"]
+    predict["predict<br/>loading at the 70 % cap → binding lines<br/>load-weighted nodal price → zonal price, zone-pair gaps"]
+    score["score<br/>zone pairs ranked by gap vs ranked by settled spread<br/>binding lines vs JAO CNECs (matched)<br/>thermal dispatch vs EM mix forecast (validation)"]
 
     forecast_store["zonal_forecast<br/>JSON per day, sub-zones aggregated to country"]
     pinned["pinned_network<br/>pypsa.Network, in memory"]
@@ -34,8 +30,8 @@ flowchart LR
     prediction["prediction<br/>binding lines, zonal prices"]
     scorecard["scorecard<br/>rank correlation and hits per day"]
 
-    map["congestion_map<br/>Core lines by predicted loading, binding highlighted; JAO actuals on scored days"]:::view
-    panel["price_panel<br/>predicted vs EM forecast vs settled per zone; scorecard"]:::view
+    map["congestion_map<br/>Core lines by predicted loading, binding highlighted; JAO actuals on scored days"]
+    panel["price_panel<br/>predicted vs EM forecast vs settled per zone; scorecard"]
 
     em_forecast --> capture --> forecast_store
     forecast_store --> pin
