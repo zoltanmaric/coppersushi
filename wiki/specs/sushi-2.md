@@ -4,7 +4,7 @@ Working memory. Architecture: [sushi-2.md](../sushi-2.md).
 
 ## Problem
 
-A working v1-style optimal power flow for one 2024 day on the 2025 OSM grid, produced by today's PyPSA-Eur with HiGHS and drawn in the app. Deadline: **Sep 11**. Start small: a working OPF first; truing it up to measured data comes after.
+A working v1-style optimal power flow for one 2024 day on the 2025 OSM grid, produced by PyPSA-Eur as of 2026 with HiGHS and drawn in the app. Deadline: **Sep 11**. Start small: a working OPF first; truing it up to measured data comes after.
 
 Demo day is 2024 because upstream's data stack ends there (prebuilt cutout `europe-1940-2024-era5`, `nuclear_p_max_pu.csv` last column 2024, renewable capacity year 2024). Later years cost a CDS cutout build and a nuclear-series extension.
 
@@ -12,7 +12,7 @@ Demo day is 2024 because upstream's data stack ends there (prebuilt cutout `euro
 
 - **PyPSA-Eur is a pinned sibling checkout** ([design](../pypsa-eur-sibling.md)): `pypsa-eur.pin` in this repo records URL + commit; a small runner checks the sibling out at the pin and runs Snakemake with `--configfile config/coppersushi.yaml`. One checkout, one data directory, shared by every worktree.
 - **This repo owns** the pin, the runner, the config and the solved networks (`networks/opf-<day>.nc`, versioned with Git LFS; Zenodo for the published demo artifact). The in-repo OSM grid assembly went with the first solved network: PyPSA-Eur's `base_network` builds the same grid from the same CSVs.
-- **Config** is written against `config/schema.default.json`, not copied from `config/examples/config.validation.yaml`, which carries keys today's code ignores (`scenario.ll`, `clustering.simplify_network.exclude_carriers`; live: `electricity.transmission_limit`, `clustering.exclude_carriers`).
+- **Config** is written against `config/schema.default.json`, not copied from `config/examples/config.validation.yaml`, which carries keys the code ignores as of 2026-09-08 (`scenario.ll`, `clustering.simplify_network.exclude_carriers`; live: `electricity.transmission_limit`, `clustering.exclude_carriers`).
 - Non-goals for this cut: true-up to actuals (calibration, measured constraints, validation), carbon layer, modelling of critical network elements and contingencies, forecasting, article copy, hosting.
 
 ## Next steps
