@@ -6,6 +6,6 @@
 
 - **name-mystery** — Never explain the project's name prominently. The mystery is part of the intrigue: no etymology in the README, the wiki index, or the app itself. A discreet note deep in a wiki page is acceptable.
 
-- **words-to-watch** — Wikipedia's [Words to watch](https://en.wikipedia.org/wiki/Wikipedia:Manual_of_Style/Words_to_watch) apply. No relative time — "today", "currently", "recently", "soon" — anchor it: "as of 2026-09-08". No weasel words — "some say", "it is thought", "widely regarded". No puffery or editorializing — "cutting-edge", "notably", "clearly".
+- **relative-time** — No relative time — "today", "currently", "recently", "soon" — anchor it: "as of 2026-09-08" (Wikipedia's [MOS:RELTIME](https://en.wikipedia.org/wiki/Wikipedia:Manual_of_Style/Words_to_watch#Relative_time_references)).
 
 - **what-is** — Pages state what is. What was, what changed and why live in `log.md` and git — no "scrapped", "formerly" or "superseded" narratives on pages. Spell out acronyms on first use.
