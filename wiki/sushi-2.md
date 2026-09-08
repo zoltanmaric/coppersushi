@@ -44,7 +44,7 @@ flowchart LR
     pypsa_eur_run -.-> congestion_forecast
     zonal_forecast -.-> congestion_forecast
     congestion_forecast -.-> congestion_map
-    jao_elements -.-> congestion_forecast
+    trued_network -.-> congestion_forecast
     jao_elements -.-> congestion_map
     day_ahead_prices -.-> congestion_map
 ```
