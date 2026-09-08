@@ -4,7 +4,7 @@ Working memory. Architecture: [sushi-2.md](../sushi-2.md).
 
 ## Problem
 
-A working v1-style optimal power flow for one 2024 day on the 2025 OSM grid, produced by the 2026 PyPSA-Eur with HiGHS and drawn in the app. Deadline: **Sep 11**. Start small: a working OPF first; truing it up to measured data comes after.
+A working v1-style optimal power flow for one 2024 day on the 2025 OSM grid, produced by PyPSA-Eur as of 2026 with HiGHS and drawn in the app. Deadline: **Sep 11**. Start small: a working OPF first; truing it up to measured data comes after.
 
 Demo day is 2024 because upstream's data stack ends there (prebuilt cutout `europe-1940-2024-era5`, `nuclear_p_max_pu.csv` last column 2024, renewable capacity year 2024). Later years cost a CDS cutout build and a nuclear-series extension.
 
