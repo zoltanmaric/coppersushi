@@ -15,7 +15,7 @@ Solid nodes and edges are implemented; **dashed (class `planned`) are planned** 
 
 ```mermaid
 flowchart LR
-    classDef planned stroke-dasharray: 5 5,stroke:#888,color:#888,fill:none
+    classDef planned stroke-dasharray: 5 5,stroke:#888,fill:none
 
     net_power_map["net_power_map<br/>go.Figure (Dash app)"]
 

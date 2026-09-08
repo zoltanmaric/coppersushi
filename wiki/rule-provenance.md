@@ -21,4 +21,6 @@ Rules older than this page carry no row and are the first ablation candidates.
 | `vendor-guidelines` (`.agents/skills/AGENTS.md`) | A skill's first draft carried an incident log and a source citation; the vendor pages forbid both |
 | `pull-request` ledger verdicts | A separable layer was listed as a piggyback without a chop offer; a goldfish critic flagged it |
 | `pull-request` new layer via `gh stack add` | Two layers were opened with `gh pr create` and rebased by hand; GitHub showed a two-PR stack with the new PRs outside it until `gh stack link` repaired it |
+| `mermaid` theme unset; fill paired with colour | Two spec diagrams with light fills and no text colour rendered grey-on-white in GitHub's dark theme; the user had hit the same on another project. Aligned with Princeton University Library's accessible-Mermaid guide and GitHub community discussion 35733 |
+| `mermaid` placeholders as `‹x›` | `&lt;day&gt;` in two spec diagrams rendered as nothing: "networks/opf-.nc" |
 | `pull-request` critic reads the vendor guidelines | A skill draft with an incident log and a source citation passed two automated reviews; the user caught it |
