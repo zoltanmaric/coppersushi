@@ -1,4 +1,4 @@
 # PyPSA-Eur checkout used by coppersushi/pypsa_eur.py: repository URL, then commit SHA.
-# Tag the SHA on that repository when pinning (pin/<what is new in it>); as of 2026-09-08 pin/clusters-all-fixes, head of the fork's coppersushi branch.
+# Tag the SHA on that repository when pinning (pin/<YYYY-MM-DD>-<what is new>, never moved); as of 2026-09-08 pin/2026-09-08-clusters-all-fixes, head of the fork's coppersushi branch.
 https://github.com/zoltanmaric/pypsa-eur.git
 eb3a6a34644bb2ba255b6c03afb66a72a755f01a
