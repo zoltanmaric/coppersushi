@@ -4,6 +4,34 @@
 
 **Draws on it:** [core-capacity-calculation](../core-capacity-calculation.md), [flow-based-market-coupling](../flow-based-market-coupling.md), [specs/jao-grid](../specs/jao-grid.md), [specs/core-congestion-forecast](../specs/core-congestion-forecast.md).
 
+## The process it describes
+
+Chapter 3 lays the day-ahead process out as eleven steps against the actors. Coordinated capacity calculator is CCC.
+
+```mermaid
+flowchart TB
+    subgraph d2 ["D-2"]
+        NP["Net positions aligned Europe-wide<br>ENTSO-E process, all TSOs"]
+        IGM["Hourly individual grid model<br>each TSO"]
+        CGM["Common grid model, Continental Europe<br>merging agent"]
+        IN["Elements, contingencies, shift key, external constraints, remedial actions, long-term allocations<br>each TSO"]
+        FB0["Initial computation and element selection<br>CCC"]
+        RAO["Remedial-action optimisation<br>CCC"]
+    end
+    subgraph d1 ["D-1"]
+        LTN["Long-term nominations<br>allocation platform"]
+        FB1["Intermediate computation: minimum margin, long-term inclusion<br>CCC"]
+        VAL["Validation: final adjustment values, early publication<br>each TSO"]
+        FB2["Final computation and presolve<br>CCC"]
+        PUB["Publication; domain to market coupling<br>CCC, JAO"]
+    end
+    NP --> IGM --> CGM --> FB0
+    IN --> FB0
+    FB0 --> RAO --> FB1
+    LTN --> FB1
+    FB1 --> VAL --> FB2 --> PUB
+```
+
 ## What it settles
 
 **The computation is central, the inputs are not.** Chapter 3 gives the process as a table of steps against five actors: Core TSOs, non-Core TSOs, the merging entity, the coordinated capacity calculator (CCC) and the single allocation platform. Each TSO builds an hourly D-2 individual grid model (structural data, topology, forecast generation, load and DC-link flows, HVDC as load or generation) and supplies its own list of critical network elements and contingencies (CNECs), generation shift key (GSK), external constraints and available remedial actions. The merging entity checks quality, substitutes a fallback for a late or rejected model, and merges all of Continental Europe into one common grid model (CGM) per hour. The CCC runs the flow-based computation, remedial-action optimisation and presolve. TSOs validate the result and may only reduce it. Net positions for the models come from ENTSO-E's centrally operated common grid model alignment process.

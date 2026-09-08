@@ -8,4 +8,6 @@
 
 - **project-lens** — Digest the document for this repository, not in general: what it settles that our model, data or specs depend on, and where it and we diverge. A section the project never touches gets one line saying it exists, or nothing.
 
+- **diagram** — When the document describes a process or a structure, draw it in Mermaid (`mermaid` skill). Prose narrating a flowchart is longer and less clear than the chart.
+
 - **edition** — State the edition digested and what later editions changed that matters here. When a newer edition supersedes it, re-digest the same page; `log.md` records the change.
