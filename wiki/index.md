@@ -18,8 +18,9 @@
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026
 
 ## Specs (working memory — burn-down state, not settled knowledge)
-- [specs/sushi-2.md](specs/sushi-2.md) — the Sep 11 cut: next steps and acceptance criteria
 - [specs/jao-grid.md](specs/jao-grid.md) — JAO's Core elements matched to our OSM grid: a map of what limited trade on a day, and true line and transformer limits from JAO's own numbers
+- [specs/sushi-2.md](specs/sushi-2.md) — the OPF chapter: a 2024 day on the OSM grid; next steps and acceptance criteria
+- [specs/core-congestion-forecast.md](specs/core-congestion-forecast.md) — the hackathon cut: Electricity Maps zonal forecasts pinned into the nodal OPF, predicted binding lines and price splits scored against JAO
 - [specs/architecture-review-graph.md](specs/architecture-review-graph.md) — lightweight architecture-review experiment: manual DAG, PR deltas, and an I/O-boundary test
 
 ## Literature (one digest per authoritative document, link only)

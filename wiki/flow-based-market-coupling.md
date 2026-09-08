@@ -1,6 +1,6 @@
 # Flow-based market coupling — Core versus the NTC borders
 
-How the European day-ahead market decides how much power may cross a border between two bidding zones, and why the method differs by region. The wider market-design argument is in [copper-plate-problem](copper-plate-problem.md).
+How the European day-ahead market decides how much power may cross a border between two bidding zones, and why the method differs by region. Context for [specs/core-congestion-forecast](specs/core-congestion-forecast.md); the wider market-design argument is in [copper-plate-problem](copper-plate-problem.md).
 
 ## The question both methods answer
 

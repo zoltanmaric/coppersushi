@@ -27,6 +27,10 @@ flowchart LR
     jao_elements["jao_elements<br/>JAO data + OSM substations → JAO's Core elements matched to our lines and transformers, with limits and shadow prices"]:::planned
     jao_map["jao_map<br/>/jao/&lt;day&gt; (Dash app)"]:::planned
     trued_network["trued_network<br/>solved_network with JAO limits on matched lines and transformers, checked pairs attached"]:::planned
+    zonal_forecast["zonal_forecast<br/>coppersushi.electricity_maps → data/forecasts/&lt;day&gt;/"]:::planned
+    congestion_forecast["congestion_forecast<br/>pre-solve network pinned to the forecast, HiGHS → networks/forecast-&lt;day&gt;.nc"]:::planned
+    day_ahead_prices["day_ahead_prices<br/>coppersushi.electricity_maps → settled prices per zone"]:::planned
+    congestion_map["congestion_map<br/>go.Figure + scorecard (Dash app)"]:::planned
 
     pypsa_eur_pin --> pypsa_eur_run
     pypsa_eur_pin -.-> unsimplified
@@ -37,6 +41,12 @@ flowchart LR
     jao_elements -.-> jao_map
     jao_elements -.-> trued_network
     solved_network -.-> trued_network
+    pypsa_eur_run -.-> congestion_forecast
+    zonal_forecast -.-> congestion_forecast
+    congestion_forecast -.-> congestion_map
+    jao_elements -.-> congestion_forecast
+    jao_elements -.-> congestion_map
+    day_ahead_prices -.-> congestion_map
 ```
 
 Code is one package, `coppersushi/`, organised by domain noun; `io-boundary` in `coppersushi/AGENTS.md` names the two modules that touch the world.
