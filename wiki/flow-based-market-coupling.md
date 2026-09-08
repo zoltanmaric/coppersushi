@@ -4,7 +4,7 @@ How the European day-ahead market decides how much power may cross a border betw
 
 ## The question both methods answer
 
-The day-ahead auction (EUPHEMIA) sets one price per bidding zone, usually a country. It pretends the grid inside a zone has no limits. Between zones it needs to know how much power may be traded tomorrow. The grid operators (TSOs) have to give the market that limit before bids close. There are two ways to describe it.
+The day-ahead auction ([EUPHEMIA](literature/euphemia-public-description.md)) sets one price per bidding zone, usually a country. It pretends the grid inside a zone has no limits. Between zones it needs to know how much power may be traded tomorrow. The grid operators (TSOs) have to give the market that limit before bids close. There are two ways to describe it.
 
 ## Method 1: NTC, one pipe per border
 
@@ -125,4 +125,4 @@ Flow-based coupling started in Central Western Europe in 2015. It covers the **C
 
 A nodal optimal power flow is what flow-based coupling approximates. The PTDFs are the sensitivities a DC power flow computes, summed up to zones. The margins are line limits minus a safety factor. The shadow prices are the line duals. PyPSA-Eur caps every line at 70 % of its thermal rating, which plays the role of the safety margin.
 
-What our model does not copy from the TSOs: which elements they choose to monitor (in Core, those where a zone-to-zone trade moves at least 5 % of its power), how they assume a zone's extra export is spread over its plants, tomorrow's outages and phase-shifter settings in their base case, the exact safety margins, and the extra limits they put on whole zones for stability. The congestion-forecast spec predicts binding lines and price splits from physics alone and scores them against JAO's published shadow prices. The distance between the two is exactly that list.
+What our model does not copy from the TSOs: which elements they choose to monitor (in Core, those where a zone-to-zone trade moves at least 5 % of its power, per the TSOs' [methodology note](literature/core-da-ccm-explanatory-note.md)), how they assume a zone's extra export is spread over its plants, tomorrow's outages and phase-shifter settings in their base case, the exact safety margins, and the extra limits they put on whole zones for stability. The congestion-forecast spec predicts binding lines and price splits from physics alone and scores them against JAO's published shadow prices. The distance between the two is exactly that list.

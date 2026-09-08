@@ -1,6 +1,6 @@
 # Explanatory note on the Core day-ahead and intraday flow-based capacity calculation methodology
 
-**Issued by** the sixteen Core TSOs, 4 June 2018, alongside their methodology proposal under Article 20 of the CACM Regulation (EU) 2015/1222. Hosted by ACER: [PDF, 37 pages](https://acer.europa.eu/sites/default/files/documents/en/Electricity/MARKET-CODES/CAPACITY-ALLOCATION-AND-CONGESTION-MANAGEMENT/16%20CCM/Action%204%20-%20CCM%20Core%20explanatory%20document.pdf). The legal text it explains is the Core day-ahead capacity calculation methodology, approved by ACER Decision 02/2019 and amended three times since; the [third amendment, clean version, 8 Dec 2023](https://eepublicdownloads.entsoe.eu/clean-documents/nc-tasks/Core%20DA%20CCM%203rd%20RfA%20-%20Clean%20version.pdf) is the text in force. This note predates go-live (8 June 2022); see "What changed since" below.
+**Issued by** the sixteen Core TSOs, 4 June 2018, alongside their methodology proposal under Article 20 of the CACM Regulation (EU) 2015/1222. Hosted by ACER: [PDF, 37 pages](https://acer.europa.eu/sites/default/files/documents/en/Electricity/MARKET-CODES/CAPACITY-ALLOCATION-AND-CONGESTION-MANAGEMENT/16%20CCM/Action%204%20-%20CCM%20Core%20explanatory%20document.pdf). The legal text it explains is the Core day-ahead capacity calculation methodology, approved by [ACER Decision 02/2019](https://www.acer.europa.eu/sites/default/files/documents/Individual%20Decisions_annex/Annex%20Ia%20-%20Decision%20on%20Core%20CCM_0.pdf) and amended three times since; the [third amendment, clean version, 8 Dec 2023](https://eepublicdownloads.entsoe.eu/clean-documents/nc-tasks/Core%20DA%20CCM%203rd%20RfA%20-%20Clean%20version.pdf) is the text in force. This note predates go-live (8 June 2022); see "What changed since" below.
 
 **Draws on it:** [core-capacity-calculation](../core-capacity-calculation.md), [flow-based-market-coupling](../flow-based-market-coupling.md), [specs/jao-grid](../specs/jao-grid.md), [specs/core-congestion-forecast](../specs/core-congestion-forecast.md).
 
@@ -19,11 +19,11 @@ flowchart TB
         RAO["Remedial-action optimisation<br>CCC"]
     end
     subgraph d1 ["D-1"]
-        LTN["Long-term nominations<br>allocation platform"]
+        LTN["Long-term nominations<br>each TSO"]
         FB1["Intermediate computation: minimum margin, long-term inclusion<br>CCC"]
         VAL["Validation: final adjustment values, early publication<br>each TSO"]
         FB2["Final computation and presolve<br>CCC"]
-        PUB["Publication; domain to market coupling<br>CCC, JAO"]
+        PUB["Publication; capacities to market coupling<br>CCC and TSOs"]
     end
     NP --> IGM --> CGM --> FB0
     IN --> FB0
@@ -34,7 +34,7 @@ flowchart TB
 
 ## What it settles
 
-**The computation is central, the inputs are not.** Chapter 3 gives the process as a table of steps against five actors: Core TSOs, non-Core TSOs, the merging entity, the coordinated capacity calculator (CCC) and the single allocation platform. Each TSO builds an hourly D-2 individual grid model (structural data, topology, forecast generation, load and DC-link flows, HVDC as load or generation) and supplies its own list of critical network elements and contingencies (CNECs), generation shift key (GSK), external constraints and available remedial actions. The merging entity checks quality, substitutes a fallback for a late or rejected model, and merges all of Continental Europe into one common grid model (CGM) per hour. The CCC runs the flow-based computation, remedial-action optimisation and presolve. TSOs validate the result and may only reduce it. Net positions for the models come from ENTSO-E's centrally operated common grid model alignment process.
+**The computation is central, the inputs are not.** The individual grid models are hourly and carry topology, forecast generation, load and DC-link flows, with HVDC as load or generation; the merging entity substitutes a fallback for a late or rejected one, and the merged model covers all of Continental Europe. Net positions for the models come from ENTSO-E's centrally operated common grid model alignment. At validation, TSOs may only reduce.
 
 **Physics is linear and active-power only.** The PTDFs are described as the linearisation of the model, and elements are assumed loaded by active power alone (power factor 1); a TSO whose element carries substantial reactive flow sets a final adjustment value at validation. The [2017 consultation draft](https://consultations.entsoe.eu/markets/core-da-ccm/user_uploads/explanatory-note-for-core-da-fb-cc-public-consultation_fv.pdf) of this note says it outright: contingency analysis "based on a DC load flow approach".
 
@@ -46,7 +46,7 @@ flowchart TB
 
 **Limits are the TSO's own.** The maximum admissible current is set by each TSO from its security policy: permanent or temporary, fixed, seasonal or dynamic where the equipment exists. An element limited by a breaker or current transformer rather than the conductor gets a constant limit.
 
-**Generation shift key is per TSO, no common formula.** Appendix 1 gives each TSO's recipe. Three families: shift proportional to each dispatchable unit's D-2 output, nuclear excluded (Czechia, France, Poland, Romania, Slovakia; Croatia, Slovenia and Hungary add load nodes for lower-voltage generation); market-driven units only, chosen by statistics, base load excluded (Austria; Germany's four TSOs each build one and weight them into a single German key); pro-rata between per-unit minimum and maximum levels chosen for extreme import and export (Belgium, Netherlands). The GSK must be constant per market time unit because EUPHEMIA needs a convex domain.
+**Generation shift key is per TSO, no common formula.** Appendix 1 gives each TSO's recipe. Three families: shift proportional to each dispatchable unit's D-2 output (Czechia, France, Poland, Romania, Slovakia; Croatia, Slovenia and Hungary add load nodes for lower-voltage generation; Czechia, Romania, Slovakia and Slovenia exclude nuclear); market-driven units only, chosen by statistics, base load excluded (Austria; Germany's four TSOs each build one and weight them into a single German key); pro-rata between per-unit minimum and maximum levels chosen for extreme import and export (Belgium, Netherlands). The GSK must be constant per market time unit because the price-coupling algorithm needs a convex domain.
 
 **Remedial-action optimisation** enlarges the domain in the forecast market direction using the actions TSOs offer (phase-shifter taps, topology). Limits per contingency: at most two TSOs involved and at most eight curative actions (three for RTE, two for PSE). Elements below the 5 % threshold can be listed as monitored so the optimisation does not overload them; a 50 MW tolerance keeps low-sensitivity ones from binding.
 
@@ -56,13 +56,13 @@ flowchart TB
 
 **Presolve.** The CCC removes constraints that cannot bind; only the presolved set goes to the market. Every redundant constraint is still respected by construction.
 
-**Fallbacks.** Up to two consecutive missing hours are spanned from the neighbouring hours' intersection; longer gaps get default parameters. If market coupling itself fails, ATCs for the shadow auction are derived from the domain by an iterative split of margins across borders.
+**Fallbacks.** Up to two consecutive missing hours are spanned from their neighbours, longer gaps get default parameters, and if coupling itself fails, shadow-auction ATCs are derived from the domain.
 
-**External constraints** cap a zone's net position for reasons the flow-based model cannot express (voltage, stability, dynamic limits). They appear as rows with a single ±1 PTDF, or are handed to the market separately as allocation constraints. The note spends three pages on their legal basis.
+**External constraints** cap a zone's net position for reasons the linear model cannot express (voltage, stability); they appear as rows with a single ±1 PTDF or go to the market separately as allocation constraints. Three pages argue their legal basis.
 
 ## What changed since
 
-- **70 % rule.** Regulation (EU) 2019/943 Article 16(8) replaced the 20 % minimum: RAM must reach 70 % of the element's technical capacity, with linear trajectories and derogations during transition. The third amendment carries it.
+- **70 % rule.** Regulation (EU) 2019/943 Article 16(8) added a second floor: the margin plus the flow from non-Core exchanges must reach 70 % of the element's capacity, with linear trajectories and derogations during transition. The 20 % floor stays and the larger of the two applies; the third amendment carries both.
 - **Advanced hybrid coupling** replaced standard hybrid coupling for Core's edge borders; the note describes only the standard form, where non-Core exchanges enter through the base case.
-- **Extended LTA inclusion**: EUPHEMIA now receives the untouched domain plus the long-term domain and takes their union itself ([euphemia-public-description](euphemia-public-description.md)). An amendment submitted in 2026 removes long-term allocations from day-ahead capacity calculation entirely; ACER decides by 30 September 2026.
-- **Central Europe.** Core and Italy North merged into the Central Europe region (ACER Decisions 04/2024 and 10/2025). The TSOs' [explanatory document of October 2024](https://consultations.entsoe.eu/markets/central-europe-da-ccm/supporting_documents/20241017%20Explanatory%20Document%20CE%20DA%20CCM%20%20PC%20version.pdf) covers only the delta: Swiss and Italian integration, HVDC on Central Europe borders, unmodelled 132 kV tie-lines, and dropping the obligation to phase out seasonal limits.
+- **Extended LTA inclusion**: EUPHEMIA now receives the untouched domain plus the long-term domain and takes their union itself ([euphemia-public-description](euphemia-public-description.md)). An [amendment submitted in 2026](https://www.acer.europa.eu/news/acer-amend-electricity-day-ahead-capacity-calculation-methodology-core-region) removes long-term allocations from day-ahead capacity calculation entirely; ACER decides by 30 September 2026.
+- **Central Europe.** Core and Italy North merged into the Central Europe region (ACER Decisions 04/2024 and [10/2025](https://www.acer.europa.eu/sites/default/files/documents/Individual%20Decisions_annex/ACER-Decision-10-2025-Annex-II.pdf)). The TSOs' [explanatory document of October 2024](https://consultations.entsoe.eu/markets/central-europe-da-ccm/supporting_documents/20241017%20Explanatory%20Document%20CE%20DA%20CCM%20%20PC%20version.pdf) covers only the delta: Swiss and Italian integration, HVDC on Central Europe borders, tie-lines below 220 kV that the merged model does not carry, and dropping the obligation to phase out seasonal limits.

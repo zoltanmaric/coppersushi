@@ -1,6 +1,6 @@
 # Literature Guidelines
 
-- **one-to-one** — One page per authoritative public document, digesting that document alone: who issued it, which edition, what it settles, what it leaves open, and which wiki pages draw on it. Name the file after the document, not the topic. Synthesis across documents belongs in a concept page, never here.
+- **one-to-one** — One page per authoritative public document, digesting that document alone: who issued it, which edition and what later editions changed that matters here, what it settles, what it leaves open, and which wiki pages draw on it. Name the file after the document, not the topic. A newer edition re-digests the same page; `log.md` records the change.
 
 - **link-only** — Link the original; never copy its text into the repository. Licences differ (EUPHEMIA's forbids reproduction) and one rule is simpler than two. Quote at most a phrase, marked as a quote.
 
@@ -10,4 +10,3 @@
 
 - **diagram** — When the document describes a process or a structure, draw it in Mermaid (`mermaid` skill): prose narrating a flowchart is longer and less clear than the chart. When it does not (a data dictionary, a list of definitions), no diagram; a decorative one costs attention.
 
-- **edition** — State the edition digested and what later editions changed that matters here. When a newer edition supersedes it, re-digest the same page; `log.md` records the change.
