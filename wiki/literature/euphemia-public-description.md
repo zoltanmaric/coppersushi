@@ -14,7 +14,23 @@
 
 **Orders.** Aggregated hourly and quarter-hourly curves, block orders (fill-or-kill, linked, exclusive, curtailable, flexible), complex orders with minimum-income conditions, scheduled stops and load gradients (Iberia), merit and PUN orders (Italy). Blocks and minimum-income conditions need binary variables; merit and PUN orders need strict consecutiveness.
 
-**The algorithm.** A master surplus-maximisation problem over the block and complex selections, solved by branch and cut, then three sub-problems: price determination (are there zonal prices consistent with the selection, with no paradoxically accepted block, and with the primal-dual relations on flows holding?), PUN search, and volume indeterminacy (curtailment sharing, volume maximisation, merit-order enforcement, flow decomposition). An infeasible sub-problem adds a cut to the master and the search resumes. Prices are duals of the fixed-selection problem; complementary slackness is checked explicitly: two zones price apart only when every path between them is saturated. The run stops at a time limit of about 12 minutes; the best solution so far is published, and the document says optimality is not guaranteed because heuristics are used.
+**The algorithm.** One master problem and three sub-problems, with cuts feeding back:
+
+```mermaid
+flowchart TB
+    M["Surplus maximisation over block and complex selections<br>branch and cut"]
+    P["Price determination<br>zonal prices consistent with the selection, no paradoxically accepted block"]
+    U["PUN search<br>Italy"]
+    V["Volume indeterminacy<br>curtailment sharing, volume maximisation, flow decomposition"]
+    M -- "integer solution" --> P
+    P -- "infeasible: add cut" --> M
+    P -- "prices" --> U
+    U -- "paradoxical block: add cut" --> M
+    U --> V
+    V -- "try to improve until ~12 min" --> M
+```
+
+A master surplus-maximisation problem over the block and complex selections, solved by branch and cut, then three sub-problems: price determination (are there zonal prices consistent with the selection, with no paradoxically accepted block, and with the primal-dual relations on flows holding?), PUN search, and volume indeterminacy (curtailment sharing, volume maximisation, merit-order enforcement, flow decomposition). An infeasible sub-problem adds a cut to the master and the search resumes. Prices are duals of the fixed-selection problem; complementary slackness is checked explicitly: two zones price apart only when every path between them is saturated. The run stops at a time limit of about 12 minutes; the best solution so far is published, and the document says optimality is not guaranteed because heuristics are used.
 
 **Solution quality** is graded by constraint violations against two tolerance levels; a violation past the decoupling level fails the session. A partially decoupled Core zone is priced at the average of its neighbours, at the Core TSOs' request.
 
