@@ -15,16 +15,16 @@ Two deliverables from one piece of matching work:
 
 ```mermaid
 flowchart LR
-    classDef src fill:#eef,stroke:#446
-    classDef xform fill:#fff,stroke:#000
-    classDef view fill:#fee,stroke:#644
+    classDef src stroke:#4a6fa5,stroke-width:2px
+    classDef xform stroke-dasharray: 3 3
+    classDef view stroke:#a54a4a,stroke-width:2px
 
     jao_fc[("JAO finalComputation<br/>per element & hour: substationFrom/To, elementType, u, imax, fmax, fmaxType, frm, fref, ram, contName, presolved")]:::src
     jao_sp[("JAO shadowPrices<br/>binding elements per hour, shadow price")]:::src
     osm_subs[("OpenStreetMap via Overpass<br/>named substations ≥ 220 kV with coordinates, Core countries")]:::src
-    grid[("Our OSM grid<br/>networks/opf-&lt;day&gt;.nc: buses with coordinates, lines by OSM id")]:::src
+    grid[("Our OSM grid<br/>networks/opf-‹day›.nc: buses with coordinates, lines by OSM id")]:::src
 
-    fetch["fetch_jao<br/>one day → data/jao/&lt;day&gt;/*.json (committed)"]:::xform
+    fetch["fetch_jao<br/>one day → data/jao/‹day›/*.json (committed)"]:::xform
     geocode["geocode_substations<br/>normalise names, fuzzy match, hand overrides → data/substations-core.csv (committed)"]:::xform
     match["match_elements<br/>substation pair → nearest buses → the line between them; circuits summed; transformers and PSTs as points<br/>contingency names parsed and matched the same way"]:::xform
     true_up["true_up_limits<br/>s_nom := fmax per matched line and transformer; flag ratio &gt; 2 to the old rating"]:::xform
@@ -33,7 +33,7 @@ flowchart LR
     limits["trued_network<br/>pypsa.Network with JAO limits on matched elements"]
     report["rating_report<br/>old vs new limit by voltage level"]
 
-    map["jao_map<br/>/jao/&lt;day&gt;: elements on the map, colour by shadow price or margin; PSTs and transformers as points; external constraints listed"]:::view
+    map["jao_map<br/>/jao/‹day›: elements on the map, colour by shadow price or margin; PSTs and transformers as points; external constraints listed"]:::view
 
     jao_fc --> fetch
     jao_sp --> fetch
