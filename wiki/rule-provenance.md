@@ -25,3 +25,6 @@ Rules older than this page carry no row and are the first ablation candidates.
 | `mermaid` placeholders as `‹x›` | `&lt;day&gt;` in two spec diagrams rendered as nothing: "networks/opf-.nc" |
 | `pull-request` critic reads the vendor guidelines | A skill draft with an incident log and a source citation passed two automated reviews; the user caught it |
 | `design-first`: question zero on clear asks too | Twice in one session a clear ask was executed as stated and the user had to prompt the pushback: three documents were digested where one answered the question, and a diagram rule went in without its no-process caveat |
+| `one-to-one`, `link-only`, `sparingly` (`wiki/literature/AGENTS.md`) | Decided in the grill that created the folder (log, 2026-09-08 ingest): three documents were about to be digested with raw text copies committed, one of which forbids reproduction |
+| `project-lens` (`wiki/literature/AGENTS.md`) | Added with the folder: the user asked that digests keep the repository's angle rather than summarise the document in general |
+| `diagram` (`wiki/literature/AGENTS.md`) | The first methodology digest narrated the note's eleven-step process table in prose; the user asked for the diagram |
