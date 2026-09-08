@@ -24,3 +24,4 @@ Rules older than this page carry no row and are the first ablation candidates.
 | `mermaid` theme unset; fill paired with colour | Two spec diagrams with light fills and no text colour rendered grey-on-white in GitHub's dark theme; the user had hit the same on another project. Aligned with Princeton University Library's accessible-Mermaid guide and GitHub community discussion 35733 |
 | `mermaid` placeholders as `‹x›` | `&lt;day&gt;` in two spec diagrams rendered as nothing: "networks/opf-.nc" |
 | `pull-request` critic reads the vendor guidelines | A skill draft with an incident log and a source citation passed two automated reviews; the user caught it |
+| `design-first`: question zero on clear asks too | Twice in one session a clear ask was executed as stated and the user had to prompt the pushback: three documents were digested where one answered the question, and a diagram rule went in without its no-process caveat |

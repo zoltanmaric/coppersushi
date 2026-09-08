@@ -15,8 +15,7 @@
 - **delete-heavily** — Rely heavily on git — delete code with a heavy hand. Git history is the archive. Never keep commented-out code, unused functions, "just in case" branches, or half-finished experiments in the tree; delete them and recover from history if ever needed. Prefer discarding stale uncommitted work over carrying it along.
 
 - **design-first** — Design-first for non-trivial work.
-  - When an ask is ambiguous, interrogate before implementing (`grill` skill), scaling depth to the ambiguity.
-  - Before non-trivial work, ask whether this is the right question at all.
+  - Interrogate before implementing (`grill` skill) on every non-trivial ask, clear or not: first whether it is the right question at all, then what exactly is asked; depth scales with ambiguity.
   - For large or multi-session tasks, use a spec (`spec` skill) — create one when obviously needed, suggest it in the gray zone.
   - When a spec or design has grown load-bearing, suggest a goldfish review (`goldfish` skill); the user pulls the trigger.
 
