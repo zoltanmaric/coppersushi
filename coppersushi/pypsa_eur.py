@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import NamedTuple
 
@@ -16,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 PIN_FILE = REPO / "pypsa-eur.pin"
 CONFIG = REPO / "config" / "coppersushi.yaml"
-TARGET = "solve_elec_networks"
 
 
 class Pin(NamedTuple):
@@ -28,9 +28,10 @@ def solve() -> Path:
     """Run PyPSA-Eur with our config; the solved network becomes a candidate, kept but rejected if it sheds load."""
     pin, sibling = _read_pin(), _sibling_dir()
     _checkout(pin, sibling)
-    logger.info("pypsa-eur: snakemake %s with %s in %s — a first run downloads ~20 GB and takes about an hour; "
-                "snakemake narrates each rule", TARGET, CONFIG.name, sibling)
-    subprocess.run(["pixi", "run", "snakemake", "-call", TARGET, "--configfile", str(CONFIG)], cwd=sibling, check=True)
+    cmd = ["pixi", "run", "snakemake", "-call", "solve_elec_networks", "--configfile", str(CONFIG)]
+    logger.info("pypsa-eur: `%s` in %s — a first run downloads ~20 GB and takes about an hour; snakemake narrates each rule",
+                " ".join(cmd), sibling)
+    subprocess.run(cmd, cwd=sibling, check=True)
     cfg = yaml.safe_load(CONFIG.read_text())
     solved = sorted((sibling / "results" / cfg["run"]["name"] / "networks").glob("*.nc"))
     if len(solved) != 1:
@@ -88,8 +89,6 @@ def _git(cwd: Path, *args: str) -> str:
 
 
 if __name__ == "__main__":
-    import sys
-
     logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
     match sys.argv[1:]:
         case ["solve"]:

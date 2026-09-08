@@ -40,7 +40,8 @@ class NetworkSnapshot:
         # 1208 offwind-dc    0.000000  0.753669
         generators_t.update(p_max_pu_t)
 
-        # Static and time-dependent quantities together; generators absent at the node and the load-shedding pseudo-generator stay out.
+        # Static and time-dependent quantities together. Generators absent at the node stay out of the tooltip, and so does
+        # the load-shedding pseudo-generator: `promote` refuses a network that sheds, so here it is always idle.
         generators = self.n.generators[['p_nom_opt', 'bus', 'carrier']].join(generators_t)
         generators = generators[(generators.p_nom_opt > 0) & (generators.carrier != 'load')]
         generators['p_max'] = generators.p_max_pu * generators.p_nom_opt
