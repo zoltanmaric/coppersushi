@@ -8,9 +8,9 @@ Needs: a versioned pin tying our config to the workflow code it targets; no vend
 
 ## How we configure and reuse it
 
-- **`pypsa-eur.pin`**: two lines, a repository URL and a commit SHA; the runner fetches that commit from that URL into the sibling. Today it names the fork's integration branch `fix/clusters-all`, which merges our three `clusters: all` fixes until they land upstream ([ledger](upstream-contributions.md)). Bumping = editing the SHA and re-running.
+- **`pypsa-eur.pin`**: two lines, a repository URL and a commit SHA; the runner fetches that commit from that URL into the sibling. As of 2026-09-08 it points at the fork's `coppersushi` branch, which stacks our three `clusters: all` fixes until they land upstream ([ledger](upstream-contributions.md)). Bumping = editing the SHA, tagging it on the fork (`pin/<what is new in it>`) so a later rebase cannot orphan it, re-running.
 - **Runner** (`coppersushi/pypsa_eur.py`; `coppersushi/networks.py` names and locates the results): locates the sibling from git's common directory — the main checkout's parent, so it resolves identically from any worktree under `worktrees/` — overridable by `PYPSA_EUR_DIR`; reads the pin; refuses a dirty checkout; fetches and checks the pinned commit out detached; verifies HEAD equals the pin; runs `pixi run snakemake -call solve_elec_networks --configfile <abs path>/config/coppersushi.yaml`; copies `results/coppersushi/networks/base_s_all_elec_.nc` to the gitignored `networks/candidates/opf-<day>-<pin>.nc`. **Sanctioning is a separate, human step**: `promote` copies a candidate to `networks/opf-<day>.nc` and stages it; the commit makes it a Git LFS object. LFS keeps every committed version forever and GitHub does not prune them, so solves are iterated outside git and sanctioned rarely (`networks/AGENTS.md`).
-- **`config/coppersushi.yaml`**: only what deviates from `config/config.default.yaml`, written against `config/schema.default.json`: `run.name`, `scenario` (`clusters: [all]`, `opts: [""]`), `countries` (upstream's list plus UA and MD), `data.wdpa.source: primary`, `snapshots` (one day), `electricity.transmission_limit: v1.0`, empty `extendable_carriers`, `clustering.temporal.resolution_elec: 2h`, `solving.solver` highs with `threads: 8` and `run_crossover: on`, `transmission_losses: 0`, `noisy_costs: false`, `load_shedding.enable: true` (diagnostic; the runner rejects a shed day). Upstream's `config/examples/config.validation.yaml` is *not* the template — it carries keys today's code ignores.
+- **`config/coppersushi.yaml`**: only what deviates from `config/config.default.yaml`, written against `config/schema.default.json`: `run.name`, `scenario` (`clusters: [all]`, `opts: [""]`), `countries` (upstream's list plus UA and MD), `data.wdpa.source: primary`, `snapshots` (one day), `electricity.transmission_limit: v1.0`, empty `extendable_carriers`, `clustering.temporal.resolution_elec: 2h`, `solving.solver` highs with `threads: 8` and `run_crossover: on`, `transmission_losses: 0`, `noisy_costs: false`, `load_shedding.enable: true` (diagnostic; the runner rejects a shed day). Upstream's `config/examples/config.validation.yaml` is *not* the template — it carries keys the code ignores as of 2026-09-08.
 - **Data** stays in the sibling: `data/`, `cutouts/`, `resources/`, `results/`. Prebuilt cutout `europe-1940-2024-era5` and the osm-prebuilt grid are retrieved by upstream rules; nothing is fetched by us.
 - **Environment**: pixi in the sibling (`pixi install`, `pixi shell`), upstream's preferred method.
 
@@ -73,9 +73,13 @@ Known traps, verified in upstream `563f22f6`: `clusters: all` is barely travelle
 
 ## Fork refs (remote `fork`)
 
+In the sibling, `remote.pushDefault` is `fork`, so a bare `git push` never targets upstream.
+
 | Ref | Meaning |
 |---|---|
 | `master` | Pristine mirror of upstream. **Never commit here.** Sync: `git fetch origin && git merge --ff-only origin/master && git push fork master`. |
+| `coppersushi` | What the pin points at: upstream `master` plus the topic branches rebased on top, nothing else — every commit on it lives on a topic branch. Sync: `git rebase origin/master coppersushi && git push --force-with-lease fork coppersushi`; rebuild from the topic branches when one changes; a layer drops out when its fix lands upstream. |
+| `pin/*` (tags) | One per SHA ever written to `pypsa-eur.pin`, named for what is new in it (as of 2026-09-08 `pin/clusters-all-fixes`), so a rebase never orphans a pinned commit. Tag when you pin. |
 | topic branches | Only for patches bound upstream ([ledger](upstream-contributions.md)); pushed to `fork`, tested by pointing the pin at the branch commit. |
 | `legacy-2022` | The old master (48 commits on PyPSA-Eur 0.5). Archive. |
 | `coppersushi-v1` (tag) | The commit whose `config.yaml` produced v1's bundled network `opf-2013-07-17-v1.nc`. |
