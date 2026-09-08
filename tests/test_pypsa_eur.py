@@ -50,7 +50,7 @@ def test_promote_copies_the_candidate_to_the_days_network(monkeypatch, tmp_path)
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     networks_dir = tmp_path / "networks"
     networks_dir.mkdir()
-    candidate = networks_dir / "candidates" / "opf-2013-07-17-bccf56e8.nc"
+    candidate = networks_dir / "candidates" / "opf-2013-07-17-bccf56e8-0f1e2d3c-20260909T001532Z.nc"
     candidate.parent.mkdir()
     candidate.write_bytes(b"net")
     monkeypatch.setattr(pypsa_eur.shedding, "reject", lambda n: None)
