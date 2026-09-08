@@ -21,16 +21,14 @@ flowchart LR
 
     pypsa_eur_pin["pypsa_eur_pin<br/>pypsa-eur.pin + config/coppersushi.yaml"]
     pypsa_eur_run["pypsa_eur_run<br/>coppersushi.data_sources.pypsa_eur → Snakemake in ../pypsa-eur (HiGHS)"]
-    solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
+    solved_network["solved_network<br/>networks/opf-‹day›.nc, Git LFS"]
 
     unsimplified["unsimplified_build<br/>skip PyPSA-Eur's 380 kV lift: keep voltage levels and transformers"]:::planned
     jao_elements["jao_elements<br/>JAO data + OSM substations → JAO's Core elements matched to our lines and transformers, with limits and shadow prices"]:::planned
-    jao_map["jao_map<br/>/jao/&lt;day&gt; (Dash app)"]:::planned
+    jao_map["jao_map<br/>/jao/‹day› (Dash app)"]:::planned
     trued_network["trued_network<br/>solved_network with JAO limits on matched lines and transformers, checked pairs attached"]:::planned
-    zonal_forecast["zonal_forecast<br/>coppersushi.electricity_maps → data/forecasts/&lt;day&gt;/"]:::planned
-    congestion_forecast["congestion_forecast<br/>pre-solve network pinned to the forecast, HiGHS → networks/forecast-&lt;day&gt;.nc"]:::planned
-    day_ahead_prices["day_ahead_prices<br/>coppersushi.electricity_maps → settled prices per zone"]:::planned
-    congestion_map["congestion_map<br/>go.Figure + scorecard (Dash app)"]:::planned
+    binding_forecast["binding_forecast<br/>trued_network under the market's rulebook, load pinned to the TSOs' D-2 forecast, HiGHS → predicted binding elements per hour"]:::planned
+    forecast_page["forecast_page<br/>/forecast/‹day› (Dash app): hits and misses, spreads split by element, scorecard"]:::planned
 
     pypsa_eur_pin --> pypsa_eur_run
     pypsa_eur_pin -.-> unsimplified
@@ -41,12 +39,10 @@ flowchart LR
     jao_elements -.-> jao_map
     jao_elements -.-> trued_network
     solved_network -.-> trued_network
-    pypsa_eur_run -.-> congestion_forecast
-    zonal_forecast -.-> congestion_forecast
-    congestion_forecast -.-> congestion_map
-    trued_network -.-> congestion_forecast
-    jao_elements -.-> congestion_map
-    day_ahead_prices -.-> congestion_map
+    trued_network -.-> binding_forecast
+    jao_elements -.-> binding_forecast
+    binding_forecast -.-> forecast_page
+    jao_elements -.-> forecast_page
 ```
 
 Code is one package, `coppersushi/`, organised by domain noun; `io-boundary` in `coppersushi/AGENTS.md` names the two modules that touch the world.

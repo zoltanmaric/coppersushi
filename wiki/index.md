@@ -20,7 +20,7 @@
 ## Specs (working memory — burn-down state, not settled knowledge)
 - [specs/jao-grid.md](specs/jao-grid.md) — JAO's Core elements matched to our OSM grid: a map of what limited trade on a day, and true line and transformer limits from JAO's own numbers
 - [specs/sushi-2.md](specs/sushi-2.md) — the OPF chapter: a 2024 day on the OSM grid; next steps and acceptance criteria
-- [specs/core-congestion-forecast.md](specs/core-congestion-forecast.md) — the hackathon cut: Electricity Maps zonal forecasts pinned into the nodal OPF, predicted binding lines and price splits scored against JAO
+- [specs/core-congestion-forecast.md](specs/core-congestion-forecast.md) — the hackathon cut: a Core day's binding elements named from D-2 evening by the nodal grid under the market's rulebook, scored against JAO's 13:00 shadow prices beside a persistence baseline
 - [specs/architecture-review-graph.md](specs/architecture-review-graph.md) — lightweight architecture-review experiment: manual DAG, PR deltas, and an I/O-boundary test
 
 ## Literature (one digest per authoritative document, link only)
