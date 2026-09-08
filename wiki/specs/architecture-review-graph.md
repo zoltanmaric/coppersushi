@@ -10,9 +10,9 @@ Large agent PRs have been costly to review elsewhere, but Copper Sushi has not y
 
 Keep one small, explicit Mermaid DAG in the durable Sushi 2 architecture page. Nodes are domain artifacts; an edge means “required to produce.” Since 2026-09-02 the graph also carries **planned** parts, dashed (`classDef planned`): a plan PR adds or removes them, a feature PR turns them solid, so a review reads as “which dashed parts got fleshed out” rather than a fresh drawing each time. The diagram is deliberately human-maintained: its small diff, plus an **Architecture delta** section in every PR body (`None` is valid), is the review surface. No framework, extractor, policy language, graph bot, or required graph check until real use proves those costs worthwhile.
 
-Add one narrow enforcement mechanism now: external I/O belongs in named source/sink adapters, while transformations do not perform it directly. Enforce a documented finite set of imports/calls with Import Linter or a small AST-based test. This is not a claim to detect dynamic or transitive I/O, nor to prove referential transparency; PyPSA's in-memory mutation remains allowed.
+Add one narrow enforcement mechanism now: external I/O belongs in the boundary modules the architecture test names (`networks`, `pypsa_eur`), while every other module accepts and returns in-memory values. Enforce a documented finite set of imports/calls with a small AST-based test. This is not a claim to detect dynamic or transitive I/O, nor to prove referential transparency; PyPSA's in-memory mutation remains allowed.
 
-Scope is new Python Sushi 2 code. `app.py` and the old `scripts/` implementation remain frozen legacy until replaced.
+Scope is the `coppersushi/` package; `app.py`, the composition root, sits outside the test and is where the Mapbox token is read.
 
 ## Deliberately deferred
 
@@ -24,6 +24,10 @@ Scope is new Python Sushi 2 code. `app.py` and the old `scripts/` implementation
 ## Next steps
 
 Use the surface on the next three real Sushi 2 PRs that add or rewire sources or transformations. The user reviews the diagram/delta without reading the full diff; an independent agent audits the full diff for omitted architectural facts.
+
+## Pilot PRs
+
+1. #19 (PyPSA-Eur runner, OSM assembly deleted, package fold): delta stated; a goldfish pass found it omitted the planned-to-solid transition of three nodes, recorded and fixed before merge. The architecture test caught a file read inside the plotting code the first time it covered that module.
 
 ## Acceptance criteria
 
