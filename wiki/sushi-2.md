@@ -23,9 +23,14 @@ flowchart LR
     pypsa_eur_run["pypsa_eur_run<br/>coppersushi.pypsa_eur → Snakemake in ../pypsa-eur (HiGHS)"]
     solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
 
+    jao_elements["jao_elements<br/>coppersushi.jao + OSM substations → JAO's Core elements matched to our lines, with limits and shadow prices"]:::planned
+    jao_map["jao_map<br/>/jao/&lt;day&gt; (Dash app)"]:::planned
+
     pypsa_eur_pin --> pypsa_eur_run
     pypsa_eur_run --> solved_network
     solved_network --> net_power_map
+    solved_network -.-> jao_elements
+    jao_elements -.-> jao_map
 ```
 
 Code is one package, `coppersushi/`, organised by domain noun; `io-boundary` in `coppersushi/AGENTS.md` names the two modules that touch the world.
