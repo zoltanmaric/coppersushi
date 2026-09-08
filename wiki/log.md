@@ -58,3 +58,6 @@ Rule and skill lines record the observed stumble that earned them in rule-proven
 
 ## [2026-09-08] ingest | Flow-based versus NTC capacity calculation
 Distilled how cross-zonal capacity reaches EUPHEMIA: NTC pipes per border on most European borders, flow-based CNEC constraints (PTDF, RAM, shadow price) in Core since 2022 and the Nordics since 2024, the 70 % minimum-RAM rule, and JAO's publication timeline. Framed the nodal OPF as the full-information version of flow-based coupling and listed what it does not reproduce. New page flow-based-market-coupling.
+
+## [2026-09-08] decision | JAO's elements on our grid as a separate task
+JAO's finalComputation carries substation names, element types and the TSOs' own limits per element and hour; OpenStreetMap carries the coordinates PyPSA-Eur's extract drops. Matching the two gives a map of what limited Core trade on a day and true limits for our lines and transformers (PyPSA-Eur's 2000 MVA transformer default against real 555–607 MW units). Split out as specs/jao-grid because it needs nothing from the OPF; the congestion forecast consumes its outputs.
