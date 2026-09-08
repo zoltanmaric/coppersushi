@@ -55,3 +55,6 @@ Rule and skill lines record the observed stumble that earned them in rule-proven
 
 ## [2026-09-07] decision | One package, boundary as a module list
 `pipeline/` (sources, sinks) and `scripts/` folded into `coppersushi/`, modules named by domain noun. The dataflow that justified role folders is PyPSA-Eur's; this repo specifies the model, shelves its results and works on the network in memory. The I/O boundary is now the two modules the architecture test names. Retired `narrate-slow-ops` (the one slow step delegates narration to snakemake); `explicit-timezones` stays although nothing constructs a timestamp today, because its stumble was observed and true-up brings timestamps back; the goldfish pass also restored the "How we contribute" section a rebase had dropped from upstream-contributions.
+
+## [2026-09-08] ingest | Flow-based versus NTC capacity calculation
+Distilled how cross-zonal capacity reaches EUPHEMIA: NTC pipes per border on most European borders, flow-based CNEC constraints (PTDF, RAM, shadow price) in Core since 2022 and the Nordics since 2024, the 70 % minimum-RAM rule, and JAO's publication timeline. Framed the nodal OPF as the full-information version of flow-based coupling and listed what it does not reproduce. New page flow-based-market-coupling.
