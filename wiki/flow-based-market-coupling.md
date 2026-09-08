@@ -37,6 +37,12 @@ Nobody booked the 300 MW crossing the Netherlands and Belgium. Their lines carry
 2. **Every NTC is set low on purpose.** A TSO does not know tomorrow's trades in other zones, so it reserves room for the worst case. Capacity reserved this way is never used.
 3. **The number carries no reason.** A TSO may lower the NTC without saying why. Through August 2026 the Spain–France schedules sat flat at 500 to 800 MW on 2.8 GW of wire while the two prices differed by 30 to 140 €/MWh (RTE eco2mix; Electricity Maps). A flat schedule under a wide spread is what a binding cap looks like, but the schedule alone does not prove it; the offered capacity published by the TSOs does.
 
+### How a TSO arrives at the number
+
+The same way flow-based coupling starts, up to the last step. The operators on both sides of the border take a forecast of tomorrow's grid, the same kind of base case, and push a growing exchange from A to B through it, assuming which plants in A ramp up and which in B ramp down (a generation shift key again). They stop at the first limit: a line at its thermal rating, a line that would overload if some other line tripped, or on some borders a voltage or stability limit found in separate dynamic studies. That exchange is the *total transfer capacity*. A reliability margin for forecast error comes off it; the result is the NTC. Capacity already sold as long-term rights comes off next; what is left is the *available transfer capacity* the auction gets. Each side computes its own number and the lower one applies.
+
+So both methods run the same load-flow with the same shift keys and margins. The difference is what they hand the market. NTC freezes one scenario for every other border, finds where this border's pipe would burst under it, and publishes that single number. Flow-based publishes the lines and their sensitivities and lets the market pick the combination. Where the limit is voltage or stability rather than a hot line, the load-flow scan never reaches it: the operator sets the number from dynamic studies, and it is fixed until the next study. This is the case on Spain–France, which is why that border's cap does not move with the weather.
+
 NTC still governs most European borders: Spain–France–Portugal, the Italian borders, the Baltic states, South-East Europe, Great Britain's interconnectors, and the borders between Core and the Nordic countries.
 
 ## Method 2: flow-based, limits on the lines themselves
