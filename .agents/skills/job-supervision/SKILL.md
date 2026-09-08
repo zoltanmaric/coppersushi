@@ -16,7 +16,7 @@ description: Launches and supervises long-running commands — solves, workflows
 
 ## Launch recipe
 
-- **Detach from the tool's timeout in its own process group, keep the PID and the exit status**: a background tool call is capped, and a plain `nohup … &` shares the tool shell's group. Launch as `nohup perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV' bash -c '<cmd>; echo "EXIT $?"' </dev/null >> <logdir>/<name>.log 2>&1 & echo $! > <logdir>/<name>.pid`, then confirm `ps -o pgid= -p $(cat <name>.pid)` prints the PID.
+- **Detach from the tool's timeout in its own process group, keep the PID and the exit status**: a background tool call is capped, and a plain `nohup … &` shares the tool shell's group. Launch as `nohup perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV' bash -c '<cmd>; echo "EXIT $?"' </dev/null >> <logdir>/<name>.log 2>&1 & echo $! > <logdir>/<name>.pid`, then, after a second, confirm `ps -o pgid= -p $(cat <name>.pid)` prints the PID.
 - **Never pipe a long-runner through `tail`/`head`**. Log to a file, read the tail on demand.
 - **Arm the watcher at once** on the log, filtering for progress **and every terminal state**: `Traceback|Error|Exiting|EXIT|Killed`.
 - **Verify downloads by size or checksum** before relying on them.
