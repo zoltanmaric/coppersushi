@@ -4,7 +4,7 @@ Who produces the flow-based domain that [EUPHEMIA](literature/euphemia-public-de
 
 ## Neither siloed nor a master solver
 
-Each TSO models only its own grid, and nobody runs one Europe-wide optimisation. In between sits one central computation on a merged model, run on the TSOs' behalf by two regional coordination centres, Coreso and TSCNET ([ENTSO-E's Core page](https://www.entsoe.eu/bites/ccr-core/day-ahead/)). ENTSO-E sets the standards and runs the alignment of net positions; it computes no capacity. The auction itself belongs to the power exchanges.
+Each TSO models only its own grid, and nobody co-optimises the grid Europe-wide; the one Europe-wide optimisation, EUPHEMIA, sees only the zonal constraints it is handed. In between sits one central computation on a merged model, run on the TSOs' behalf by two regional coordination centres, Coreso and TSCNET ([ENTSO-E's Core page](https://www.entsoe.eu/bites/ccr-core/day-ahead/)). ENTSO-E sets the standards and runs the alignment of net positions; it computes no capacity. The auction itself belongs to the power exchanges.
 
 ```mermaid
 flowchart LR
