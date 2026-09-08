@@ -23,11 +23,14 @@ flowchart LR
     pypsa_eur_run["pypsa_eur_run<br/>coppersushi.pypsa_eur → Snakemake in ../pypsa-eur (HiGHS)"]
     solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
 
-    jao_elements["jao_elements<br/>JAO data + OSM substations → JAO's Core elements matched to our lines, with limits and shadow prices"]:::planned
+    unsimplified["unsimplified_build<br/>skip PyPSA-Eur's 380 kV lift: keep voltage levels and transformers"]:::planned
+    jao_elements["jao_elements<br/>JAO data + OSM substations → JAO's Core elements matched to our lines and transformers, with limits and shadow prices"]:::planned
     jao_map["jao_map<br/>/jao/&lt;day&gt; (Dash app)"]:::planned
     trued_network["trued_network<br/>solved_network with JAO limits on matched lines and transformers, checked pairs attached"]:::planned
 
     pypsa_eur_pin --> pypsa_eur_run
+    pypsa_eur_pin -.-> unsimplified
+    unsimplified -.-> solved_network
     pypsa_eur_run --> solved_network
     solved_network --> net_power_map
     solved_network -.-> jao_elements
