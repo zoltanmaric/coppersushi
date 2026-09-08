@@ -78,4 +78,4 @@ Known traps, verified in upstream `563f22f6`: `clusters: all` is barely travelle
 | `master` | Pristine mirror of upstream. **Never commit here.** Sync: `git fetch origin && git merge --ff-only origin/master && git push fork master`. |
 | topic branches | Only for patches bound upstream ([ledger](upstream-contributions.md)); pushed to `fork`, tested by pointing the pin at the branch commit. |
 | `legacy-2022` | The old master (48 commits on PyPSA-Eur 0.5). Archive. |
-| `coppersushi-v1` (tag) | The commit whose `config.yaml` produced v1's bundled network `elec_s_all_ec_lv1.01_2H.nc`. |
+| `coppersushi-v1` (tag) | The commit whose `config.yaml` produced v1's bundled network `opf-2013-07-17-v1.nc`. |

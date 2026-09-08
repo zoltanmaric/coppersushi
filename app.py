@@ -15,7 +15,7 @@ app = Dash(__name__, title='Copper Sushi 🍣', external_stylesheets=[dbc.themes
 server = app.server
 
 NETWORK_LOADERS = {
-    'v1': lambda: networks.load(networks.NETWORKS_DIR / 'elec_s_all_ec_lv1.01_2H.nc'),
+    'v1': lambda: networks.load(networks.NETWORKS_DIR / 'opf-2013-07-17-v1.nc'),
     'opf-2013': lambda: networks.load(networks.solved('2013-07-17')),
 }
 # Unsanctioned solves are viewable at /candidates/<file stem>

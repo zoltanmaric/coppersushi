@@ -9,7 +9,7 @@ The web app is deployed
 [**here**](https://121gigawatts.org/copper-sushi-power-flow-european-grid/),
 along with an explanation of the main features.
 
-v1's network `networks/elec_s_all_ec_lv1.01_2H.nc` is a solved PyPSA-Eur 0.5.0 optimal power flow (one day, 2013-07-17, 2-hour snapshots,
+v1's network `networks/opf-2013-07-17-v1.nc` is a solved PyPSA-Eur 0.5.0 optimal power flow (one day, 2013-07-17, 2-hour snapshots,
 lines expandable to 1.01× current volume). The exact configuration that
 produced it is tagged
 [`coppersushi-v1`](https://github.com/zoltanmaric/pypsa-eur/tree/coppersushi-v1)
