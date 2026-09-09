@@ -6,6 +6,7 @@ Rules older than this page carry no row and are the first ablation candidates.
 
 | Line | Stumble |
 |---|---|
+| `information-home` | Config comments carried backtest narrative and a spec step number, a PR description recounted the agent's own corrected drafts, and a test helper's docstring explained its caller and the bug's history — three corrections in one session, each information that belonged in the wiki, the PR body, or nowhere |
 | `design-first`, `ablation`, `grill`/`spec`/`goldfish` skills | Design conversation, see [agent-workflow-design](agent-workflow-design.md) |
 | `watch-long-runs`, `job-supervision`: detach from the tool's timeout | The first PyPSA-Eur run was a background tool call capped at 10 min; stopped and relaunched |
 | `job-supervision`: own process group, confirm the PGID | A `nohup … &` from the tool shell inherits the shell's group; `kill -- -<pid>` failed with "no such process" and `pgrep -g` reported the job gone while it ran |

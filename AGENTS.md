@@ -31,4 +31,6 @@
 
 - **worktrees** — Isolate conflicting concurrent work. Multiple agents commonly work in this repository at once. Create worktrees under the gitignored `worktrees/` directory. If another agent's changes conflict with yours, offer to move your work to a worktree rather than overwrite or discard either set of changes.
 
+- **information-home** — Put a fact where it is locally useful, once, and link rather than repeat it. Docstrings and comments: what the code does, and why it is non-obvious — not its callers, not its history. `README.md`: how to install and run. `wiki/`: domain knowledge, design decisions and specs (`wiki/specs/`), stating what is; `wiki/log.md`: what changed. Commit message and PR description: why *this* change — evidence, bugs found, dependencies, rejected alternatives. `AGENTS.md` and `.agents/skills/`: durable instruction to agents, nothing else.
+
 - **architecture-delta** — Declare the architecture delta in every PR. Every PR body carries an "Architecture delta" section: "None", or one line per change to the dataflow graph in `wiki/sushi-2.md`, updated in the same PR. The graph holds implemented parts (solid) and planned parts (dashed, class `planned`): a plan PR adds or removes dashed parts, a feature PR turns them solid — reviewers see what was fleshed out.
