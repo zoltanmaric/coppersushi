@@ -1,6 +1,6 @@
 # Core day-ahead capacity calculation: from the TSOs' grid models to the auction's shadow prices
 
-How the numbers that limit tomorrow's cross-zonal trade in Core come about. This is the reference for the process the [congestion forecast](specs/core-congestion-forecast.md) emulates; what that project substitutes for each step lives in the spec, not here. Vocabulary first, then one row of the published result read column by column, then the chain that produces it, then who acts and who decides. The maths of PTDF, RAM and shadow price is in [flow-based-market-coupling](flow-based-market-coupling.md); the sources are the TSOs' [explanatory note](literature/core-da-ccm-explanatory-note.md), JAO's [handbook](literature/jao-core-publication-handbook.md) and the [EUPHEMIA description](literature/euphemia-public-description.md). Every number below is from JAO's web service for 2024-08-28 and 2024-08-29 unless said otherwise.
+How the numbers that limit tomorrow's cross-zonal trade in Core come about. This is the reference for the process the [congestion forecast](specs/core-congestion-forecast.md) emulates; what that project substitutes for each step lives in the spec, not here. Vocabulary first, then one row of the published result read column by column and the rows that bound at the same hour, then the chain that produces it, then who acts and who decides. The maths of PTDF, RAM and shadow price is in [flow-based-market-coupling](flow-based-market-coupling.md); the sources are the TSOs' [explanatory note](literature/core-da-ccm-explanatory-note.md), JAO's [handbook](literature/jao-core-publication-handbook.md) and the [EUPHEMIA description](literature/euphemia-public-description.md). Every number below is from JAO's web service for 2024-08-28 and 2024-08-29 unless said otherwise.
 
 ## Vocabulary
 
@@ -13,7 +13,7 @@ How the numbers that limit tomorrow's cross-zonal trade in Core come about. This
 - **External constraint.** JAO's name for a row that is no network element: a cap on a hub's import or export, one PTDF of ±1 on that hub. On 2024-08-29 the only ones in the domain were ALEGrO's four, ±1,000 MW on each virtual hub. Beside them sit four **equality rows**, pairs of ≤ 0 and ≥ 0 with PTDF 1 on every hub they cover, which keep the fourteen hubs' net positions summing to zero and the two ALEGrO hubs summing to zero. Caps on a whole zone travel outside the domain as **allocation constraints**, published on their own page: on 2024-08-29 Poland's net position was capped in every hour, Belgium's imports in none.
 - **Rating and margins.** `fmax` is the element's maximum flow in MW, from its current rating in amperes and its voltage; fixed, seasonal, or dynamic, changing hour by hour with the weather. The reliability margin `frm` is held back for forecast error. `ram`, the remaining available margin, is what is left for cross-zonal trade after the base flow and the margins are deducted: the right-hand side of the row.
 - **Presolve.** Dropping every row the other rows already imply. About 120 of some 11,500 rows an hour survive, flagged `presolved`; only they reach the auction.
-- **Shadow price.** After the auction, for each row that bound, the welfare one more MW of RAM on it would have bought, in €/MW. Published per binding row and hour.
+- **Shadow price.** After the auction, for each row that bound, the welfare one more MW of RAM on it would have bought, in €/MW. Published per binding row and hour; three of them are read in [Binding](#binding).
 - **Price spread.** The difference between two zones' day-ahead prices in an hour, published per border.
 - **Vertical load.** The load the transmission grid sees at its substations: consumption minus the generation connected below it, in distribution grids, called embedded generation (rooftop solar, small wind and hydro). Not total consumption: for Germany at noon it is a tenth of it.
 - **Phase-shifting transformer.** A transformer whose tap changer shifts the voltage angle and so steers power between parallel paths. Its tap position is an hourly operational setting, like a valve.
@@ -51,6 +51,18 @@ The whole chain exists to produce rows like this one. Elia monitors Lixhe–Gram
 Read as the auction reads it: 0.102 · NP_BE + 0.051 · NP_FR − 0.018 · NP_NL − 0.421 · NP_ALBE + … ≤ 851. The 568 MW that flow with no Core exchange are already inside the right-hand side, so the row says the net positions may add 851 MW before the line reaches its limit less its margin plus the minimum-margin lift. The Belgian end of ALEGrO sits at Lixhe, hence the large ALEGrO coefficient on a line that never crosses a border. The line is monitored because a Belgian–Dutch trade puts 0.102 + 0.018 = 12 % of its volume on it, above the 5 % threshold of step 4. And the lift in `amr` is the 70 % rule at work: after margin and the flow without Core exchange only 711 MW of 1421 are open to Core trade; the target is 70 % less the 10 % the outside exchanges already take, 851 MW; the 140 MW gap is added.
 
 What changed overnight is the flows (`frefInit` 506 to 217, `fcore` 668 to 568), the PTDFs by a few hundredths, and this time the seasonal rating. The element, its contingency, its margin share and its factor did not. That is the pattern across the hour: of the 487 elements monitored on 29 Aug, 479 were monitored on 28 Aug; 97 % of the rows are the same element under the same contingency; of the 108 element rows that reached the auction on 29 Aug, 107 were in the previous day's list and 89 had reached the auction the day before as well.
+
+## Binding
+
+At 13:00 on 28 August JAO published, for each hour of 29 August, the rows the auction had used to the last megawatt. At 00:00 CEST there were three. Multiplying each row's PTDFs by the zones' published net positions gives the flow the trade put on it:
+
+| TSO | Element | Under the outage of | Room (`ram`) | PTDF · net positions | Shadow price |
+|---|---|---|---|---|---|
+| APG | Obersielach–Podlog 247 | Maribor–Kainachtal 1 | 175 MW | 175 MW | 156.83 €/MW |
+| ČEPS | Nosovice–Varin | Križovany–Sokolnice | 690 MW | 690 MW | 106.80 €/MW |
+| Elia | ALEGrO's export bound, `BE_AL_export` | none | 1,000 MW | 1,000 MW | 0.28 €/MW |
+
+Binding means equal, not close: the trade used the room to the megawatt. The shadow price is what one more megawatt of room on that row would have saved the market in that hour. The Lixhe–Gramme row above had 851 MW of room and the trade pushed 578 MW the other way, 1,429 MW of slack and nothing to pay. Over the hour's 108 element rows the slack runs from 0 to 3,066 MW with a median of 775, and exactly two rows sit at zero, the two above. At 18:00 CEST, the day's busiest hour with seven binding rows, Obersielach–Podlog had 100 MW of room and a shadow price of 4,325 €/MW; that row carries most of the 709 €/MWh Austria–Slovenia spread decomposed on [flow-based-market-coupling](flow-based-market-coupling.md).
 
 ## The chain, step by step
 
