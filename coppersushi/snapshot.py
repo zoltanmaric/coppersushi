@@ -1,8 +1,18 @@
 import pandas as pd
 import pypsa
+from pandera.typing import DataFrame
+
+from coppersushi.data_model.network_views import Buses, Generators, Loads
 
 
 class NetworkSnapshot:
+    """Built once per snapshot (`power_flow.get_node_info_for_snapshot` does so 24 times
+    over a day) — its frames carry `DataFrame[Model]` return annotations for readability
+    but are not `@pa.check_types`-checked: that decorator alone was measured to add >20%
+    to `colored_network_figure`'s build time (see `pr-a-report.md`). `tests/test_snapshot.py`
+    exercises these frames directly, so a wrong model still fails immediately.
+    """
+
     def __init__(self, network: pypsa.Network, snapshot: pd.Timestamp):
         self.n = network
         self.snapshot = snapshot
@@ -11,12 +21,12 @@ class NetworkSnapshot:
         self.loads = self._loads()
         self.generators = self._generators()
 
-    def _buses(self) -> pd.DataFrame:
+    def _buses(self) -> DataFrame[Buses]:
         buses_t = pd.DataFrame(self.n.buses_t.p.loc[self.snapshot].rename('p'))
         buses = self.n.buses[['x', 'y', 'country', 'v_nom']].join(buses_t)
         return buses
 
-    def _loads(self) -> pd.DataFrame:
+    def _loads(self) -> DataFrame[Loads]:
         power_series = self.n.loads_t.p.loc[self.snapshot].rename('p_load')
         return pd.DataFrame(power_series).rename_axis('Bus', axis='index')
 
@@ -64,7 +74,7 @@ class NetworkSnapshot:
         return generators.rename({'bus': 'Bus'}, axis='columns')\
             .rename_axis('quantities', axis='columns')
 
-    def _generators(self) -> pd.DataFrame:
+    def _generators(self) -> DataFrame[Generators]:
         """
         :return: A `pandas` DataFrame indexed by the bus ID **and** the generator carrier
         """

@@ -1,10 +1,18 @@
 import numpy as np
 import pandas as pd
+import pandera.pandas as pa
 import plotly.graph_objects as go
 import plotly.io as pio
 import pyproj
 import pypsa
+from pandera.typing import DataFrame
 
+from coppersushi.data_model.network_views import (
+    BranchInfo,
+    BranchInfoForSnapshot,
+    BranchQuantityByComponentAndName,
+    NodeInfoForSnapshot,
+)
 from coppersushi.snapshot import NetworkSnapshot
 
 # For each snapshot, a figure has 4 traces
@@ -31,6 +39,10 @@ def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.Da
 
 
 def get_bus_coordinates(n: pypsa.Network, bus_name: str) -> pd.DataFrame:
+    """:return: columns matching `data_model.network_views.BusCoordinates`, renamed to
+    `<bus_name>_x`/`<bus_name>_y` — not `@pa.check_types`-checked since the column
+    names it produces depend on `bus_name`.
+    """
     return n.buses.loc[n.branches()[bus_name]][['x', 'y']] \
             .set_index(n.branches().index) \
             .rename(dict(x=bus_name+'_x', y=bus_name+'_y'), axis='columns')
@@ -64,7 +76,8 @@ def get_branch_direction(branch_info: pd.DataFrame) -> tuple[pd.Series, pd.Serie
     return direction, inverse_direction
 
 
-def get_branch_info(n: pypsa.Network) -> pd.DataFrame:
+@pa.check_types
+def get_branch_info(n: pypsa.Network) -> DataFrame[BranchInfo]:
     """Builds a DataFrame with edge & middle point coordinates, power flow direction angles for each line."""
     bus0_coordinates = get_bus_coordinates(n, 'bus0')
     bus1_coordinates = get_bus_coordinates(n, 'bus1')
@@ -86,15 +99,23 @@ def get_branch_info(n: pypsa.Network) -> pd.DataFrame:
     return branch_info
 
 
+@pa.check_types
 def to_branches_by_component_and_name(
-        branches: pd.DataFrame, snapshot: pd.Timestamp, component: str, quantity: str) -> pd.DataFrame:
+        branches: pd.DataFrame, snapshot: pd.Timestamp, component: str, quantity: str
+) -> DataFrame[BranchQuantityByComponentAndName]:
     """Indexes the given series by component (Link or Line) and branch name"""
     df = branches[quantity].loc[snapshot].rename(quantity).rename_axis('name').to_frame()
     df['component'] = component
     return df.set_index('component', append=True).reorder_levels(['component', 'name'])
 
 
-def get_branch_info_for_snapshot(n: pypsa.Network, branch_info: pd.DataFrame, snapshot: pd.Timestamp) -> pd.DataFrame:
+def get_branch_info_for_snapshot(
+        n: pypsa.Network, branch_info: pd.DataFrame, snapshot: pd.Timestamp
+) -> DataFrame[BranchInfoForSnapshot]:
+    """Not `@pa.check_types`-checked: measured >20% slower over `colored_network_figure`'s
+    24-snapshot loop (see `pr-a-report.md`). The return annotation still documents the
+    columns; `get_branch_info`, which this builds on, is validated once per network instead.
+    """
     lines_t_p0 = to_branches_by_component_and_name(n.lines_t, snapshot, 'Line', 'p0')
     links_t_p0 = to_branches_by_component_and_name(n.links_t, snapshot, 'Link', 'p0')
     transformers_t_p0 = to_branches_by_component_and_name(n.transformers_t, snapshot, 'Transformer', 'p0')
@@ -108,7 +129,11 @@ def get_branch_info_for_snapshot(n: pypsa.Network, branch_info: pd.DataFrame, sn
     return branch_info_t
 
 
-def get_node_info_for_snapshot(n: pypsa.Network, snapshot: pd.Timestamp) -> pd.DataFrame:
+def get_node_info_for_snapshot(n: pypsa.Network, snapshot: pd.Timestamp) -> DataFrame[NodeInfoForSnapshot]:
+    """Not `@pa.check_types`-checked: measured >20% slower over `colored_network_figure`'s
+    24-snapshot loop (see `pr-a-report.md`). The return annotation still documents the
+    columns; the `NetworkSnapshot` frames it concatenates are validated at construction.
+    """
     ns = NetworkSnapshot(n, snapshot)
     tooltips_htmls = get_tooltip_htmls(ns)
     return pd.concat([ns.buses, tooltips_htmls], axis='columns')
