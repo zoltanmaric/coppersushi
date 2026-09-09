@@ -30,4 +30,12 @@
 
 ## What it leaves open
 
-Column names in the web service differ from the page labels (lower camel case, e.g. `fmaxType`, `contName`); the handbook documents the pages, and the API's own request tab documents the parameters. Nothing in it ties an element to coordinates; substations are names only.
+The handbook documents the pages. The web service, `/core/api/data/<page>?FromUtc=…&ToUtc=…`, public and keyless, differs from them in ways checked against 2024-08-29:
+
+- Pages are `initialComputation`, `preFinalComputation`, `finalComputation`, `shadowPrices`, `d2CF`, `netPos`, `maxNetPos`, `priceSpread`; columns are lower camel case (`fmaxType`, `contName`; `amr` is the adjustment for minimum RAM).
+- A multi-branch contingency is not one row per branch: every row carries a `contingencies` list, one entry per branch with its own substations, EIC code and element type, beside the free-text `contName`. All 116 presolved rows of the sampled hour have it.
+- PTDFs are `ptdf_<hub>` columns on the domain pages and `hub_<hub>` columns on the shadow-price page.
+- `priceSpread` reports `border_<A>_<B>` as the price of B minus the price of A.
+- `d2CF` and `netPos` are one row per hour with one column per hub.
+
+Nothing in it ties an element to coordinates; substations are names only.
