@@ -10,19 +10,19 @@ The day is **2024-08-29**, the day [jao-grid](jao-grid.md) matches; the day is a
 
 ## What the auction sees, and what we substitute
 
-The auction clears the zones' bids against about 120 rows per hour of "PTDF · net positions ≤ RAM" (step 11). Everything about the grid enters through those rows. So the forecast is: rebuild the rows for D a day early, then clear a cost-based market against them.
+The auction clears the zones' bids against about 120 rows per hour of "PTDF · net positions ≤ RAM" (step 11): each row is one grid element under one assumed outage, its PTDFs (power transfer distribution factors) say how much of each zone's net position lands on that element, and its RAM (remaining available margin) is the room the element has left for trade. Everything about the grid enters through those rows. So the forecast is: rebuild the rows for D a day early, then clear a cost-based market against them.
 
 | Step | The real input | Our stand-in at D-2 evening |
 |---|---|---|
-| 1 aligned net positions | D2CF, published 10:30 D-1 | our base case's net positions |
-| 2, 3 grid models | never published | PyPSA-Eur's solved day: OSM grid, plant registry, weather-driven availability, the day's load, cost dispatch, hydro and pumped storage at that dispatch; no outages, no phase-shifter taps |
+| 1 aligned net positions | D2CF, the D-2 congestion forecast: the TSOs' two-day-ahead forecast of each zone's load, generation and net position, taken from their grid models and published 10:30 D-1 | our base case's net positions |
+| 2, 3 grid models | never published | PyPSA-Eur's solved day: OpenStreetMap grid, plant registry, weather-driven availability, the day's load, cost dispatch, hydro and pumped storage at that dispatch; no outages, no phase-shifter taps |
 | 4 the list, ratings, margins, factors | published 10:30 D-1 | D-1's rows, published 10:30 D-2: the same list, fixed and seasonal ratings, `frm`, `minRamFactor`; dynamic ratings a day old |
 | 5 PTDFs and base flows | published 10:30 D-1 | PTDFs: D-1's. Base flow per row: our grid's DC flow on the matched element under its contingency at our dispatch; `fcore` from it through D-1's PTDFs and our net positions. Rows we cannot match keep D-1's `fcore` |
 | 6 remedial actions | published 10:30 D-1 | D-1's `fnrao` |
 | 7 minimum margin | published 10:30 D-1 | `amr` recomputed by the verified identity from our `fcore` and D-1's `minRamTarget` |
 | 8, 9 long-term rights, validation | published 10:30 D-1 | D-1's `fltn` and validation columns; the long-term domain not modelled, see Open |
 | 10 RAM and presolve | published 10:30 D-1 | RAM by the verified identity on D-1's presolved rows, the candidate set; the full list is a later refinement |
-| 11 bids | sold, never published | supply steps per zone from PyPSA-Eur's plants at the day's fuel and carbon prices; demand inelastic at the zone's load; exchanges with zones outside Core fixed per border from D-1's RefProg, JAO's `refProg` page |
+| 11 bids | sold, never published | supply steps per zone from PyPSA-Eur's plants at the day's fuel and carbon prices; demand inelastic at the zone's load; exchanges with zones outside Core fixed per border from D-1's RefProg, the reference programme: the exchanges per border the TSOs assumed when merging their grid models, JAO's `refProg` page |
 
 ## The machine
 
@@ -75,7 +75,7 @@ The JAO fetch is jao-grid's adapter, `coppersushi/jao.py` with the tidy tables i
 
 ## Next steps
 
-1. **Extend jao-grid's adapter and tables** with what the LP needs: the PTDF column per hub, `fcore`, `fall`, `fuaf`, `amr`, `minRamTarget`, `fltn`, `iva` and `ram` on the presolved rows of 2024-08-28 and 2024-08-29, every hour; the `refProg` and `allocationConstraint` pages for both days; `priceSpread` for 2024-08-29. Presolved rows only, as plain CSV under `data/jao/‹day›/`, the way that stack commits them: about 2,600 rows and well under 2 MB a day, no LFS. The full list of some 11,500 rows an hour is a later refinement, since a row redundant on D-1 can bind on D (19 of 108 in the sampled hour). The join between the domain and the shadow-price page is on hour, element EIC, direction and the contingency's branch EIC, never on the contingency string, whose format differs between the two feeds; the eight non-element rows carry `NA` as EIC and join by name. On 2024-08-29 hour and EIC alone are unique across the 78 binding element rows, but 17 of 72 presolved element-directions carry more than one contingency, so the full key is the rule.
+1. **Extend jao-grid's adapter and tables** with what the LP needs: the PTDF column per hub, `fcore`, `fall`, `fuaf`, `amr`, `minRamTarget`, `fltn`, `iva` and `ram` on the presolved rows of 2024-08-28 and 2024-08-29, every hour; the `refProg` and `allocationConstraint` pages for both days; `priceSpread` for 2024-08-29. Presolved rows only, as plain CSV under `data/jao/‹day›/`, the way that stack commits them: about 2,600 rows and well under 2 MB a day, no LFS. The full list of some 11,500 rows an hour is a later refinement, since a row redundant on D-1 can bind on D (19 of 108 in the sampled hour). The join between the domain and the shadow-price page is on hour, element EIC (energy identification code), direction and the contingency's branch EIC, never on the contingency string, whose format differs between the two feeds; the eight non-element rows carry `NA` as EIC and join by name. On 2024-08-29 hour and EIC alone are unique across the 78 binding element rows, but 17 of 72 presolved element-directions carry more than one contingency, so the full key is the rule.
 2. **Bids table** from `networks/opf-2024-08-29.nc`: generators grouped by country with the hour's marginal cost (`generators_t.marginal_cost`; the static column is zero) and available capacity; hydro and pumped storage at their dispatch; load per country, Luxembourg into DE-LU.
 3. **The LP, and run 1.** Binding rows and spreads next to 13:00, hour by hour. This is where we learn whether cost bids are good enough for the grid to matter.
 4. **Run 2.** Look again.
