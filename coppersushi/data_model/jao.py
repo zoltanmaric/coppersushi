@@ -112,6 +112,17 @@ class ExternalConstraints(pa.DataFrameModel):
         coerce = True
 
 
+class ExternalConstraintsWithPrices(ExternalConstraints):
+    """`ExternalConstraints` plus what the shadow-price feed says about each hourly row."""
+
+    shadow_price: Series[float] = pa.Field(nullable=True)  # NaN where the constraint did not bind
+    binding_direction: Series[str] = pa.Field(nullable=True)  # The sense that bound; only the price feed states it
+
+    class Config:
+        strict = False
+        coerce = True
+
+
 class ElementsWithPrices(Elements):
     """`Elements` plus what the shadow-price feed says about each row."""
 

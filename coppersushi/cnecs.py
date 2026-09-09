@@ -14,9 +14,16 @@ with four quirks that every consumer would otherwise re-discover:
 4. Where two TSOs monitor one element they may publish different `fmax`. The market is
    held by the tighter rating, so that is the one kept, and the disagreement is recorded.
 
+5. `"NA"` is a value in every text column: the feeds write the literal wherever a field
+   does not apply. Left alone it is a substation called NA and a direction called NA, so
+   it is blanked to `""` everywhere before anything reads a text column.
+
 Non-physical rows — the ALEGrO external constraints and the equality constraints — carry
 no element at all and are dropped before any grouping; they come back out of
-`external_constraints`.
+`external_constraints`. What makes a row non-physical is the handbook's own definition —
+the constraint names, and the absence of an element EIC — and nothing else: JAO publishes
+real elements with real EICs, real limits and no location metadata at all, and classifying
+by a missing field would file those as constraints.
 
 Design: `wiki/specs/jao-grid.md`. Field meanings:
 `wiki/literature/jao-core-publication-handbook.md`.
@@ -30,6 +37,7 @@ from coppersushi.data_model.jao import (
     Elements,
     ElementsWithPrices,
     ExternalConstraints,
+    ExternalConstraintsWithPrices,
     ShadowPrices,
 )
 
@@ -38,6 +46,12 @@ POINT_TYPES = ("Transformer", "PST")  # elements at one substation, so `substati
 PLACEHOLDER = "NA"  # what the domain feed writes where a row has no EIC, TSO or direction
 
 KEYS = ["hour", "eic", "direction"]
+CONSTRAINT_KEYS = ["hour", "name"]  # a constraint has no EIC, and only the price feed knows its direction
+
+# Text columns in which the feeds write `"NA"` for "does not apply".
+PLACEHOLDER_COLUMNS = [
+    "eic", "direction", "hub_from", "hub_to", "substation_from", "substation_to", "element_type",
+]
 
 ELEMENT_COLUMNS = [
     "hour", "eic", "name", "tso", "direction", "hub_from", "hub_to",
@@ -71,9 +85,14 @@ NAME_COLUMNS = [
 ]
 
 
+def blank_placeholder(values: pd.Series) -> pd.Series:
+    """The feeds' `"NA"` placeholder and missing values, both as `""`."""
+    return values.fillna("").astype(str).str.strip().replace(PLACEHOLDER, "")
+
+
 def normalise_tso(tso: pd.Series) -> pd.Series:
     """Upper-case TSO codes, with the feeds' `"NA"` and missing values both as `""`."""
-    return tso.fillna("").astype(str).str.strip().str.upper().replace(PLACEHOLDER, "")
+    return blank_placeholder(tso).str.upper()
 
 
 def strip_names(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
@@ -87,23 +106,25 @@ def strip_names(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
 
 
 def _frame(rows: list[dict]) -> pd.DataFrame:
-    """A feed's rows under our names, with `hour` tz-aware and every name stripped."""
+    """A feed's rows under our names: `hour` tz-aware, names stripped, `"NA"` blanked."""
     frame = pd.DataFrame(rows).rename(columns=RENAME)
     frame = frame.assign(hour=pd.to_datetime(frame.hour, utc=True, format="ISO8601"))
-    return strip_names(frame, NAME_COLUMNS)
+    frame = strip_names(frame, NAME_COLUMNS)
+    present = [column for column in PLACEHOLDER_COLUMNS if column in frame]
+    return frame.assign(**{column: blank_placeholder(frame[column]) for column in present})
 
 
 def _is_non_physical(frame: pd.DataFrame) -> pd.Series:
     """The rows that describe a constraint rather than a network element.
 
-    Three independent tells, because no single one holds in both feeds: the name's prefix,
-    an EIC that is the literal `"NA"` (domain feed) or absent (shadow-price feed), and a
-    missing element type.
+    Two tells, and deliberately no more: the name's prefix, and no element EIC — the literal
+    `"NA"` on the domain page, absent on the shadow-price page, `""` either way once `_frame`
+    has blanked it. A missing `elementType` is *not* a tell. JAO publishes real elements whose
+    location metadata is entirely absent — `St. Peter 2 - Salzburg 455`, a 220 kV APG line with
+    an EIC, an fmax of 624 MW and no type, hubs or substations — and reading absence as
+    non-physical files those as constraints and drops them from the element table.
     """
-    tells = frame.name.str.startswith(NON_PHYSICAL) | frame.eic.isna() | frame.eic.eq(PLACEHOLDER)
-    if "element_type" in frame:
-        tells |= frame.element_type.isna()
-    return tells.fillna(False).astype(bool)
+    return (frame.name.str.startswith(NON_PHYSICAL) | frame.eic.eq("")).fillna(False).astype(bool)
 
 
 def _physical(frame: pd.DataFrame) -> pd.DataFrame:
@@ -195,3 +216,35 @@ def with_shadow_prices(
         raise ValueError(f"shadow prices for elements absent from the presolved set: {names}")
     priced = prices[KEYS + ["shadow_price", "cont_name"]].rename(columns={"cont_name": "binding_contingency"})
     return elements.merge(priced, on=KEYS, how="left", validate="one_to_one").pipe(ElementsWithPrices.validate)
+
+
+def with_constraint_prices(
+    constraints: DataFrame[ExternalConstraints], prices: DataFrame[ExternalConstraints]
+) -> DataFrame[ExternalConstraintsWithPrices]:
+    """The hourly external constraints, each carrying the price it bound at, NaN where it did not.
+
+    The two feeds describe these on different grains: the domain feed publishes every
+    constraint's limit every hour, the price feed only the ones that bound. Keeping both as rows
+    would put a constraint that bound on two of them, one with the limit and one with the price.
+
+    The join is on the hour and the name alone. The domain feed writes `"NA"` for a constraint's
+    direction, so only the price feed knows which sense bound, and that comes across beside the
+    price rather than overwriting the blank.
+    """
+    prices = prices[prices.hour.isin(constraints.hour)]
+    repeated = prices[prices.duplicated(subset=CONSTRAINT_KEYS, keep=False)]
+    if not repeated.empty:
+        names = ", ".join(sorted(set(repeated.name)))
+        raise ValueError(f"several prices for one constraint and hour: {names}")
+    matched = prices.merge(constraints[CONSTRAINT_KEYS], on=CONSTRAINT_KEYS, how="left", indicator=True)
+    missing = matched[matched._merge == "left_only"]
+    if not missing.empty:
+        names = ", ".join(sorted(set(missing.name)))
+        raise ValueError(f"prices for constraints the domain feed never published: {names}")
+    priced = prices[CONSTRAINT_KEYS + ["shadow_price", "direction"]].rename(
+        columns={"direction": "binding_direction"}
+    )
+    return (
+        constraints.merge(priced, on=CONSTRAINT_KEYS, how="left", validate="one_to_one")
+        .pipe(ExternalConstraintsWithPrices.validate)
+    )

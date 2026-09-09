@@ -28,6 +28,7 @@ from coppersushi.data_model.jao import (
     Contingencies,
     Elements,
     ExternalConstraints,
+    ExternalConstraintsWithPrices,
     ShadowPrices,
 )
 from coppersushi.market_day import MarketDay
@@ -45,10 +46,10 @@ class Day(NamedTuple):
     elements: DataFrame[Elements]
     contingencies: DataFrame[Contingencies]
     shadow_prices: DataFrame[ShadowPrices]
-    external_constraints: DataFrame[ExternalConstraints]
+    external_constraints: DataFrame[ExternalConstraintsWithPrices]
 
 
-MODELS = (Elements, Contingencies, ShadowPrices, ExternalConstraints)
+MODELS = (Elements, Contingencies, ShadowPrices, ExternalConstraintsWithPrices)
 
 
 def day_dir(day: str) -> Path:
@@ -105,9 +106,8 @@ def fetch_day(day: str) -> Path:
     """Fetch one market day into `data/jao/<day>/` and return the directory.
 
     The shadow-price feed is one request for the whole window: it carries only the elements
-    that bound, so a day of it is small. Its non-physical rows join the domain feed's in
-    `external_constraints` — the domain feed publishes each constraint's limit every hour,
-    the price feed only the ones that bound, with their price.
+    that bound, so a day of it is small. Its non-physical rows are joined onto the domain
+    feed's rather than concatenated, so a constraint that bound is one row and not two.
     """
     hours = hours_for(day)
     elements, contingencies, externals = fetch_hours(hours)
@@ -117,7 +117,7 @@ def fetch_day(day: str) -> Path:
         elements,
         contingencies,
         cnecs.shadow_prices(prices),
-        pd.concat([externals, cnecs.external_constraints(prices)], ignore_index=True),
+        cnecs.with_constraint_prices(externals, cnecs.external_constraints(prices)),
     )
 
 
@@ -126,7 +126,7 @@ def write_day(
     elements: DataFrame[Elements],
     contingencies: DataFrame[Contingencies],
     shadow_prices: DataFrame[ShadowPrices],
-    external_constraints: DataFrame[ExternalConstraints],
+    external_constraints: DataFrame[ExternalConstraintsWithPrices],
 ) -> Path:
     """Write the four tables as CSV, creating the directory."""
     directory.mkdir(parents=True, exist_ok=True)

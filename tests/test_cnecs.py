@@ -18,6 +18,15 @@ def final_computation() -> list[dict]:
     return rows("final-computation-hour.json")
 
 
+def untyped_element() -> list[dict]:
+    """Two `St. Peter 2 - Salzburg 455` rows of 2024-08-29T05:00Z, verbatim, one presolved.
+
+    A real 220 kV APG line with an EIC and an fmax, published with no `elementType`, no hubs,
+    no substations and no direction at all. JAO presolved it in four hours of 2024-08-29.
+    """
+    return rows("final-computation-untyped-element.json")
+
+
 def test_non_physical_rows_are_filtered_from_final_computation_too():
     elements = cnecs.elements(final_computation())
     assert not elements.eic.eq(cnecs.PLACEHOLDER).any()
@@ -36,7 +45,7 @@ def test_names_are_stripped():
 def test_one_row_per_element_hour_and_direction():
     elements = cnecs.elements(final_computation())
     assert not elements.duplicated(subset=["hour", "eic", "direction"]).any()
-    assert set(elements.element_type) <= {"Line", "TieLine", "Transformer", "PST"}
+    assert set(elements.element_type) <= {"Line", "TieLine", "Transformer", "PST", ""}
 
 
 def test_hour_is_utc_aware():
@@ -108,3 +117,43 @@ def test_two_prices_for_one_element_name_it_rather_than_failing_in_the_merge():
     doubled = pd.concat([prices, within.head(1)], ignore_index=True)
     with pytest.raises(ValueError, match=str(within.iloc[0].eic)):
         cnecs.with_shadow_prices(elements, doubled)
+
+
+def test_an_element_with_no_type_is_not_an_external_constraint():
+    """Classification follows the handbook's definition, not the presence of metadata."""
+    assert cnecs.external_constraints(untyped_element()).empty
+
+
+def test_an_element_with_no_type_keeps_its_eic_and_its_limit():
+    elements = cnecs.elements(untyped_element())
+    assert list(elements.eic) == ["14T-220-0-00455F"]
+    assert elements.fmax.iloc[0] == 624.0
+    assert elements.ram.iloc[0] == 336.0
+    assert elements.element_type.iloc[0] == ""
+    assert elements.substation_from.iloc[0] == ""
+    assert elements.direction.iloc[0] == ""
+
+
+def test_the_na_placeholder_never_survives_as_a_value():
+    elements = cnecs.elements(final_computation() + untyped_element())
+    for column in ["direction", "hub_from", "hub_to", "substation_from", "substation_to", "element_type"]:
+        assert not elements[column].eq(cnecs.PLACEHOLDER).any()
+
+
+def test_a_constraint_that_bound_is_one_row_carrying_its_price():
+    hourly = cnecs.external_constraints(final_computation())
+    priced = cnecs.external_constraints(rows("shadow-prices-day.json"))
+    joined = cnecs.with_constraint_prices(hourly, priced)
+    assert len(joined) == len(hourly)
+    assert joined.shadow_price.notna().any()
+    assert set(joined.loc[joined.shadow_price.notna(), "binding_direction"]) == {"OPPOSITE"}
+
+
+def test_a_price_for_a_constraint_the_domain_feed_never_published_is_an_error():
+    hourly = cnecs.external_constraints(final_computation())
+    priced = cnecs.external_constraints(rows("shadow-prices-day.json"))
+    stray = priced[priced.hour.isin(hourly.hour)].copy()
+    assert not stray.empty, "the fixture needs a priced constraint in the domain feed's hour"
+    stray.iloc[0, stray.columns.get_loc("name")] = "External Constraint NOWHERE"
+    with pytest.raises(ValueError, match="NOWHERE"):
+        cnecs.with_constraint_prices(hourly, stray)

@@ -15,8 +15,9 @@ def rows(name: str) -> list[dict]:
 
 def written(directory) -> jao.Day:
     fc, sp = rows("final-computation-hour.json"), rows("shadow-prices-day.json")
-    jao.write_day(directory, cnecs.elements(fc), cnecs.contingencies(fc),
-                  cnecs.shadow_prices(sp), cnecs.external_constraints(sp))
+    jao.write_day(directory, cnecs.elements(fc), cnecs.contingencies(fc), cnecs.shadow_prices(sp),
+                  cnecs.with_constraint_prices(cnecs.external_constraints(fc),
+                                               cnecs.external_constraints(sp)))
     return jao.read_day(directory)
 
 
