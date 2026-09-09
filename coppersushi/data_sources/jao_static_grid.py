@@ -1,0 +1,159 @@
+"""JAO's Core Static Grid Model: one release's workbook, fetched and kept as CSV.
+
+A release is a zip of a handbook, a map and one workbook, published at a stable URL under
+`https://www.jao.eu/sites/default/files/`. Every release back to the 1st stays downloadable
+under an `outdated_` prefix, so the derived CSVs are committed and the workbook is not:
+provenance is the URL plus the workbook's own date.
+
+`coppersushi/data_sources/jao.py` is untouched by this. That module reads the publication
+tool — what the grid *did* in a given hour; this one reads what the equipment *is*. Two
+sources, two modules, one join key (`EIC_Code`).
+
+Every column decision lives in `static_grid`; this module is the HTTP, the zip and the CSV.
+
+Three things are asserted before a byte is parsed, because the release is identified by
+nothing inside the workbook itself: the zip's byte count, the workbook's date prefix — the
+containing folder is named for the upload month (`2024-10`), not the release — and the
+sheet names.
+
+Design: `wiki/specs/jao-grid.md`.
+"""
+
+import io
+import logging
+import sys
+import urllib.request
+import zipfile
+from pathlib import Path
+from typing import NamedTuple
+
+import pandas as pd
+from pandera.typing import DataFrame
+
+from coppersushi import REPO, static_grid
+from coppersushi.data_model.static_grid import Branches, Transformers
+
+logger = logging.getLogger(__name__)
+
+BASE_URL = "https://www.jao.eu/sites/default/files"
+STATIC_GRID_DIR = REPO / "data" / "jao-static-grid"
+TIMEOUT_SECONDS = 300
+
+WORKBOOK_SHEETS = ("Lines", "Tielines", "Transformers", "Remedial Actions", "Change Log")
+
+
+class Release(NamedTuple):
+    """Where one release lives and what it must turn out to be."""
+
+    path: str  # Under BASE_URL, percent-encoded as JAO publishes it
+    workbook: str  # The member to read; its date prefix is the release's identity
+    zip_bytes: int  # Measured; a different size is a different publication
+
+
+RELEASES = {
+    "2024-03-29": Release(
+        path="2024-10/outdated_Core%20Static%20Grid%20Model%20%E2%80%93%205th%20release.zip",
+        workbook="20240329_Core Static Grid Model_public.xlsx",
+        zip_bytes=1_727_357,
+    ),
+}
+
+
+class Model(NamedTuple):
+    """One release of the Static Grid Model, as the two tables `static_grid` builds."""
+
+    transformers: DataFrame[Transformers]
+    branches: DataFrame[Branches]
+
+
+MODELS = (Transformers, Branches)
+
+
+def release_dir(release: str) -> Path:
+    return STATIC_GRID_DIR / release
+
+
+def check_download(release: Release, payload: bytes) -> None:
+    """Raise unless the zip is the one that was measured."""
+    if len(payload) != release.zip_bytes:
+        raise RuntimeError(f"{release.path}: {len(payload)} bytes, expected {release.zip_bytes}")
+
+
+def check_workbook(release: str, name: str, sheets: list[str]) -> None:
+    """Raise unless the extracted workbook is this release's, with the sheets it should have."""
+    expected_date = release.replace("-", "")
+    if not name.startswith(expected_date):
+        raise RuntimeError(f"{name}: not the {release} release; the folder is named for the upload month")
+    if tuple(sheets) != WORKBOOK_SHEETS:
+        raise RuntimeError(f"{name}: sheets {sheets}, expected {list(WORKBOOK_SHEETS)}")
+
+
+def read_sheets(release: str, workbook: bytes, name: str) -> dict[str, pd.DataFrame]:
+    """The three equipment sheets, read past the merged banner row."""
+    with pd.ExcelFile(io.BytesIO(workbook), engine="openpyxl") as book:
+        check_workbook(release, name, book.sheet_names)
+        return {
+            sheet: book.parse(sheet_name=sheet, header=static_grid.HEADER_ROW)
+            for sheet in static_grid.SHEETS
+        }
+
+
+def download(release: Release) -> bytes:
+    """The release zip, refused unless it is the size it was measured at."""
+    url = f"{BASE_URL}/{release.path}"
+    logger.info("jao static grid: GET %s", url)
+    with urllib.request.urlopen(url, timeout=TIMEOUT_SECONDS) as response:
+        payload = response.read()
+    check_download(release, payload)
+    logger.info("jao static grid: %d bytes", len(payload))
+    return payload
+
+
+def fetch(release: str = static_grid.RELEASE) -> Path:
+    """Fetch one release into `data/jao-static-grid/<release>/` and return the directory."""
+    spec = RELEASES[release]
+    with zipfile.ZipFile(io.BytesIO(download(spec))) as archive:
+        workbook = archive.read(spec.workbook)
+    sheets = read_sheets(release, workbook, spec.workbook)
+    return write_release(
+        release_dir(release),
+        static_grid.transformers(sheets["Transformers"]),
+        static_grid.branches(sheets["Lines"], sheets["Tielines"]),
+    )
+
+
+def write_release(
+    directory: Path,
+    transformers: DataFrame[Transformers],
+    branches: DataFrame[Branches],
+) -> Path:
+    """Write the two tables as CSV, creating the directory."""
+    directory.mkdir(parents=True, exist_ok=True)
+    for name, frame in zip(Model._fields, (transformers, branches)):
+        frame.to_csv(directory / f"{name}.csv", index=False)
+    logger.info("jao static grid: wrote %s", directory)
+    return directory
+
+
+def read_release(directory: Path) -> Model:
+    """The two tables back from CSV, each validated."""
+    frames = [
+        pd.read_csv(directory / f"{name}.csv").pipe(model.validate)
+        for name, model in zip(Model._fields, MODELS)
+    ]
+    return Model(*frames)
+
+
+def load_release(release: str = static_grid.RELEASE) -> Model:
+    return read_release(release_dir(release))
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
+    match sys.argv[1:]:
+        case ["fetch"]:
+            fetch()
+        case ["fetch", release]:
+            fetch(release)
+        case _:
+            sys.exit(f"usage: python -m {__spec__.name} fetch [<release>]")
