@@ -12,6 +12,7 @@
 
 ## Entities
 - [sushi-2.md](sushi-2.md) — Copper Sushi 2: optimal power flow on the 2025 OSM grid via PyPSA-Eur as of 2026; architecture
+- [backtest-2024-08-29.md](backtest-2024-08-29.md) — one solved day scored against JAO's binding CNECs and settled prices: what each config change bought, and what to fix next
 - [pypsa-eur-sibling.md](pypsa-eur-sibling.md) — PyPSA-Eur as a pinned sibling checkout: why not a submodule, fork refs and rules, the 2026-09-02 refresh record
 - [copper-sushi-app.md](copper-sushi-app.md) — what the app shows, the OPF behind it, data provenance and caveats
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026
