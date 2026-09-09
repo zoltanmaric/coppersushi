@@ -20,7 +20,7 @@ flowchart LR
     net_power_map["net_power_map<br/>go.Figure (Dash app)"]
 
     pypsa_eur_pin["pypsa_eur_pin<br/>pypsa-eur.pin + config/coppersushi.yaml"]
-    pypsa_eur_run["pypsa_eur_run<br/>coppersushi.pypsa_eur → Snakemake in ../pypsa-eur (HiGHS)"]
+    pypsa_eur_run["pypsa_eur_run<br/>coppersushi.data_sources.pypsa_eur → Snakemake in ../pypsa-eur (HiGHS)"]
     solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
 
     unsimplified["unsimplified_build<br/>skip PyPSA-Eur's 380 kV lift: keep voltage levels and transformers"]:::planned
