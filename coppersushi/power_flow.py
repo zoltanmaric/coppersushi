@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import pandera.pandas as pa
 import plotly.graph_objects as go
 import plotly.io as pio
 import pyproj
@@ -40,7 +39,7 @@ def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.Da
 
 def get_bus_coordinates(n: pypsa.Network, bus_name: str) -> pd.DataFrame:
     """:return: columns matching `data_model.network_views.BusCoordinates`, renamed to
-    `<bus_name>_x`/`<bus_name>_y` — not `@pa.check_types`-checked since the column
+    `<bus_name>_x`/`<bus_name>_y` — not validated against that model since the column
     names it produces depend on `bus_name`.
     """
     return n.buses.loc[n.branches()[bus_name]][['x', 'y']] \
@@ -76,7 +75,6 @@ def get_branch_direction(branch_info: pd.DataFrame) -> tuple[pd.Series, pd.Serie
     return direction, inverse_direction
 
 
-@pa.check_types
 def get_branch_info(n: pypsa.Network) -> DataFrame[BranchInfo]:
     """Builds a DataFrame with edge & middle point coordinates, power flow direction angles for each line."""
     bus0_coordinates = get_bus_coordinates(n, 'bus0')
@@ -96,7 +94,7 @@ def get_branch_info(n: pypsa.Network) -> DataFrame[BranchInfo]:
 
     branch_info['direction'], branch_info['inverse_direction'] = get_branch_direction(branch_info)
 
-    return branch_info
+    return branch_info.pipe(BranchInfo.validate)
 
 
 def to_branches_by_component_and_name(
@@ -104,9 +102,10 @@ def to_branches_by_component_and_name(
 ) -> DataFrame[BranchQuantityByComponentAndName]:
     """Indexes the given series by component (Link or Line) and branch name.
 
-    Not `@pa.check_types`-checked: `quantity` is caller-chosen, so the model's `p0`
-    field only documents today's actual call sites (always `quantity='p0'`) rather
-    than a constraint the function enforces — `quantity='p1'` must keep working.
+    Not validated against `BranchQuantityByComponentAndName`: `quantity` is
+    caller-chosen, so the model's `p0` field only documents today's actual call sites
+    (always `quantity='p0'`) rather than a constraint the function enforces —
+    `quantity='p1'` must keep working.
     """
     df = branches[quantity].loc[snapshot].rename(quantity).rename_axis('name').to_frame()
     df['component'] = component
@@ -116,10 +115,6 @@ def to_branches_by_component_and_name(
 def get_branch_info_for_snapshot(
         n: pypsa.Network, branch_info: pd.DataFrame, snapshot: pd.Timestamp
 ) -> DataFrame[BranchInfoForSnapshot]:
-    """Not `@pa.check_types`-checked: measured >20% slower over `colored_network_figure`'s
-    24-snapshot loop (see `pr-a-report.md`). The return annotation still documents the
-    columns; `get_branch_info`, which this builds on, is validated once per network instead.
-    """
     lines_t_p0 = to_branches_by_component_and_name(n.lines_t, snapshot, 'Line', 'p0')
     links_t_p0 = to_branches_by_component_and_name(n.links_t, snapshot, 'Link', 'p0')
     transformers_t_p0 = to_branches_by_component_and_name(n.transformers_t, snapshot, 'Transformer', 'p0')
@@ -130,17 +125,13 @@ def get_branch_info_for_snapshot(
         lambda row: row.direction if row.p0 >= 0 else row.inverse_direction, axis='columns'
     )
 
-    return branch_info_t
+    return branch_info_t.pipe(BranchInfoForSnapshot.validate)
 
 
 def get_node_info_for_snapshot(n: pypsa.Network, snapshot: pd.Timestamp) -> DataFrame[NodeInfoForSnapshot]:
-    """Not `@pa.check_types`-checked: measured >20% slower over `colored_network_figure`'s
-    24-snapshot loop (see `pr-a-report.md`). The return annotation still documents the
-    columns; the `NetworkSnapshot` frames it concatenates are validated at construction.
-    """
     ns = NetworkSnapshot(n, snapshot)
     tooltips_htmls = get_tooltip_htmls(ns)
-    return pd.concat([ns.buses, tooltips_htmls], axis='columns')
+    return pd.concat([ns.buses, tooltips_htmls], axis='columns').pipe(NodeInfoForSnapshot.validate)
 
 
 def get_branch_edge(line_info: pd.DataFrame, x_or_y: str) -> pd.Series:
