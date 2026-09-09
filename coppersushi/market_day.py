@@ -1,47 +1,57 @@
-"""The Core market day: local midnight to local midnight in CET/CEST, so 23, 24 or 25 hours.
+"""The market operating day: local midnight to local midnight, so 23, 24 or 25 hours long.
 
-Arithmetic stays in local time — ``pd.DateOffset(days=1)`` shifts wall time — so the zone
-resolves the clock change rather than us adding 24 hours to a day that has 23.
+``MarketDay`` rather than ``CetMarketDay`` because the zone is a constructor argument and CET
+is only its default.
+
+Calendar arithmetic runs on the naive local date, never on the aware start: adding
+``timedelta(days=1)`` to an aware datetime adds exactly 24 hours and steps over a clock change.
 
 Domain: wiki/flow-based-market-coupling.md. Timezones: coppersushi/AGENTS.md.
 """
 
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
+
 import pandas as pd
 
-MARKET_TZ = "Europe/Brussels"  # CET/CEST, the zone Core's day-ahead market runs on
+MARKET_TZ = ZoneInfo("Europe/Brussels")  # CET/CEST, the zone Core's day-ahead market runs on
 
 
-def window(day: str) -> tuple[pd.Timestamp, pd.Timestamp]:
-    """The market day's ``[start, end)`` as tz-aware UTC timestamps."""
-    start = pd.Timestamp(day, tz=MARKET_TZ)
-    end = start + pd.DateOffset(days=1)
-    return start.tz_convert("UTC"), end.tz_convert("UTC")
+@dataclass(frozen=True)
+class MarketDay:
+    """One operating day in ``zone``, as the half-open window ``[start, end)``."""
 
+    date: date
+    zone: ZoneInfo = MARKET_TZ
 
-def hours(day: str) -> pd.DatetimeIndex:
-    """Every hour of the market day, tz-aware UTC: 23, 24 or 25 of them."""
-    start, end = window(day)
-    return pd.date_range(start, end, freq="h", inclusive="left", tz="UTC")
+    @classmethod
+    def on(cls, day: str | date, zone: ZoneInfo = MARKET_TZ) -> "MarketDay":
+        """The operating day of a calendar date, ``"2024-08-29"`` or a ``datetime.date``."""
+        return cls(date.fromisoformat(day) if isinstance(day, str) else day, zone)
 
+    @classmethod
+    def containing(cls, moment: datetime, zone: ZoneInfo = MARKET_TZ) -> "MarketDay":
+        """The operating day an instant falls in; a naive instant is read as UTC."""
+        aware = moment if moment.tzinfo else moment.replace(tzinfo=UTC)
+        return cls(aware.astimezone(zone).date(), zone)
 
-def snapshots(day: str) -> pd.DatetimeIndex:
-    """The market day's hours as PyPSA snapshots.
+    @property
+    def start_time_local(self) -> datetime:
+        return datetime.combine(self.date, time.min, tzinfo=self.zone)
 
-    The single conversion point where an aware timestamp becomes naive: PyPSA snapshots are
-    naive, meaning UTC (coppersushi/AGENTS.md, explicit-timezones).
-    """
-    return hours(day).tz_localize(None)
+    @property
+    def end_time_local(self) -> datetime:
+        return datetime.combine(self.date + timedelta(days=1), time.min, tzinfo=self.zone)
 
+    @property
+    def start_time_utc(self) -> datetime:
+        return self.start_time_local.astimezone(UTC)
 
-def containing(moment: str | pd.Timestamp) -> str:
-    """The market day an instant falls in; the inverse of ``config_window``'s start.
+    @property
+    def end_time_utc(self) -> datetime:
+        return self.end_time_local.astimezone(UTC)
 
-    Naive input is read as UTC, PyPSA's convention; an aware timestamp is converted.
-    """
-    return str(pd.to_datetime(moment, utc=True).tz_convert(MARKET_TZ).date())
-
-
-def config_window(day: str) -> tuple[str, str]:
-    """The market day's window as naive-UTC strings, the form PyPSA-Eur's ``snapshots`` takes."""
-    start, end = window(day)
-    return tuple(moment.tz_localize(None).strftime("%Y-%m-%d %H:%M") for moment in (start, end))
+    def hours(self) -> pd.DatetimeIndex:
+        """Every hour of the day, tz-aware UTC: 23, 24 or 25 of them."""
+        return pd.date_range(self.start_time_utc, self.end_time_utc, freq="h", inclusive="left", tz="UTC")

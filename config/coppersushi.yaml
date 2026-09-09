@@ -18,9 +18,7 @@ data:
   wdpa:
     source: primary
 
-# The Core market day in CET/CEST, not the UTC day: JAO publishes per market day, so our
-# snapshots follow it and a JAO hour maps to a snapshot by identity. Derived, not typed:
-# `python -c "from coppersushi import market_day; print(market_day.config_window('2024-08-29'))"`.
+# The Core market day in CET/CEST, not the UTC day.
 snapshots:
   start: "2024-08-28 22:00"
   end: "2024-08-29 22:00"
