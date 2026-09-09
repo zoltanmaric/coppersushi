@@ -4,7 +4,15 @@ __pycache__/
 .DS_Store
 /specs/
 /worktrees/
-/data/
+# Downloaded build inputs.
+/data/*
+
+# JAO's terms reserve all reproduction rights and forbid redistributing Content; this repository
+# is public, so no JAO-derived bytes are committed — not the tables, not captured API responses.
+# `python -m coppersushi.data_sources.jao fetch <day>` refills the first; the tests run on
+# synthesised look-alikes in tests/fixtures/synthetic-jao/.
+/data/jao/
+/tests/fixtures/jao/
 /wiki/.obsidian/
 *.code-workspace
 

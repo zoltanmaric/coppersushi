@@ -3,6 +3,38 @@
 Append-only chronology of wiki operations (ingests, queries, lints).
 Entry format: `## [YYYY-MM-DD] <operation> | <title>`
 
+## [2026-09-10] change | No JAO bytes in a public repository
+
+JAO's [terms](https://www.jao.eu/terms-conditions) reserve all reproduction rights, limit use to
+internal information purposes and forbid Content being disseminated, copied, extracted or
+distributed without written authorisation. This repository is public, so `data/jao/2024-08-29/`
+(the four CSVs) and the three captured API responses under `tests/fixtures/jao/` are deleted and
+both paths gitignored. Reproducibility is unharmed: the endpoints are public and keyless, and
+`python -m coppersushi.data_sources.jao fetch 2024-08-29` rebuilds the tables byte for byte.
+
+The tests now run on `tests/fixtures/synthetic-jao/`, written to JAO's response shape with invented
+TSOs, EICs, substations and numbers, and carrying every quirk the real capture was kept for: two
+TSOs publishing different `fmax` on one tie-line, trailing whitespace on names and substations, a
+contingency branch published wholly as `"NA"`, the four external and two equality constraints, a
+non-presolved row, prices in hours the domain feed does not cover, and the untyped element — an
+EIC and a limit with `elementType: null` and `"NA"` everywhere else.
+The real measurements those stand for stay here and in the entry above, not in the tree.
+
+## [2026-09-09] change | JAO's two feeds land as four tables
+2024-08-29's Core domain and shadow prices fetched hour by hour on the CET market day and reduced to
+`data/jao/2024-08-29/` (gitignored; see the 2026-09-10 entry): 1,738 element rows over 106 EICs, 4,169 contingency rows, 78 shadow prices on
+13 binding elements, 192 external constraints, 145 distinct substation names, 1.0 MB. `coppersushi/cnecs.py`
+owns every quirk of the feeds; `coppersushi/data_sources/jao.py` owns only HTTP and CSV.
+Four quirks measured rather than assumed. Names carry trailing whitespace (105 of 113 `cneName` values),
+so nothing joins until stripped. One tie-line monitored by two TSOs carries two `fmax` values
+(Cirkovce-Heviz: ELES 1109 MW, MAVIR 1386 MW) — the tighter one binds, flagged, and a differing `fmax`
+without a differing TSO raises. Contingencies come structured, one entry per outaged branch, not parsed
+from `contName`. And **a missing `elementType` does not mean a row is not an element**: JAO publishes real
+elements with real EICs and real limits whose location metadata is absent — `St. Peter 2 - Salzburg 455`
+(EIC 14T-220-0-00455F, 220 kV APG, fmax 624) was being dropped from `elements` and misfiled as an external
+constraint, including in the four hours JAO actually presolved it. Non-physical now means what the handbook
+says: an External or Equality Constraint name, or the literal `"NA"` EIC.
+
 ## [2026-09-09] change | Snapshots follow the Core market day, hourly
 The shelf solved UTC days at 2-hour resolution; JAO publishes hourly on the CET market day, so a JAO hour had no snapshot to land on without a mapping rule. Config now runs 24 hourly snapshots from 22:00Z to 22:00Z (23 or 25 across a clock change), derived by `coppersushi/market_day.py` rather than hand-typed. Both OPF networks re-solved and re-promoted; `opf-2013-07-17-v1.nc` is left alone, being a 2022-fork artefact that cannot be reproduced. Also corrected pypsa-eur-sibling: the checkout has one remote, `origin`, pointing at the fork — upstream is not a remote at all, so the documented `master` sync was a no-op against itself.
 

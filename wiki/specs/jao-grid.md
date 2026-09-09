@@ -32,7 +32,7 @@ flowchart LR
     osm_subs[("OpenStreetMap via Overpass<br/>named substations ≥ 220 kV with coordinates, Core countries")]
     grid[("Our OSM grid, unsimplified<br/>networks/opf-‹day›.nc: voltage levels and transformers kept; buses with coordinates, lines by OSM id")]
 
-    fetch["fetch_jao<br/>one day → data/jao/‹day›/*.json (committed)"]
+    fetch["fetch_jao<br/>one day → data/jao/‹day›/*.csv (gitignored)"]
     geocode["geocode_substations<br/>normalise names, fuzzy match, hand overrides → data/substations-core.csv (committed)"]
     match["match_elements<br/>substation pair → nearest buses → the line between them; all monitored elements on the pair summed; transformers and PSTs as points<br/>contingency branches matched the same way"]
     true_up["true_up_limits<br/>s_nom := summed fmax per matched line and transformer; flag ratio &gt; 2 to the old rating"]
@@ -74,7 +74,7 @@ The JAO fetch is an adapter (external I/O) and joins the architecture test's all
 ## Next steps
 
 1. **Unsimplified network** (the precondition, and first because everything else lands on it): keep PyPSA-Eur's voltage levels and transformers, solve 2024-08-29, promote it to the shelf. The 878 transformers come back with guessed ratings; step 4 replaces the monitored ones.
-2. **JAO fetch**: an adapter that pulls the day from both endpoints into committed JSON; a hermetic test on a small fixture of rows.
+2. **JAO fetch**: an adapter that pulls the day from both endpoints into gitignored CSV — JAO's terms forbid redistributing it — with a hermetic test on synthesised rows in JAO's shape.
 3. **Substation geocoding**: Overpass per Core country, the normalisation, the override column; committed CSV with the OSM ids as provenance.
 4. **Element matching** and the map page for 2024-08-29.
 5. **True-up transform** with the ratio flag and the rating report.
