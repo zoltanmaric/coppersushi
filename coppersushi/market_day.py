@@ -1,14 +1,9 @@
-"""The Core market day, which is not the UTC day.
+"""The Core market day: local midnight to local midnight in CET/CEST, so 23, 24 or 25 hours.
 
-JAO publishes per market day in CET/CEST, so 2024-08-29 runs from 2024-08-28T22:00Z to
-2024-08-29T22:00Z, and a day is 23, 24 or 25 hours long depending on daylight saving. Our
-snapshots follow it, so a JAO hour maps to a snapshot by identity and nothing has to be
-dropped, duplicated or averaged.
+Arithmetic stays in local time — ``pd.DateOffset(days=1)`` shifts wall time — so the zone
+resolves the clock change rather than us adding 24 hours to a day that has 23.
 
-Arithmetic happens in local time — ``pd.DateOffset(days=1)`` shifts wall time, so the zone
-handles the clock change and we never add 24 hours to a day that has 23.
-
-Design: wiki/specs/jao-grid.md. Timezone rules: coppersushi/AGENTS.md, wiki/timezone-handling.md.
+Domain: wiki/flow-based-market-coupling.md. Timezones: coppersushi/AGENTS.md.
 """
 
 import pandas as pd
@@ -39,20 +34,14 @@ def snapshots(day: str) -> pd.DatetimeIndex:
 
 
 def containing(moment: str | pd.Timestamp) -> str:
-    """The market day an instant falls in — the inverse of ``config_window``'s start.
+    """The market day an instant falls in; the inverse of ``config_window``'s start.
 
-    The runner names candidates after the day they cover, but the config carries a window
-    *start* (``2024-08-28 22:00``), which is the previous calendar date. Naive input is read as
-    UTC, PyPSA's convention; an aware timestamp is converted.
+    Naive input is read as UTC, PyPSA's convention; an aware timestamp is converted.
     """
     return str(pd.to_datetime(moment, utc=True).tz_convert(MARKET_TZ).date())
 
 
 def config_window(day: str) -> tuple[str, str]:
-    """The ``snapshots.start`` and ``snapshots.end`` for ``config/coppersushi.yaml``.
-
-    PyPSA-Eur reads them as naive UTC, so they are the market day's UTC window written without
-    a zone — derived here rather than hand-copied into the config.
-    """
+    """The market day's window as naive-UTC strings, the form PyPSA-Eur's ``snapshots`` takes."""
     start, end = window(day)
     return tuple(moment.tz_localize(None).strftime("%Y-%m-%d %H:%M") for moment in (start, end))

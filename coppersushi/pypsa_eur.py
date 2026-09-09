@@ -36,8 +36,7 @@ def solve(experiment: str | None = None) -> Path:
     solved = sorted((sibling / "results" / cfg["run"]["name"] / "networks").glob("*.nc"))
     if len(solved) != 1:
         raise RuntimeError(f"expected exactly one solved network, found {solved}")
-    # snapshots.start is a window start (2024-08-28 22:00), not a day: candidates are named
-    # after the market day they cover (coppersushi/market_day.py).
+    # snapshots.start is a window start, not a day (coppersushi/market_day.py).
     day = market_day.containing(cfg["snapshots"]["start"])
     candidate = networks.candidate(day, pin.sha, CONFIG.read_bytes(), experiment)
     candidate.parent.mkdir(parents=True, exist_ok=True)
