@@ -174,7 +174,9 @@ def external_constraints(rows: list[dict]) -> DataFrame[ExternalConstraints]:
     return frame[columns].reset_index(drop=True).pipe(ExternalConstraints.validate)
 
 
-def with_shadow_prices(elements: pd.DataFrame, prices: pd.DataFrame) -> DataFrame[ElementsWithPrices]:
+def with_shadow_prices(
+    elements: DataFrame[Elements], prices: DataFrame[ShadowPrices]
+) -> DataFrame[ElementsWithPrices]:
     """`elements` plus the price of each binding one, NaN where it did not bind.
 
     Prices outside the elements' hours are irrelevant, not suspicious; a price *within*
@@ -182,6 +184,10 @@ def with_shadow_prices(elements: pd.DataFrame, prices: pd.DataFrame) -> DataFram
     is not the set the market cleared against, so it raises rather than dropping.
     """
     prices = prices[prices.hour.isin(elements.hour)]
+    repeated = prices[prices.duplicated(subset=KEYS, keep=False)]
+    if not repeated.empty:
+        names = ", ".join(sorted(set(repeated.eic.astype(str))))
+        raise ValueError(f"several shadow prices for one element, hour and direction: {names}")
     matched = prices.merge(elements[KEYS], on=KEYS, how="left", indicator=True)
     missing = matched[matched._merge == "left_only"]
     if not missing.empty:

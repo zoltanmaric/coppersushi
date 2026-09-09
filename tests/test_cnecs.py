@@ -98,3 +98,13 @@ def test_an_unmatched_shadow_price_is_an_error_not_a_silent_drop():
     stray.iloc[0, stray.columns.get_loc("eic")] = "NOT-AN-ELEMENT"
     with pytest.raises(ValueError, match="NOT-AN-ELEMENT"):
         cnecs.with_shadow_prices(elements, stray)
+
+
+def test_two_prices_for_one_element_name_it_rather_than_failing_in_the_merge():
+    elements = cnecs.elements(final_computation())
+    prices = cnecs.shadow_prices(rows("shadow-prices-day.json"))
+    within = prices[prices.hour.isin(elements.hour)]
+    assert not within.empty
+    doubled = pd.concat([prices, within.head(1)], ignore_index=True)
+    with pytest.raises(ValueError, match=str(within.iloc[0].eic)):
+        cnecs.with_shadow_prices(elements, doubled)
