@@ -1,9 +1,14 @@
+import re
 import subprocess
 from pathlib import Path
 
 import pytest
+import yaml
 
 from coppersushi import networks, pypsa_eur
+
+# Upstream's `atlite.default_cutout` in config/config.default.yaml; ours overrides it or inherits it.
+UPSTREAM_DEFAULT_CUTOUT = "europe-2013-sarah3-era5"
 
 
 def test_pin_file_parses_to_url_and_sha():
@@ -59,3 +64,30 @@ def test_promote_copies_the_candidate_to_the_days_network(monkeypatch, tmp_path)
     staged = subprocess.run(["git", "diff", "--cached", "--name-only"], cwd=tmp_path, capture_output=True, text=True).stdout
     assert "networks/opf-2013-07-17.nc" in staged
 
+
+
+def weather_year_mismatch(config: dict) -> str | None:
+    """Report a cutout whose weather year is not the day's, or ``None`` if they agree."""
+    cutout = config.get("atlite", {}).get("default_cutout", UPSTREAM_DEFAULT_CUTOUT)
+    if not (match := re.search(r"europe-(\d{4})-", cutout)):
+        return f"cannot read a year from cutout {cutout!r}"
+    day = config["snapshots"]["start"]
+    if match.group(1) != day[:4]:
+        return f"cutout {cutout!r} is weather year {match.group(1)}, but the day is {day}"
+    return None
+
+
+def test_the_weather_year_follows_the_day():
+    assert weather_year_mismatch(yaml.safe_load(pypsa_eur.CONFIG.read_text())) is None
+
+
+def test_weather_year_check_detects_a_stale_cutout():
+    stale = {"snapshots": {"start": "2024-08-29"}, "atlite": {"default_cutout": "europe-2013-sarah3-era5"}}
+    assert weather_year_mismatch(stale) == (
+        "cutout 'europe-2013-sarah3-era5' is weather year 2013, but the day is 2024-08-29"
+    )
+
+
+def test_weather_year_check_catches_the_inherited_default():
+    """With no `atlite` key the run silently inherits upstream's 2013 cutout."""
+    assert "2013" in weather_year_mismatch({"snapshots": {"start": "2024-08-29"}})
