@@ -1,0 +1,7 @@
+eic,name,element_type,branch_id,branch_type,bus0,bus1,match_status,bus_source,score
+SYN-TU-ASYMMETRIC,Hagenwerder AT1,Transformer,synthetic/hagenwerder-trafo,Transformer,way/59026005-380,way/59026005-220,matched,exact,1.0
+SYN-TU-CONSTANT,Hagenwerder - Mikulowa 220,Line,synthetic/hagenwerder-mikulowa-220,Line,way/59026005-220,way/111615226-220,matched,exact,1.0
+SYN-TU-FIXED-MOVER,Etzenricht - Hradec 1,TieLine,relation/395087-380,Line,way/29084374-380,way/28099187-220,matched,exact,1.0
+SYN-TU-PARALLEL-1,Hagenwerder - Mikulowa 1,Line,relation/3730417-380,Line,way/59026005-380,way/111615226-220,matched,exact,1.0
+SYN-TU-PARALLEL-2,Hagenwerder - Mikulowa 2,Line,relation/3730417-380,Line,way/59026005-380,way/111615226-220,matched,exact,1.0
+SYN-TU-UNMATCHED,Mostar - Nosovice,TieLine,,Line,,,no_substation,,0.0
