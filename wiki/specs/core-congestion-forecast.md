@@ -19,18 +19,18 @@ The auction clears the zones' bids against about 120 rows per hour of "PTDF · n
 | 4 the list, ratings, margins, factors | published 10:30 D-1 | D-1's rows, published 10:30 D-2: the same list, fixed and seasonal ratings, `frm`, `minRamFactor`; dynamic ratings a day old |
 | 5 PTDFs and base flows | published 10:30 D-1 | PTDFs: D-1's. Base flow per row: our grid's DC flow on the matched element under its contingency at our dispatch; `fcore` from it through D-1's PTDFs and our net positions. Rows we cannot match keep D-1's `fcore` |
 | 6 remedial actions | published 10:30 D-1 | D-1's `fnrao` |
-| 7 minimum margin | published 10:30 D-1 | `amr` recomputed by the verified identity from our `fall` and D-1's factor |
-| 8, 9 long-term rights, validation | published 10:30 D-1 | D-1's columns |
+| 7 minimum margin | published 10:30 D-1 | `amr` recomputed by the verified identity from our `fcore` and D-1's `minRamTarget` |
+| 8, 9 long-term rights, validation | published 10:30 D-1 | D-1's `fltn` and validation columns; the long-term domain not modelled, see Open |
 | 10 RAM and presolve | published 10:30 D-1 | RAM by the verified identity; no presolve, the solver carries redundant rows |
 | 11 bids | sold, never published | supply steps per zone from PyPSA-Eur's plants at the day's fuel and carbon prices; demand inelastic at the zone's load; exchanges with zones outside Core fixed per border from D-1's RefProg, JAO's `refProg` page |
 
 ## The machine
 
-One linear program per hour. Variables: each hub's net position (twelve zones and the two ALEGrO hubs) and each zone's output per supply step, the steps being PyPSA-Eur's generators grouped by zone and cost from the hourly cost series, carbon included, at the hour's availability; hydro and pumped storage enter at the base case's dispatch as a zero-cost step; Luxembourg's buses fold into DE-LU. Per zone, output minus load minus its fixed exchange with non-Core zones equals its net position, with a slack at the price cap so the program stays feasible. Every row of the domain holds, and the domain already carries the balance rows: two equality rows keep the fourteen hubs' net positions summing to zero, two keep the ALEGrO pair summing to zero, and four external constraints hold each ALEGrO hub within ±1,000 MW. Minimise cost. Out come the net positions, the rows with a non-zero dual (the binding rows) and their duals (the shadow prices), and the zonal prices as the balances' duals. The implied spread between two zones is the shadow prices times the PTDF differences, the identity checked on [flow-based-market-coupling](../flow-based-market-coupling.md).
+One linear program per hour. Variables: each hub's net position (twelve zones and the two ALEGrO hubs) and each zone's output per supply step, the steps being PyPSA-Eur's generators grouped by zone and cost from the hourly cost series, carbon included, at the hour's availability; hydro and pumped storage enter at the base case's dispatch as a zero-cost step; Luxembourg's buses fold into DE-LU. Per zone, output minus load minus its fixed exchange with non-Core zones equals its net position, with a slack at the price cap so the program stays feasible. Every row of the domain holds, and the domain already carries the balance rows: two equality rows keep the fourteen hubs' net positions summing to zero, two keep the ALEGrO pair summing to zero, and four external constraints hold each ALEGrO hub within ±1,000 MW. Poland's and Belgium's caps from JAO's `allocationConstraint` page bound their net positions; Poland's was set every hour of the day. Minimise cost. Out come the net positions, the rows with a non-zero dual (the binding rows) and their duals (the shadow prices), and the zonal prices as the balances' duals. The implied spread between two zones is the shadow prices times the PTDF differences, the identity checked on [flow-based-market-coupling](../flow-based-market-coupling.md).
 
 Three tables in, one out. In: the rows (per hour: identity, PTDFs, RAM), the bid steps (per zone and hour: capacity, cost), the non-Core exchanges (per border and hour, from RefProg). Out: per hour, binding rows with shadow prices, net positions, zonal prices. Some 11,500 rows and a few hundred variables per hour; HiGHS solves it in well under a second. Swap the rows table and the same program is a different run.
 
-Hours: JAO's day runs 22:00 UTC to 22:00 UTC; the network holds twelve two-hour snapshots of the UTC day. Each snapshot's bids and flows serve its two hours, the first also serves the two hours before it, the last goes unused. An hourly re-solve on the CEST day is the fix if this shows in the result.
+Hours: the network's snapshots are the market day's 24 hours, 22:00 UTC to 22:00 UTC, the same hours JAO publishes (jao-grid's hourly re-solve, PR #59), so nothing is mapped.
 
 ## Runs, in build order
 
@@ -38,7 +38,7 @@ Hours: JAO's day runs 22:00 UTC to 22:00 UTC; the network holds twelve two-hour 
 2. **Yesterday's rows.** D-1's rows unchanged. Already a D-2 forecast, one that assumes the grid's constraints do not move overnight; needs no matching and no grid. The guaranteed deliverable.
 3. **Yesterday's rows with our flows.** D-1's rows with `fcore`, `amr` and RAM rebuilt from our grid's flows on the matched elements. The nodal model's whole contribution. Run 2 is what it has to improve on; run 1 is its ceiling. Needs the matching, so it is the last thing on the day, if time remains.
 
-The page comes in two forms. First a table, binding rows by JAO's element names, JAO's beside ours per hour, with the spread table: this needs no coordinates and shows runs 1 and 2 as soon as they exist. Then the two maps, which need the elements placed on our grid; the elements that bind on the day can be placed by hand first, as jao-grid allows.
+The page is two maps: jao-grid's `/jao/‹day›` drawing, elements coloured by shadow price, drawn twice with one hour slider and one colour scale, JAO's shadow prices on the left and a run's on the right, the spread table beneath. It needs the elements placed on our grid, which is jao-grid's matching; the LP and runs 1 and 2 need only its data layer and proceed in parallel.
 
 ## Dataflow
 
@@ -56,7 +56,7 @@ flowchart LR
     flows["row_flows<br/>DC flow on each matched element under its contingency at our dispatch → fcore, amr, RAM per row by the verified identities; unmatched rows keep D-1's"]
     lp["zonal_clearing<br/>HiGHS: min cost s.t. balances, ΣNP = 0, ALEGrO, every row → net positions, binding rows, shadow prices, zonal prices"]
     forecast["binding_forecast<br/>per run and hour: binding rows, shadow prices, implied spreads"]
-    page["forecast_page<br/>/forecast/‹day›: first a table by element name, then JAO's binding elements on the left map, ours on the right, one hour slider, one colour scale; spread table beneath"]
+    page["forecast_page<br/>/forecast/‹day›: jao_map's drawing twice, JAO's binding elements left, ours right, one hour slider, one colour scale; spread table beneath"]
 
     rows_dm1 --> flows
     grid --> flows
@@ -71,21 +71,21 @@ flowchart LR
     elements --> page
 ```
 
-The JAO fetch is the adapter jao-grid plans; as of 2026-09-09 no JAO code exists in the repository, so step 1 writes it. Transforms exchange frames; the LP is linopy on HiGHS, already in the environment, with no PyPSA network in it.
+The JAO fetch is jao-grid's adapter, `coppersushi/jao.py` with the tidy tables in `coppersushi/cnecs.py` (the first code layer of its stack, planned in PR #58), extended with the columns and pages the LP needs. Transforms exchange frames; the LP is linopy on HiGHS, already in the environment, with no PyPSA network in it.
 
 ## Next steps
 
-1. **Fetch and commit the rows**: `finalComputation` and `refProg` for 2024-08-28 and 2024-08-29, every hour, and `shadowPrices` and `priceSpread` for 2024-08-29, under `data/jao/‹day›/`. About 280,000 rows a day: Parquet under Git LFS with only the columns the LP and the page need. Three repository edits come with it: the adapter joins the I/O allowlist in `tests/test_architecture.py`, `.gitignore` stops ignoring `data/jao/`, `.gitattributes` puts `data/jao/**/*.parquet` under LFS. The shadow-price page names things differently (`cnecName`, `hub_<zone>`, `f0core`), so the join to the rows is on EIC, contingency, direction and hour.
-2. **Bids table** from `networks/opf-2024-08-29.nc`: generators grouped by country with the snapshot's marginal cost (`generators_t.marginal_cost`; the static column is zero) and available capacity; hydro and pumped storage at their dispatch; load per country, Luxembourg into DE-LU; snapshots mapped to JAO's hours as above.
-3. **The LP, and run 1.** Binding rows and spreads next to 13:00, hour by hour, as the table page. This is where we learn whether cost bids are good enough for the grid to matter.
+1. **Extend jao-grid's adapter and tables** with what the LP needs: the PTDF column per hub, `fcore`, `fall`, `fuaf`, `amr`, `minRamTarget`, `fltn`, `iva` and `ram` on the presolved rows of 2024-08-28 and 2024-08-29, every hour; the `refProg` and `allocationConstraint` pages for both days; `priceSpread` for 2024-08-29. Presolved rows only, as plain CSV under `data/jao/‹day›/`, the way that stack commits them: about 2,600 rows and well under 2 MB a day, no LFS. The full list of some 11,500 rows an hour is a later refinement, since a row redundant on D-1 can bind on D (19 of 108 in the sampled hour). The join between the domain and the shadow-price page is on EIC and hour, never on the contingency string, whose format differs between the two feeds.
+2. **Bids table** from `networks/opf-2024-08-29.nc`: generators grouped by country with the hour's marginal cost (`generators_t.marginal_cost`; the static column is zero) and available capacity; hydro and pumped storage at their dispatch; load per country, Luxembourg into DE-LU.
+3. **The LP, and run 1.** Binding rows and spreads next to 13:00, hour by hour. This is where we learn whether cost bids are good enough for the grid to matter.
 4. **Run 2.** Look again.
-5. **Matching** (jao-grid's steps 3 and 4) for the elements in D-1's rows, by hand for the ones that bind, the row flows, **run 3**.
-6. **The maps.**
+5. **Row flows** on the elements jao-grid has matched, **run 3**.
+6. **The page**: jao-grid's map drawn twice.
 
 ## Acceptance criteria
 
 - [ ] One command runs the three runs for 2024-08-29 from committed inputs and writes each run's binding rows, shadow prices, net positions and zonal prices per hour.
-- [ ] `/forecast/2024-08-29` shows JAO's binding elements beside a chosen run's per hour, first as a table by element name, then as two maps with one hour slider and one colour scale, and the spread table beneath.
+- [ ] `/forecast/2024-08-29` shows two maps with one hour slider and one colour scale, JAO's binding elements on the left, a chosen run's on the right, and the spread table beneath; the drawing is jao-grid's `/jao/‹day›` map.
 - [ ] A written explanation of what matches and what does not, per run, on [backtest-2024-08-29](../backtest-2024-08-29.md) or a sibling page.
 - [ ] Spec burned to nothing; findings distilled; this file deleted.
 
@@ -97,6 +97,7 @@ Scoring and baselines; more than one day; price levels as a claim; our own PTDFs
 
 - Our base case's exchanges with the outside are not usable in the balances: its Core net positions miss JAO's by about 2 GW per zone, with Ukraine and Moldova exporting 4 to 5 GW into PL, HU, SK and RO where RefProg has them importing, and France exporting to Switzerland where RefProg has the reverse. RefProg replaces them in the LP; run 3's row flows near those borders carry the same transit until the nodal solve pins its external borders.
 - Our ALEGrO link sits at 1,000 MW in every snapshot; JAO's ALBE net position flips sign through the day. Run 3's `fcore` near Lixhe and Oberzier inherits that.
-- Transformers and phase shifters: the simplified network has none (jao-grid's precondition), so their rows keep D-1's flows in run 3; 19 of the 116 presolved rows at the first hour.
+- Transformers and phase shifters: until jao-grid's unsimplified network lands, ours has none, so their rows keep D-1's flows in run 3; 19 of the 116 presolved rows at the first hour.
 - Whether run 3's `fcore` is better as a level or as a change: our flow for D minus our flow for D-1, added to D-1's `fcore`, cancels the grid model's bias but needs D-1 solved too.
 - National caps on net positions live on JAO's `maxNetPos` page, outside the domain; none bound on the day. Rows to add if a day ever needs them.
+- The long-term domain: EUPHEMIA clears on the union of the rows and the long-term allocations per border (JAO's `lta` page), so a rows-only LP is tighter than the market wherever the allocations reach beyond the rows, and a binding long-term facet never appears on the shadow-price page. Run 1 shows whether the day needed it.
