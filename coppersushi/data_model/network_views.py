@@ -128,23 +128,27 @@ class NodeInfoForSnapshot(Buses):
         coerce = True
 
 
-# Columns our models source directly from PyPSA, paired with the dtype PyPSA itself
-# declares for them (`n.components[<Component>].defaults.at[<attribute>, "dtype"]`).
-# `tests/test_data_model.py` asserts these haven't drifted from PyPSA's own schema.
+# Columns our models source directly from PyPSA: (our model, our column, PyPSA
+# component, PyPSA attribute). `tests/test_data_model.py` asserts our model's own
+# declared dtype (`Model.to_schema().columns[our column].dtype`) still matches what
+# PyPSA declares for its attribute (`n.components[component].defaults.at[attribute,
+# "dtype"]`) — neither side hardcoded, so either drifting independently fails the test.
+#
+# `Loads.p_load` is the one non-identity rename: it's sourced from PyPSA's `Load.p`.
 #
 # Two attributes we rely on are deliberately absent: `Bus.country` is a PyPSA-Eur
 # addition, not a PyPSA attribute, and `Line.v_nom` is derived at runtime by
 # `calculate_dependent_values`, not declared in PyPSA's schema either.
 PYPSA_SOURCED = [
-    ("Bus", "v_nom", "float64"),
-    ("Bus", "x", "float64"),
-    ("Bus", "y", "float64"),
-    ("Bus", "p", "float64"),
-    ("Line", "p0", "float64"),
-    ("Link", "p0", "float64"),
-    ("Transformer", "p0", "float64"),
-    ("Generator", "p", "float64"),
-    ("Generator", "p_max_pu", "float64"),
-    ("Generator", "p_nom_opt", "float64"),
-    ("Load", "p", "float64"),
+    (Buses, "v_nom", "Bus", "v_nom"),
+    (Buses, "x", "Bus", "x"),
+    (Buses, "y", "Bus", "y"),
+    (Buses, "p", "Bus", "p"),
+    (BranchInfoForSnapshot, "p0", "Line", "p0"),
+    (BranchInfoForSnapshot, "p0", "Link", "p0"),
+    (BranchInfoForSnapshot, "p0", "Transformer", "p0"),
+    (Generators, "p", "Generator", "p"),
+    (Generators, "p_max_pu", "Generator", "p_max_pu"),
+    (Generators, "p_nom_opt", "Generator", "p_nom_opt"),
+    (Loads, "p_load", "Load", "p"),
 ]

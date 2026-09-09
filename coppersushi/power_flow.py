@@ -99,11 +99,15 @@ def get_branch_info(n: pypsa.Network) -> DataFrame[BranchInfo]:
     return branch_info
 
 
-@pa.check_types
 def to_branches_by_component_and_name(
         branches: pd.DataFrame, snapshot: pd.Timestamp, component: str, quantity: str
 ) -> DataFrame[BranchQuantityByComponentAndName]:
-    """Indexes the given series by component (Link or Line) and branch name"""
+    """Indexes the given series by component (Link or Line) and branch name.
+
+    Not `@pa.check_types`-checked: `quantity` is caller-chosen, so the model's `p0`
+    field only documents today's actual call sites (always `quantity='p0'`) rather
+    than a constraint the function enforces — `quantity='p1'` must keep working.
+    """
     df = branches[quantity].loc[snapshot].rename(quantity).rename_axis('name').to_frame()
     df['component'] = component
     return df.set_index('component', append=True).reorder_levels(['component', 'name'])
