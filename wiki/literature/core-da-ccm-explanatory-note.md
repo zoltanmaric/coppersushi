@@ -6,7 +6,7 @@
 
 ## The process it describes
 
-Chapter 3 lays the day-ahead process out as eleven steps against the actors. Coordinated capacity calculator is CCC.
+Chapter 3 supplies the actors and the original eleven steps. The order below incorporates the later methodology and JAO publication sequence. Coordinated capacity calculator is CCC.
 
 ```mermaid
 flowchart TB
@@ -19,17 +19,17 @@ flowchart TB
         RAO["Remedial-action optimisation<br>CCC"]
     end
     subgraph d1 ["D-1"]
-        LTN["Long-term nominations<br>each TSO"]
         FB1["Intermediate computation: minimum margin, long-term inclusion<br>CCC"]
-        VAL["Validation: final adjustment values, early publication<br>each TSO"]
-        FB2["Final computation and presolve<br>CCC"]
-        PUB["Publication; capacities to market coupling<br>CCC and TSOs"]
+        VAL["Coordinated and individual validation<br>Core TSOs"]
+        PRE["Presolve and pre-final publication<br>CCC, 08:00"]
+        LTN["Long-term nominations<br>each TSO"]
+        FB2["Final RAM and publication<br>CCC, 10:30"]
+        PUB["Capacities to market coupling<br>CCC and TSOs"]
     end
     NP --> IGM --> CGM --> FB0
     IN --> FB0
     FB0 --> RAO --> FB1
-    LTN --> FB1
-    FB1 --> VAL --> FB2 --> PUB
+    FB1 --> VAL --> PRE --> LTN --> FB2 --> PUB
 ```
 
 ## What it settles
@@ -65,4 +65,4 @@ flowchart TB
 - **70 % rule.** Regulation (EU) 2019/943 Article 16(8) added a second floor: the margin plus the flow from non-Core exchanges must reach 70 % of the element's capacity, with linear trajectories and derogations during transition. The 20 % floor stays and the larger of the two applies; the [third amendment](https://eepublicdownloads.entsoe.eu/clean-documents/nc-tasks/Core%20DA%20CCM%203rd%20RfA%20-%20Clean%20version.pdf) introduced it and the consolidated text keeps both.
 - **Advanced hybrid coupling** replaced standard hybrid coupling for Core's edge borders; the note describes only the standard form, where non-Core exchanges enter through the base case.
 - **Extended LTA inclusion**: EUPHEMIA now receives the untouched domain plus the long-term domain and takes their union itself ([euphemia-public-description](euphemia-public-description.md)). The fourth amendment, approved by ACER on 16 July 2026, removes long-term allocations from day-ahead capacity calculation; the TSOs stop applying LTA inclusion once long-term capacity is itself calculated flow-based, so approval and application are separate dates.
-- **Central Europe.** Core and Italy North merged into the Central Europe region (ACER Decisions 04/2024 and [10/2025](https://www.acer.europa.eu/sites/default/files/documents/Individual%20Decisions_annex/ACER-Decision-10-2025-Annex-II.pdf)). The TSOs' [explanatory document of October 2024](https://consultations.entsoe.eu/markets/central-europe-da-ccm/supporting_documents/20241017%20Explanatory%20Document%20CE%20DA%20CCM%20%20PC%20version.pdf) covers only the delta: Swiss and Italian integration, HVDC on Central Europe borders, tie-lines below 220 kV that the merged model does not carry, and dropping the obligation to phase out seasonal limits.
+- **Central Europe.** ACER Decisions 04/2024 and [10/2025](https://www.acer.europa.eu/sites/default/files/documents/Individual%20Decisions_annex/ACER-Decision-10-2025-Annex-II.pdf) establish the merger of Core and Italy North into the Central Europe region; the sources here do not establish its application date. The TSOs' [explanatory document of October 2024](https://consultations.entsoe.eu/markets/central-europe-da-ccm/supporting_documents/20241017%20Explanatory%20Document%20CE%20DA%20CCM%20%20PC%20version.pdf) covers only the delta: Swiss and Italian integration, HVDC on Central Europe borders, tie-lines below 220 kV that the merged model does not carry, and dropping the obligation to phase out seasonal limits.
