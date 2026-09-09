@@ -19,17 +19,35 @@ data:
     source: primary
 
 snapshots:
-  start: "2013-07-17"
-  end: "2013-07-18"
+  start: "2024-08-29"
+  end: "2024-08-30"
   inclusive: left
 
+# The weather year follows the day; upstream defaults to 2013.
+atlite:
+  default_cutout: europe-2024-sarah3-era5
+
 electricity:
+  # The fleet commissioned by 2024 and not yet retired; `x != x` keeps unset dates.
+  powerplants_filter: (DateIn <= 2024 or DateIn != DateIn) and (DateOut >= 2024 or DateOut != DateOut)
   transmission_limit: v1.0
   extendable_carriers:
     Generator: []
     StorageUnit: []
     Store: []
     Link: []
+
+conventional:
+  dynamic_fuel_price: true  # monthly World Bank prices, not static assumptions
+
+costs:
+  year: 2025  # nearest published vintage to the day; upstream ships 2050
+  emission_prices:
+    dynamic: true  # daily EUA series
+
+# The synthetic demand series ends 2023, so it cannot cover this day (wiki/backtest-2024-08-29.md).
+load:
+  supplement_synthetic: false
 
 clustering:
   temporal:
@@ -46,6 +64,7 @@ solving:
   options:
     transmission_losses: 0
     noisy_costs: false
+    assign_all_duals: true  # line-limit shadow prices
     # Diagnostic, not tolerance: shedding at 100 k€/MWh keeps an infeasible day solvable so the
     # network shows where demand cannot be met; the runner rejects any candidate that sheds.
     load_shedding:
