@@ -44,3 +44,24 @@ def test_the_config_window_is_the_market_day():
     """What config/coppersushi.yaml must carry: PyPSA-Eur snapshots are naive UTC."""
     assert market_day.config_window("2024-08-29") == ("2024-08-28 22:00", "2024-08-29 22:00")
     assert market_day.config_window("2013-07-17") == ("2013-07-16 22:00", "2013-07-17 22:00")
+
+
+def test_the_market_day_containing_a_window_start_is_the_inverse_of_config_window():
+    """The runner names candidates from snapshots.start, which is a window start, not a day."""
+    for day in ("2024-08-29", "2024-01-15", "2024-03-31", "2024-10-27", "2013-07-17"):
+        start, _ = market_day.config_window(day)
+        assert market_day.containing(start) == day
+
+
+def test_containing_reads_a_naive_start_as_utc():
+    assert market_day.containing("2024-08-28 22:00") == "2024-08-29"
+
+
+def test_containing_accepts_an_aware_timestamp_too():
+    assert market_day.containing(pd.Timestamp("2024-08-28T22:00:00Z")) == "2024-08-29"
+
+
+def test_an_hour_inside_the_day_still_names_the_day():
+    assert market_day.containing("2024-08-29 12:00") == "2024-08-29"
+    assert market_day.containing("2024-08-29 21:59") == "2024-08-29"
+    assert market_day.containing("2024-08-29 22:00") == "2024-08-30"

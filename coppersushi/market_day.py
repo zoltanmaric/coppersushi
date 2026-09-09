@@ -38,6 +38,16 @@ def snapshots(day: str) -> pd.DatetimeIndex:
     return hours(day).tz_localize(None)
 
 
+def containing(moment: str | pd.Timestamp) -> str:
+    """The market day an instant falls in — the inverse of ``config_window``'s start.
+
+    The runner names candidates after the day they cover, but the config carries a window
+    *start* (``2024-08-28 22:00``), which is the previous calendar date. Naive input is read as
+    UTC, PyPSA's convention; an aware timestamp is converted.
+    """
+    return str(pd.to_datetime(moment, utc=True).tz_convert(MARKET_TZ).date())
+
+
 def config_window(day: str) -> tuple[str, str]:
     """The ``snapshots.start`` and ``snapshots.end`` for ``config/coppersushi.yaml``.
 

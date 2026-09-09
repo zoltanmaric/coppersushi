@@ -10,7 +10,7 @@ from typing import NamedTuple
 
 import yaml
 
-from coppersushi import networks, shedding
+from coppersushi import market_day, networks, shedding
 from coppersushi.networks import REPO
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,10 @@ def solve(experiment: str | None = None) -> Path:
     solved = sorted((sibling / "results" / cfg["run"]["name"] / "networks").glob("*.nc"))
     if len(solved) != 1:
         raise RuntimeError(f"expected exactly one solved network, found {solved}")
-    candidate = networks.candidate(cfg["snapshots"]["start"], pin.sha, CONFIG.read_bytes(), experiment)
+    # snapshots.start is a window start (2024-08-28 22:00), not a day: candidates are named
+    # after the market day they cover (coppersushi/market_day.py).
+    day = market_day.containing(cfg["snapshots"]["start"])
+    candidate = networks.candidate(day, pin.sha, CONFIG.read_bytes(), experiment)
     candidate.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(solved[0], candidate)
     shedding.reject(networks.load(candidate))
