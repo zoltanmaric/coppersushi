@@ -4,7 +4,7 @@ Working memory. Architecture: [sushi-2.md](../sushi-2.md).
 
 ## Problem
 
-A working v1-style optimal power flow for one 2024 day on the 2025 OSM grid, produced by PyPSA-Eur as of 2026 with HiGHS and drawn in the app. The Sep 11 hackathon cut is [core-congestion-forecast](core-congestion-forecast.md), which re-pins the solved 2013 network and needs nothing from here; the 2024 day continues at its own pace. Truing it up to measured data comes after.
+A working v1-style optimal power flow for one 2024 day on the 2025 OSM grid, produced by PyPSA-Eur as of 2026 with HiGHS and drawn in the app. The Sep 11 hackathon cut is [core-congestion-forecast](core-congestion-forecast.md), which consumes the solved 2024 day. Truing it up to measured data comes after.
 
 Demo day is **2024-08-29** because upstream's data stack ends at 2024 (newest prebuilt cutout `europe-2024-sarah3-era5`, `nuclear_p_max_pu.csv` last column 2024, renewable capacity year 2024). Later years cost a CDS cutout build and a nuclear-series extension.
 

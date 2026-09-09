@@ -1,84 +1,96 @@
 # Spec: Core congestion forecast (burn-down)
 
-Working memory. Target: **Hack on the Grid** (Electricity Maps hackathon, Copenhagen, 2026-09-11), "Power markets" track. Domain: [copper-plate-problem](../copper-plate-problem.md). Background: [flow-based-market-coupling](../flow-based-market-coupling.md), [core-day-ahead-capacity-calculation](../core-day-ahead-capacity-calculation.md). Consumes [jao-grid](jao-grid.md)'s matched elements. Architecture: [sushi-2](../sushi-2.md).
+Working memory. Target: **Hack on the Grid** (Electricity Maps hackathon, Copenhagen, 2026-09-11), "Power markets" track. Domain: [copper-plate-problem](../copper-plate-problem.md). How the real thing works: [core-day-ahead-capacity-calculation](../core-day-ahead-capacity-calculation.md); "step n" below is that page's numbering. Background: [flow-based-market-coupling](../flow-based-market-coupling.md). Consumes [jao-grid](jao-grid.md)'s matched elements. Architecture: [sushi-2](../sushi-2.md).
 
-## Problem
+## Goal
 
-In Core, tomorrow's zonal price splits are the auction's binding constraints weighted by their PTDFs: the clearing problem's own arithmetic, reproduced on JAO's published numbers to the cent in ten hours of 2024-08-29 and within half in the rest ([flow-based-market-coupling](../flow-based-market-coupling.md)). The TSOs publish which elements *may* bind on day D at 10:30 on D-1; the auction decides which *do*, and JAO publishes them at 13:00. The claim: name day D's binding elements from **D-2 evening**, before the TSOs publish anything for D, with our nodal grid playing by the market's rulebook, and score against the 13:00 truth.
+For one Core day, produce what we would have said at D-2 evening about which rows of the auction's domain bind in each hour and what price spreads they imply. Show it on a page beside what JAO published at 13:00 on D-1. Explain the difference. That is the whole deliverable: one day, one page, one explanation. No scoring, no baseline, no second day until this one has been read by eye.
 
-**One day, 2024-08-29**, the day [jao-grid](jao-grid.md) matches; the day is a parameter. It is the rehearsal: every input is public and complete, so the score isolates the model's foresight from forecast error. A 2026 day, then a future one, follow by swapping the zonal-forecast provider and nothing else.
+The day is **2024-08-29**, the day [jao-grid](jao-grid.md) matches; the day is a parameter. It is a hindcast: every input is a stand-in for what a live run at D-2 evening would have, drawn from what is public, and named below. A 2026 day follows by swapping inputs and nothing else.
 
-**What the model may see at D-2 evening.** The domain published for D-1 (10:30 on D-2): the monitored elements, their ratings and reliability margins, the zone caps. D-1's binding set (13:00 on D-2), which is the baseline. The zonal forecast for D: in the rehearsal, JAO's D2CF page for D, the TSOs' own load per hub, made on D-2 and published only at 10:30 on D-1, so a stated stand-in for what a live run gets from Electricity Maps' 72-hour forecast. PyPSA-Eur's weather-driven availability for the day stands in for a renewables forecast the same way.
+## What the auction sees, and what we substitute
 
-**The rulebook.** The market is blind by design, so the model must be too:
+The auction clears the zones' bids against about 120 rows per hour of "PTDF · net positions ≤ RAM" (step 11). Everything about the grid enters through those rows. So the forecast is: rebuild the rows for D a day early, then clear a cost-based market against them.
 
-- Constraints only on the elements the TSOs monitored for D-1, matched to our lines and transformers by jao-grid. Every other line runs free.
-- Each element's limit is the market's: rating minus reliability margin, lifted to the 70 % floor where the flow at zero Core exchange leaves less than 70 % of the rating for trade. The zero-exchange flow comes from our own solve with Core net positions fixed at zero, the TSOs' pre-final case. Dynamic ratings take D-1's value.
-- D-1's zone caps as bounds on each zone's net position. Four of the day's seventeen binding constraints were caps, and no line model foresees those.
-- Cost-based dispatch on PyPSA-Eur's costs as the bid proxy, load pinned per hub from D2CF, Core net positions free: the trade pattern is the thing being forecast.
-- Binding rows are pairs, an element under an outage, for 105 of the 116 constraints of a sampled hour. The N-1 pairs enter as post-outage flow limits via outage factors, as jao-grid's `n-1` mode defines them; the first end-to-end run is N-0 so the loop closes.
+| Step | The real input | Our stand-in at D-2 evening |
+|---|---|---|
+| 1 aligned net positions | D2CF, published 10:30 D-1 | our base case's net positions |
+| 2, 3 grid models | never published | PyPSA-Eur's solved day: OSM grid, plant registry, weather-driven availability, the day's load, cost dispatch; no outages, no phase-shifter taps |
+| 4 the list, ratings, margins, factors | published 10:30 D-1 | D-1's rows, published 10:30 D-2: the same list, fixed and seasonal ratings, `frm`, `minRamFactor`; dynamic ratings a day old |
+| 5 PTDFs and base flows | published 10:30 D-1 | PTDFs: D-1's. Base flow per row: our grid's DC flow on the matched element under its contingency at our dispatch; `fcore` from it through D-1's PTDFs and our net positions. Rows we cannot match keep D-1's `fcore` |
+| 6 remedial actions | published 10:30 D-1 | D-1's `fnrao` |
+| 7 minimum margin | published 10:30 D-1 | `amr` recomputed by the verified identity from our `fall` and D-1's factor |
+| 8, 9 long-term rights, validation | published 10:30 D-1 | D-1's columns |
+| 10 RAM and presolve | published 10:30 D-1 | RAM by the verified identity; no presolve, the solver carries redundant rows |
+| 11 bids | sold, never published | supply steps per zone from PyPSA-Eur's plants at the day's fuel and carbon prices; demand inelastic at the zone's load; exchanges with zones outside Core fixed from our base case |
+
+## The machine
+
+One linear program per hour. Variables: each hub's net position (twelve zones and the two ALEGrO hubs) and each zone's output per supply step. Per zone, output minus load minus its fixed exchange with non-Core zones equals its net position; the Core net positions sum to zero; the ALEGrO hubs sum to zero and stay within ±1,000 MW, which is what the day's four external constraints say; every row of the domain holds. Minimise cost. Out come the net positions, the rows with a non-zero dual (the binding rows) and their duals (the shadow prices), and the zonal prices as the balances' duals. The implied spread between two zones is the shadow prices times the PTDF differences, the identity checked on [flow-based-market-coupling](../flow-based-market-coupling.md).
+
+Three tables in, one out. In: the rows (per hour: identity, PTDFs, RAM), the bid steps (per zone and hour: capacity, cost), the non-Core exchanges (per zone and hour). Out: per hour, binding rows with shadow prices, net positions, zonal prices. About 11,800 rows and a few hundred variables per hour; HiGHS solves it in well under a second. Swap the rows table and the same program is a different run.
+
+## Runs, in build order
+
+1. **Replay.** The LP has two inputs, the rows and the bids. In the forecast both are ours, so a miss cannot be blamed on either. Replay runs the same LP on JAO's published rows for D with our bids. If replay matches 13:00, our bids are fine and any forecast miss is the grid's. If replay is already off, the bids are the problem before the grid enters. Same program, different table. It exists the moment the LP does, and on a live day it is a product by itself: at 10:30 it says what 13:00 will show.
+2. **Yesterday's rows.** D-1's rows unchanged. Already a D-2 forecast, one that assumes the grid's constraints do not move overnight; needs no matching and no grid. The guaranteed deliverable.
+3. **Yesterday's rows with our flows.** D-1's rows with `fcore`, `amr` and RAM rebuilt from our grid's flows on the matched elements. The nodal model's whole contribution. Run 2 is what it has to improve on; run 1 is its ceiling.
 
 ## Dataflow
 
 ```mermaid
 flowchart LR
 
-    jao_dom[("JAO finalComputation for D-1<br/>elements, ratings, margins, zone caps; published 10:30 on D-2")]
-    jao_d2cf[("JAO d2CF for D<br/>load per hub; the TSOs' D-2 forecast, the rehearsal's stand-in")]
-    jao_truth[("JAO shadowPrices and priceSpread for D and D-1<br/>published 13:00 and 15:50 on D-1")]
-    elements[("jao_elements (specs/jao-grid)<br/>D-1's elements and their outages on our lines and transformers")]
-    grid[("Unsimplified solved network for D<br/>networks/opf-‹day›.nc")]
+    rows_dm1[("JAO finalComputation for D-1<br/>all rows, all hours; committed")]
+    rows_d[("JAO finalComputation for D<br/>the replay's rows; committed")]
+    truth[("JAO shadowPrices and priceSpread for D<br/>committed")]
+    grid[("solved_network<br/>networks/opf-‹day›.nc")]
+    elements[("jao_elements (specs/jao-grid)<br/>the rows' elements and contingency branches on our lines")]
 
-    rulebook["rulebook_limits<br/>rating − margin per matched element, lifted to the 70 % floor from a zero-exchange solve; D-1 zone caps; every other line free"]
-    pin["pin_load<br/>D2CF load per hub as zonal equalities; Core net positions free; PyPSA-Eur costs and availability"]
-    solve["solve<br/>HiGHS; N-0 first, then the N-1 pairs via outage factors"]
-    predict["predict<br/>tight constraints per hour → binding elements and zone caps"]
-    score["score<br/>precision and recall per element-hour against the 13:00 truth; the same for D-1's binding set"]
+    bids["zonal_bids<br/>supply steps per zone and hour from the network's generators at the day's fuel and carbon prices; load per zone; exchanges with non-Core zones"]
+    flows["row_flows<br/>DC flow on each matched element under its contingency at our dispatch → fcore, amr, RAM per row by the verified identities; unmatched rows keep D-1's"]
+    lp["zonal_clearing<br/>HiGHS: min cost s.t. balances, ΣNP = 0, ALEGrO, every row → net positions, binding rows, shadow prices, zonal prices"]
+    forecast["binding_forecast<br/>per run and hour: binding rows, shadow prices, implied spreads"]
+    page["forecast_page<br/>/forecast/‹day›: JAO's binding elements on the left map, ours on the right, one hour slider, one colour scale; spread table beneath"]
 
-    forecast["binding_forecast<br/>predicted binding elements per hour"]
-    scorecard["scorecard<br/>model beside baseline"]
-    page["forecast_page<br/>/forecast/‹day›: hits, false alarms and misses on the map; the day's spreads split by element; scorecard"]
-
-    jao_dom --> rulebook
-    elements --> rulebook
-    grid --> pin --> solve
-    jao_d2cf --> pin
-    rulebook --> solve --> predict --> forecast --> score --> scorecard
-    jao_truth --> score
-    forecast --> page
-    jao_truth --> page
-    scorecard --> page
+    rows_dm1 --> flows
+    grid --> flows
+    elements --> flows
+    flows --> lp
+    rows_dm1 --> lp
+    rows_d --> lp
+    grid --> bids --> lp
+    lp --> forecast --> page
+    truth --> page
+    elements --> page
 ```
 
-The JAO fetch is jao-grid's adapter with four more pages. Transforms exchange in-memory networks and frames.
-
-## Approach
-
-- **Scoring.** Per element-hour, predicted binding against JAO's 13:00 binding: precision and recall over the day's 13 elements and 4 zone caps across 23 hours. Beside it, the same numbers for the free baseline: D-1's binding set applied to D. The model earns its place where D differs from D-1, an outage, a rating change, a wind swing; the scorecard says by how much.
-- **Prices without predicting prices.** The page splits each hour's published spreads into the binding elements' contributions, shadow price times PTDF difference, from JAO's numbers. That is the bridge from elements to prices; the shadow price *level* is not predicted, because it is the slope of bid curves the model does not have. Nor is a zone-pair rank correlation of spreads scored: 66 pairs carry twelve zones' worth of information, so a day's 0.29 clears no significance bar, and it would measure the levels we do not predict. The exchanges sell aggregated curves per zone under internal-use licences ([flow-based-market-coupling](../flow-based-market-coupling.md)), so calibrating costs to them is later work that can never commit the curves themselves.
-- **Diagnostics, not criteria.** Our zero-exchange flow against JAO's `fref` per matched element, and our zone-to-element sensitivities against JAO's PTDFs, say where the grid or the dispatch is wrong when hits are bad.
-- **Rejected.** Physics-only limits at 70 % of rating on every line, scored against the auction: they predict where physics overloads, the market is built not to see that, and the divergence is the thesis, not an error. Measured on this day ([backtest](../backtest-2024-08-29.md)): 45 to 80 lines at their cap per snapshot against JAO's 0 to 10, congestion placed in France where JAO had none, location rank correlation about zero through every cost variant. Nodal prices as predicted zonal prices: disconnected from zonal prices; the bridge is the identity above. A zonal LP on D-1's domain with cost curves as the baseline: a machine for one scorecard row, which D-1's binding set gives for free. A daily live loop with Electricity Maps forecasts on the 2013 proxy network: no matched elements to score against, two-hour steps, no cron worth running before the model works on one day.
-- **Non-goals.** Zonal price and shadow-price levels; redispatch and the full-physics layer, where the market's schedule overloads what it cannot see; planned outages, remedial actions and phase-shifter optimisation; a daily capture; trading signals.
+The JAO fetch is jao-grid's adapter with three more pages. Transforms exchange frames; the LP is linopy or scipy on HiGHS, no PyPSA network in it.
 
 ## Next steps
 
-1. **Unsimplified 2024-08-29 solve** on the day's configuration (2024 weather cutout, dynamic fuel and carbon prices, 2025 cost vintage, duals assigned), jao-grid's step 1. Everything sits behind it.
-2. **JAO fetch for the day**: the D-1 domain, D2CF for D, shadow prices for D and D-1, price spreads for D; committed JSON, hermetic test on a fixture of rows.
-3. **Matching and the map**, jao-grid's steps 3 and 4.
-4. **Rulebook solve, N-0**: D2CF load pinned, limits only on matched elements at rating minus margin, D-1 zone caps, Core net positions free. Then the 70 % lift from the zero-exchange solve, then the N-1 pairs.
-5. **Score and page**: model beside baseline; hits, false alarms and misses on the map; spreads split by element.
+1. **Fetch and commit the rows**: `finalComputation` for 2024-08-28 and 2024-08-29, every hour, and `shadowPrices` and `priceSpread` for 2024-08-29, under `data/jao/‹day›/`. About 280,000 rows a day: Parquet under Git LFS with only the columns the LP and the page need.
+2. **Bids table** from `networks/opf-2024-08-29.nc`: generators grouped by country with marginal cost and the hour's available capacity; load per country; net exchange with non-Core countries from the solved flows.
+3. **The LP, and run 1.** Binding rows and spreads next to 13:00, hour by hour. This is where we learn whether cost bids are good enough for the grid to matter.
+4. **Run 2.** Look again.
+5. **Matching** (jao-grid's steps 3 and 4) for the elements in D-1's rows, the row flows, **run 3**.
+6. **The page.**
 
 ## Acceptance criteria
 
-- [ ] One command produces day D's predicted binding elements per hour from the D-1 domain, D-1's binding set and D2CF for D, and nothing published later than D2CF, in under an hour on the laptop.
-- [ ] The same command prints precision and recall per element-hour for the model and for D-1's binding set, over the day's 13 binding elements and 4 zone caps.
-- [ ] `/forecast/2024-08-29` colours the matched elements hit, false alarm or miss, lists the zone caps, splits the day's spreads by element from JAO's numbers, and shows the scorecard.
+- [ ] One command runs the three runs for 2024-08-29 from committed inputs and writes each run's binding rows, shadow prices, net positions and zonal prices per hour.
+- [ ] `/forecast/2024-08-29` shows two maps with one hour slider and one colour scale, JAO's binding elements on the left, a chosen run's on the right, and the spread table beneath.
+- [ ] A written explanation of what matches and what does not, per run, on [backtest-2024-08-29](../backtest-2024-08-29.md) or a sibling page.
 - [ ] Spec burned to nothing; findings distilled; this file deleted.
+
+## Non-goals
+
+Scoring and baselines; more than one day; price levels as a claim; our own PTDFs through a shift key (D-1's serve for now); redispatch after the auction, remedial actions, outages; a live loop; trading signals.
 
 ## Open
 
-- How far D-1's element list and ratings differ from D's; the day measures it for free once both domains are fetched.
-- Monitored elements jao-grid fails to match: invisible to the model, or a proxy limit.
-- Whether D2CF load plus PyPSA-Eur's availability reproduces the TSOs' base case, read off the `fref` diagnostic.
-- Generator outages: the model ran French nuclear 16 % above actual on the day ([backtest](../backtest-2024-08-29.md)), which moves the trade pattern the binding set depends on. ENTSO-E's unavailability data is public; the first accuracy lever once the loop closes.
-- What the pinning interface needs from a live provider beyond load per hub: Electricity Maps' 72-hour forecast carries the mix by type, D2CF does not, and the trial key does not yet grant the mix forecast (review of this spec).
+- Non-Core exchanges: our base case's or D-1's realised values; run 1 decides.
+- The four equality rows in the domain and the allocation constraints EUPHEMIA receives outside it: what they are, whether the LP needs them.
+- Transformers and phase shifters: the simplified network has none (jao-grid's precondition), so their rows keep D-1's flows in run 3; 19 of the 116 presolved rows at the first hour.
+- Whether run 3's `fcore` is better as a level or as a change: our flow for D minus our flow for D-1, added to D-1's `fcore`, cancels the grid model's bias but needs D-1 solved too.
+- Inelastic demand with a price cap may overstate spreads in scarce hours.
