@@ -5,7 +5,7 @@ Purely documentation: `strict = False` on every model, so extra columns pass thr
 untouched. Where a column is sourced straight from PyPSA (rather than computed here),
 its `dtype` and unit/description are copied from PyPSA's own attribute schema
 (`n.components[<Component>].defaults`); `PYPSA_SOURCED` below pins that these have not
-drifted, and is checked by `tests/test_data_model.py`.
+drifted.
 """
 
 import pandera.pandas as pa
@@ -13,7 +13,7 @@ from pandera.typing import Series
 
 
 class Buses(pa.DataFrameModel):
-    """One row per bus, indexed by bus name. Produced by `snapshot.NetworkSnapshot.buses`."""
+    """One row per bus, indexed by bus name."""
 
     x: Series[float]  # Longitude. PyPSA: Bus.x
     y: Series[float]  # Latitude. PyPSA: Bus.y
@@ -27,7 +27,7 @@ class Buses(pa.DataFrameModel):
 
 
 class Loads(pa.DataFrameModel):
-    """One row per bus with a load, indexed by Bus. Produced by `snapshot.NetworkSnapshot.loads`."""
+    """One row per bus with a load, indexed by Bus."""
 
     p_load: Series[float]  # Active power consumption [MW]. Sourced from PyPSA's Load.p.
 
@@ -37,10 +37,7 @@ class Loads(pa.DataFrameModel):
 
 
 class Generators(pa.DataFrameModel):
-    """One row per (Bus, carrier), indexed by that MultiIndex.
-
-    Produced by `snapshot.NetworkSnapshot.generators`.
-    """
+    """One row per (Bus, carrier), indexed by that MultiIndex."""
 
     p_nom_opt: Series[float] = pa.Field(nullable=True)  # Optimised nominal capacity [MW]. PyPSA: Generator.p_nom_opt
     p: Series[float]  # Active power [MW] (+ve if net generation). PyPSA: Generator.p
@@ -55,10 +52,9 @@ class Generators(pa.DataFrameModel):
 class BusCoordinates(pa.DataFrameModel):
     """Coordinates of one bus role (`bus0` or `bus1`) per branch, indexed by branch name.
 
-    Produced by `power_flow.get_bus_coordinates`, which renames these columns to
-    `<bus_name>_x`/`<bus_name>_y` at call time — so this documents the shape *before*
-    that rename, and carries no validation: the real column names are built from the
-    caller's `bus_name` argument, which a static schema can't describe.
+    Carries no validation: the real column names are built from a `bus_name` argument
+    into `<bus_name>_x`/`<bus_name>_y`, so this documents the shape before that rename
+    and no static schema can describe the result.
     """
 
     x: Series[float]  # PyPSA: Bus.x
@@ -70,10 +66,7 @@ class BusCoordinates(pa.DataFrameModel):
 
 
 class BranchInfo(pa.DataFrameModel):
-    """One row per branch (Line/Link/Transformer), indexed by branch name.
-
-    Produced by `power_flow.get_branch_info`.
-    """
+    """One row per branch (Line/Link/Transformer), indexed by branch name."""
 
     bus0_x: Series[float]  # Ours: `BusCoordinates.x` for bus0
     bus0_y: Series[float]  # Ours: `BusCoordinates.y` for bus0
@@ -93,9 +86,8 @@ class BranchInfo(pa.DataFrameModel):
 class BranchQuantityByComponentAndName(pa.DataFrameModel):
     """One quantity indexed by (component, name).
 
-    Produced by `power_flow.to_branches_by_component_and_name`, which is generic over
-    `quantity` — but every call site in this codebase passes `p0`, so that's the only
-    column this model documents.
+    Generic over `quantity`; `p0` is the column documented here, and the model carries
+    no validation so another `quantity` still passes.
     """
 
     p0: Series[float]  # PyPSA: Line/Link/Transformer.p0
@@ -106,7 +98,7 @@ class BranchQuantityByComponentAndName(pa.DataFrameModel):
 
 
 class BranchInfoForSnapshot(BranchInfo):
-    """`BranchInfo` plus per-snapshot flow. Produced by `power_flow.get_branch_info_for_snapshot`."""
+    """`BranchInfo` plus per-snapshot flow."""
 
     p0: Series[float] = pa.Field(nullable=True)  # Active power at bus0 [MW]. PyPSA: Line/Link/Transformer.p0
     branch_loading: Series[float] = pa.Field(nullable=True)  # Ours: abs(p0) / p_max * 100
@@ -118,7 +110,7 @@ class BranchInfoForSnapshot(BranchInfo):
 
 
 class NodeInfoForSnapshot(Buses):
-    """`Buses` plus a rendered tooltip. Produced by `power_flow.get_node_info_for_snapshot`."""
+    """`Buses` plus a rendered tooltip."""
 
     html: Series[str]  # Ours: rendered tooltip markup
 
@@ -128,10 +120,8 @@ class NodeInfoForSnapshot(Buses):
 
 
 # Columns our models source directly from PyPSA: (our model, our column, PyPSA
-# component, PyPSA attribute). `tests/test_data_model.py` asserts our model's own
-# declared dtype (`Model.to_schema().columns[our column].dtype`) still matches what
-# PyPSA declares for its attribute (`n.components[component].defaults.at[attribute,
-# "dtype"]`) — neither side hardcoded, so either drifting independently fails the test.
+# component, PyPSA attribute). Our declared dtype and PyPSA's must agree; neither side
+# is hardcoded, so either drifting independently is caught.
 #
 # `Loads.p_load` is the one non-identity rename: it's sourced from PyPSA's `Load.p`.
 #
