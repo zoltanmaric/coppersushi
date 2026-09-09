@@ -4,7 +4,7 @@
 
 - **public-repo** — Everything here is public: code, wiki, commit messages, PR bodies, review comments. Nothing enters that isn't already public — no secrets, no private repositories or their paths, no employer or client material, no personal information. When knowledge came from a private source, carry the idea, never the pointer. Secrets live in the gitignored `.secrets/`.
 
-- **no-push** — Never push without asking. Always ask the user before pushing to any remote.
+- **main-push** — Ask before pushing directly to `main`. Push topic branches and create or update their pull requests without separate confirmation.
 
 - **commit-cadence** — Commit deliberately, not per turn. Don't commit after every instruction — the user often adjusts what they just asked for, and those adjustments belong in the same commit as the original change, not in a follow-up. Let work accumulate across a few turns, then group it into atomic, cohesive commits when a piece of work has settled.
 
@@ -19,7 +19,7 @@
   - For large or multi-session tasks, use a spec (`spec` skill) — create one when obviously needed, suggest it in the gray zone.
   - When a spec or design has grown load-bearing, suggest a goldfish review (`goldfish` skill); the user pulls the trigger.
 
-- **ablation** — Keep agent rules and skills minimal — ablate, don't accumulate. Every line here and in `.agents/skills/` is read on every run and must earn its place through an observed, repeated stumble — never a predicted one — recorded in `wiki/rule-provenance.md`. As models improve, old corrective lines go stale: re-ablate occasionally by deleting lines and seeing what actually breaks. If nothing ever needs adding back, the deleting wasn't aggressive enough.
+- **ablation** — Keep agent rules and skills minimal — ablate, don't accumulate. Every line here and in `.agents/skills/` is read on every run and must earn its place through an observed, repeated stumble — never a predicted one — recorded in `wiki/rule-provenance.md`. The user may override the repetition bar after the agent names the missing evidence and gets the user's explicit confirmation. As models improve, old corrective lines go stale: re-ablate occasionally by deleting lines and seeing what actually breaks. If nothing ever needs adding back, the deleting wasn't aggressive enough.
 
 - **fix-the-generator** — Fix the generator, not the instance. Before patching a flagged problem, ask what produced it; prefer the fix that ends the class — restructure the code, restate the rule's principle — over the one that closes the single case. A second occurrence of anything is conclusive: the local level was the wrong level.
 

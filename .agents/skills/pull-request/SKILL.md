@@ -1,6 +1,6 @@
 ---
 name: pull-request
-description: Use when creating a pull request, when scope grows inside an open one, when readying one for review, or when splitting work into a stacked-PR chain.
+description: Guides pull request creation and review, including posting findings, controlling scope, readying work for review, and splitting work into a stacked-PR chain.
 ---
 
 # Pull requests
@@ -21,6 +21,12 @@ description: Use when creating a pull request, when scope grows inside an open o
 - Every PR body carries an "Architecture delta" section (root `architecture-delta` rule).
 - When a goldfish reviews a PR touching `.agents/` or any `AGENTS.md`, the critic reads `.agents/skills/AGENTS.md` and the vendor guidelines it links before the diff.
 
+## Review findings
+
+- Keep review findings in chat by default. Post them to a pull request only if the user explicitly asks; first show the proposed comment text and anchors and get approval.
+- Post each approved finding as a separate inline review thread on the narrowest relevant changed line, so it can be replied to and resolved independently. If no exact line exists, use the closest relevant changed line. Post a top-level summary only if the user asks.
+- Attribute each posted thread with the agent, model version and reasoning effort. If the runtime does not expose a field, say so instead of guessing.
+
 ## Stacks
 
 GitHub-native stacked PRs (public preview since 2026-07): an ordered chain of branches where each PR targets the branch below it and shows reviewers only its own layer's diff.
@@ -36,7 +42,7 @@ GitHub-native stacked PRs (public preview since 2026-07): an ordered chain of br
 ### Command map (`gh stack`, official extension `github/gh-stack`)
 
 Prerequisite: `gh extension install github/gh-stack` — official, but not bundled with `gh`.
-`submit`, `push`, `sync`, `link`, and `merge` write to the remote: the root `no-push` rule applies — ask the user first.
+`submit`, `push`, `sync`, and `link` may create or update pull requests without confirmation. `merge` changes the trunk and requires an explicit request.
 
 - `init [branches...] [--base <trunk>]` — start a stack, or adopt existing branches listed bottom→top.
 - `add <branch>` / `add -Am "<msg>"` — new layer on top; `-Am` stages, commits, and creates the branch in one step.
