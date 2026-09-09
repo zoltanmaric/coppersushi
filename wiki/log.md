@@ -3,6 +3,9 @@
 Append-only chronology of wiki operations (ingests, queries, lints).
 Entry format: `## [YYYY-MM-DD] <operation> | <title>`
 
+## [2026-09-08] lint | Cutout naming corrected: the weather year follows the day
+`europe-1940-2024-era5` appeared in pypsa-eur-sibling and the sushi-2 spec as the prebuilt cutout in play. It is neither: it names a CDS build recipe in upstream's `cutouts:` map (404 as a file), while `atlite.default_cutout` is `europe-2013-sarah3-era5`. Cutouts are one calendar year, so the 2024-08-29 day needs `europe-2024-sarah3-era5`. Upstream already rejects a mismatch (`sel(time=...)` raises), but only after the 6.7 GB download and without naming the cause, so a config test now checks the two years agree up front. Found by dry-running the 2024 day: the DAG resolved `retrieve_cutout` to the 2013 file. Sushi-2 step 2 gains the cutout as its third change.
+
 ## [2026-08-19] setup | Wiki instantiated at repo top level
 
 ## [2026-08-19] ingest | The Copper Plate Must Die + Copper Sushi blog posts
