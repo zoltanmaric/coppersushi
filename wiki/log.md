@@ -31,6 +31,9 @@ phase shifter when `Theta θ (°)` is populated (136), which the names do not te
 named `TR`, and JAO's own feed disagrees with the workbook in both directions. And `EIC_Code` is not a
 key — two RTE pairs share one EIC while differing in rating and impedance, a tie-line appears once per
 TSO owning an end, and 29 line rows carry none at all.
+And a published reactance is not always a usable one: one transformer has x = −11.7 Ω and one line
+has x = 0, which in a power flow is a short circuit rather than a small impedance. Neither is
+repaired — the workbook says what it says — both are flagged `x_physical = False`.
 The headline number: JAO's real transformer ratings have a median of 790 MVA where PyPSA-Eur's
 placeholder (`build_osm_network.py:1245`, the summed line capacity at the busier bus) has 4,425 MVA.
 

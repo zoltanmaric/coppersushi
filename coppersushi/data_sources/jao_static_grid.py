@@ -66,17 +66,17 @@ class Model(NamedTuple):
     branches: DataFrame[Branches]
 
 
-MODELS = (Transformers, Branches)
+TABLES = {"transformers": Transformers, "branches": Branches}  # file stem → its model
 
 
 def release_dir(release: str) -> Path:
     return STATIC_GRID_DIR / release
 
 
-def check_download(release: Release, payload: bytes) -> None:
+def check_download(spec: Release, payload: bytes) -> None:
     """Raise unless the zip is the one that was measured."""
-    if len(payload) != release.zip_bytes:
-        raise RuntimeError(f"{release.path}: {len(payload)} bytes, expected {release.zip_bytes}")
+    if len(payload) != spec.zip_bytes:
+        raise RuntimeError(f"{spec.path}: {len(payload)} bytes, expected {spec.zip_bytes}")
 
 
 def check_workbook(release: str, name: str, sheets: list[str]) -> None:
@@ -98,13 +98,13 @@ def read_sheets(release: str, workbook: bytes, name: str) -> dict[str, pd.DataFr
         }
 
 
-def download(release: Release) -> bytes:
+def download(spec: Release) -> bytes:
     """The release zip, refused unless it is the size it was measured at."""
-    url = f"{BASE_URL}/{release.path}"
+    url = f"{BASE_URL}/{spec.path}"
     logger.info("jao static grid: GET %s", url)
     with urllib.request.urlopen(url, timeout=TIMEOUT_SECONDS) as response:
         payload = response.read()
-    check_download(release, payload)
+    check_download(spec, payload)
     logger.info("jao static grid: %d bytes", len(payload))
     return payload
 
@@ -127,21 +127,39 @@ def write_release(
     transformers: DataFrame[Transformers],
     branches: DataFrame[Branches],
 ) -> Path:
-    """Write the two tables as CSV, creating the directory."""
+    """Write the two tables as CSV, creating the directory, after reporting what is in them.
+
+    The two counts are logged because neither is visible in the CSV without looking for
+    it, and both are traps for whatever joins these tables next: rows the workbook gives
+    an unusable reactance, and EICs it publishes twice.
+    """
     directory.mkdir(parents=True, exist_ok=True)
-    for name, frame in zip(Model._fields, (transformers, branches)):
+    for name, frame in {"transformers": transformers, "branches": branches}.items():
+        report(name, frame)
         frame.to_csv(directory / f"{name}.csv", index=False)
     logger.info("jao static grid: wrote %s", directory)
     return directory
 
 
+def report(name: str, frame: pd.DataFrame) -> None:
+    """Log the two counts a consumer of this table has to make a decision about."""
+    unusable = frame[~frame.x_physical]
+    collisions = static_grid.eic_collisions(frame)
+    logger.info(
+        "jao static grid: %s: %d rows; %d with an unusable reactance %s; %d rows over %d colliding EICs %s",
+        name, len(frame), len(unusable), sorted(unusable.eic.dropna())[:5],
+        len(collisions), collisions.eic.nunique(), sorted(set(collisions.eic))[:5],
+    )
+
+
 def read_release(directory: Path) -> Model:
     """The two tables back from CSV, each validated."""
-    frames = [
-        pd.read_csv(directory / f"{name}.csv").pipe(model.validate)
-        for name, model in zip(Model._fields, MODELS)
-    ]
-    return Model(*frames)
+    return Model(
+        **{
+            name: pd.read_csv(directory / f"{name}.csv").pipe(model.validate)
+            for name, model in TABLES.items()
+        }
+    )
 
 
 def load_release(release: str = static_grid.RELEASE) -> Model:
