@@ -6,6 +6,7 @@ __pycache__/
 /worktrees/
 /data/
 /wiki/.obsidian/
+*.code-workspace
 
 # Unsanctioned solves; `python -m coppersushi.pypsa_eur promote <file>` moves one into networks/ (LFS).
 networks/candidates/
