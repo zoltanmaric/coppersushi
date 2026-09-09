@@ -53,7 +53,8 @@ app.layout = html.Div([
     html.Div(
         [
             dcc.Link('2013 model (v1)', href='/', style={'marginRight': '1em'}),
-            dcc.Link('2013 OPF on the 2025 grid', href='/opf-2013'),
+            dcc.Link('2013 OPF on the 2025 grid', href='/opf-2013', style={'marginRight': '1em'}),
+            dcc.Link('2024 OPF on the 2025 grid', href='/opf-2024'),
         ],
         style={'padding': '0.4em 1em'}
     ),
