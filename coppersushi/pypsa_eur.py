@@ -24,7 +24,7 @@ class Pin(NamedTuple):
     sha: str
 
 
-def solve() -> Path:
+def solve(experiment: str | None = None) -> Path:
     """Run PyPSA-Eur with our config; the solved network becomes a candidate, kept but rejected if it sheds load."""
     pin, sibling = _read_pin(), _sibling_dir()
     _checkout(pin, sibling)
@@ -36,7 +36,7 @@ def solve() -> Path:
     solved = sorted((sibling / "results" / cfg["run"]["name"] / "networks").glob("*.nc"))
     if len(solved) != 1:
         raise RuntimeError(f"expected exactly one solved network, found {solved}")
-    candidate = networks.candidate(cfg["snapshots"]["start"], pin.sha)
+    candidate = networks.candidate(cfg["snapshots"]["start"], pin.sha, CONFIG.read_bytes(), experiment)
     candidate.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(solved[0], candidate)
     shedding.reject(networks.load(candidate))
@@ -93,7 +93,9 @@ if __name__ == "__main__":
     match sys.argv[1:]:
         case ["solve"]:
             solve()
+        case ["solve", experiment]:
+            solve(experiment)
         case ["promote", candidate]:
             promote(Path(candidate))
         case _:
-            sys.exit(f"usage: python -m {__spec__.name} solve | promote <candidate.nc>")
+            sys.exit(f"usage: python -m {__spec__.name} solve [experiment] | promote <candidate.nc>")
