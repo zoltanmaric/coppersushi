@@ -4,7 +4,15 @@ import plotly.graph_objects as go
 import plotly.io as pio
 import pyproj
 import pypsa
+from pandera.typing import DataFrame
 
+from coppersushi.data_model.network_views import (
+    BranchInfo,
+    BranchInfoForSnapshot,
+    BranchQuantityByComponentAndName,
+    BusCoordinates,
+    NodeInfoForSnapshot,
+)
 from coppersushi.snapshot import NetworkSnapshot
 
 # For each snapshot, a figure has 4 traces
@@ -30,7 +38,11 @@ def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.Da
     return attribute_by_buses_sum
 
 
-def get_bus_coordinates(n: pypsa.Network, bus_name: str) -> pd.DataFrame:
+def get_bus_coordinates(n: pypsa.Network, bus_name: str) -> DataFrame[BusCoordinates]:
+    """:return: columns matching `data_model.network_views.BusCoordinates`, renamed to
+    `<bus_name>_x`/`<bus_name>_y` — not validated against that model since the column
+    names it produces depend on `bus_name`.
+    """
     return n.buses.loc[n.branches()[bus_name]][['x', 'y']] \
             .set_index(n.branches().index) \
             .rename(dict(x=bus_name+'_x', y=bus_name+'_y'), axis='columns')
@@ -43,7 +55,8 @@ epsg3857 = pyproj.Proj('epsg:3857')
 def get_branch_midpoint(branch_info: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
     """Project lat/lon of branch buses to x/y coordinates,
     calculate mid-point between them,
-    project mid-point back to lat/lon coordinates."""
+    project mid-point back to lat/lon coordinates.
+    """
 
     x0, y0 = epsg3857(longitude=branch_info.bus0_x, latitude=branch_info.bus0_y)
     x1, y1 = epsg3857(longitude=branch_info.bus1_x, latitude=branch_info.bus1_y)
@@ -58,13 +71,13 @@ geodesic = pyproj.Geod(ellps='WGS84')
 
 
 def get_branch_direction(branch_info: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
-    """Branch power flow direction angle (clockwise from North)"""
+    """Branch power flow direction angle (clockwise from North)."""
     [direction, inverse_direction, _] = \
         geodesic.inv(branch_info.bus0_x, branch_info.bus0_y, branch_info.bus1_x, branch_info.bus1_y)
     return direction, inverse_direction
 
 
-def get_branch_info(n: pypsa.Network) -> pd.DataFrame:
+def get_branch_info(n: pypsa.Network) -> DataFrame[BranchInfo]:
     """Builds a DataFrame with edge & middle point coordinates, power flow direction angles for each line."""
     bus0_coordinates = get_bus_coordinates(n, 'bus0')
     bus1_coordinates = get_bus_coordinates(n, 'bus1')
@@ -83,18 +96,22 @@ def get_branch_info(n: pypsa.Network) -> pd.DataFrame:
 
     branch_info['direction'], branch_info['inverse_direction'] = get_branch_direction(branch_info)
 
-    return branch_info
+    return branch_info.pipe(BranchInfo.validate)
 
 
 def to_branches_by_component_and_name(
-        branches: pd.DataFrame, snapshot: pd.Timestamp, component: str, quantity: str) -> pd.DataFrame:
-    """Indexes the given series by component (Link or Line) and branch name"""
+        branches: pd.DataFrame, snapshot: pd.Timestamp, component: str, quantity: str
+) -> DataFrame[BranchQuantityByComponentAndName]:
+    """Indexes the given series by component (Link or Line) and branch name.
+    """
     df = branches[quantity].loc[snapshot].rename(quantity).rename_axis('name').to_frame()
     df['component'] = component
     return df.set_index('component', append=True).reorder_levels(['component', 'name'])
 
 
-def get_branch_info_for_snapshot(n: pypsa.Network, branch_info: pd.DataFrame, snapshot: pd.Timestamp) -> pd.DataFrame:
+def get_branch_info_for_snapshot(
+        n: pypsa.Network, branch_info: DataFrame[BranchInfo], snapshot: pd.Timestamp
+) -> DataFrame[BranchInfoForSnapshot]:
     lines_t_p0 = to_branches_by_component_and_name(n.lines_t, snapshot, 'Line', 'p0')
     links_t_p0 = to_branches_by_component_and_name(n.links_t, snapshot, 'Link', 'p0')
     transformers_t_p0 = to_branches_by_component_and_name(n.transformers_t, snapshot, 'Transformer', 'p0')
@@ -105,16 +122,16 @@ def get_branch_info_for_snapshot(n: pypsa.Network, branch_info: pd.DataFrame, sn
         lambda row: row.direction if row.p0 >= 0 else row.inverse_direction, axis='columns'
     )
 
-    return branch_info_t
+    return branch_info_t.pipe(BranchInfoForSnapshot.validate)
 
 
-def get_node_info_for_snapshot(n: pypsa.Network, snapshot: pd.Timestamp) -> pd.DataFrame:
+def get_node_info_for_snapshot(n: pypsa.Network, snapshot: pd.Timestamp) -> DataFrame[NodeInfoForSnapshot]:
     ns = NetworkSnapshot(n, snapshot)
     tooltips_htmls = get_tooltip_htmls(ns)
-    return pd.concat([ns.buses, tooltips_htmls], axis='columns')
+    return pd.concat([ns.buses, tooltips_htmls], axis='columns').pipe(NodeInfoForSnapshot.validate)
 
 
-def get_branch_edge(line_info: pd.DataFrame, x_or_y: str) -> pd.Series:
+def get_branch_edge(line_info: DataFrame[BranchInfoForSnapshot], x_or_y: str) -> pd.Series:
     return line_info.apply(lambda row: [row['bus0_' + x_or_y], row['bus1_' + x_or_y], None], axis='columns')
 
 
@@ -145,8 +162,8 @@ def get_tooltip_htmls(ns: NetworkSnapshot) -> 'pd.Series[str]':
 
 
 def create_traces(
-        node_info_t: pd.DataFrame,
-        branch_info_t: pd.DataFrame,
+        node_info_t: DataFrame[NodeInfoForSnapshot],
+        branch_info_t: DataFrame[BranchInfoForSnapshot],
         cmax: float
 ) -> (go.Trace, go.Trace, go.Trace, go.Trace):
     loaded_filter = branch_info_t.branch_loading > 99
@@ -224,6 +241,7 @@ def create_traces(
 
 
 def get_interquartile_range(df: pd.DataFrame) -> pd.DataFrame:
+
     q1 = np.quantile(df, 0.25)
     q3 = np.quantile(df, 0.75)
     iqr = q3 - q1

@@ -1,5 +1,8 @@
 import pandas as pd
 import pypsa
+from pandera.typing import DataFrame
+
+from coppersushi.data_model.network_views import Buses, Generators, Loads
 
 
 class NetworkSnapshot:
@@ -11,14 +14,14 @@ class NetworkSnapshot:
         self.loads = self._loads()
         self.generators = self._generators()
 
-    def _buses(self) -> pd.DataFrame:
+    def _buses(self) -> DataFrame[Buses]:
         buses_t = pd.DataFrame(self.n.buses_t.p.loc[self.snapshot].rename('p'))
         buses = self.n.buses[['x', 'y', 'country', 'v_nom']].join(buses_t)
-        return buses
+        return buses.pipe(Buses.validate)
 
-    def _loads(self) -> pd.DataFrame:
+    def _loads(self) -> DataFrame[Loads]:
         power_series = self.n.loads_t.p.loc[self.snapshot].rename('p_load')
-        return pd.DataFrame(power_series).rename_axis('Bus', axis='index')
+        return pd.DataFrame(power_series).rename_axis('Bus', axis='index').pipe(Loads.validate)
 
     def _flat_generators(self) -> pd.DataFrame:
         p = self.n.generators_t.p.loc[self.snapshot].rename('p')
@@ -64,7 +67,7 @@ class NetworkSnapshot:
         return generators.rename({'bus': 'Bus'}, axis='columns')\
             .rename_axis('quantities', axis='columns')
 
-    def _generators(self) -> pd.DataFrame:
+    def _generators(self) -> DataFrame[Generators]:
         """
         :return: A `pandas` DataFrame indexed by the bus ID **and** the generator carrier
         """
@@ -72,4 +75,4 @@ class NetworkSnapshot:
 
         # Replace the current indexing by generator name with a MultiIndex
         # by bus and carrier.
-        return flat_generators.set_index(['Bus', 'carrier'])
+        return flat_generators.set_index(['Bus', 'carrier']).pipe(Generators.validate)
