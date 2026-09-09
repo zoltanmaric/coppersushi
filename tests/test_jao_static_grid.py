@@ -27,11 +27,19 @@ def test_write_and_load_round_trip(tmp_path):
     assert model.branches.is_tieline.any()
 
 
-def test_the_pst_flag_survives_the_csv(tmp_path):
-    """A bool column written as True/False is the round trip's easiest thing to silently invert."""
-    model = written(tmp_path)
-    assert model.transformers[model.transformers.eic == "19T0000000063830"].is_pst.all()
-    assert not model.transformers[model.transformers.eic == "30T-ROSI400AT--1"].is_pst.any()
+def test_the_boolean_flags_survive_the_csv(tmp_path):
+    """Bool columns written as True/False are the round trip's easiest thing to silently invert."""
+    tr = written(tmp_path).transformers.set_index("eic")
+    assert tr.loc["99T-BRAVO-PS001B"].is_pst
+    assert not tr.loc["99T-CHARL-TR001C"].is_pst
+    assert not tr.loc["99T-FOXTR-TR001F"].x_physical
+    assert tr.loc["99T-CHARL-TR001C"].x_physical
+
+
+def test_a_blank_eic_survives_the_csv_as_missing_rather_than_the_string_nan(tmp_path):
+    branches = written(tmp_path).branches
+    assert branches.eic.isna().sum() == 2
+    assert not branches.eic.eq("nan").any()
 
 
 def test_a_short_download_is_refused():
@@ -55,9 +63,6 @@ def test_a_workbook_missing_a_sheet_is_refused():
         jao_static_grid.check_workbook("2024-03-29", "20240329_x.xlsx", ["Lines", "Transformers"])
 
 
-def test_the_committed_release_is_the_one_in_force_on_the_day():
-    model = jao_static_grid.load_release()
-    assert len(model.transformers) == 520
-    elements = pd.read_csv(REPO / "data" / "jao" / "2024-08-29" / "elements.csv")
-    monitored = set(elements[elements.element_type.isin(("Transformer", "PST"))].eic)
-    assert monitored <= set(model.transformers.eic)
+def test_the_release_directory_is_named_for_the_release_not_the_upload_month():
+    assert jao_static_grid.release_dir(static_grid.RELEASE).name == "2024-03-29"
+    assert jao_static_grid.RELEASES[static_grid.RELEASE].workbook.startswith("20240329")

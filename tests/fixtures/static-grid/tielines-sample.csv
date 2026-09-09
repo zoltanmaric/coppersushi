@@ -1,11 +1,5 @@
-NE_name,EIC_Code,TSO,Full_name,Full_name.1,Voltage_level(kV),Period 1,Period 2,Period 3,Period 4,Period 5,Period 6,Fixed,DLRmin(A),DLRmax(A),Resistance_R(Ω),Reactance_X(Ω),Susceptance_B(μS),Length_(km),Comment
-Bentwisch - Bjaeverskov (DC cable),10T-DE-DK-00005A,50HERTZ,Bentwisch,Bjaeverskov,380,,,,,,,1500,,,,,,,
-Vierraden - Krajnik 507,10T-DE-PL-000039,50HERTZ,Vierraden,Krajnik,380,,,,,,,2520,,,0.35,3.49,57.17699,13.1,Tie-line to PL (PSE)
-Vierraden - Krajnik 508,10T-DE-PL-000047,50HERTZ,Vierraden,Krajnik,380,,,,,,,2520,,,0.35,3.49,57.17699,13.1,Tie-line to PL (PSE)
-Röhrsdorf - Hradec 445,10T-CZ-DE-00002U,50HERTZ,Röhrsdorf,Hradec Vychod,380,,,,,,,2520,,,1.23,10.945,174.8296,51.9,Tie-line to CZ (CEPS)
-Röhrsdorf - Hradec 446,10T-CZ-DE-00003S,50HERTZ,Röhrsdorf,Hradec Vychod,380,,,,,,,2520,,,1.23,10.945,174.8296,51.9,Tie-line to CZ (CEPS)
-Kainachtal - Maribor 473,10T-AT-SI-00001T,APG,Kainachtal,Maribor,380,,,,,,,1920,,,0.725,9.05,105.9973,33.7,Tieline between AT-SI.
-St.Peter - Pleinting 258,10T-AT-DE-000037,APG,St.Peter,Pleinting,220,,,,,,,1350,,,0.134,0.698,9.364,1.9,Tieline between AT-DE.
-Obersielach - Podlog 247,10T-AT-SI-00003P,APG,Obersielach,Podlog,220,,,,,,,920,,,1.99,13.44,93.03827,19.6,Tieline between AT-SI.
-MAASBRACHT – VAN EYCK BLACK/27,10T-BE-NL-00002G,ELIA,VAN EYCK,Maasbracht,380,2448.32,2317.1600000000003,2186,2317.1600000000003,2448.32,,,2186,2570.7360000000003,0.1365705,1.57575,22.88,5.5,Tie-line to NL (TenneT_NL) 
-Beznau - Tiengen AARE O,10T-CH-DE-000034,AMPRION GMBH,Beznau,Tiengen,220,1792,1792,2187,-,-,-,-,-,-,0.245,1.91,16.2,5.0,Tie-line to Switzerland (SWISSGRID)
+NE_name,EIC_Code,TSO,Full_name,Full_name,Voltage_level(kV),Period 1,Period 2,Period 3,Period 4,Period 5,Period 6,Fixed,DLRmin(A),DLRmax(A),Resistance_R(Ω),Reactance_X(Ω),Susceptance_B(μS),Length_(km),Comment
+Victor - Whiskey (DC cable),99T-VW-DC00001V,VICTORTSO,VICTOR,WHISKEY,400,,,,,,,1500.0,,,,,,100.0,
+Xray - Yankee 400,99T-XY-000001X,XRAYTSO,XRAY,YANKEE,400,1792,1792,2187,-,-,-,-,,,1.2,14.0,120.0,40.0,
+Zulu - Alfa 380,99T-ZA-000001Z,ZULUTSO,ZULU,ALFA,380,,,,,,,2520.0,,,0.5,6.0,70.0,15.0,
+Zulu - Alfa 380,99T-ZA-000001Z,ALFATSO,ZULU,ALFA,380,,,,,,,2520.0,,,0.5,6.0,70.0,15.0,

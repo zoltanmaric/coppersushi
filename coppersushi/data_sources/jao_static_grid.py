@@ -2,8 +2,12 @@
 
 A release is a zip of a handbook, a map and one workbook, published at a stable URL under
 `https://www.jao.eu/sites/default/files/`. Every release back to the 1st stays downloadable
-under an `outdated_` prefix, so the derived CSVs are committed and the workbook is not:
-provenance is the URL plus the workbook's own date.
+under an `outdated_` prefix, so provenance is the URL plus the workbook's own date.
+
+**Nothing derived from the workbook is committed.** JAO's terms of use reserve every right
+of reproduction and permit only "internal information purposes", so neither the workbook nor
+the tables built from it may be redistributed. `fetch` is the only way to obtain them, and it
+writes into a gitignored `data/` — anyone reproducing this work runs it.
 
 `coppersushi/data_sources/jao.py` is untouched by this. That module reads the publication
 tool — what the grid *did* in a given hour; this one reads what the equipment *is*. Two

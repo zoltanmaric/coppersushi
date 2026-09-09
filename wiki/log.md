@@ -21,8 +21,10 @@ response value was retained.
 
 ## [2026-09-10] change | JAO's Static Grid Model: real transformer ratings and impedances
 The Core Static Grid Model (5th release, 2024-03-29 — the one in force on 2024-08-29) fetched as one
-1.7 MB zip and reduced to `data/jao-static-grid/2024-03-29/`: 520 transformers (136 of them phase
-shifters) and 2,967 branches (2,633 lines, 334 tie-lines), 449 KB. `EIC_Code` is the key the
+1.7 MB zip and reduced to 520 transformers (136 of them phase shifters) and 2,967 branches (2,633
+lines, 334 tie-lines). Nothing derived from it is committed: JAO's terms reserve every right of
+reproduction and permit only internal use, so `jao_static_grid.fetch` writes into a gitignored
+`data/jao-static-grid/<release>/` and is the only way to obtain the tables. `EIC_Code` is the key the
 publication feed already carries, and 103 of the day's 106 element EICs join, including all 17
 monitored transformers and phase shifters.
 Four quirks measured. The real column names are on the second row, under a merged banner. The current
