@@ -2,7 +2,7 @@
 
 **Issued by** JAO, the Joint Allocation Office, as the handbook Article 25 of the Core day-ahead capacity calculation methodology requires alongside the publication platform. Version 1.8, December 2022: [PDF, 29 pages](https://publicationtool.jao.eu/PublicationHandbook/Core_PublicationTool_Handbook_v1.8.pdf). It is the data dictionary for [publicationtool.jao.eu/core](https://publicationtool.jao.eu/core/) and its web service at `/core/api`. An intraday counterpart exists ([Core IDCC handbook v1.6, October 2025](https://www.jao.eu/sites/default/files/2025-10/Core_IDCC_PublicationTool_Handbook_v1.6.pdf)).
 
-**Draws on it:** [specs/jao-grid](../specs/jao-grid.md), [specs/core-congestion-forecast](../specs/core-congestion-forecast.md), [core-capacity-calculation](../core-capacity-calculation.md).
+**Draws on it:** [specs/jao-grid](../specs/jao-grid.md), [specs/core-congestion-forecast](../specs/core-congestion-forecast.md), [core-day-ahead-capacity-calculation](../core-day-ahead-capacity-calculation.md).
 
 ## What it settles
 

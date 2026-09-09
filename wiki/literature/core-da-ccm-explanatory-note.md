@@ -2,7 +2,7 @@
 
 **Issued by** the sixteen Core TSOs, 4 June 2018, alongside their methodology proposal under Article 20 of the CACM Regulation (EU) 2015/1222. Hosted by ACER: [PDF, 37 pages](https://acer.europa.eu/sites/default/files/documents/en/Electricity/MARKET-CODES/CAPACITY-ALLOCATION-AND-CONGESTION-MANAGEMENT/16%20CCM/Action%204%20-%20CCM%20Core%20explanatory%20document.pdf). The legal text it explains is the Core day-ahead capacity calculation methodology, approved by [ACER Decision 02/2019](https://www.acer.europa.eu/sites/default/files/documents/Individual%20Decisions_annex/Annex%20Ia%20-%20Decision%20on%20Core%20CCM_0.pdf) and amended four times since, most recently by [ACER Decision 10/2026](https://www.acer.europa.eu/sites/default/files/documents/Individual%20Decisions/ACER-Decision-10-2026-Core-DayAhead-CCM-Amendment.pdf) of 16 July 2026, whose [Annex II](https://www.acer.europa.eu/sites/default/files/documents/Individual%20Decisions_annex/ACER-Decision-10-2026-Core-DayAhead-CCM-Amendment-Annex-II.pdf) is the consolidated methodology in force. This note predates go-live (8 June 2022); see "What changed since" below.
 
-**Draws on it:** [core-capacity-calculation](../core-capacity-calculation.md), [flow-based-market-coupling](../flow-based-market-coupling.md), [specs/jao-grid](../specs/jao-grid.md), [specs/core-congestion-forecast](../specs/core-congestion-forecast.md).
+**Draws on it:** [core-day-ahead-capacity-calculation](../core-day-ahead-capacity-calculation.md), [flow-based-market-coupling](../flow-based-market-coupling.md), [specs/jao-grid](../specs/jao-grid.md), [specs/core-congestion-forecast](../specs/core-congestion-forecast.md).
 
 ## The process it describes
 

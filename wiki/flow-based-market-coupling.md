@@ -39,7 +39,7 @@ Nobody booked the 300 MW crossing the Netherlands and Belgium. Their lines carry
 
 ### How a TSO arrives at the number
 
-The same load-flow study that starts flow-based coupling ([core-capacity-calculation](core-capacity-calculation.md)), with a different last step. The operators on both sides push a growing exchange from A to B through a forecast of tomorrow's grid, assuming which plants in A ramp up and which in B ramp down, and stop at the first limit: a line at its thermal rating, a line that would overload if some other line tripped, or on some borders a voltage or stability limit found in separate dynamic studies. That exchange is the *total transfer capacity*. A reliability margin for forecast error comes off it; the result is the NTC. Capacity already sold as long-term rights comes off next; what is left is the *available transfer capacity* the auction gets. Each side computes its own number and the lower one applies.
+The same load-flow study that starts flow-based coupling ([core-day-ahead-capacity-calculation](core-day-ahead-capacity-calculation.md)), with a different last step. The operators on both sides push a growing exchange from A to B through a forecast of tomorrow's grid, assuming which plants in A ramp up and which in B ramp down, and stop at the first limit: a line at its thermal rating, a line that would overload if some other line tripped, or on some borders a voltage or stability limit found in separate dynamic studies. That exchange is the *total transfer capacity*. A reliability margin for forecast error comes off it; the result is the NTC. Capacity already sold as long-term rights comes off next; what is left is the *available transfer capacity* the auction gets. Each side computes its own number and the lower one applies.
 
 NTC freezes one scenario for every other border, finds where this border's pipe would burst under it, and publishes that single number. Flow-based publishes the lines and their sensitivities and lets the market pick the combination. On Spain–France, voltage and stability constraints can hold capacity well below what the interconnectors could carry thermally, even though the offered capacity varies.
 
@@ -108,7 +108,7 @@ Flow-based coupling started in Central Western Europe in 2015. It covers the **C
 
 ## Day-ahead timeline, Core, CET
 
-| D-2 | TSOs' grid models merged and the domain computed ([core-capacity-calculation](core-capacity-calculation.md)) |
+| D-2 | TSOs' grid models merged and the domain computed ([core-day-ahead-capacity-calculation](core-day-ahead-capacity-calculation.md)) |
 |---|---|
 | D-1 ≈ 10:30 | JAO publishes the elements, PTDFs and margins for tomorrow |
 | D-1 12:00 | Bids close |

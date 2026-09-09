@@ -2,7 +2,7 @@
 
 **Issued by** the NEMOs, the nominated electricity market operators (power exchanges) that own and operate the single day-ahead coupling algorithm, and published by their NEMO Committee. Edition of 18 December 2025: [PDF, 90 pages](https://www.nemo-committee.eu/assets/files/euphemia-public-description.pdf). Mandated by the algorithm methodology (ACER Decision 04/2020, Article 4.18). The document's copyright notice forbids reproduction, so this page paraphrases and does not quote.
 
-**Draws on it:** [flow-based-market-coupling](../flow-based-market-coupling.md), [core-capacity-calculation](../core-capacity-calculation.md), [specs/core-congestion-forecast](../specs/core-congestion-forecast.md).
+**Draws on it:** [flow-based-market-coupling](../flow-based-market-coupling.md), [core-day-ahead-capacity-calculation](../core-day-ahead-capacity-calculation.md), [specs/core-congestion-forecast](../specs/core-congestion-forecast.md).
 
 ## What it settles
 

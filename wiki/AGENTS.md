@@ -6,6 +6,8 @@
 
 - **name-mystery** — Never explain the project's name prominently. The mystery is part of the intrigue: no etymology in the README, the wiki index, or the app itself. A discreet note deep in a wiki page is acceptable.
 
+- **page-names** — Name a page so a reader who has forgotten the project knows what it is from the file name alone: the domain's own term for the thing, or a specific noun phrase, never a string of generic words. Rename when a name proves unclear; git keeps the history.
+
 - **relative-time** — No relative time — "today", "currently", "recently", "soon" — anchor it: "as of 2026-09-08" (Wikipedia's [MOS:RELTIME](https://en.wikipedia.org/wiki/Wikipedia:Manual_of_Style/Words_to_watch#Relative_time_references)).
 
 - **what-is** — Pages state what is. What was, what changed and why live in `log.md` and git — no "scrapped", "formerly" or "superseded" narratives on pages. Spell out acronyms on first use.
