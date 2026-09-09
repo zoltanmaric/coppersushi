@@ -1220,6 +1220,9 @@ hour,eic,direction,cont_name,branch_eic,branch_name,substation_from,substation_t
 2024-08-29 05:00:00+00:00,10T1001C--00036X,OPPOSITE,Westtirol - Silz 413 Westtitrol - Silz 413,10T1001C--00035Z,NA,NA,NA,
 2024-08-29 05:00:00+00:00,10T-AT-CZ-00003X,OPPOSITE,Slavetice - Durnrohr - V438  Duernrohr 1 - Slavetice 438,10T-AT-CZ-00004V,Slavetice - Durnrohr - V438,Slavetice,Durnrohr,TieLine
 2024-08-29 05:00:00+00:00,10T-AT-CZ-00003X,OPPOSITE,Slavetice - Durnrohr - V438  Duernrohr 1 - Slavetice 438,10T-AT-CZ-00004V,Duernrohr 1 - Slavetice 438,Duernrohr 1,Slavetice,TieLine
+2024-08-29 05:00:00+00:00,14T-220-0-00455F,,St. Peter 2 - Salzburg 456 Salzburg - Salzach 232B_VSZ Salzburg - Salzach 232B_VSZ,14T-220-0-T0456O,St. Peter 2 - Salzburg 456,St. Peter,Salzburg,Line
+2024-08-29 05:00:00+00:00,14T-220-0-00455F,,St. Peter 2 - Salzburg 456 Salzburg - Salzach 232B_VSZ Salzburg - Salzach 232B_VSZ,14T-220-0-T0456O,Salzburg - Salzach 232B_VSZ,Salzach,Salzburg,Line
+2024-08-29 05:00:00+00:00,14T-220-0-00455F,,St. Peter 2 - Salzburg 456 Salzburg - Salzach 232B_VSZ Salzburg - Salzach 232B_VSZ,14T-220-0-T0456O,Salzburg - Salzach 232B_VSZ,Salzach,Salzburg,Line
 2024-08-29 05:00:00+00:00,10T-AT-SI-00001T,OPPOSITE,Kainachtal - Maribor 474 400 kV Maribor - Kainachtal 2,10T-AT-SI-00002R,Kainachtal - Maribor 474,Kainachtal,Maribor,TieLine
 2024-08-29 05:00:00+00:00,10T-AT-SI-00001T,OPPOSITE,Kainachtal - Maribor 474 400 kV Maribor - Kainachtal 2,10T-AT-SI-00002R,400 kV Maribor - Kainachtal 2,Maribor,Kainachtal,TieLine
 2024-08-29 05:00:00+00:00,14T-22220-TAPSTO,OPPOSITE,Tauern - Weissenbach 221,14T-220-0-002213,Tauern - Weissenbach 221,Tauern,Weissenbach,Line
@@ -1789,6 +1792,9 @@ hour,eic,direction,cont_name,branch_eic,branch_name,substation_from,substation_t
 2024-08-29 08:00:00+00:00,10T1001C--00035Z,OPPOSITE,Westtirol - Silz 414 Westtitrol - Silz 414,10T1001C--00036X,NA,NA,NA,
 2024-08-29 08:00:00+00:00,10T-AT-CZ-00003X,OPPOSITE,Slavetice - Durnrohr - V438  Duernrohr 1 - Slavetice 438,10T-AT-CZ-00004V,Slavetice - Durnrohr - V438,Slavetice,Durnrohr,TieLine
 2024-08-29 08:00:00+00:00,10T-AT-CZ-00003X,OPPOSITE,Slavetice - Durnrohr - V438  Duernrohr 1 - Slavetice 438,10T-AT-CZ-00004V,Duernrohr 1 - Slavetice 438,Duernrohr 1,Slavetice,TieLine
+2024-08-29 08:00:00+00:00,14T-220-0-00455F,,St. Peter 2 - Salzburg 456 Salzburg - Salzach 232B_VSZ Salzburg - Salzach 232B_VSZ,14T-220-0-T0456O,St. Peter 2 - Salzburg 456,St. Peter,Salzburg,Line
+2024-08-29 08:00:00+00:00,14T-220-0-00455F,,St. Peter 2 - Salzburg 456 Salzburg - Salzach 232B_VSZ Salzburg - Salzach 232B_VSZ,14T-220-0-T0456O,Salzburg - Salzach 232B_VSZ,Salzach,Salzburg,Line
+2024-08-29 08:00:00+00:00,14T-220-0-00455F,,St. Peter 2 - Salzburg 456 Salzburg - Salzach 232B_VSZ Salzburg - Salzach 232B_VSZ,14T-220-0-T0456O,Salzburg - Salzach 232B_VSZ,Salzach,Salzburg,Line
 2024-08-29 08:00:00+00:00,10T-AT-SI-00001T,OPPOSITE,Kainachtal - Maribor 474 400 kV Maribor - Kainachtal 2,10T-AT-SI-00002R,Kainachtal - Maribor 474,Kainachtal,Maribor,TieLine
 2024-08-29 08:00:00+00:00,10T-AT-SI-00001T,OPPOSITE,Kainachtal - Maribor 474 400 kV Maribor - Kainachtal 2,10T-AT-SI-00002R,400 kV Maribor - Kainachtal 2,Maribor,Kainachtal,TieLine
 2024-08-29 08:00:00+00:00,14T-38220-WT041O,OPPOSITE,Leupolz - Westtirol 412 Leupolz - Westtirol FUESSN O,10T-AT-DE-10007U,Leupolz - Westtirol 412,Leupolz,Westtirol,TieLine
@@ -1971,6 +1977,9 @@ hour,eic,direction,cont_name,branch_eic,branch_name,substation_from,substation_t
 2024-08-29 09:00:00+00:00,10T1001C--00035Z,OPPOSITE,Westtirol - Silz 414 Westtitrol - Silz 414,10T1001C--00036X,NA,NA,NA,
 2024-08-29 09:00:00+00:00,10T-AT-CZ-00003X,OPPOSITE,Slavetice - Durnrohr - V438  Duernrohr 1 - Slavetice 438,10T-AT-CZ-00004V,Slavetice - Durnrohr - V438,Slavetice,Durnrohr,TieLine
 2024-08-29 09:00:00+00:00,10T-AT-CZ-00003X,OPPOSITE,Slavetice - Durnrohr - V438  Duernrohr 1 - Slavetice 438,10T-AT-CZ-00004V,Duernrohr 1 - Slavetice 438,Duernrohr 1,Slavetice,TieLine
+2024-08-29 09:00:00+00:00,14T-220-0-00455F,,St. Peter 2 - Salzburg 456 Salzburg - Salzach 232B_VSZ Salzburg - Salzach 232B_VSZ,14T-220-0-T0456O,St. Peter 2 - Salzburg 456,St. Peter,Salzburg,Line
+2024-08-29 09:00:00+00:00,14T-220-0-00455F,,St. Peter 2 - Salzburg 456 Salzburg - Salzach 232B_VSZ Salzburg - Salzach 232B_VSZ,14T-220-0-T0456O,Salzburg - Salzach 232B_VSZ,Salzach,Salzburg,Line
+2024-08-29 09:00:00+00:00,14T-220-0-00455F,,St. Peter 2 - Salzburg 456 Salzburg - Salzach 232B_VSZ Salzburg - Salzach 232B_VSZ,14T-220-0-T0456O,Salzburg - Salzach 232B_VSZ,Salzach,Salzburg,Line
 2024-08-29 09:00:00+00:00,14T-38220-WT041O,OPPOSITE,Leupolz - Westtirol 412 Leupolz - Westtirol FUESSN O,10T-AT-DE-10007U,Leupolz - Westtirol 412,Leupolz,Westtirol,TieLine
 2024-08-29 09:00:00+00:00,14T-38220-WT041O,OPPOSITE,Leupolz - Westtirol 412 Leupolz - Westtirol FUESSN O,10T-AT-DE-10007U,Leupolz - Westtirol FUESSN O,Leupolz,Westtirol,TieLine
 2024-08-29 09:00:00+00:00,14T-38220-WT041O,OPPOSITE,Buers - Westtirol ws (421) Westtirol 1 - Buers 421,10T-AT-DE-000053,Buers - Westtirol ws (421),Buers,Westtirol,TieLine
@@ -3378,6 +3387,9 @@ hour,eic,direction,cont_name,branch_eic,branch_name,substation_from,substation_t
 2024-08-29 17:00:00+00:00,14T-220-0-0273BO,DIRECT,Strass - Thaur 274B,14T-220-0-0274BL,Strass - Thaur 274B,Strass,Thaur,Line
 2024-08-29 17:00:00+00:00,10T-AT-CZ-00003X,OPPOSITE,Slavetice - Durnrohr - V438  Duernrohr 1 - Slavetice 438,10T-AT-CZ-00004V,Slavetice - Durnrohr - V438,Slavetice,Durnrohr,TieLine
 2024-08-29 17:00:00+00:00,10T-AT-CZ-00003X,OPPOSITE,Slavetice - Durnrohr - V438  Duernrohr 1 - Slavetice 438,10T-AT-CZ-00004V,Duernrohr 1 - Slavetice 438,Duernrohr 1,Slavetice,TieLine
+2024-08-29 17:00:00+00:00,14T-220-0-00455F,,St. Peter 2 - Salzburg 456 Salzburg - Salzach 232B_VSZ Salzburg - Salzach 232B_VSZ,14T-220-0-T0456O,St. Peter 2 - Salzburg 456,St. Peter,Salzburg,Line
+2024-08-29 17:00:00+00:00,14T-220-0-00455F,,St. Peter 2 - Salzburg 456 Salzburg - Salzach 232B_VSZ Salzburg - Salzach 232B_VSZ,14T-220-0-T0456O,Salzburg - Salzach 232B_VSZ,Salzach,Salzburg,Line
+2024-08-29 17:00:00+00:00,14T-220-0-00455F,,St. Peter 2 - Salzburg 456 Salzburg - Salzach 232B_VSZ Salzburg - Salzach 232B_VSZ,14T-220-0-T0456O,Salzburg - Salzach 232B_VSZ,Salzach,Salzburg,Line
 2024-08-29 17:00:00+00:00,10T-AT-SI-00001T,OPPOSITE,Kainachtal - Maribor 474 400 kV Maribor - Kainachtal 2,10T-AT-SI-00002R,Kainachtal - Maribor 474,Kainachtal,Maribor,TieLine
 2024-08-29 17:00:00+00:00,10T-AT-SI-00001T,OPPOSITE,Kainachtal - Maribor 474 400 kV Maribor - Kainachtal 2,10T-AT-SI-00002R,400 kV Maribor - Kainachtal 2,Maribor,Kainachtal,TieLine
 2024-08-29 17:00:00+00:00,14T-380-0-475SRK,OPPOSITE,Kainachtal - Y_Mellach 476KT,14T-380-0-004763,Kainachtal - Y_Mellach 476KT,Kainachtal,Y_Mellach,Line
