@@ -118,6 +118,7 @@ Checked on JAO's own numbers for 2024-08-29: the shadow-price page's PTDFs times
 The exchanges publish each zone's aggregated curves, all NEMOs combined, since October 2021, as paid internal-use subscriptions: EPEX per market area via the EEX webshop, Nord Pool per region; seven Core zones covered, none of CZ, HU, HR, SI, SK. Recorded on flow-based-market-coupling with why the cost proxy must carry the day's allowance price: at about €70 a tonne it re-orders coal and gas.
 
 ## [2026-09-09] query | The day-ahead chain step by step, and one row of the domain
+Vocabulary entries are one-token `###` headings so GitHub and Obsidian resolve the same links. New wiki rule `term-anchors`, after D2CF was met cold in the spec the same day.
 
 Review follow-up: the standard median of first-hour slack is 768 MW, the average of the two middle rows, not the previously reported upper-middle value of 775 MW. The page now quotes JAO's full contingency name, links the Core-versus-whole-market constraint distinction, and restores Lixhe–Gramme's 12 % Belgium–Netherlands sensitivity and −0.421 ALEGrO coefficient. The post-nomination 20 % floor remains: Equation 19 applies it to final RAM and the following paragraph permits a lower TSO factor only for operational security. The explanatory-note diagram now distinguishes presolve and the 08:00 pre-final publication from nominations and the 10:30 final publication; its Central Europe note records that the cited decisions establish the merger but do not establish its application date.
 

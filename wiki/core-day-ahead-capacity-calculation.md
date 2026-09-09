@@ -28,23 +28,91 @@ flowchart LR
 
 ## Vocabulary
 
-- **D, D-1, D-2.** D is the delivery day. The auction for D clears on D-1 at noon. The grid models for D are built on D-2.
-- **Net position.** A zone's exports minus imports in an hour, in MW. The auction's decision variables, one per hub and hour.
-- **PTDF, power transfer distribution factor.** The MW that land on an element per MW of a hub's net position, one number per row and hub: the row's left-hand side.
-- **Hub.** JAO's word for anything with a net position: the twelve Core zones, and two virtual hubs at the ends of ALEGrO, the direct-current cable between Belgium and Germany (`ALBE` at Lixhe, `ALDE` at Oberzier). A cable inside a meshed grid carries whatever it is told to, so the auction trades it like a border of its own. PTDF columns are named per hub.
-- **The domain.** The set of linear constraints the auction must respect: one row per monitored element under an assumed outage, reading "PTDF · net positions ≤ RAM", plus rows that cap a hub's net position. JAO publishes three versions for D on D-1: initial at 01:15, pre-final at 08:00, final at 10:30. JAO's publication tool is a website with one table per dataset and a web service behind it; "page" below means one of those tables.
-- **Critical network element, with contingency.** A line or transformer a TSO monitors is a critical network element. Paired with a contingency, the assumed outage of some other element, it is a critical network element with contingency, one row of the domain. Of the 116 presolved rows of a sampled hour, 105 were such pairs, 3 were elements alone, and 8 were no element at all: the four external constraints and four equality rows below.
-- **External constraint.** A domain row with no network element: it caps a hub's **Core** net position with one PTDF of ±1. On 2024-08-29 the domain contained four, the ±1,000 MW bounds on each ALEGrO virtual hub. Beside them were four **equality rows**, pairs of ≤ 0 and ≥ 0 that made all fourteen Core hub positions sum to zero and the two ALEGrO positions sum to zero. A separate allocation-constraints feed can cap a zone's **whole-market** net position, including trade outside Core ([JAO's distinction](literature/jao-core-publication-handbook.md)): on 2024-08-29 Poland was capped in every hour and Belgium's import cap never applied.
-- **Rating and margins.** `fmax` is the element's maximum flow in MW, from its current rating in amperes and its voltage; fixed, seasonal, or dynamic, changing hour by hour with the weather. The reliability margin `frm` is held back for forecast error. `ram`, the remaining available margin, is what is left for cross-zonal trade after the base flow and the margins are deducted: the right-hand side of the row.
-- **Presolve.** Dropping every row the other rows already imply. About 120 of some 11,500 rows an hour survive, flagged `presolved`; only they reach the auction.
-- **Shadow price.** The marginal value of one more MW of RAM on a binding flow-based row, in €/MW, in EUPHEMIA's price calculation after its order selection is fixed. It is not a promise that rerunning the non-convex auction with one more MW would raise total welfare by exactly that amount. JAO publishes these values for the rows in its shadow-price feed, not for every kind of market constraint; the first hour is worked through in [Binding](#binding).
-- **Price spread.** The difference between two zones' day-ahead prices in an hour, published per border.
-- **Vertical load.** The load the transmission grid sees at its substations: consumption minus the generation connected below it, in distribution grids, called embedded generation (rooftop solar, small wind and hydro). Not total consumption: for Germany at noon it is a tenth of it.
-- **Phase-shifting transformer.** A transformer whose tap changer shifts the voltage angle and so steers power between parallel paths. Its tap position is an hourly operational setting, like a valve.
-- **Generation shift key.** For each zone, the shares by which a change in the zone's net position is spread over its plants. It turns nodal sensitivities into zonal PTDFs and is the auction's only notion of what happens inside a zone.
-- **Remedial action.** A measure a TSO can take to relieve an element: a phase-shifter tap or a topology change, which cost nothing, or redispatching plants, which costs money. The domain computation uses only the costless kind.
-- **D2CF and RefProg.** Two JAO pages published with the final domain. D2CF, the D-2 congestion forecast, gives per zone the vertical load, generation and net position from the TSOs' grid models. RefProg, the reference programme, gives the cross-border exchanges assumed when the models were merged.
+Each term is a heading of one token, hyphenated when it takes two words, so that one link resolves both on GitHub and in Obsidian: `core-day-ahead-capacity-calculation.md#d2cf`, `#allocation-constraint`.
 
+### Timeline
+
+D is the delivery day. The auction for D clears on D-1 at noon. The grid models for D are built on D-2.
+
+### Net-position
+
+A zone's exports minus imports in an hour, in MW. The auction's decision variables, one per hub and hour.
+
+### PTDF
+
+Power transfer distribution factor: the MW that land on an element per MW of a hub's net position, one number per row and hub. The row's left-hand side.
+
+### Hub
+
+JAO's word for anything with a net position: the twelve Core zones, and two virtual hubs at the ends of ALEGrO, the direct-current cable between Belgium and Germany (`ALBE` at Lixhe, `ALDE` at Oberzier). A cable inside a meshed grid carries whatever it is told to, so the auction trades it like a border of its own. PTDF columns are named per hub.
+
+### Domain
+
+The set of linear constraints the auction must respect: one row per monitored element under an assumed outage, reading "PTDF · net positions ≤ RAM", plus rows that cap a hub's net position. JAO publishes three versions for D on D-1: initial at 01:15, pre-final at 08:00, final at 10:30. JAO's publication tool is a website with one table per dataset and a web service behind it; "page" below means one of those tables.
+
+### CNEC
+
+A line or transformer a TSO monitors is a critical network element. Paired with a contingency, the assumed outage of some other element, it is a critical network element with contingency, one row of the domain. Of the 116 presolved rows of a sampled hour, 105 were such pairs, 3 were elements alone, and 8 were no element at all: the four external constraints and four equality rows below.
+
+### External-constraint
+
+A domain row with no network element: it caps a hub's **Core** net position with one PTDF of ±1. On 2024-08-29 the domain contained four, the ±1,000 MW bounds on each ALEGrO virtual hub.
+
+### Equality-rows
+
+Four rows beside the external constraints, pairs of ≤ 0 and ≥ 0 that made all fourteen Core hub positions sum to zero and the two ALEGrO positions sum to zero.
+
+### Allocation-constraint
+
+A separate feed that can cap a zone's **whole-market** net position, including trade outside Core ([JAO's distinction](literature/jao-core-publication-handbook.md)). On 2024-08-29 Poland was capped in every hour and Belgium's import cap never applied.
+
+### Rating
+
+`fmax`, the element's maximum flow in MW, from its current rating in amperes and its voltage. Fixed, seasonal, or dynamic, changing hour by hour with the weather.
+
+### FRM
+
+Flow reliability margin, `frm`: the part of the rating held back for forecast error.
+
+### RAM
+
+Remaining available margin, `ram`: what is left for cross-zonal trade after the base flow and the margins are deducted from the rating. The right-hand side of the row.
+
+### Presolve
+
+Dropping every row the other rows already imply. About 120 of some 11,500 rows an hour survive, flagged `presolved`; only they reach the auction.
+
+### Shadow-price
+
+The marginal value of one more MW of RAM on a binding flow-based row, in €/MW, in EUPHEMIA's price calculation after its order selection is fixed. It is not a promise that rerunning the non-convex auction with one more MW would raise total welfare by exactly that amount. JAO publishes these values for the rows in its shadow-price feed, not for every kind of market constraint; the first hour is worked through in [Binding](#binding).
+
+### Spread
+
+Price spread: the difference between two zones' day-ahead prices in an hour, published per border.
+
+### Vertical-load
+
+The load the transmission grid sees at its substations: consumption minus the generation connected below it, in distribution grids, called embedded generation (rooftop solar, small wind and hydro). Not total consumption: for Germany at noon it is a tenth of it.
+
+### PST
+
+Phase-shifting transformer: a transformer whose tap changer shifts the voltage angle and so steers power between parallel paths. Its tap position is an hourly operational setting, like a valve.
+
+### GSK
+
+Generation shift key: for each zone, the shares by which a change in the zone's net position is spread over its plants. It turns nodal sensitivities into zonal PTDFs and is the auction's only notion of what happens inside a zone.
+
+### Remedial-action
+
+A measure a TSO can take to relieve an element: a phase-shifter tap or a topology change, which cost nothing, or redispatching plants, which costs money. The domain computation uses only the costless kind.
+
+### D2CF
+
+The D-2 congestion forecast, a JAO page published with the final domain: per zone, the vertical load, generation and net position from the TSOs' grid models for D.
+
+### RefProg
+
+The reference programme, a JAO page published with the final domain: the cross-border exchanges assumed when the TSOs' models were merged.
 ## One row of the domain
 
 The thread begins with one constraint and stays with it through the auction. APG monitors the 220 kV Obersielach–Podlog tie-line from Austria to Slovenia under the assumed outage of Maribor–Kainachtal 1. Its direct-direction row reached the auction at 00:00 CEST on both delivery days. The columns are ordered by the step that sets them, not by JAO's schema.
