@@ -31,7 +31,7 @@ Out come the net positions, the rows with a non-zero dual, which are the binding
 3. **The check.** Clear our bids against 29 August's own rows, the constraints the market actually had. Whatever differs from 13:00 is the bids' doing, or the LP's omissions: the long-term domain and EUPHEMIA's block and complex orders. Printed, not on the page. If this is already far off, the forecast cannot be read.
 4. **The forecast.** The same LP on 28 August's rows. Out: per hour, the binding constraints by name, their shadow prices, the zonal prices and the implied spreads, and each zone's net position.
 5. **Our base case.** Inside each zone, plants by cost fill the load plus the forecast's net position, no line limits anywhere; the outside at RefProg; ALEGrO at the forecast's hub value. A DC load flow of that dispatch on the full grid gives the flow on every line. Nothing is capped and nothing is flagged: this is the physical picture of the forecast trade, the way the TSOs build their own base case from forecast schedules.
-6. **The page.** Left: jao-grid's `/jao/‹day›` map, JAO's binding elements coloured by shadow price. Right: our grid with lines coloured by loading from step 5, as the app already draws a solved network, and the forecast's binding constraints listed by name with their shadow prices. One hour slider for both. Beneath: the price differences, JAO's beside ours. Then the written account.
+6. **The page.** Left: jao-grid's `/jao/‹day›` map, JAO's binding elements coloured by shadow price. Right: our grid with lines coloured by loading from step 5, as the app already draws a solved network, and the forecast's binding constraints listed by name with their shadow prices. One hour slider for both. Beneath: the twelve zones as a choropleth of the hour's price, ours beside JAO's, both relative to Germany because JAO publishes spreads and not levels, and the price differences as a table. Then the written account, with a screenshot of the page so a later session sees what was shown.
 
 ## Dataflow
 
@@ -49,7 +49,7 @@ flowchart LR
     lp["zonal_clearing<br/>HiGHS: min cost s.t. balances, the rows, Poland's cap → net positions, binding rows, shadow prices, zonal prices"]
     forecast["binding_forecast<br/>per hour: binding rows by name, shadow prices, implied spreads, net positions"]
     base["base_case<br/>per zone, plants by cost fill load plus the forecast's net position; RefProg outside; DC load flow on the full grid, no limits → flow per line"]
-    page["forecast_page<br/>/forecast/‹day›: JAO's map left, our load flow right with the binding rows listed, one hour slider; spreads beneath"]
+    page["forecast_page<br/>/forecast/‹day›: JAO's map left, our load flow right with the binding rows listed, one hour slider; zonal price choropleths and the spread table beneath"]
 
     grid --> bids --> lp
     rows_28 --> lp
@@ -69,8 +69,8 @@ The LP is linopy on HiGHS, already in the environment, with no PyPSA network in 
 ## Acceptance criteria
 
 - [ ] One command produces, for 29 August, the check and the forecast, binding constraints with shadow prices and zonal prices per hour, and the base case's flow per line, from committed inputs.
-- [ ] `/forecast/2024-08-29` shows JAO's binding elements on the left, our load flow and binding constraints on the right, one hour slider, and the price differences beneath.
-- [ ] A written explanation of what matches and what does not, on [backtest-2024-08-29](../backtest-2024-08-29.md) or a sibling page.
+- [ ] `/forecast/2024-08-29` shows JAO's binding elements on the left, our load flow and binding constraints on the right, one hour slider, and beneath them the zonal price choropleths, ours beside JAO's relative to Germany, and the spread table.
+- [ ] A written explanation of what matches and what does not, on [backtest-2024-08-29](../backtest-2024-08-29.md) or a sibling page, with a screenshot of the page under `wiki/images/`.
 - [ ] Spec burned to nothing; findings distilled; this file deleted.
 
 ## Later
