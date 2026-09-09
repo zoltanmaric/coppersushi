@@ -10,6 +10,7 @@ from coppersushi.data_model.network_views import (
     BranchInfo,
     BranchInfoForSnapshot,
     BranchQuantityByComponentAndName,
+    BusCoordinates,
     NodeInfoForSnapshot,
 )
 from coppersushi.snapshot import NetworkSnapshot
@@ -23,6 +24,10 @@ pio.templates.default = "plotly_dark"
 
 
 def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.DataFrame, technology: str = None) -> pd.Series:
+    """`generators_t_attr` stays a bare `pd.DataFrame`: it is a PyPSA time-series panel
+    (snapshots x generators), whose columns are generator names, so no static schema
+    describes it.
+    """
     attribute_by_generators = generators_t_attr.filter(like=technology) if technology else generators_t_attr
 
     # Rename generators columns to their corresponding bus names
@@ -37,7 +42,7 @@ def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.Da
     return attribute_by_buses_sum
 
 
-def get_bus_coordinates(n: pypsa.Network, bus_name: str) -> pd.DataFrame:
+def get_bus_coordinates(n: pypsa.Network, bus_name: str) -> DataFrame[BusCoordinates]:
     """:return: columns matching `data_model.network_views.BusCoordinates`, renamed to
     `<bus_name>_x`/`<bus_name>_y` — not validated against that model since the column
     names it produces depend on `bus_name`.
@@ -54,7 +59,12 @@ epsg3857 = pyproj.Proj('epsg:3857')
 def get_branch_midpoint(branch_info: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
     """Project lat/lon of branch buses to x/y coordinates,
     calculate mid-point between them,
-    project mid-point back to lat/lon coordinates."""
+    project mid-point back to lat/lon coordinates.
+
+    `branch_info` stays a bare `pd.DataFrame`: `get_branch_info` calls this while the
+    frame is still half-built (bus0/bus1 coordinates only), so `BranchInfo` — which
+    also declares `mid_x`/`mid_y`/`p_max`/`direction` — would misdescribe it.
+    """
 
     x0, y0 = epsg3857(longitude=branch_info.bus0_x, latitude=branch_info.bus0_y)
     x1, y1 = epsg3857(longitude=branch_info.bus1_x, latitude=branch_info.bus1_y)
@@ -69,7 +79,11 @@ geodesic = pyproj.Geod(ellps='WGS84')
 
 
 def get_branch_direction(branch_info: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
-    """Branch power flow direction angle (clockwise from North)"""
+    """Branch power flow direction angle (clockwise from North).
+
+    `branch_info` stays a bare `pd.DataFrame` for the same reason as
+    `get_branch_midpoint`: the frame is still missing its `direction` columns here.
+    """
     [direction, inverse_direction, _] = \
         geodesic.inv(branch_info.bus0_x, branch_info.bus0_y, branch_info.bus1_x, branch_info.bus1_y)
     return direction, inverse_direction
@@ -102,6 +116,9 @@ def to_branches_by_component_and_name(
 ) -> DataFrame[BranchQuantityByComponentAndName]:
     """Indexes the given series by component (Link or Line) and branch name.
 
+    `branches` stays a bare `pd.DataFrame`: it is a PyPSA time-series panel
+    (`n.lines_t` & co.) keyed by quantity, with no static schema.
+
     Not validated against `BranchQuantityByComponentAndName`: `quantity` is
     caller-chosen, so the model's `p0` field only documents today's actual call sites
     (always `quantity='p0'`) rather than a constraint the function enforces —
@@ -113,7 +130,7 @@ def to_branches_by_component_and_name(
 
 
 def get_branch_info_for_snapshot(
-        n: pypsa.Network, branch_info: pd.DataFrame, snapshot: pd.Timestamp
+        n: pypsa.Network, branch_info: DataFrame[BranchInfo], snapshot: pd.Timestamp
 ) -> DataFrame[BranchInfoForSnapshot]:
     lines_t_p0 = to_branches_by_component_and_name(n.lines_t, snapshot, 'Line', 'p0')
     links_t_p0 = to_branches_by_component_and_name(n.links_t, snapshot, 'Link', 'p0')
@@ -134,7 +151,7 @@ def get_node_info_for_snapshot(n: pypsa.Network, snapshot: pd.Timestamp) -> Data
     return pd.concat([ns.buses, tooltips_htmls], axis='columns').pipe(NodeInfoForSnapshot.validate)
 
 
-def get_branch_edge(line_info: pd.DataFrame, x_or_y: str) -> pd.Series:
+def get_branch_edge(line_info: DataFrame[BranchInfoForSnapshot], x_or_y: str) -> pd.Series:
     return line_info.apply(lambda row: [row['bus0_' + x_or_y], row['bus1_' + x_or_y], None], axis='columns')
 
 
@@ -165,8 +182,8 @@ def get_tooltip_htmls(ns: NetworkSnapshot) -> 'pd.Series[str]':
 
 
 def create_traces(
-        node_info_t: pd.DataFrame,
-        branch_info_t: pd.DataFrame,
+        node_info_t: DataFrame[NodeInfoForSnapshot],
+        branch_info_t: DataFrame[BranchInfoForSnapshot],
         cmax: float
 ) -> (go.Trace, go.Trace, go.Trace, go.Trace):
     loaded_filter = branch_info_t.branch_loading > 99
@@ -244,6 +261,10 @@ def create_traces(
 
 
 def get_interquartile_range(df: pd.DataFrame) -> pd.DataFrame:
+    """`df` stays a bare `pd.DataFrame`: callers pass arbitrary node-value panels
+    (`n.buses_t.p`, `n.loads_t.p_set`, ...), which share no static schema.
+    """
+
     q1 = np.quantile(df, 0.25)
     q3 = np.quantile(df, 0.75)
     iqr = q3 - q1

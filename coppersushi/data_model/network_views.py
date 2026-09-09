@@ -57,9 +57,8 @@ class BusCoordinates(pa.DataFrameModel):
 
     Produced by `power_flow.get_bus_coordinates`, which renames these columns to
     `<bus_name>_x`/`<bus_name>_y` at call time — so this documents the shape *before*
-    that rename and is deliberately not wired up with `@pa.check_types`: the real
-    column names depend on the caller's `bus_name` argument, which a static model
-    can't express without generating classes dynamically (ruled out by the brief).
+    that rename, and carries no validation: the real column names are built from the
+    caller's `bus_name` argument, which a static schema can't describe.
     """
 
     x: Series[float]  # PyPSA: Bus.x
