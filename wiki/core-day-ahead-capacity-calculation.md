@@ -28,9 +28,7 @@ flowchart LR
 
 ## Vocabulary
 
-Each term is a heading of one token, hyphenated when it takes two words, so that one link resolves both on GitHub and in Obsidian: `core-day-ahead-capacity-calculation.md#d2cf`, `#allocation-constraint`.
-
-### Timeline
+### D-2
 
 D is the delivery day. The auction for D clears on D-1 at noon. The grid models for D are built on D-2.
 
@@ -86,7 +84,7 @@ Dropping every row the other rows already imply. About 120 of some 11,500 rows a
 
 The marginal value of one more MW of RAM on a binding flow-based row, in €/MW, in EUPHEMIA's price calculation after its order selection is fixed. It is not a promise that rerunning the non-convex auction with one more MW would raise total welfare by exactly that amount. JAO publishes these values for the rows in its shadow-price feed, not for every kind of market constraint; the first hour is worked through in [Binding](#binding).
 
-### Spread
+### Price-spread
 
 Price spread: the difference between two zones' day-ahead prices in an hour, published per border.
 
@@ -113,6 +111,7 @@ The D-2 congestion forecast, a JAO page published with the final domain: per zon
 ### RefProg
 
 The reference programme, a JAO page published with the final domain: the cross-border exchanges assumed when the TSOs' models were merged.
+
 ## One row of the domain
 
 The thread begins with one constraint and stays with it through the auction. APG monitors the 220 kV Obersielach–Podlog tie-line from Austria to Slovenia under the assumed outage of Maribor–Kainachtal 1. Its direct-direction row reached the auction at 00:00 CEST on both delivery days. The columns are ordered by the step that sets them, not by JAO's schema.
