@@ -3,9 +3,10 @@
 import ast
 from pathlib import Path
 
-PACKAGE_ROOT = Path(__file__).parents[1] / "coppersushi"
+from coppersushi import PACKAGE
+
+DATA_SOURCES = PACKAGE / "data_sources"  # modules living here are the only ones allowed to touch the world
 ILLEGAL_TRANSFORM = Path(__file__).parent / "fixtures" / "io-boundary" / "illegal_transform.py"
-IO_MODULES = {"networks", "pypsa_eur"}  # the only modules allowed to touch the world
 NAIVE_TIME = Path(__file__).parent / "fixtures" / "naive-time" / "naive_time.py"
 
 # These are the direct APIs the project currently promises to keep in adapters.
@@ -29,7 +30,7 @@ IO_CALLS = {
 
 
 def is_boundary(path: Path) -> bool:
-    return path.stem in IO_MODULES
+    return DATA_SOURCES in path.parents
 
 
 def direct_io_violations(path: Path) -> list[str]:
@@ -54,7 +55,7 @@ def direct_io_violations(path: Path) -> list[str]:
 def test_transformations_do_not_perform_direct_io():
     violations = [
         violation
-        for path in PACKAGE_ROOT.rglob("*.py")
+        for path in PACKAGE.rglob("*.py")
         if not is_boundary(path)
         for violation in direct_io_violations(path)
     ]
@@ -88,7 +89,7 @@ def implicit_timezone_violations(path: Path) -> list[str]:
 def test_timestamps_state_their_timezone():
     violations = [
         violation
-        for path in PACKAGE_ROOT.rglob("*.py")
+        for path in PACKAGE.rglob("*.py")
         for violation in implicit_timezone_violations(path)
     ]
     assert violations == []

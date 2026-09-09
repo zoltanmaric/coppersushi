@@ -7,7 +7,8 @@ from pathlib import Path
 
 import pypsa
 
-REPO = Path(__file__).parents[1]
+from coppersushi import REPO
+
 NETWORKS_DIR = REPO / "networks"
 CANDIDATES_DIR = NETWORKS_DIR / "candidates"  # gitignored
 _CANDIDATE = re.compile(r"opf-(\d{4}-\d{2}-\d{2})-[0-9a-f]{8}-[0-9a-f]{8}-[A-Za-z0-9._-]+")

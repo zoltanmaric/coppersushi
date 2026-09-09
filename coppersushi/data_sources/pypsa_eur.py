@@ -12,9 +12,9 @@ from typing import NamedTuple
 import pandas as pd
 import yaml
 
-from coppersushi import networks, shedding
+from coppersushi import REPO, shedding
+from coppersushi.data_sources import networks
 from coppersushi.market_day import MarketDay
-from coppersushi.networks import REPO
 
 logger = logging.getLogger(__name__)
 

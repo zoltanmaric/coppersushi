@@ -8,7 +8,8 @@ import plotly.graph_objects as go
 from dash import Dash, dcc, html, Input, Output, ctx, no_update
 import dash_bootstrap_components as dbc
 
-from coppersushi import networks, power_flow
+from coppersushi import power_flow
+from coppersushi.data_sources import networks
 
 app = Dash(__name__, title='Copper Sushi 🍣', external_stylesheets=[dbc.themes.DARKLY])
 

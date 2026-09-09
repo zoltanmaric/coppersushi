@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from coppersushi import networks, pypsa_eur
+from coppersushi.data_sources import networks, pypsa_eur
 from coppersushi.market_day import MarketDay
 
 # Upstream's `atlite.default_cutout` in config/config.default.yaml; ours overrides it or inherits it.

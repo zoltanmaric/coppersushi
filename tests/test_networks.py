@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from coppersushi import networks
+from coppersushi.data_sources import networks
 
 FIXTURE = Path(__file__).parent / "fixtures" / "networks" / "v1-sample.nc"
 

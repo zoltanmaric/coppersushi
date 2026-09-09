@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=../../pypsa-eur/config/schema.default.json
 # Copper Sushi's PyPSA-Eur configuration: only what deviates from config.default.yaml.
-# Passed with --configfile by coppersushi/pypsa_eur.py; design in wiki/pypsa-eur-sibling.md.
+# Passed with --configfile by coppersushi/data_sources/pypsa_eur.py; design in wiki/pypsa-eur-sibling.md.
 
 run:
   name: coppersushi
