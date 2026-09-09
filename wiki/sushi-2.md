@@ -27,8 +27,8 @@ flowchart LR
     jao_elements["jao_elements<br/>JAO data + OSM substations → JAO's Core elements matched to our lines and transformers, with limits and shadow prices"]:::planned
     jao_map["jao_map<br/>/jao/‹day› (Dash app)"]:::planned
     trued_network["trued_network<br/>solved_network with JAO limits on matched lines and transformers, checked pairs attached"]:::planned
-    binding_forecast["binding_forecast<br/>zonal clearing of cost bids against the domain's rows, JAO's for the replay and D-1's rebuilt with our flows for the forecast → binding rows, shadow prices, implied spreads per hour"]:::planned
-    forecast_page["forecast_page<br/>/forecast/‹day› (Dash app): JAO's binding elements beside ours, one hour slider; spread table"]:::planned
+    binding_forecast["binding_forecast<br/>zonal clearing of cost bids against the previous day's published rows → binding rows, shadow prices, implied spreads; a copper-plate dispatch at its net positions and its load flow"]:::planned
+    forecast_page["forecast_page<br/>/forecast/‹day› (Dash app): JAO's binding elements left, our load flow and binding rows right, one hour slider; spread table"]:::planned
 
     pypsa_eur_pin --> pypsa_eur_run
     pypsa_eur_pin -.-> unsimplified
@@ -40,7 +40,6 @@ flowchart LR
     jao_elements -.-> trued_network
     solved_network -.-> trued_network
     solved_network -.-> binding_forecast
-    jao_elements -.-> binding_forecast
     binding_forecast -.-> forecast_page
     jao_elements -.-> forecast_page
 ```

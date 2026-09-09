@@ -20,7 +20,7 @@
 ## Specs (working memory — burn-down state, not settled knowledge)
 - [specs/jao-grid.md](specs/jao-grid.md) — JAO's Core elements matched to our OSM grid: a map of what limited trade on a day, and true line and transformer limits from JAO's own numbers
 - [specs/sushi-2.md](specs/sushi-2.md) — the OPF chapter: a 2024 day on the OSM grid; next steps and acceptance criteria
-- [specs/core-congestion-forecast.md](specs/core-congestion-forecast.md) — the hackathon cut: one Core day's binding rows and implied spreads as we would have said them at D-2 evening, a zonal clearing of cost bids against the domain's rows rebuilt with our grid's flows, shown beside JAO's 13:00 result
+- [specs/core-congestion-forecast.md](specs/core-congestion-forecast.md) — the hackathon cut: 29 August 2024's binding constraints and implied spreads as a zonal clearing of cost bids against the previous day's published rows would have said them, with the copper-plate load flow of that trade on our grid, shown beside JAO's 13:00 result
 - [specs/architecture-review-graph.md](specs/architecture-review-graph.md) — lightweight architecture-review experiment: manual DAG, PR deltas, and an I/O-boundary test
 
 ## Literature (one digest per authoritative document, link only)
