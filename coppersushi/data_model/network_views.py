@@ -1,11 +1,9 @@
-"""Pandera schemas for the DataFrames `snapshot.py` and `power_flow.py` build on top of a
-solved `pypsa.Network`.
+"""Pandera schemas for the DataFrames built on top of a solved `pypsa.Network`.
 
-Purely documentation: `strict = False` on every model, so extra columns pass through
-untouched. Where a column is sourced straight from PyPSA (rather than computed here),
-its `dtype` and unit/description are copied from PyPSA's own attribute schema
-(`n.components[<Component>].defaults`); `PYPSA_SOURCED` below pins that these have not
-drifted.
+`strict = False` on every model, so extra columns pass through untouched. Where a column
+is sourced straight from PyPSA rather than computed here, its `dtype` and unit are copied
+from PyPSA's own attribute schema (`n.components[<Component>].defaults`); `PYPSA_SOURCED`
+below pins that these have not drifted.
 """
 
 import pandera.pandas as pa

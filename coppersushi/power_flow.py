@@ -24,10 +24,6 @@ pio.templates.default = "plotly_dark"
 
 
 def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.DataFrame, technology: str = None) -> pd.Series:
-    """`generators_t_attr` stays a bare `pd.DataFrame`: it is a PyPSA time-series panel
-    (snapshots x generators), whose columns are generator names, so no static schema
-    describes it.
-    """
     attribute_by_generators = generators_t_attr.filter(like=technology) if technology else generators_t_attr
 
     # Rename generators columns to their corresponding bus names
@@ -60,10 +56,6 @@ def get_branch_midpoint(branch_info: pd.DataFrame) -> tuple[pd.Series, pd.Series
     """Project lat/lon of branch buses to x/y coordinates,
     calculate mid-point between them,
     project mid-point back to lat/lon coordinates.
-
-    `branch_info` stays a bare `pd.DataFrame`: `get_branch_info` calls this while the
-    frame is still half-built (bus0/bus1 coordinates only), so `BranchInfo` — which
-    also declares `mid_x`/`mid_y`/`p_max`/`direction` — would misdescribe it.
     """
 
     x0, y0 = epsg3857(longitude=branch_info.bus0_x, latitude=branch_info.bus0_y)
@@ -79,11 +71,7 @@ geodesic = pyproj.Geod(ellps='WGS84')
 
 
 def get_branch_direction(branch_info: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
-    """Branch power flow direction angle (clockwise from North).
-
-    `branch_info` stays a bare `pd.DataFrame` for the same reason as
-    `get_branch_midpoint`: the frame is still missing its `direction` columns here.
-    """
+    """Branch power flow direction angle (clockwise from North)."""
     [direction, inverse_direction, _] = \
         geodesic.inv(branch_info.bus0_x, branch_info.bus0_y, branch_info.bus1_x, branch_info.bus1_y)
     return direction, inverse_direction
@@ -115,14 +103,6 @@ def to_branches_by_component_and_name(
         branches: pd.DataFrame, snapshot: pd.Timestamp, component: str, quantity: str
 ) -> DataFrame[BranchQuantityByComponentAndName]:
     """Indexes the given series by component (Link or Line) and branch name.
-
-    `branches` stays a bare `pd.DataFrame`: it is a PyPSA time-series panel
-    (`n.lines_t` & co.) keyed by quantity, with no static schema.
-
-    Not validated against `BranchQuantityByComponentAndName`: `quantity` is
-    caller-chosen, so the model's `p0` field only documents today's actual call sites
-    (always `quantity='p0'`) rather than a constraint the function enforces —
-    `quantity='p1'` must keep working.
     """
     df = branches[quantity].loc[snapshot].rename(quantity).rename_axis('name').to_frame()
     df['component'] = component
@@ -261,9 +241,6 @@ def create_traces(
 
 
 def get_interquartile_range(df: pd.DataFrame) -> pd.DataFrame:
-    """`df` stays a bare `pd.DataFrame`: callers pass arbitrary node-value panels
-    (`n.buses_t.p`, `n.loads_t.p_set`, ...), which share no static schema.
-    """
 
     q1 = np.quantile(df, 0.25)
     q3 = np.quantile(df, 0.75)
