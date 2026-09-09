@@ -6,6 +6,7 @@ import pytest
 import yaml
 
 from coppersushi import networks, pypsa_eur
+from coppersushi.market_day import MarketDay
 
 # Upstream's `atlite.default_cutout` in config/config.default.yaml; ours overrides it or inherits it.
 UPSTREAM_DEFAULT_CUTOUT = "europe-2013-sarah3-era5"
@@ -91,3 +92,16 @@ def test_weather_year_check_detects_a_stale_cutout():
 def test_weather_year_check_catches_the_inherited_default():
     """With no `atlite` key the run silently inherits upstream's 2013 cutout."""
     assert "2013" in weather_year_mismatch({"snapshots": {"start": "2024-08-29"}})
+
+
+def test_the_config_window_is_the_market_day():
+    """What config/coppersushi.yaml must carry: PyPSA-Eur snapshots are naive UTC."""
+    assert pypsa_eur.config_window(MarketDay.on("2024-08-29")) == ("2024-08-28 22:00", "2024-08-29 22:00")
+    assert pypsa_eur.config_window(MarketDay.on("2013-07-17")) == ("2013-07-16 22:00", "2013-07-17 22:00")
+
+
+def test_snapshots_are_naive_utc_matching_the_hours():
+    day = MarketDay.on("2024-08-29")
+    snapshots = pypsa_eur.snapshots(day)
+    assert snapshots.tz is None
+    assert list(snapshots) == list(day.hours().tz_localize(None))

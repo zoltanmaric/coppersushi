@@ -10,3 +10,7 @@ __pycache__/
 
 # Unsanctioned solves; `python -m coppersushi.pypsa_eur promote <file>` moves one into networks/ (LFS).
 networks/candidates/
+
+# Implementation plans are working documents, not deliverables: they are amended as the work
+# teaches us things, so a checked-in copy differs per branch and goes stale on the lower ones.
+docs/superpowers/plans/

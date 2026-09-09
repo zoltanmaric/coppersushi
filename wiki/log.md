@@ -3,6 +3,9 @@
 Append-only chronology of wiki operations (ingests, queries, lints).
 Entry format: `## [YYYY-MM-DD] <operation> | <title>`
 
+## [2026-09-09] change | Snapshots follow the Core market day, hourly
+The shelf solved UTC days at 2-hour resolution; JAO publishes hourly on the CET market day, so a JAO hour had no snapshot to land on without a mapping rule. Config now runs 24 hourly snapshots from 22:00Z to 22:00Z (23 or 25 across a clock change), derived by `coppersushi/market_day.py` rather than hand-typed. Both OPF networks re-solved and re-promoted; `opf-2013-07-17-v1.nc` is left alone, being a 2022-fork artefact that cannot be reproduced. Also corrected pypsa-eur-sibling: the checkout has one remote, `origin`, pointing at the fork — upstream is not a remote at all, so the documented `master` sync was a no-op against itself.
+
 ## [2026-09-08] backtest | One day scored against JAO and settled prices
 2024-08-29 solved on the OSM grid and compared with JAO's 78 binding CNECs and settled Core prices. Zone-pair rank correlation went -0.03 -> +0.29 and price bias -119 -> -60 EUR/MWh across four runs; the whole gain came from pricing CO2 (Instrat daily EUA), with dynamic fuel prices and the 2025 cost vintage worth about a point each. Congestion *location* never correlated (rho ~0) — that is jao-grid's lever, not a cost one. New page backtest-2024-08-29; two upstream bugs found and patched on the fork.
 ## [2026-09-08] lint | Cutout naming corrected: the weather year follows the day

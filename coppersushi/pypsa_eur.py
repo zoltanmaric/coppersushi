@@ -5,12 +5,15 @@ import os
 import shutil
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import NamedTuple
 
+import pandas as pd
 import yaml
 
 from coppersushi import networks, shedding
+from coppersushi.market_day import MarketDay
 from coppersushi.networks import REPO
 
 logger = logging.getLogger(__name__)
@@ -36,12 +39,27 @@ def solve(experiment: str | None = None) -> Path:
     solved = sorted((sibling / "results" / cfg["run"]["name"] / "networks").glob("*.nc"))
     if len(solved) != 1:
         raise RuntimeError(f"expected exactly one solved network, found {solved}")
-    candidate = networks.candidate(cfg["snapshots"]["start"], pin.sha, CONFIG.read_bytes(), experiment)
+    day = MarketDay.containing(datetime.fromisoformat(cfg["snapshots"]["start"])).date.isoformat()
+    candidate = networks.candidate(day, pin.sha, CONFIG.read_bytes(), experiment)
     candidate.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(solved[0], candidate)
     shedding.reject(networks.load(candidate))
     logger.info("pypsa-eur: done — candidate %s; sanction it with `promote` to make it the day's network", candidate.name)
     return candidate
+
+
+def snapshots(day: MarketDay) -> pd.DatetimeIndex:
+    """The market day's hours as PyPSA snapshots.
+
+    The single conversion point where an aware timestamp becomes naive: PyPSA snapshots are
+    naive, meaning UTC (coppersushi/AGENTS.md, explicit-timezones).
+    """
+    return day.hours().tz_localize(None)
+
+
+def config_window(day: MarketDay) -> tuple[str, str]:
+    """The market day's window as naive-UTC strings, the form PyPSA-Eur's ``snapshots`` takes."""
+    return tuple(moment.strftime("%Y-%m-%d %H:%M") for moment in (day.start_time_utc, day.end_time_utc))
 
 
 def promote(candidate: Path) -> Path:
