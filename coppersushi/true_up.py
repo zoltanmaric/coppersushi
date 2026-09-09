@@ -41,7 +41,8 @@ from pandera.typing import DataFrame
 from coppersushi.data_model.elements import ElementMatches
 from coppersushi.data_model.jao import Elements
 from coppersushi.data_model.true_up import Limits, RatingComparison, RatingReport, Ratings
-from coppersushi.elements import MATCHED, bus_voltage
+from coppersushi.elements import MATCHED
+from coppersushi.substations import voltage
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +118,7 @@ def _branch_voltages(n: pypsa.Network) -> pd.DataFrame:
     rows = []
     for branch_type, static in (("Line", n.lines), ("Transformer", n.transformers)):
         for branch_id, branch in static.iterrows():
-            suffixes = [bus_voltage(branch.bus0), bus_voltage(branch.bus1)]
+            suffixes = [voltage(branch.bus0), voltage(branch.bus1)]
             fallback = max(n.buses.v_nom[branch.bus0], n.buses.v_nom[branch.bus1])
             rows.append(
                 {
