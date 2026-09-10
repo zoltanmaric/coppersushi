@@ -6,6 +6,7 @@ from typing import NamedTuple
 
 import pandas as pd
 import plotly.graph_objects as go
+import dash_bootstrap_components as dbc
 from dash import dcc, html
 from pandera.typing import DataFrame
 
@@ -25,7 +26,7 @@ class Day:
     """All in-memory inputs for one delivery day's page."""
 
     market_day: MarketDay
-    buses: pd.DataFrame
+    zones: pd.DataFrame
     mapped_elements: DataFrame[MappedCnecElements]
     constraints: DataFrame[ActiveConstraints]
     ptdfs: DataFrame[ConstraintPtdfs]
@@ -41,7 +42,7 @@ class Rendered(NamedTuple):
     interval_marks: dict[int, str]
     interval_value: int
     constraint_options: list[dict]
-    constraint_value: int | None
+    constraint_value: str | None  # Bootstrap select values are strings
 
 
 def local_today() -> str:
@@ -55,17 +56,18 @@ def layout(day: str | None = None) -> html.Div:
         [
             html.Div(
                 [
-                    dcc.DatePickerSingle(id="cnec-date", date=day or local_today()),
-                    dcc.Dropdown(
+                    # Bootstrap controls, not `dcc` ones: the dark theme styles these, while
+                    # `dcc.DatePickerSingle` and `dcc.Dropdown` ship a light palette of their
+                    # own and would render their own state white on white.
+                    dbc.Input(id="cnec-date", type="date", value=day or local_today()),
+                    dbc.Select(
                         id="cnec-constraint",
                         placeholder="Select a binding row",
-                        clearable=True,
                     ),
-                    dcc.Dropdown(
+                    dbc.Select(
                         id="cnec-reference-zone",
                         options=[{"label": zone, "value": zone} for zone in market.CORE_ZONES],
                         value="AT",
-                        clearable=False,
                     ),
                 ],
                 style={
@@ -75,29 +77,43 @@ def layout(day: str | None = None) -> html.Div:
                     "padding": "0.4em 1em",
                 },
             ),
+            dbc.Alert(id="cnec-status", color="danger", is_open=False, style={"margin": "0 1em"}),
             dcc.Graph(
                 id="cnec-map",
                 style={"height": "82vh"},
                 config={"responsive": True, "displayModeBar": False, "scrollZoom": True},
             ),
-            dcc.Slider(id="cnec-interval", min=0, max=1, step=1, value=0),
+            html.Div(
+                dcc.Slider(id="cnec-interval", min=0, max=1, step=1, value=0),
+                style={"padding": "0 1em 2.5em"},
+            ),
         ]
     )
 
 
-def interval_marks(day: MarketDay) -> dict[int, str]:
-    """Hourly labels on either hourly or quarter-hourly controls, with DST disambiguated."""
+def interval_marks(day: MarketDay) -> dict[int, dict]:
+    """Hourly labels on either hourly or quarter-hourly controls, with DST disambiguated.
+
+    Written vertically: 24 hourly labels do not fit a page-width slider side by side, and
+    a quarter-hourly day carries four times as many intervals behind the same labels.
+    """
     intervals = day.market_time_units()
     stride = 1 if len(intervals) <= 25 else 4
     return {
-        index: interval.tz_convert(MARKET_TZ).strftime("%H:%M %Z")
+        index: {
+            "label": interval.tz_convert(MARKET_TZ).strftime("%H:%M %Z"),
+            "style": {"writingMode": "vertical-rl", "fontSize": "0.7em"},
+        }
         for index, interval in enumerate(intervals)
         if index % stride == 0
     }
 
 
+NO_SELECTION = {"label": "No constraint selected", "value": ""}
+
+
 def _constraint_options(constraints: pd.DataFrame) -> list[dict]:
-    options = []
+    options = [NO_SELECTION]
     for row in constraints.sort_values("shadow_price", ascending=False).itertuples():
         contingency = row.cont_name if pd.notna(row.cont_name) else "base case"
         options.append(
@@ -106,7 +122,7 @@ def _constraint_options(constraints: pd.DataFrame) -> list[dict]:
                     f"{row.name} · {row.direction} · {contingency} · "
                     f"{row.shadow_price:,.2f} €/MWh"
                 ),
-                "value": int(row.source_id),
+                "value": str(row.source_id),
             }
         )
     return options
@@ -125,8 +141,9 @@ def render(
     interval = intervals[index]
     active = day.constraints[day.constraints.interval.eq(interval)]
     options = _constraint_options(active)
-    option_values = {option["value"] for option in options}
-    selected_value = selected_source_id if selected_source_id in option_values else None
+    option_values = {option["value"] for option in options} - {NO_SELECTION["value"]}
+    chosen = "" if selected_source_id is None else str(selected_source_id)
+    selected_value = chosen if chosen in option_values else None
     selected = (
         cnec_market.ConstraintKey(int(selected_value)) if selected_value is not None else None
     )
@@ -141,7 +158,7 @@ def render(
     )
     return Rendered(
         figure=cnec_price_map.figure(
-            day.buses, day.mapped_elements, snapshot, mapbox_token
+            day.zones, day.mapped_elements, snapshot, mapbox_token
         ),
         interval_max=len(intervals) - 1,
         interval_marks=interval_marks(day.market_day),

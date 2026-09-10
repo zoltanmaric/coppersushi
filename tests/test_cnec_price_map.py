@@ -2,6 +2,7 @@ import json
 
 import pandas as pd
 import pytest
+from shapely.geometry import Point, shape
 
 from coppersushi import REPO, cnec_market, cnec_price_map, cnecs, market
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
@@ -15,6 +16,17 @@ PRICE_FIXTURE = (
 MAP_FIXTURES = REPO / "tests" / "fixtures" / "cnec-price-map"
 
 
+def read_zones():
+    """The fixture zone shapes in the two columns ``figure`` relies on."""
+    features = json.loads((MAP_FIXTURES / "zones.geojson").read_text())["features"]
+    return pd.DataFrame(
+        {
+            "zone": [feature["properties"]["idx"] for feature in features],
+            "geometry": [shape(feature["geometry"]) for feature in features],
+        }
+    )
+
+
 @pytest.fixture
 def inputs():
     rows = json.loads(FIXTURE.read_text())["data"]
@@ -25,22 +37,44 @@ def inputs():
     view = cnec_market.snapshot(
         constraints, ptdfs, external, prices, pd.Timestamp("2024-08-28T22:00:00Z")
     )
-    buses = pd.read_csv(MAP_FIXTURES / "buses.csv", index_col="bus")
+    zones = read_zones()
     geometries = pd.read_csv(MAP_FIXTURES / "mapped-elements.csv").pipe(
         MappedCnecElements.validate
     )
-    return buses, geometries, view
+    return zones, geometries, view
 
 
 def trace(fig, name):
     return next(item for item in fig.data if item.name == name)
 
 
-def test_prices_colour_every_network_node_and_label_each_zone(inputs):
+def test_choropleth_carries_one_price_per_priced_zone_and_labels_each(inputs):
     fig = cnec_price_map.figure(*inputs)
-    nodes = trace(fig, "published day-ahead price")
-    assert list(nodes.marker.color) == [50.0, 50.0, 70.0, 70.0]
-    assert list(trace(fig, "zone prices").text) == ["AT<br>50.00 €", "BE<br>70.00 €"]
+    fill = trace(fig, "published day-ahead price")
+    assert list(fill.locations) == ["AT", "BE"]
+    assert list(fill.z) == [50.0, 70.0]
+    assert [feature["id"] for feature in fill.geojson["features"]] == ["AT", "BE"]
+    assert list(trace(fig, "zone prices").text) == ["AT<br>50 €", "BE<br>70 €"]
+
+
+def test_each_zone_label_sits_inside_its_own_zone(inputs):
+    zones, _, _ = inputs
+    labels = trace(cnec_price_map.figure(*inputs), "zone prices")
+    shapes = dict(zip(zones.zone, zones.geometry))
+    for text, lon, lat in zip(labels.text, labels.lon, labels.lat):
+        assert shapes[text[:2]].contains(Point(lon, lat))
+
+
+def test_unpriced_zones_are_left_off_the_map(inputs):
+    zones, geometries, view = inputs
+    fill = trace(cnec_price_map.figure(zones, geometries, view), "published day-ahead price")
+    assert "DE" not in list(fill.locations)
+
+
+def test_prices_without_any_zone_geometry_are_refused(inputs):
+    zones, geometries, view = inputs
+    with pytest.raises(ValueError, match="none of the priced zones"):
+        cnec_price_map.figure(zones.iloc[0:0], geometries, view)
 
 
 def test_one_element_is_drawn_once_and_one_target_carries_each_binding_row(inputs):
@@ -72,7 +106,7 @@ def test_map_states_coverage_and_what_purple_does_not_mean(inputs):
 
 
 def selected_inputs(inputs, reference="AT"):
-    buses, geometries, base = inputs
+    zones, geometries, base = inputs
     selected = cnec_market.key_of(base.constraints.iloc[0])
     rows = json.loads(FIXTURE.read_text())["data"]
     view = cnec_market.snapshot(
@@ -84,12 +118,12 @@ def selected_inputs(inputs, reference="AT"):
         selected,
         reference,
     )
-    return buses, geometries, view
+    return zones, geometries, view
 
 
 def test_selected_constraint_adds_signed_influence_without_replacing_prices(inputs):
     fig = cnec_price_map.figure(*selected_inputs(inputs))
-    assert list(trace(fig, "published day-ahead price").marker.color) == [50.0, 50.0, 70.0, 70.0]
+    assert list(trace(fig, "published day-ahead price").z) == [50.0, 70.0]
     influence = trace(fig, "contribution relative to AT")
     by_text = dict(zip(influence.text, influence.marker.color))
     assert any("BE · +2.87 €/MWh" in text for text in by_text)
@@ -99,7 +133,7 @@ def test_influence_radiates_from_the_cnec_to_zones_not_over_grid_branches(inputs
     fig = cnec_price_map.figure(*selected_inputs(inputs))
     belgium = trace(fig, "BE contribution")
     assert list(belgium.lon) == pytest.approx([14.75, 4.5])
-    assert list(belgium.lat) == pytest.approx([46.45, 50.85])
+    assert list(belgium.lat) == pytest.approx([46.45, 50.8])
     assert "not a power-flow path" in fig.layout.annotations[0].text
     assert "relative to <b>AT</b>" in fig.layout.annotations[0].text
 
@@ -114,11 +148,11 @@ def test_reference_change_changes_the_sign_without_touching_the_price_layer(inpu
 
 
 def test_unmapped_selected_row_keeps_zonal_contributions_but_has_no_rays(inputs):
-    buses, geometries, view = selected_inputs(inputs)
+    zones, geometries, view = selected_inputs(inputs)
     geometries = geometries.assign(
         x0=None, y0=None, x1=None, y1=None, match_status="no_branch"
     ).pipe(MappedCnecElements.validate)
-    fig = cnec_price_map.figure(buses, geometries, view)
+    fig = cnec_price_map.figure(zones, geometries, view)
     assert trace(fig, "contribution relative to AT") is not None
     assert not any(item.name.endswith(" contribution") for item in fig.data)
     assert "rays cannot be anchored" in fig.layout.annotations[0].text

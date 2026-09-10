@@ -24,6 +24,17 @@ class Buses(pa.DataFrameModel):
         coerce = True
 
 
+class BiddingZoneShapes(pa.DataFrameModel):
+    """One row per bidding zone: its code and its onshore polygon. PyPSA: Shape.geometry."""
+
+    zone: Series[str] = pa.Field(unique=True)
+    geometry: Series[object]  # shapely Polygon or MultiPolygon, EPSG:4326
+
+    class Config:
+        strict = False
+        coerce = True
+
+
 class Loads(pa.DataFrameModel):
     """One row per bus with a load, indexed by Bus."""
 

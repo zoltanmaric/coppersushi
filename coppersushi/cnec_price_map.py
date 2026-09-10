@@ -1,5 +1,7 @@
 """Published zonal prices and market-binding CNECs in one Plotly map."""
 
+import math
+
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -13,21 +15,28 @@ POSITIVE = "#42d9f5"
 NEGATIVE = "#ff9f43"
 POINT_TYPES = ("Transformer", "PST")
 MAPPED = "matched"
+FRAME_ZOOM = 1.0  # Chosen against the rendered page, not derived: viewport aspect varies
 
 
-def _priced_buses(buses: pd.DataFrame, prices: pd.DataFrame) -> pd.DataFrame:
-    priced = buses.reset_index(names="bus").merge(
-        prices[["zone", "price"]], left_on="country", right_on="zone", how="inner"
+def _priced_zones(zones: pd.DataFrame, prices: pd.DataFrame) -> pd.DataFrame:
+    priced = zones[["zone", "geometry"]].merge(
+        prices[["zone", "price"]], on="zone", how="inner", validate="one_to_one"
     )
     if priced.empty:
-        raise ValueError("none of the priced zones has a bus on the map")
+        raise ValueError("none of the priced zones has geometry on the map")
     return priced
 
 
-def _zone_centres(priced_buses: pd.DataFrame) -> pd.DataFrame:
-    """One restrained label position per zone, derived from the shown network nodes."""
-    return priced_buses.groupby("zone", as_index=False).agg(
-        x=("x", "median"), y=("y", "median"), price=("price", "first")
+def _zone_centres(priced_zones: pd.DataFrame) -> pd.DataFrame:
+    """One label position per zone, guaranteed to fall inside the zone's own polygon."""
+    points = [geometry.representative_point() for geometry in priced_zones.geometry]
+    return pd.DataFrame(
+        {
+            "zone": priced_zones.zone.to_numpy(),
+            "x": [point.x for point in points],
+            "y": [point.y for point in points],
+            "price": priced_zones.price.to_numpy(),
+        }
     )
 
 
@@ -54,43 +63,51 @@ def _line_coordinates(rows: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
     return lon, lat
 
 
-def _price_traces(priced_buses: pd.DataFrame) -> list[go.Scattermapbox]:
-    centres = _zone_centres(priced_buses)
-    nodes = go.Scattermapbox(
+def _price_traces(priced_zones: pd.DataFrame) -> list[go.Choroplethmapbox | go.Scattermapbox]:
+    labels_at = _zone_centres(priced_zones)
+    fill = go.Choroplethmapbox(
         name="published day-ahead price",
-        lon=priced_buses.x,
-        lat=priced_buses.y,
-        mode="markers",
+        geojson={
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "id": row.zone,
+                    "properties": {},
+                    "geometry": row.geometry.__geo_interface__,
+                }
+                for row in priced_zones.itertuples()
+            ],
+        },
+        locations=priced_zones.zone,
+        z=priced_zones.price,
+        colorscale=map_style.NETWORK_VALUE_COLORSCALE,
+        marker_opacity=map_style.ZONE_FILL_OPACITY,
+        marker_line_color=map_style.ZONE_BORDER,
+        marker_line_width=map_style.ZONE_BORDER_WIDTH,
         hoverinfo="text",
         text=(
-            priced_buses.zone + " · " + priced_buses.price.map(lambda value: f"{value:,.2f} €/MWh")
+            priced_zones.zone + " · " + priced_zones.price.map(lambda value: f"{value:,.2f} €/MWh")
         ),
-        marker=go.scattermapbox.Marker(
-            color=priced_buses.price,
-            colorscale=map_style.NETWORK_VALUE_COLORSCALE,
-            size=7,
-            opacity=0.72,
-            showscale=True,
-            colorbar=go.scattermapbox.marker.ColorBar(
-                title=dict(text="Day-ahead price [€/MWh]", side="top"),
-                orientation="h",
-                y=-0.02,
-                yanchor="top",
-                thickness=14,
-            ),
+        colorbar=go.choroplethmapbox.ColorBar(
+            title=dict(text="Day-ahead price [€/MWh]", side="top"),
+            orientation="h",
+            y=-0.02,
+            yanchor="top",
+            thickness=14,
         ),
     )
     labels = go.Scattermapbox(
         name="zone prices",
-        lon=centres.x,
-        lat=centres.y,
+        lon=labels_at.x,
+        lat=labels_at.y,
         mode="text",
         hoverinfo="skip",
-        text=centres.zone + "<br>" + centres.price.map(lambda value: f"{value:,.2f} €"),
-        textfont=dict(color="white", size=12),
+        text=labels_at.zone + "<br>" + labels_at.price.map(lambda value: f"{value:,.0f} €"),
+        textfont=dict(color="white", size=13),
         showlegend=False,
     )
-    return [nodes, labels]
+    return [fill, labels]
 
 
 def _hover_targets(rows: pd.DataFrame) -> pd.DataFrame:
@@ -225,22 +242,39 @@ def _contribution_traces(
     return traces, note
 
 
+def _view(priced_zones: pd.DataFrame) -> dict:
+    """Centre and zoom that frame the zones being drawn.
+
+    A mapbox subplot does not fit itself to its traces, so without this the map opens on
+    the default null island. One zoom level per halving of the drawn span, plus the
+    constant that fills a wide viewport with Core rather than with the Atlantic.
+    """
+    bounds = [zone.bounds for zone in priced_zones.geometry]
+    west, south = min(b[0] for b in bounds), min(b[1] for b in bounds)
+    east, north = max(b[2] for b in bounds), max(b[3] for b in bounds)
+    span = max(east - west, north - south)
+    return dict(
+        center=go.layout.mapbox.Center(lat=(south + north) / 2, lon=(west + east) / 2),
+        zoom=math.log2(360 / span) + FRAME_ZOOM,
+    )
+
+
 def figure(
-    buses: pd.DataFrame,
+    zones: pd.DataFrame,
     geometries: DataFrame[MappedCnecElements],
     view: Snapshot,
     mapbox_token: str | None = None,
 ) -> go.Figure:
-    """The base price layer plus every mapped physical row active in ``view.interval``."""
-    priced_buses = _priced_buses(buses, view.prices)
-    centres = _zone_centres(priced_buses)
+    """The zonal price choropleth plus every mapped physical row active in ``view.interval``."""
+    priced_zones = _priced_zones(zones, view.prices)
+    centres = _zone_centres(priced_zones)
     placed = _placed(view.constraints, geometries)
     mapped = placed.match_status.eq(MAPPED).sum()
     annotation = (
         f"<b>{mapped} of {len(placed)} active rows mapped</b><br>"
         "Purple means market-binding under contingency, not physically overloaded."
     )
-    traces = _price_traces(priced_buses) + _constraint_traces(placed)
+    traces = _price_traces(priced_zones) + _constraint_traces(placed)
     if view.contribution is not None:
         contribution_traces, contribution_note = _contribution_traces(
             placed, centres, view.contribution
@@ -253,6 +287,7 @@ def figure(
         margin=dict(r=0, t=0, l=0, b=0),
         mapbox_style=map_style.MAP_STYLE,
         mapbox_accesstoken=mapbox_token,
+        mapbox=_view(priced_zones),
         uirevision=True,
         legend=dict(x=0.01, y=0.99, bgcolor=map_style.LEGEND_BACKGROUND),
         annotations=[
