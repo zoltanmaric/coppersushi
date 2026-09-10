@@ -108,7 +108,7 @@ def _voltage(bus_id: str) -> int:
     return int(suffix) if suffix.isdigit() else -1
 
 
-def _osm_id(bus_id: str) -> str:
+def osm_id(bus_id: str) -> str:
     """The OSM object the bus belongs to: its id without the voltage suffix."""
     return bus_id.rsplit("-", 1)[0]
 
@@ -186,7 +186,7 @@ def match(
             {
                 "jao_name": jao_name,
                 "bus_id": bus_id,
-                "osm_id": None if bus is None else _osm_id(bus_id),
+                "osm_id": None if bus is None else osm_id(bus_id),
                 "osm_name": None if bus is None else bus.osm_name,
                 "country": None if bus is None else bus.country,
                 "score": score,
