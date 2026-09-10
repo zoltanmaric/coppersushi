@@ -10,6 +10,8 @@ from coppersushi.data_model.cnec_price_map import CnecGeometries
 
 PURPLE = "#b45cff"
 NETWORK_GREY = "#5d6570"
+POSITIVE = "#42d9f5"
+NEGATIVE = "#ff9f43"
 POINT_TYPES = ("Transformer", "PST")
 MAPPED = "matched"
 
@@ -125,6 +127,85 @@ def _constraint_traces(placed: pd.DataFrame) -> list[go.Scattermapbox]:
     ]
 
 
+def _selected_row(placed: pd.DataFrame, contribution: pd.DataFrame) -> pd.Series:
+    first = contribution.iloc[0]
+    selected = placed[
+        placed.eic.eq(first.eic)
+        & placed.direction.eq(first.direction)
+        & placed.cont_name.eq(first.cont_name)
+    ]
+    if len(selected) != 1:
+        raise ValueError(f"contribution matched {len(selected)} active rows")
+    return selected.iloc[0]
+
+
+def _contribution_traces(
+    placed: pd.DataFrame,
+    centres: pd.DataFrame,
+    contribution: pd.DataFrame,
+) -> tuple[list[go.Scattermapbox], str]:
+    """Signed zonal influence radiating from the selected element, never along grid edges."""
+    selected = _selected_row(placed, contribution)
+    zonal = contribution.merge(centres[["zone", "x", "y"]], on="zone", how="inner")
+    reference = str(contribution.reference_zone.iloc[0])
+    scale = zonal.contribution.abs().max() or 1.0
+    colours = [POSITIVE if value >= 0 else NEGATIVE for value in zonal.contribution]
+    sizes = 7 + 17 * zonal.contribution.abs() / scale
+    markers = go.Scattermapbox(
+        name=f"contribution relative to {reference}",
+        lon=zonal.x,
+        lat=zonal.y,
+        mode="markers",
+        hoverinfo="text",
+        text=(
+            zonal.zone + " · "
+            + zonal.contribution.map(lambda value: f"{value:+,.2f} €/MWh")
+            + f" relative to {reference}"
+        ),
+        marker=go.scattermapbox.Marker(color=colours, size=sizes, opacity=0.88),
+    )
+    traces = [markers]
+    mapped = selected.match_status == MAPPED
+    if mapped:
+        origin_x = (selected.x0 + selected.x1) / 2
+        origin_y = (selected.y0 + selected.y1) / 2
+        for row in zonal[zonal.contribution.abs() > 1e-9].itertuples():
+            traces.append(
+                go.Scattermapbox(
+                    name=f"{row.zone} contribution",
+                    lon=[origin_x, row.x],
+                    lat=[origin_y, row.y],
+                    mode="lines",
+                    hoverinfo="skip",
+                    showlegend=False,
+                    line=dict(
+                        color=POSITIVE if row.contribution > 0 else NEGATIVE,
+                        width=0.8 + 5.2 * abs(row.contribution) / scale,
+                    ),
+                    opacity=0.5,
+                )
+            )
+        traces.append(
+            go.Scattermapbox(
+                name="selected CNEC",
+                lon=[selected.x0, selected.x1],
+                lat=[selected.y0, selected.y1],
+                mode="lines+markers",
+                hoverinfo="skip",
+                line=dict(color=PURPLE, width=9),
+                marker=go.scattermapbox.Marker(color=PURPLE, size=9),
+                showlegend=False,
+            )
+        )
+    note = (
+        f"Selected contribution relative to <b>{reference}</b>. "
+        "Rays are zonal PTDF influence, not a power-flow path."
+    )
+    if not mapped:
+        note += " The selected CNEC has no mapped geometry, so its rays cannot be anchored."
+    return traces, note
+
+
 def figure(
     buses: pd.DataFrame,
     geometries: DataFrame[CnecGeometries],
@@ -133,13 +214,21 @@ def figure(
 ) -> go.Figure:
     """The base price layer plus every mapped physical row active in ``view.interval``."""
     priced_buses = _priced_buses(buses, view.prices)
+    centres = _zone_centres(priced_buses)
     placed = _placed(view.constraints, geometries)
     mapped = placed.match_status.eq(MAPPED).sum()
     annotation = (
         f"<b>{mapped} of {len(placed)} active rows mapped</b><br>"
         "Purple means market-binding under contingency, not physically overloaded."
     )
-    fig = go.Figure(_price_traces(priced_buses) + _constraint_traces(placed))
+    traces = _price_traces(priced_buses) + _constraint_traces(placed)
+    if view.contribution is not None:
+        contribution_traces, contribution_note = _contribution_traces(
+            placed, centres, view.contribution
+        )
+        traces += contribution_traces
+        annotation += "<br>" + contribution_note
+    fig = go.Figure(traces)
     fig.update_layout(
         hovermode="closest",
         margin=dict(r=0, t=0, l=0, b=0),

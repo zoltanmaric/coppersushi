@@ -92,3 +92,56 @@ def test_map_states_coverage_and_what_purple_does_not_mean(inputs):
     note = fig.layout.annotations[0].text
     assert "2 of 2 active rows mapped" in note
     assert "not physically overloaded" in note
+
+
+def selected_inputs(inputs, reference="AT"):
+    buses, geometries, base = inputs
+    selected = cnec_market.key_of(base.constraints.iloc[0])
+    rows = json.loads(FIXTURE.read_text())["data"]
+    view = cnec_market.snapshot(
+        cnecs.active_constraints(rows),
+        cnecs.constraint_ptdfs(rows),
+        cnecs.active_external_constraints(rows),
+        base.prices,
+        base.interval,
+        selected,
+        reference,
+    )
+    return buses, geometries, view
+
+
+def test_selected_constraint_adds_signed_influence_without_replacing_prices(inputs):
+    fig = cnec_price_map.figure(*selected_inputs(inputs))
+    assert list(trace(fig, "published day-ahead price").marker.color) == [50.0, 50.0, 70.0, 70.0]
+    influence = trace(fig, "contribution relative to AT")
+    by_text = dict(zip(influence.text, influence.marker.color))
+    assert any("BE · +2.87 €/MWh" in text for text in by_text)
+
+
+def test_influence_radiates_from_the_cnec_to_zones_not_over_grid_branches(inputs):
+    fig = cnec_price_map.figure(*selected_inputs(inputs))
+    belgium = trace(fig, "BE contribution")
+    assert list(belgium.lon) == pytest.approx([14.75, 4.5])
+    assert list(belgium.lat) == pytest.approx([46.45, 50.85])
+    assert "not a power-flow path" in fig.layout.annotations[0].text
+    assert "relative to <b>AT</b>" in fig.layout.annotations[0].text
+
+
+def test_reference_change_changes_the_sign_without_touching_the_price_layer(inputs):
+    fig = cnec_price_map.figure(*selected_inputs(inputs, reference="BE"))
+    influence = trace(fig, "contribution relative to BE")
+    values = dict(zip(influence.text, influence.marker.color))
+    austrian = next(text for text in values if text.startswith("AT ·"))
+    assert "-2.87 €/MWh" in austrian
+    assert values[austrian] == cnec_price_map.NEGATIVE
+
+
+def test_unmapped_selected_row_keeps_zonal_contributions_but_has_no_rays(inputs):
+    buses, geometries, view = selected_inputs(inputs)
+    geometries = geometries.assign(
+        x0=None, y0=None, x1=None, y1=None, match_status="no_branch"
+    ).pipe(CnecGeometries.validate)
+    fig = cnec_price_map.figure(buses, geometries, view)
+    assert trace(fig, "contribution relative to AT") is not None
+    assert not any(item.name.endswith(" contribution") for item in fig.data)
+    assert "rays cannot be anchored" in fig.layout.annotations[0].text
