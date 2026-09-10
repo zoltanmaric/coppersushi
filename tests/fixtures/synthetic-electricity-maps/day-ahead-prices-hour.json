@@ -1,0 +1,34 @@
+{
+  "responses": [
+    {
+      "zone": "AT",
+      "temporalGranularity": "hourly",
+      "data": [
+        {
+          "zone": "AT",
+          "datetime": "2024-08-28T22:00:00Z",
+          "createdAt": "2024-08-28T12:00:00Z",
+          "updatedAt": "2024-08-28T12:05:00Z",
+          "value": 50.0,
+          "unit": "EUR/MWh",
+          "source": "example.test"
+        }
+      ]
+    },
+    {
+      "zone": "BE",
+      "temporalGranularity": "hourly",
+      "data": [
+        {
+          "zone": "BE",
+          "datetime": "2024-08-28T22:00:00Z",
+          "createdAt": "2024-08-28T12:00:00Z",
+          "updatedAt": "2024-08-28T12:05:00Z",
+          "value": 70.0,
+          "unit": "EUR/MWh",
+          "source": "example.test"
+        }
+      ]
+    }
+  ]
+}

@@ -54,4 +54,19 @@ class MarketDay:
 
     def hours(self) -> pd.DatetimeIndex:
         """Every hour of the day, tz-aware UTC: 23, 24 or 25 of them."""
-        return pd.date_range(self.start_time_utc, self.end_time_utc, freq="h", inclusive="left", tz="UTC")
+        return self.intervals("h")
+
+    def intervals(self, frequency: str = "15min") -> pd.DatetimeIndex:
+        """Every market-time-unit start in the day, tz-aware UTC.
+
+        Core day-ahead capacity data is quarter-hourly while some price sources still
+        publish hourly values. Keeping the source resolution explicit avoids inventing
+        four distinct prices where the source supplied one.
+        """
+        return pd.date_range(
+            self.start_time_utc,
+            self.end_time_utc,
+            freq=frequency,
+            inclusive="left",
+            tz="UTC",
+        )

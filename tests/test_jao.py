@@ -21,6 +21,17 @@ def written(directory) -> jao.Day:
     return jao.read_day(directory)
 
 
+def active_written(directory) -> jao.ActiveDay:
+    active = rows("active-fb-day.json")
+    jao.write_active_day(
+        directory,
+        cnecs.active_constraints(active),
+        cnecs.constraint_ptdfs(active),
+        cnecs.active_external_constraints(active),
+    )
+    return jao.read_active_day(directory)
+
+
 def test_write_and_load_round_trip(tmp_path):
     day = written(tmp_path)
     assert str(day.elements.hour.dt.tz) == "UTC"
@@ -53,3 +64,11 @@ def test_the_day_fetched_is_the_market_day():
 
 def test_the_request_window_is_stamped_the_way_the_service_wants_it():
     assert jao._stamp(pd.Timestamp("2024-08-28T22:00:00Z")) == "2024-08-28T22:00:00.000Z"
+
+
+def test_active_fb_tables_round_trip_at_quarter_hour_grain(tmp_path):
+    active = active_written(tmp_path)
+    assert len(active.constraints) == 2
+    assert len(active.ptdfs) == 24
+    assert len(active.external_constraints) == 1
+    assert [str(frame.interval.dt.tz) for frame in active] == ["UTC"] * 3

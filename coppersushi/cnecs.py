@@ -33,13 +33,18 @@ import pandas as pd
 from pandera.typing import DataFrame
 
 from coppersushi.data_model.jao import (
+    ActiveConstraints,
+    ActiveExternalConstraints,
     Contingencies,
+    ConstraintContributions,
+    ConstraintPtdfs,
     Elements,
     ElementsWithPrices,
     ExternalConstraints,
     ExternalConstraintsWithPrices,
     ShadowPrices,
 )
+from coppersushi.market import CORE_ZONES
 
 NON_PHYSICAL = ("External Constraint", "Equality Constraint")
 POINT_TYPES = ("Transformer", "PST")  # elements at one substation, so `substation_from == substation_to`
@@ -47,6 +52,8 @@ PLACEHOLDER = "NA"  # what the domain feed writes where a row has no EIC, TSO or
 
 KEYS = ["hour", "eic", "direction"]
 CONSTRAINT_KEYS = ["hour", "name"]  # a constraint has no EIC, and only the price feed knows its direction
+ACTIVE_KEYS = ["source_id"]
+ACTIVE_PTDF_COLUMNS = ["source_id", "interval", "eic", "direction", "cont_name"]
 
 # Text columns in which the feeds write `"NA"` for "does not apply".
 PLACEHOLDER_COLUMNS = [
@@ -63,6 +70,7 @@ ELEMENT_COLUMNS = [
 # Both feeds' field names, mapped onto ours. The two pages never carry both spellings of
 # a field, so one dict serves them both.
 RENAME = {
+    "id": "source_id",
     "dateTimeUtc": "hour",
     "cneEic": "eic",
     "cnecEic": "eic",
@@ -78,6 +86,7 @@ RENAME = {
     "elementType": "element_type",
     "fmaxType": "fmax_type",
     "shadowPrice": "shadow_price",
+    "ramMcp": "ram_mcp",
 }
 
 NAME_COLUMNS = [
@@ -183,6 +192,86 @@ def shadow_prices(rows: list[dict]) -> DataFrame[ShadowPrices]:
     frame = frame.assign(tso=normalise_tso(frame.tso))
     columns = ["hour", "eic", "name", "tso", "direction", "cont_name", "shadow_price", "ram", "fmax"]
     return frame[columns].reset_index(drop=True).pipe(ShadowPrices.validate)
+
+
+def active_constraints(rows: list[dict]) -> DataFrame[ActiveConstraints]:
+    """The physical rows of JAO's post-auction active flow-based publication.
+
+    An element and direction can bind under more than one contingency in the same
+    interval, so the contingency is part of the key. Collapsing to the element grain
+    would discard a distinct market constraint and its own PTDF vector.
+    """
+    frame = _physical(_frame(rows)).rename(columns={"hour": "interval"})
+    frame = frame.assign(tso=normalise_tso(frame.tso))
+    columns = [
+        "source_id", "interval", "eic", "name", "tso", "direction", "cont_name", "branch_eic",
+        "hub_from", "hub_to", "shadow_price", "ram", "ram_mcp",
+    ]
+    active = frame[columns].reset_index(drop=True)
+    repeated = active[active.duplicated(ACTIVE_KEYS, keep=False)]
+    if not repeated.empty:
+        names = ", ".join(sorted(set(repeated.name)))
+        raise ValueError(f"repeated active flow-based row identifiers for: {names}")
+    return active.pipe(ActiveConstraints.validate)
+
+
+def constraint_ptdfs(rows: list[dict]) -> DataFrame[ConstraintPtdfs]:
+    """Every physical active flow-based row's PTDF vector, in long Core-zone form."""
+    frame = _physical(_frame(rows)).rename(columns={"hour": "interval"})
+    hub_columns = {f"hub_{zone}": zone for zone in CORE_ZONES}
+    missing = sorted(set(hub_columns) - set(frame.columns))
+    if missing:
+        raise ValueError(f"active flow-based response is missing Core PTDF columns: {missing}")
+    ptdfs = frame[ACTIVE_PTDF_COLUMNS + list(hub_columns)].melt(
+        id_vars=ACTIVE_PTDF_COLUMNS,
+        value_vars=list(hub_columns),
+        var_name="hub_column",
+        value_name="ptdf",
+    )
+    ptdfs = ptdfs.assign(zone=ptdfs.hub_column.map(hub_columns)).drop(columns="hub_column")
+    return ptdfs.sort_values(["interval", "source_id", "zone"], ignore_index=True).pipe(ConstraintPtdfs.validate)
+
+
+def active_external_constraints(rows: list[dict]) -> DataFrame[ActiveExternalConstraints]:
+    """Active flow-based rows with no physical element, retained for a completeness count."""
+    frame = _frame(rows)
+    frame = frame[_is_non_physical(frame)].rename(columns={"hour": "interval"})
+    frame = frame.assign(tso=normalise_tso(frame.tso))
+    columns = ["interval", "name", "tso", "direction", "shadow_price", "ram", "ram_mcp"]
+    return frame[columns].reset_index(drop=True).pipe(ActiveExternalConstraints.validate)
+
+
+def price_contributions(
+    constraint: pd.Series,
+    ptdfs: DataFrame[ConstraintPtdfs],
+    reference_zone: str,
+) -> DataFrame[ConstraintContributions]:
+    """A binding row's zonal price contribution relative to ``reference_zone``.
+
+    EUPHEMIA's congestion duals do not contain the common energy-price component.
+    The selected row therefore explains only relative prices:
+    ``-shadow_price * (PTDF_z - PTDF_reference)``.
+    """
+    if reference_zone not in CORE_ZONES:
+        raise ValueError(f"reference zone must be one of {CORE_ZONES}: {reference_zone}")
+    selected = ptdfs
+    for key in ACTIVE_KEYS:
+        selected = selected[selected[key].eq(constraint[key])]
+    if len(selected) != len(CORE_ZONES):
+        raise ValueError(f"selected constraint has {len(selected)} PTDFs, expected {len(CORE_ZONES)}")
+    reference = selected.loc[selected.zone.eq(reference_zone), "ptdf"]
+    if len(reference) != 1:
+        raise ValueError(f"selected constraint has {len(reference)} PTDFs for {reference_zone}")
+    difference = selected.ptdf - reference.iloc[0]
+    return (
+        selected.assign(
+            reference_zone=reference_zone,
+            ptdf_difference=difference,
+            contribution=-float(constraint.shadow_price) * difference,
+        )
+        .reset_index(drop=True)
+        .pipe(ConstraintContributions.validate)
+    )
 
 
 def external_constraints(rows: list[dict]) -> DataFrame[ExternalConstraints]:

@@ -132,3 +132,69 @@ class ElementsWithPrices(Elements):
     class Config:
         strict = False
         coerce = True
+
+
+class ActiveConstraints(pa.DataFrameModel):
+    """One physical row that bound in EUPHEMIA, per market time unit and contingency."""
+
+    source_id: Series[int] = pa.Field(unique=True)  # Stable row identifier from the publication
+    interval: Series[UtcTimestamp]
+    eic: Series[str]
+    name: Series[str]
+    tso: Series[str]
+    direction: Series[str] = pa.Field(isin=["DIRECT", "OPPOSITE"])
+    cont_name: Series[str] = pa.Field(nullable=True)  # Null means the base case, without contingency
+    branch_eic: Series[str] = pa.Field(nullable=True)
+    hub_from: Series[str]
+    hub_to: Series[str]
+    shadow_price: Series[float] = pa.Field(gt=0)  # Welfare gain from 1 MW more RAM [EUR/MWh]
+    ram: Series[float] = pa.Field(nullable=True)  # Published RAM [MW]
+    ram_mcp: Series[float] = pa.Field(nullable=True)  # RAM left at the market-clearing point [MW]
+
+    class Config:
+        strict = False
+        coerce = True
+
+
+class ConstraintPtdfs(pa.DataFrameModel):
+    """A binding physical row's zonal PTDFs, one Core bidding zone per row."""
+
+    source_id: Series[int]
+    interval: Series[UtcTimestamp]
+    eic: Series[str]
+    direction: Series[str]
+    cont_name: Series[str] = pa.Field(nullable=True)
+    zone: Series[str]
+    ptdf: Series[float]  # Change in monitored flow per MW of zonal net-position change [MW/MW]
+
+    class Config:
+        strict = False
+        coerce = True
+
+
+class ConstraintContributions(ConstraintPtdfs):
+    """One selected row's relative zonal price contribution under an explicit reference."""
+
+    reference_zone: Series[str]
+    ptdf_difference: Series[float]
+    contribution: Series[float]  # -shadow_price * ptdf_difference [EUR/MWh]
+
+    class Config:
+        strict = False
+        coerce = True
+
+
+class ActiveExternalConstraints(pa.DataFrameModel):
+    """A binding non-spatial row, retained beside the mappable flow-based constraints."""
+
+    interval: Series[UtcTimestamp]
+    name: Series[str]
+    tso: Series[str]
+    direction: Series[str]
+    shadow_price: Series[float] = pa.Field(gt=0)
+    ram: Series[float] = pa.Field(nullable=True)
+    ram_mcp: Series[float] = pa.Field(nullable=True)
+
+    class Config:
+        strict = False
+        coerce = True
