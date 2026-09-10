@@ -3,7 +3,7 @@
 ## Concepts
 - [copper-plate-problem.md](copper-plate-problem.md) — the EU market-design argument motivating this project (copper plate, redispatch, co-optimisation, locational pricing)
 - [flow-based-market-coupling.md](flow-based-market-coupling.md) — how cross-zonal capacity reaches the day-ahead market: NTC pipes versus Core's flow-based CNEC constraints, PTDF, RAM, shadow prices, and what a nodal OPF does and does not reproduce
-- [core-capacity-calculation.md](core-capacity-calculation.md) — who computes Core's flow-based domain and when: TSO models merged by Coreso, one central DC load flow by the coordination centres, TSO validation, JAO, EUPHEMIA
+- [core-day-ahead-capacity-calculation.md](core-day-ahead-capacity-calculation.md) — how the August 2024 Core process turned grid models into auction constraints: actor map, vocabulary, one binding row carried through to its shadow price and zonal spread, the eleven-step chain and decision rights
 - [agent-workflow-design.md](agent-workflow-design.md) — rationale and sources behind the `design-first` and `ablation` rules and the grill/spec/goldfish skills
 - [rule-provenance.md](rule-provenance.md) — the observed stumble behind each `AGENTS.md` rule and skill line; the `ablation` rule's lookup table
 - [nodal-disaggregation.md](nodal-disaggregation.md) — survey: splitting measured national load and generation into per-node injections; what superseded PyPSA-Eur's approach

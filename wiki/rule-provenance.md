@@ -35,3 +35,4 @@ Rules older than this page carry no row and are the first ablation candidates.
 | `diagram` (`wiki/literature/AGENTS.md`) | The first methodology digest narrated the note's eleven-step process table in prose; the user asked for the diagram |
 | `relative-time` (wiki) | "Today it points at the fork's `coppersushi` branch" written into pypsa-eur-sibling on 2026-09-08; eight older "today"s found on the same sweep |
 | `file-urls` | Files named by bare or relative paths in chat, many times; on 2026-09-09 the user could not find a scratchpad CSV named that way and overrode the repetition bar |
+| `page-names` (wiki) | Two pages named from generic words on 2026-09-09: `core-capacity-calculation`, which the user could not place from its name, and a proposed `core-domain-inputs` that described a whole process |
