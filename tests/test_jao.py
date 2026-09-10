@@ -72,3 +72,16 @@ def test_active_fb_tables_round_trip_at_quarter_hour_grain(tmp_path):
     assert len(active.ptdfs) == 24
     assert len(active.external_constraints) == 1
     assert [str(frame.interval.dt.tz) for frame in active] == ["UTC"] * 3
+
+
+def test_a_cache_from_an_older_adapter_is_fetched_again(tmp_path, monkeypatch):
+    day = "2026-09-10"
+    directory = tmp_path / day
+    active_written(directory)
+    constraints = directory / "active-constraints.csv"
+    pd.read_csv(constraints).drop(columns="source_id").to_csv(constraints, index=False)
+    fetched = []
+    monkeypatch.setattr(jao, "JAO_DIR", tmp_path)
+    monkeypatch.setattr(jao, "fetch_active_day", lambda d: fetched.append(d) or active_written(directory))
+    assert jao.load_active_day(day).constraints.source_id.is_unique
+    assert fetched == [day]
