@@ -80,26 +80,22 @@ def cnec_geometries() -> MappedCnecElements:
     Which substations an element joins does not change by delivery day, while the domain
     feed for the next day is published hours before its auction clears. Building geometry
     from whatever days are cached therefore lets a day whose own domain feed is absent
-    still draw its binding elements.
+    still draw its binding elements. Where cached days disagree, the latest day's ends win.
     """
     if 'core' not in _geometries:
         days = sorted(day.name for day in jao.JAO_DIR.iterdir() if jao.day_dir(day.name).is_dir())
-        cached = [jao.load_day(day).elements for day in days if _has_domain_tables(day)]
+        cached = [jao.load_day(day).element_ends for day in days if jao.has_day(day)]
         if not cached:
             raise RuntimeError(
                 f'no JAO domain day cached under {jao.JAO_DIR}; run '
                 '`python -m coppersushi.data_sources.jao fetch <day>`'
             )
         _geometries['core'] = cnec_geometry.locate_elements(
-            pd.concat(cached, ignore_index=True),
+            pd.concat(cached, ignore_index=True).drop_duplicates(['eic', 'tso'], keep='last'),
             osm_locator.read_csvs(),
             osm_locator.load_aliases(),
         )
     return _geometries['core']
-
-
-def _has_domain_tables(day: str) -> bool:
-    return (jao.day_dir(day) / 'elements.csv').is_file()
 
 
 def cnec_day(day: str) -> cnec_page.Day:

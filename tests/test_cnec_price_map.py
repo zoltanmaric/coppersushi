@@ -85,10 +85,33 @@ def test_one_element_is_drawn_once_and_one_target_carries_each_binding_row(input
     assert pd.isna(lines.lon[2])
     rows = trace(fig, "binding rows")
     assert len(rows.lon) == 1
+    assert rows.marker.symbol == "triangle"
     assert "Grayspire" in rows.text[0]
     assert "Base case (no contingency)" in rows.text[0]
     assert "not physically overloaded" not in rows.text[0]
     assert rows.customdata[0][0] == "1,2"
+
+
+def test_a_line_marker_points_the_way_its_rows_bind(inputs):
+    zones, geometries, view = inputs
+    direct = trace(cnec_price_map.figure(*inputs), "binding rows")
+    # Elmridge (14.4, 46.7) to Fernhollow (15.1, 46.2) runs south-east; DIRECT is that way
+    assert direct.marker.angle[0] == pytest.approx(136.5, abs=1)
+    reversed_view = view._replace(constraints=view.constraints.assign(direction="OPPOSITE"))
+    opposite = trace(cnec_price_map.figure(zones, geometries, reversed_view), "binding rows")
+    assert opposite.marker.angle[0] == pytest.approx(316.5, abs=1)
+    assert list(opposite.lon) == list(direct.lon)
+
+
+def test_binding_lines_glow_under_a_thin_line_with_rounded_ends_and_no_legend(inputs):
+    fig = cnec_price_map.figure(*inputs)
+    glow, lines = trace(fig, "binding glow"), trace(fig, "market-binding CNECs")
+    assert list(glow.lon[:2]) == list(lines.lon[:2])
+    assert glow.line.width > lines.line.width
+    assert glow.opacity < lines.opacity
+    ends = trace(fig, "binding line ends")
+    assert sorted(zip(ends.lon, ends.lat)) == [(14.4, 46.7), (15.1, 46.2)]
+    assert fig.layout.showlegend is False
 
 
 def test_hover_carries_contingency_direction_ram_and_shadow_price(inputs):

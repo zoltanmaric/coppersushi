@@ -15,6 +15,13 @@ from coppersushi.market_day import MARKET_TZ
 POINT_TYPES = ("Transformer", "PST")
 MAPPED = "matched"
 FRAME_ZOOM = 1.0  # Chosen against the rendered page, not derived: viewport aspect varies
+LINE_WIDTH = 2.5
+GLOW_WIDTH = 11  # A translucent copy of the line this wide reads as a halo, not a bar
+GLOW_OPACITY = 0.3
+END_SIZE = 6  # Mapbox caps Plotly's lines flat; a dot at each end rounds them. Only
+# circles take the trace colour: every other symbol is the sprite's own grey icon.
+TARGET_SIZE = 8
+POINT_SIZE = 9
 
 
 def _priced_zones(zones: pd.DataFrame, prices: pd.DataFrame) -> pd.DataFrame:
@@ -62,6 +69,18 @@ def _line_coordinates(rows: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
     return lon, lat
 
 
+def _bearing(x0, y0, x1, y1):
+    """Bearing of each drawn segment in degrees clockwise from north.
+
+    Measured in the Web Mercator plane the map draws in, so a marker rotated by it lies
+    along the straight line between the endpoints at any latitude.
+    """
+    dy = np.degrees(
+        np.log(np.tan(np.radians(45 + y1 / 2))) - np.log(np.tan(np.radians(45 + y0 / 2)))
+    )
+    return np.degrees(np.arctan2(x1 - x0, dy)) % 360
+
+
 def _fill_anchor(basemap: str | dict) -> str | None:
     """The basemap layer the price fill goes under.
 
@@ -97,10 +116,7 @@ def _price_traces(
         marker_line_color=map_style.ZONE_BORDER,
         marker_line_width=map_style.ZONE_BORDER_WIDTH,
         below=fill_anchor,
-        hoverinfo="text",
-        text=(
-            priced_zones.zone + " · " + priced_zones.price.map(lambda value: f"{value:,.2f} €/MWh")
-        ),
+        hoverinfo="skip",  # The label already says what a hover would
         colorbar=go.choroplethmapbox.ColorBar(
             title=dict(text="Day-ahead price [€/MWh]", side="top"),
             orientation="h",
@@ -126,15 +142,22 @@ def _price_traces(
     return [fill, labels]
 
 
-def _hover_targets(rows: pd.DataFrame) -> pd.DataFrame:
-    """One reachable marker per plotted location, carrying every active row there."""
+def _hover_targets(rows: pd.DataFrame, directed: bool) -> pd.DataFrame:
+    """One reachable marker per plotted location and sense, carrying every active row there.
+
+    A row's sense is the way it binds: its geometry runs from the publishing TSO's own
+    `substation_from`, and that TSO's DIRECT runs the same way.
+    """
+    bearing = _bearing(rows.x0, rows.y0, rows.x1, rows.y1)
+    angle = np.where(rows.direction.eq("DIRECT"), bearing, (bearing + 180) % 360)
     targets = rows.assign(
         target_x=(rows.x0 + rows.x1) / 2,
         target_y=(rows.y0 + rows.y1) / 2,
+        angle=angle if directed else 0.0,
         hover=_hover(rows),
     )
     return (
-        targets.groupby(["target_x", "target_y"], as_index=False, dropna=False)
+        targets.groupby(["target_x", "target_y", "angle"], as_index=False, dropna=False)
         .agg(
             hover=("hover", lambda values: "<br><br>".join(values)),
             source_ids=("source_id", lambda values: ",".join(map(str, values))),
@@ -148,22 +171,37 @@ def _constraint_traces(placed: pd.DataFrame) -> list[go.Scattermapbox]:
     The domain can publish both directions and several contingencies for an element. More
     than one EIC can also resolve to one PyPSA branch. Those are distinct market rows but
     not distinct lines on the map, so the line and its marker have different grains.
+
+    A line's hover target is a triangle pointing the way its rows bind; a transformer's or
+    PST's is a square.
     """
     mapped = placed[placed.match_status.eq(MAPPED)]
     line_rows = mapped[~mapped.element_type.isin(POINT_TYPES)]
     unique_lines = line_rows.drop_duplicates("branch_id")
     lon, lat = _line_coordinates(unique_lines)
-    lines = go.Scattermapbox(
-        name="market-binding CNECs",
-        lon=lon,
-        lat=lat,
-        mode="lines",
-        hoverinfo="none",
-        line=dict(color=map_style.BINDING, width=5),
+
+    def line(name: str, width: float, opacity: float) -> go.Scattermapbox:
+        return go.Scattermapbox(
+            name=name,
+            lon=lon,
+            lat=lat,
+            mode="lines",
+            hoverinfo="none",
+            opacity=opacity,
+            line=dict(color=map_style.BINDING, width=width),
+        )
+
+    ends = go.Scattermapbox(
+        name="binding line ends",
+        lon=np.concatenate([unique_lines.x0, unique_lines.x1]),
+        lat=np.concatenate([unique_lines.y0, unique_lines.y1]),
+        mode="markers",
+        hoverinfo="skip",
+        marker=go.scattermapbox.Marker(color=map_style.BINDING, size=END_SIZE, symbol="circle"),
     )
 
-    def markers(rows: pd.DataFrame, name: str, symbol: str, size: int) -> go.Scattermapbox:
-        targets = _hover_targets(rows)
+    def markers(rows: pd.DataFrame, name: str, symbol: str, size: int, directed: bool) -> go.Scattermapbox:
+        targets = _hover_targets(rows, directed)
         return go.Scattermapbox(
             name=name,
             lon=targets.target_x,
@@ -172,14 +210,18 @@ def _constraint_traces(placed: pd.DataFrame) -> list[go.Scattermapbox]:
             hoverinfo="text",
             text=targets.hover,
             customdata=targets[["source_ids"]].to_numpy(),
-            marker=go.scattermapbox.Marker(color=map_style.BINDING, size=size, symbol=symbol),
-            )
+            marker=go.scattermapbox.Marker(
+                color=map_style.BINDING, size=size, symbol=symbol, angle=targets.angle
+            ),
+        )
 
     point_rows = mapped[mapped.element_type.isin(POINT_TYPES)]
     return [
-        lines,
-        markers(line_rows, "binding rows", "circle", 8),
-        markers(point_rows, "binding transformers and PSTs", "triangle", 14),
+        line("binding glow", GLOW_WIDTH, GLOW_OPACITY),
+        line("market-binding CNECs", LINE_WIDTH, 1.0),
+        ends,
+        markers(line_rows, "binding rows", "triangle", TARGET_SIZE, directed=True),
+        markers(point_rows, "binding transformers and PSTs", "square", POINT_SIZE, directed=False),
     ]
 
 
@@ -227,7 +269,7 @@ def figure(
         mapbox_accesstoken=mapbox_token,
         mapbox=_view(priced_zones),
         uirevision=True,
-        legend=dict(x=0.01, y=0.92, bgcolor=map_style.LEGEND_BACKGROUND),
+        showlegend=False,
         annotations=[
             go.layout.Annotation(
                 text=annotation,

@@ -53,9 +53,10 @@ real-time grid.
   second adapter already verified across all twelve Core zones, including future cleared hours; see
   [Electricity Maps API](../electricity-maps-api.md).
 - **Geometry:** JAO supplies element and substation identities but no coordinates. As of 2026-09-10
-  `cnec_geometry` places each element by its published `substationFrom`/`substationTo` names on the
-  OSM-locator substation list (unlicensed, fetched locally), with `config/substation-aliases.csv`
-  for spelling differences. The matching work in [JAO's elements on the grid](jao-grid.md), which
+  `cnec_geometry` places each element, per publishing TSO and in that TSO's orientation, by its
+  published `substationFrom`/`substationTo` names on the OSM-locator substation list (unlicensed,
+  fetched locally), with `config/substation-aliases.csv` for spelling differences. A TSO's
+  `DIRECT` runs from its own `substationFrom`, so a binding row has a direction on the map. The matching work in [JAO's elements on the grid](jao-grid.md), which
   locates elements on the PyPSA network itself, replaces it.
 
 No optimal power flow or reconstructed dispatch is required. Published prices provide the absolute

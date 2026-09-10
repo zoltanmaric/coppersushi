@@ -4,7 +4,6 @@ BINDING = "#a72af5"
 BACKGROUND_BRANCH = "#4a4a4a"
 MUTED_BRANCH = "gray"
 MAP_STYLE = "dark"
-LEGEND_BACKGROUND = "rgba(0,0,0,0.6)"
 # One scale for every mapped value; purple is reserved for binding (wiki/sushi-2.md, Architecture 5)
 VALUE_COLORSCALE = "tropic"
 ZONE_FILL_OPACITY = 0.6
