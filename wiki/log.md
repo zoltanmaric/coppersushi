@@ -19,6 +19,26 @@ signs, so that input is unsafe until clarified or guarded by an invariant. Creat
 electricity-maps-api and corrected the backtest source decision. No credential or authenticated
 response value was retained.
 
+## [2026-09-10] change | JAO's Static Grid Model: real transformer ratings and impedances
+The Core Static Grid Model (5th release, 2024-03-29 — the one in force on 2024-08-29) fetched as one
+1.7 MB zip and reduced to 520 transformers (136 of them phase shifters) and 2,967 branches (2,633
+lines, 334 tie-lines). Nothing derived from it is committed: JAO's terms reserve every right of
+reproduction and permit only internal use, so `jao_static_grid.fetch` writes into a gitignored
+`data/jao-static-grid/<release>/` and is the only way to obtain the tables. `EIC_Code` is the key the
+publication feed already carries, and 103 of the day's 106 element EICs join, including all 17
+monitored transformers and phase shifters.
+Four quirks measured. The real column names are on the second row, under a merged banner. The current
+rating is `Max`, falling back to `Fixed` then `Min` — only 339 of 520 rows have `Max`. A row is a
+phase shifter when `Theta θ (°)` is populated (136), which the names do not tell you: 99 of those are
+named `TR`, and JAO's own feed disagrees with the workbook in both directions. And `EIC_Code` is not a
+key — two RTE pairs share one EIC while differing in rating and impedance, a tie-line appears once per
+TSO owning an end, and 29 line rows carry none at all.
+And a published reactance is not always a usable one: one transformer has x = −11.7 Ω and one line
+has x = 0, which in a power flow is a short circuit rather than a small impedance. Neither is
+repaired — the workbook says what it says — both are flagged `x_physical = False`.
+The headline number: JAO's real transformer ratings have a median of 790 MVA where PyPSA-Eur's
+placeholder (`build_osm_network.py:1245`, the summed line capacity at the busier bus) has 4,425 MVA.
+
 ## [2026-09-10] change | No JAO bytes in a public repository
 
 JAO's [terms](https://www.jao.eu/terms-conditions) reserve all reproduction rights, limit use to

@@ -23,6 +23,8 @@ flowchart LR
     pypsa_eur_run["pypsa_eur_run<br/>coppersushi.data_sources.pypsa_eur → Snakemake in ../pypsa-eur (HiGHS)"]
     solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
 
+    jao_static_grid["jao_static_grid<br/>JAO's Core Static Grid Model, fetched per release: real ratings and R/X/B/G per element EIC"]
+
     unsimplified["unsimplified_build<br/>skip PyPSA-Eur's 380 kV lift: keep voltage levels and transformers"]:::planned
     jao_elements["jao_elements<br/>JAO data + OSM substations → JAO's Core elements matched to our lines and transformers, with PTDFs, limits and shadow prices"]:::planned
     day_ahead_prices["day_ahead_prices<br/>published zonal clearing prices by market time unit"]:::planned
@@ -35,6 +37,8 @@ flowchart LR
     pypsa_eur_run --> solved_network
     solved_network --> net_power_map
     solved_network -.-> jao_elements
+    jao_static_grid -.-> jao_elements
+    jao_static_grid -.-> trued_network
     jao_elements -.-> jao_map
     day_ahead_prices -.-> jao_map
     jao_elements -.-> trued_network

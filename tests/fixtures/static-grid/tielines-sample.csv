@@ -1,0 +1,5 @@
+NE_name,EIC_Code,TSO,Full_name,Full_name,Voltage_level(kV),Period 1,Period 2,Period 3,Period 4,Period 5,Period 6,Fixed,DLRmin(A),DLRmax(A),Resistance_R(Ω),Reactance_X(Ω),Susceptance_B(μS),Length_(km),Comment
+Victor - Whiskey (DC cable),99T-VW-DC00001V,VICTORTSO,VICTOR,WHISKEY,400,,,,,,,1500.0,,,,,,100.0,
+Xray - Yankee 400,99T-XY-000001X,XRAYTSO,XRAY,YANKEE,400,1792,1792,2187,-,-,-,-,,,1.2,14.0,120.0,40.0,
+Zulu - Alfa 380,99T-ZA-000001Z,ZULUTSO,ZULU,ALFA,380,,,,,,,2520.0,,,0.5,6.0,70.0,15.0,
+Zulu - Alfa 380,99T-ZA-000001Z,ALFATSO,ZULU,ALFA,380,,,,,,,2520.0,,,0.5,6.0,70.0,15.0,

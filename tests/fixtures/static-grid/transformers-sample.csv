@@ -1,0 +1,9 @@
+Full Name,EIC_Code,TSO,Min,Max,Fixed,Primary,Secondary,Resistance_R(Ω),Reactance_X(Ω),Susceptance_B (µS),Conductance_G (µS),Taps used for RAO,Theta θ (°),Symmetrical/Asymmetrical,Phase Regulation δu (%),Angle Regulation δu (%),Comment
+TR Alpha 400/220 A1,99T-ALPHA-TR001A,ALPHATSO,800.0,866.0,,400,231.0,0.668,51.462,-415.27,2.562,,,,,1.385,
+PST Bravo PF1,99T-BRAVO-PS001B,BRAVOTSO,1200.0,1200.0,,400,400.0,0.112,11.616,-34.6375,0.0,-8;8,90.0,Symmetrical,0,1.108,
+TR Charlie 400/220   ,99T-CHARL-TR001C,CHARLIETSO,,,577.0,400,231.0,0.49,47.6,-4.98,0.47,,,,1.25,,
+TR Delta DTRHU41,99T-DELTA-TR001D,DELTATSO,,,1443.0,400,220.0,0.2987,21.601,-6.6615,1.7,,59.99,Asymmetrical,,1.388,
+TR Echo 400/225 761,99T-ECHO0-TR001E,ECHOTSO,814.0,850.0,,400,225.0,0.59,68.7,,,,,,,,Susceptance and conductance are not published for transformers 
+TR Echo 400/225 769,99T-ECHO0-TR001E,ECHOTSO,850.0,925.0,,400,225.0,0.57,72.8,,,,,,,,Susceptance and conductance are not published for transformers 
+TR Foxtrot 400/225 761,99T-FOXTR-TR001F,ECHOTSO,1659.0,1803.0,,400,225.0,0.068,-11.7,,,,,,,,Susceptance and conductance are not published for transformers 
+TR Golf 220/110,99T-GOLF0-TR001G,GOLFTSO,500.0,,,220,110.0,0.5,12.0,-3.5124,0.11,,0.0,Asymmetrical,1.124,0,
