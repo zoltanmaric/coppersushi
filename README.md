@@ -48,7 +48,7 @@ Once the server starts, the web app will be available at http://localhost:8050
 
 ### Market Data
 
-The CNEC view uses public JAO Active FB constraints and Electricity Maps' published day-ahead
+The CNEC view uses JAO's public active flow-based constraints and Electricity Maps' published day-ahead
 prices. Put an Electricity Maps key in `.secrets/.electricity_maps_api_key`, or export
 `ELECTRICITY_MAPS_API_KEY`. Fetch one delivery day into the gitignored local cache with:
 

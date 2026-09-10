@@ -221,7 +221,7 @@ def constraint_ptdfs(rows: list[dict]) -> DataFrame[ConstraintPtdfs]:
     hub_columns = {f"hub_{zone}": zone for zone in CORE_ZONES}
     missing = sorted(set(hub_columns) - set(frame.columns))
     if missing:
-        raise ValueError(f"Active FB response is missing Core PTDF columns: {missing}")
+        raise ValueError(f"active flow-based response is missing Core PTDF columns: {missing}")
     ptdfs = frame[ACTIVE_PTDF_COLUMNS + list(hub_columns)].melt(
         id_vars=ACTIVE_PTDF_COLUMNS,
         value_vars=list(hub_columns),

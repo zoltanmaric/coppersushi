@@ -29,7 +29,7 @@ def untyped_element() -> list[dict]:
 
 
 def active_fb() -> list[dict]:
-    """Invented rows in the current Active FB response shape; no JAO values are redistributed."""
+    """Invented rows in the active flow-based response shape; no JAO values are redistributed."""
     return rows("active-fb-day.json")
 
 

@@ -22,7 +22,7 @@ flowchart LR
     pypsa_eur_pin["pypsa_eur_pin<br/>pypsa-eur.pin + config/coppersushi.yaml"]
     pypsa_eur_run["pypsa_eur_run<br/>coppersushi.data_sources.pypsa_eur → Snakemake in ../pypsa-eur (HiGHS)"]
     solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
-    jao_active_fb["jao_active_fb<br/>post-auction binding constraints, shadow prices and zonal PTDFs by market time unit"]
+    jao_active_constraints["jao_active_constraints<br/>post-auction binding constraints, shadow prices and zonal PTDFs by market time unit"]
 
     jao_static_grid["jao_static_grid<br/>JAO's Core Static Grid Model, fetched per release: real ratings and R/X/B/G per element EIC"]
 
@@ -40,7 +40,7 @@ flowchart LR
     solved_network -.-> jao_elements
     jao_static_grid -.-> jao_elements
     jao_static_grid -.-> trued_network
-    jao_active_fb -.-> jao_elements
+    jao_active_constraints -.-> jao_elements
     jao_elements -.-> jao_map
     day_ahead_prices -.-> jao_map
     jao_elements -.-> trued_network
