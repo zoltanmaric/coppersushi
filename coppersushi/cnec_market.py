@@ -8,11 +8,9 @@ from coppersushi import cnecs, market
 
 
 class ConstraintKey(NamedTuple):
-    """The natural key of one physical row within a market time unit."""
+    """The publication's stable identifier for one physical row."""
 
-    eic: str
-    direction: str
-    cont_name: str
+    source_id: int
 
 
 class Snapshot(NamedTuple):
@@ -26,7 +24,7 @@ class Snapshot(NamedTuple):
 
 
 def key_of(constraint: pd.Series) -> ConstraintKey:
-    return ConstraintKey(constraint.eic, constraint.direction, constraint.cont_name)
+    return ConstraintKey(int(constraint.source_id))
 
 
 def _at_interval(frame: pd.DataFrame, interval: pd.Timestamp) -> pd.DataFrame:
@@ -49,11 +47,7 @@ def snapshot(
     external = _at_interval(external_constraints, interval)
     contribution = None
     if selected is not None:
-        chosen = current[
-            current.eic.eq(selected.eic)
-            & current.direction.eq(selected.direction)
-            & current.cont_name.eq(selected.cont_name)
-        ]
+        chosen = current[current.source_id.eq(selected.source_id)]
         if len(chosen) != 1:
             raise ValueError(f"selected constraint matched {len(chosen)} active rows")
         if reference_zone is None:

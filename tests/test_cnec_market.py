@@ -12,19 +12,13 @@ def active_rows() -> list[dict]:
     return json.loads(FIXTURE.read_text())["data"]
 
 
-def price_payload(zone: str, value: float) -> dict:
-    return {
-        "data": [
-            {
-                "zone": zone,
-                "datetime": "2024-08-28T22:00:00Z",
-                "updatedAt": "2024-08-28T12:05:00Z",
-                "value": value,
-                "unit": "EUR/MWh",
-                "source": "example.test",
-            }
-        ]
-    }
+PRICE_FIXTURE = (
+    REPO / "tests" / "fixtures" / "synthetic-electricity-maps" / "day-ahead-prices-hour.json"
+)
+
+
+def price_payloads() -> list[dict]:
+    return json.loads(PRICE_FIXTURE.read_text())["responses"]
 
 
 def inputs():
@@ -33,7 +27,7 @@ def inputs():
         cnecs.active_constraints(rows),
         cnecs.constraint_ptdfs(rows),
         cnecs.active_external_constraints(rows),
-        market.day_ahead_prices([price_payload("AT", 50.0), price_payload("BE", 70.0)]),
+        market.day_ahead_prices(price_payloads()),
     )
 
 

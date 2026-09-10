@@ -77,7 +77,7 @@ class MarketDay:
 
         The transition date is the delivery-day go-live published by the Market Coupling
         Steering Committee. This calendar rule also supplies intervals with no binding
-        Active FB row, which the sparse JAO response cannot do by itself.
+        active flow-based row, which the sparse JAO response cannot do by itself.
         """
         frequency = "15min" if self.date >= FIFTEEN_MINUTE_START else "h"
         return self.intervals(frequency)
