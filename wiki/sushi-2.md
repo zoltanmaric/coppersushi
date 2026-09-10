@@ -24,8 +24,9 @@ flowchart LR
     solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
 
     unsimplified["unsimplified_build<br/>skip PyPSA-Eur's 380 kV lift: keep voltage levels and transformers"]:::planned
-    jao_elements["jao_elements<br/>JAO data + OSM substations → JAO's Core elements matched to our lines and transformers, with limits and shadow prices"]:::planned
-    jao_map["jao_map<br/>/jao/&lt;day&gt; (Dash app)"]:::planned
+    jao_elements["jao_elements<br/>JAO data + OSM substations → JAO's Core elements matched to our lines and transformers, with PTDFs, limits and shadow prices"]:::planned
+    day_ahead_prices["day_ahead_prices<br/>published zonal clearing prices by market time unit"]:::planned
+    jao_map["jao_map<br/>/jao/&lt;day&gt;: cleared zonal prices, active CNECs and selected PTDF contribution"]:::planned
     trued_network["trued_network<br/>solved_network with JAO limits on matched lines and transformers, checked pairs attached"]:::planned
 
     pypsa_eur_pin --> pypsa_eur_run
@@ -35,6 +36,7 @@ flowchart LR
     solved_network --> net_power_map
     solved_network -.-> jao_elements
     jao_elements -.-> jao_map
+    day_ahead_prices -.-> jao_map
     jao_elements -.-> trued_network
     solved_network -.-> trued_network
 ```
