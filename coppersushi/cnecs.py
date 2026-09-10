@@ -38,6 +38,7 @@ from coppersushi.data_model.jao import (
     Contingencies,
     ConstraintContributions,
     ConstraintPtdfs,
+    ElementEnds,
     Elements,
     ElementsWithPrices,
     ExternalConstraints,
@@ -59,6 +60,8 @@ ACTIVE_PTDF_COLUMNS = ["source_id", "interval", "eic", "direction", "cont_name"]
 PLACEHOLDER_COLUMNS = [
     "eic", "direction", "hub_from", "hub_to", "substation_from", "substation_to", "element_type",
 ]
+
+END_COLUMNS = ["eic", "tso", "element_type", "substation_from", "substation_to"]
 
 ELEMENT_COLUMNS = [
     "hour", "eic", "name", "tso", "direction", "hub_from", "hub_to",
@@ -172,6 +175,27 @@ def elements(rows: list[dict]) -> DataFrame[Elements]:
         )[ELEMENT_COLUMNS]
         .pipe(Elements.validate)
     )
+
+
+def element_ends(rows: list[dict]) -> DataFrame[ElementEnds]:
+    """Each TSO's own ends of every presolved physical element, one row per EIC and TSO.
+
+    `elements` folds the TSOs of a shared element together, yet each TSO's DIRECT runs from
+    its own `substation_from`: APG's and ČEPS's DIRECT rows on one tie-line carry PTDFs of
+    opposite sign. Anything that wants to know which way a published row points needs the
+    publishing TSO's own ends.
+    """
+    frame = _physical(_frame(rows))
+    presolved = frame[frame.presolved]
+    ends = (
+        presolved.assign(tso=normalise_tso(presolved.tso))[END_COLUMNS]
+        .drop_duplicates(ignore_index=True)
+    )
+    clashing = ends[ends.duplicated(["eic", "tso"], keep=False)]
+    if not clashing.empty:
+        names = ", ".join(sorted(set(clashing.eic)))
+        raise ValueError(f"one TSO published more than one substation pair for: {names}")
+    return ends.pipe(ElementEnds.validate)
 
 
 def contingencies(rows: list[dict]) -> DataFrame[Contingencies]:

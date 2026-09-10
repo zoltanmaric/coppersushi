@@ -17,7 +17,8 @@ def written(directory) -> jao.Day:
     fc, sp = rows("final-computation-hour.json"), rows("shadow-prices-day.json")
     jao.write_day(directory, cnecs.elements(fc), cnecs.contingencies(fc), cnecs.shadow_prices(sp),
                   cnecs.with_constraint_prices(cnecs.external_constraints(fc),
-                                               cnecs.external_constraints(sp)))
+                                               cnecs.external_constraints(sp)),
+                  cnecs.element_ends(fc))
     return jao.read_day(directory)
 
 
@@ -39,9 +40,18 @@ def test_write_and_load_round_trip(tmp_path):
     assert not day.elements.empty
 
 
-def test_every_table_comes_back_with_its_zone(tmp_path):
+def test_every_hourly_table_comes_back_with_its_zone(tmp_path):
     day = written(tmp_path)
-    assert [str(frame.hour.dt.tz) for frame in day] == ["UTC"] * len(jao.Day._fields)
+    hourly = [frame for frame in day if "hour" in frame]
+    assert len(hourly) == len(jao.Day._fields) - 1  # element ends have no hour
+    assert [str(frame.hour.dt.tz) for frame in hourly] == ["UTC"] * len(hourly)
+
+
+def test_element_ends_round_trip_one_row_per_publisher_and_element(tmp_path):
+    day = written(tmp_path)
+    assert list(day.element_ends.columns) == cnecs.END_COLUMNS
+    assert not day.element_ends.duplicated(["eic", "tso"]).any()
+    assert jao.has_day.__doc__  # a cache written before this table lacks it, and says so
 
 
 def test_the_disagreement_flag_survives_the_csv(tmp_path):

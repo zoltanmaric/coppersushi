@@ -28,7 +28,7 @@ import pandas as pd
 from pandera.typing import DataFrame
 
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
-from coppersushi.data_model.jao import Elements
+from coppersushi.data_model.jao import ElementEnds
 
 Point = tuple[float, float]
 
@@ -120,26 +120,6 @@ def _closest(from_places: list[Point], to_places: list[Point]) -> tuple[Point, P
     )
 
 
-def _one_row_per_element(elements: DataFrame[Elements]) -> pd.DataFrame:
-    """The published identity of each monitored element, orientation removed.
-
-    Two TSOs monitoring one tie-line publish it under one EIC but each from its own end:
-    `Etzenricht - Hradec` and `Hradec - Etzenricht`. The pair is the identity and its order
-    is not, so the pair is sorted before duplicates are dropped.
-    """
-    ends = elements[["substation_from", "substation_to"]].to_numpy()
-    oriented = elements.assign(
-        substation_from=[min(pair, key=str) for pair in ends],
-        substation_to=[max(pair, key=str) for pair in ends],
-    )
-    identity = ["eic", "element_type", "substation_from", "substation_to"]
-    per_element = oriented[identity].drop_duplicates(ignore_index=True)
-    if per_element.eic.duplicated().any():
-        clashing = sorted(per_element.eic[per_element.eic.duplicated()])
-        raise ValueError(f"elements name more than one substation pair: {', '.join(clashing)}")
-    return per_element
-
-
 def _placement(element, index: dict[str, list[Point]], aliases: dict[str, str]) -> dict:
     """Where one monitored element is drawn, or why it is not drawn at all."""
     ends = [
@@ -182,15 +162,16 @@ def _placement(element, index: dict[str, list[Point]], aliases: dict[str, str]) 
 
 
 def locate_elements(
-    elements: DataFrame[Elements],
+    ends: DataFrame[ElementEnds],
     substations: pd.DataFrame,
     aliases: dict[str, str] | None = None,
 ) -> DataFrame[MappedCnecElements]:
-    """One row per monitored element, placed between its substations where both are located.
+    """One row per publishing TSO and element, placed between its substations where located.
 
-    The pair is unordered, so `x0`/`y0` is the alphabetically first of the two substations
-    and not the published `substation_from`: the two TSOs of a tie-line disagree about which
-    end is which, and nothing drawn from this table is directed.
+    `x0`/`y0` is the TSO's own `substation_from`, so that TSO's DIRECT runs from `(x0, y0)`
+    to `(x1, y1)`. Two TSOs monitoring one tie-line publish it under one EIC but each from
+    its own end — `Etzenricht - Hradec` and `Hradec - Etzenricht` — and get two rows drawn
+    over one another under one `branch_id`.
 
     An element with an endpoint the locator does not hold keeps its row without coordinates,
     so the map can say how much of the published set it is showing. `aliases` names the
@@ -201,11 +182,12 @@ def locate_elements(
     rows = [
         {
             "eic": element.eic,
+            "tso": element.tso,
             "element_type": element.element_type,
             "branch_type": "Transformer" if element.element_type in POINT_TYPES else "Line",
             **_placement(element, index, by_alias),
         }
-        for element in _one_row_per_element(elements).itertuples()
+        for element in ends.itertuples()
     ]
     return pd.DataFrame(rows, columns=list(MappedCnecElements.to_schema().columns)).pipe(
         MappedCnecElements.validate

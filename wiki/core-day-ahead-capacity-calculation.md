@@ -120,7 +120,7 @@ The thread begins with one constraint and stays with it through the auction. APG
 |---|---|---|---|---|
 | `tso` | APG | APG | TSO that monitors the element | 4 |
 | `cneName`, `elementType`, `hubFrom`, `hubTo` | Obersielach - Podlog 247, TieLine, AT, SI | same | Element and its end zones | 4 |
-| `direction` | DIRECT | DIRECT | One of the element's two flow directions | 4 |
+| `direction` | DIRECT | DIRECT | One of the element's two flow directions, from the publishing TSO's own `substationFrom` towards its `substationTo`: two TSOs monitoring one tie-line from opposite ends publish DIRECT rows whose PTDFs have opposite signs | 4 |
 | `contName`, `contingencies` | Kainachtal - Maribor 473 400 kV Maribor - Kainachtal 1 | same | Assumed outage, as JAO's free text and structured branches | 4 |
 | `fmaxType`, `imax`, `u` | SEASONAL, 1,101 A, 220 kV | same | Rating type, current rating and published voltage level | 4 |
 | `fmax` | 429 MW | same | TSO-supplied maximum flow; it matches √3 · 225 kV · 1,101 A although JAO labels `u` as 220 kV | 4 |

@@ -58,6 +58,26 @@ class Elements(pa.DataFrameModel):
         coerce = True
 
 
+class ElementEnds(pa.DataFrameModel):
+    """One TSO's orientation of one physical element: the ends its DIRECT runs between.
+
+    ``Elements`` folds the TSOs of a shared element into one row per hour, EIC and direction,
+    but each TSO's ``direction`` is relative to its own ``substation_from``, and two TSOs can
+    publish one tie-line from opposite ends. This table keeps every publisher's own ends.
+    """
+
+    eic: Series[str]
+    tso: Series[str]
+    element_type: Series[str]
+    substation_from: Series[str] = pa.Field(nullable=True)
+    substation_to: Series[str] = pa.Field(nullable=True)
+
+    class Config:
+        strict = True
+        coerce = True
+        unique = ["eic", "tso"]
+
+
 class Contingencies(pa.DataFrameModel):
     """One row per branch of every contingency behind a presolved element."""
 

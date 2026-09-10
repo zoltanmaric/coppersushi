@@ -29,6 +29,7 @@ from coppersushi.data_model.jao import (
     ActiveExternalConstraints,
     Contingencies,
     ConstraintPtdfs,
+    ElementEnds,
     Elements,
     ExternalConstraints,
     ExternalConstraintsWithPrices,
@@ -44,12 +45,13 @@ TIMEOUT_SECONDS = 300
 
 
 class Day(NamedTuple):
-    """One market day of JAO, as the four tables `cnecs` builds."""
+    """One market day of JAO, as the five tables `cnecs` builds."""
 
     elements: DataFrame[Elements]
     contingencies: DataFrame[Contingencies]
     shadow_prices: DataFrame[ShadowPrices]
     external_constraints: DataFrame[ExternalConstraintsWithPrices]
+    element_ends: DataFrame[ElementEnds]  # Hour-free: each publisher's orientation of its elements
 
 
 class ActiveDay(NamedTuple):
@@ -60,7 +62,7 @@ class ActiveDay(NamedTuple):
     external_constraints: DataFrame[ActiveExternalConstraints]
 
 
-MODELS = (Elements, Contingencies, ShadowPrices, ExternalConstraintsWithPrices)
+MODELS = (Elements, Contingencies, ShadowPrices, ExternalConstraintsWithPrices, ElementEnds)
 ACTIVE_MODELS = (ActiveConstraints, ConstraintPtdfs, ActiveExternalConstraints)
 
 
@@ -99,18 +101,26 @@ def _get(endpoint: str, start: pd.Timestamp, end: pd.Timestamp) -> list[dict]:
 
 def fetch_hours(
     hours: pd.DatetimeIndex,
-) -> tuple[DataFrame[Elements], DataFrame[Contingencies], DataFrame[ExternalConstraints]]:
+) -> tuple[
+    DataFrame[Elements],
+    DataFrame[Contingencies],
+    DataFrame[ExternalConstraints],
+    DataFrame[ElementEnds],
+]:
     """`finalComputation` for each hour, tidied and discarded before the next is requested."""
-    elements, contingencies, externals = [], [], []
+    elements, contingencies, externals, ends = [], [], [], []
     for hour in hours:
         rows = _get("finalComputation", hour, hour + pd.Timedelta(hours=1))
         elements.append(cnecs.elements(rows))
         contingencies.append(cnecs.contingencies(rows))
         externals.append(cnecs.external_constraints(rows))
+        ends.append(cnecs.element_ends(rows))
     return (
         pd.concat(elements, ignore_index=True).pipe(Elements.validate),
         pd.concat(contingencies, ignore_index=True).pipe(Contingencies.validate),
         pd.concat(externals, ignore_index=True).pipe(ExternalConstraints.validate),
+        # A publisher's ends do not change by the hour; a day that says otherwise fails here
+        pd.concat(ends, ignore_index=True).drop_duplicates(ignore_index=True).pipe(ElementEnds.validate),
     )
 
 
@@ -122,7 +132,7 @@ def fetch_day(day: str) -> Path:
     feed's rather than concatenated, so a constraint that bound is one row and not two.
     """
     hours = hours_for(day)
-    elements, contingencies, externals = fetch_hours(hours)
+    elements, contingencies, externals, ends = fetch_hours(hours)
     prices = _get("shadowPrices", hours[0], hours[-1] + pd.Timedelta(hours=1))
     return write_day(
         day_dir(day),
@@ -130,6 +140,7 @@ def fetch_day(day: str) -> Path:
         contingencies,
         cnecs.shadow_prices(prices),
         cnecs.with_constraint_prices(externals, cnecs.external_constraints(prices)),
+        ends,
     )
 
 
@@ -155,10 +166,12 @@ def write_day(
     contingencies: DataFrame[Contingencies],
     shadow_prices: DataFrame[ShadowPrices],
     external_constraints: DataFrame[ExternalConstraintsWithPrices],
+    element_ends: DataFrame[ElementEnds],
 ) -> Path:
-    """Write the four tables as CSV, creating the directory."""
+    """Write the five tables as CSV, creating the directory."""
     directory.mkdir(parents=True, exist_ok=True)
-    for name, frame in zip(Day._fields, (elements, contingencies, shadow_prices, external_constraints)):
+    tables = (elements, contingencies, shadow_prices, external_constraints, element_ends)
+    for name, frame in zip(Day._fields, tables):
         frame.to_csv(_path(directory, name), index=False)
     logger.info("jao: wrote %s", directory)
     return directory
@@ -179,13 +192,14 @@ def write_active_day(
 
 
 def read_day(directory: Path) -> Day:
-    """The four tables back from CSV, each validated once its zone is restored."""
+    """The five tables back from CSV, each validated once its zone is restored."""
     frames = []
     for name, model in zip(Day._fields, MODELS):
         frame = pd.read_csv(_path(directory, name))
-        # `read_csv`'s own date parsing is inconsistent about tz across versions, so the
-        # column is read as text and converted here.
-        frame = frame.assign(hour=pd.to_datetime(frame.hour, utc=True))
+        if "hour" in frame:
+            # `read_csv`'s own date parsing is inconsistent about tz across versions, so the
+            # column is read as text and converted here.
+            frame = frame.assign(hour=pd.to_datetime(frame.hour, utc=True))
         frames.append(_restore_blanks(frame, model).pipe(model.validate))
     return Day(*frames)
 
@@ -216,6 +230,11 @@ def _restore_blanks(frame: pd.DataFrame, model: type) -> pd.DataFrame:
 
 def load_day(day: str) -> Day:
     return read_day(day_dir(day))
+
+
+def has_day(day: str) -> bool:
+    """Whether every table of a cached domain day is on disk; an older cache may lack one."""
+    return all(_path(day_dir(day), name).is_file() for name in Day._fields)
 
 
 def load_active_day(day: str, refresh: bool = False) -> ActiveDay:
