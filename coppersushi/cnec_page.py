@@ -1,0 +1,151 @@
+"""Pure page state for exploring one day of prices and active constraints."""
+
+from dataclasses import dataclass
+from datetime import datetime
+from typing import NamedTuple
+
+import pandas as pd
+import plotly.graph_objects as go
+from dash import dcc, html
+from pandera.typing import DataFrame
+
+from coppersushi import cnec_market, cnec_price_map, market
+from coppersushi.data_model.cnec_price_map import MappedCnecElements
+from coppersushi.data_model.jao import (
+    ActiveConstraints,
+    ActiveExternalConstraints,
+    ConstraintPtdfs,
+)
+from coppersushi.data_model.market import DayAheadPrices
+from coppersushi.market_day import MARKET_TZ, MarketDay
+
+
+@dataclass(frozen=True)
+class Day:
+    """All in-memory inputs for one delivery day's page."""
+
+    market_day: MarketDay
+    buses: pd.DataFrame
+    mapped_elements: DataFrame[MappedCnecElements]
+    constraints: DataFrame[ActiveConstraints]
+    ptdfs: DataFrame[ConstraintPtdfs]
+    external_constraints: DataFrame[ActiveExternalConstraints]
+    prices: DataFrame[DayAheadPrices]
+
+
+class Rendered(NamedTuple):
+    """Map and control state emitted together so no control can drift from its interval."""
+
+    figure: go.Figure
+    interval_max: int
+    interval_marks: dict[int, str]
+    interval_value: int
+    constraint_options: list[dict]
+    constraint_value: int | None
+
+
+def local_today() -> str:
+    """Today's Core market-day label in its named timezone."""
+    return datetime.now(tz=MARKET_TZ).date().isoformat()
+
+
+def layout(day: str | None = None) -> html.Div:
+    """The CNEC page controls; data loading and callbacks remain at the app boundary."""
+    return html.Div(
+        [
+            html.Div(
+                [
+                    dcc.DatePickerSingle(id="cnec-date", date=day or local_today()),
+                    dcc.Dropdown(
+                        id="cnec-constraint",
+                        placeholder="Select a binding row",
+                        clearable=True,
+                    ),
+                    dcc.Dropdown(
+                        id="cnec-reference-zone",
+                        options=[{"label": zone, "value": zone} for zone in market.CORE_ZONES],
+                        value="AT",
+                        clearable=False,
+                    ),
+                ],
+                style={
+                    "display": "grid",
+                    "gridTemplateColumns": "12em minmax(24em, 1fr) 7em",
+                    "gap": "0.6em",
+                    "padding": "0.4em 1em",
+                },
+            ),
+            dcc.Graph(
+                id="cnec-map",
+                style={"height": "82vh"},
+                config={"responsive": True, "displayModeBar": False, "scrollZoom": True},
+            ),
+            dcc.Slider(id="cnec-interval", min=0, max=1, step=1, value=0),
+        ]
+    )
+
+
+def interval_marks(day: MarketDay) -> dict[int, str]:
+    """Hourly labels on either hourly or quarter-hourly controls, with DST disambiguated."""
+    intervals = day.market_time_units()
+    stride = 1 if len(intervals) <= 25 else 4
+    return {
+        index: interval.tz_convert(MARKET_TZ).strftime("%H:%M %Z")
+        for index, interval in enumerate(intervals)
+        if index % stride == 0
+    }
+
+
+def _constraint_options(constraints: pd.DataFrame) -> list[dict]:
+    options = []
+    for row in constraints.sort_values("shadow_price", ascending=False).itertuples():
+        contingency = row.cont_name if pd.notna(row.cont_name) else "base case"
+        options.append(
+            {
+                "label": (
+                    f"{row.name} · {row.direction} · {contingency} · "
+                    f"{row.shadow_price:,.2f} €/MWh"
+                ),
+                "value": int(row.source_id),
+            }
+        )
+    return options
+
+
+def render(
+    day: Day,
+    interval_index: int,
+    selected_source_id: int | None,
+    reference_zone: str,
+    mapbox_token: str | None = None,
+) -> Rendered:
+    """Render one coherent map/control state from already-loaded day inputs."""
+    intervals = day.market_day.market_time_units()
+    index = min(max(int(interval_index), 0), len(intervals) - 1)
+    interval = intervals[index]
+    active = day.constraints[day.constraints.interval.eq(interval)]
+    options = _constraint_options(active)
+    option_values = {option["value"] for option in options}
+    selected_value = selected_source_id if selected_source_id in option_values else None
+    selected = (
+        cnec_market.ConstraintKey(int(selected_value)) if selected_value is not None else None
+    )
+    snapshot = cnec_market.snapshot(
+        day.constraints,
+        day.ptdfs,
+        day.external_constraints,
+        day.prices,
+        interval,
+        selected,
+        reference_zone if selected is not None else None,
+    )
+    return Rendered(
+        figure=cnec_price_map.figure(
+            day.buses, day.mapped_elements, snapshot, mapbox_token
+        ),
+        interval_max=len(intervals) - 1,
+        interval_marks=interval_marks(day.market_day),
+        interval_value=index,
+        constraint_options=options,
+        constraint_value=selected_value,
+    )

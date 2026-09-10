@@ -89,7 +89,6 @@ JAO-derived records remain fetched locally rather than committed under JAO's ter
 
 ## Next
 
-1. Render 2024-08-29 from the existing JAO tables and published prices, consuming the element
-   mapping rather than expanding this spec into that work.
-2. Check the current JAO active flow-based service contract and load the next published day through the same
-   view.
+1. Wire the page controls and real 2024-08-29 caches to the element mapping after the independent
+   JAO geometry stack lands.
+2. Add the top navigation route, then verify both 2024-08-29 and the latest published day in-browser.
