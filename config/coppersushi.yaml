@@ -17,6 +17,11 @@ countries: [AL, AT, BA, BE, BG, CH, CZ, DE, DK, EE, ES, FI, FR, GB, GR, HR, HU, 
 data:
   wdpa:
     source: primary
+  # OSM substation names are the only join key to JAO, which names an element's ends and never gives
+  # a coordinate. `archive` serves prebuilt CSVs with no name column, so the grid is rebuilt from the
+  # OSM extract instead; the fork carries the name through (wiki/pypsa-eur-sibling.md).
+  osm:
+    source: build
 
 # The Core market day in CET/CEST, not the UTC day.
 snapshots:
@@ -53,6 +58,15 @@ load:
 clustering:
   temporal:
     resolution_elec: 1h  # JAO publishes hourly; at this resolution the mapping needs no rule
+  aggregation_strategies:
+    buses:
+      osm_name: first  # a custom bus column reaches base.nc but is dropped at simplify without this
+
+# The default endpoint (overpass-api.de) was unreachable on 2026-09-10 and rate-limits hard under
+# parallel country queries. Kumi Systems runs a public mirror of the same database.
+overpass_api:
+  url: "https://overpass.kumi.systems/api/interpreter"
+  max_tries: 12  # one failed feature discards the whole country's retrieved files, so retry hard
 
 solving:
   solver:

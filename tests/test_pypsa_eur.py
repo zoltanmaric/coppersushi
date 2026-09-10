@@ -105,3 +105,15 @@ def test_snapshots_are_naive_utc_matching_the_hours():
     snapshots = pypsa_eur.snapshots(day)
     assert snapshots.tz is None
     assert list(snapshots) == list(day.hours().tz_localize(None))
+
+
+def test_the_config_has_no_duplicate_top_level_keys():
+    """PyYAML keeps the last of two identical keys and discards the first, silently.
+
+    A second `data:` block once threw away `data.wdpa.source: primary`, so the workflow
+    fell back to an archive copy that stalls mid-download — a config change that read as
+    additive but deleted a setting three sections above it.
+    """
+    top_level = re.findall(r"^([A-Za-z_][\w-]*):", pypsa_eur.CONFIG.read_text(), re.MULTILINE)
+    duplicates = {key for key in top_level if top_level.count(key) > 1}
+    assert not duplicates, f"config/coppersushi.yaml defines these keys twice: {sorted(duplicates)}"
