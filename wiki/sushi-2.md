@@ -31,6 +31,7 @@ flowchart LR
     jao_domain["jao_domain<br/>final flow-based domain: monitored elements with their substation names, PTDFs and RAM"]
     osm_locator["osm_locator<br/>core-tso-data's OSM-locator substation coordinates, unlicensed, fetched locally"]
     cnec_geometry["cnec_geometry<br/>each element EIC placed by its published substation names; interim until jao_elements"]
+    zone_shapes["zone_shapes<br/>Core bidding-zone polygons read off solved_network's country shapes"]
     day_ahead_prices["day_ahead_prices<br/>published zonal clearing prices by market time unit"]
     cnec_market_snapshot["cnec_market_snapshot<br/>one market time unit: zonal prices, active rows, selected relative contribution"]
     jao_map["jao_map<br/>/jao/&lt;day&gt;: cleared zonal prices, active CNECs and selected PTDF contribution"]:::planned
@@ -41,6 +42,8 @@ flowchart LR
     unsimplified -.-> solved_network
     pypsa_eur_run --> solved_network
     solved_network --> net_power_map
+    solved_network --> zone_shapes
+    zone_shapes -.-> jao_map
     solved_network -.-> jao_elements
     jao_static_grid -.-> jao_elements
     jao_static_grid -.-> trued_network
