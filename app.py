@@ -8,9 +8,9 @@ import plotly.graph_objects as go
 from dash import Dash, dcc, html, Input, Output, ctx, no_update
 import dash_bootstrap_components as dbc
 
-from coppersushi import bidding_zones, cnec_geometry, cnec_page, power_flow
+from coppersushi import bidding_zones, cnec_geometry, cnec_page, map_style, power_flow
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
-from coppersushi.data_sources import electricity_maps, jao, networks, osm_locator
+from coppersushi.data_sources import electricity_maps, jao, mapbox_styles, networks, osm_locator
 from coppersushi.market_day import MarketDay
 
 # Every page's controls live in one tree that the router swaps, so a callback whose
@@ -40,11 +40,19 @@ _cache: dict[str, tuple[go.Figure, pd.Index]] = {}
 _zones: dict[str, pd.DataFrame] = {}
 _geometries: dict[str, MappedCnecElements] = {}
 _cnec_days: dict[str, cnec_page.Day] = {}
+_basemap: dict[str, dict] = {}
 
 
 def mapbox_token() -> str:
     """From the environment (deploys) or the gitignored secrets file (README: Mapbox token)."""
     return os.environ.get('MAPBOX_TOKEN') or Path('.secrets/.mapbox_token').read_text().strip()
+
+
+def basemap() -> dict:
+    """Mapbox's dark style without its labels, fetched once per process."""
+    if 'dark' not in _basemap:
+        _basemap['dark'] = map_style.without_labels(mapbox_styles.fetch(mapbox_token()))
+    return _basemap['dark']
 
 
 def figure_for(network_key: str) -> tuple[go.Figure, pd.Index]:
@@ -203,7 +211,7 @@ def render_cnec(day: str, interval_index: int, selected: str | None, reference_z
     """The CNEC page's map and controls for one day; a failed load becomes the banner."""
     try:
         rendered = cnec_page.render(
-            cnec_day(day), interval_index or 0, selected, reference_zone, mapbox_token()
+            cnec_day(day), interval_index or 0, selected, reference_zone, mapbox_token(), basemap()
         )
     except Exception as e:  # noqa: BLE001 — every loader failure must reach the page
         logging.exception('Loading the CNEC day %s failed', day)

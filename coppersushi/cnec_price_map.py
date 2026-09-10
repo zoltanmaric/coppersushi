@@ -264,8 +264,12 @@ def figure(
     geometries: DataFrame[MappedCnecElements],
     view: Snapshot,
     mapbox_token: str | None = None,
+    basemap: str | dict = map_style.MAP_STYLE,
 ) -> go.Figure:
-    """The zonal price choropleth plus every mapped physical row active in ``view.interval``."""
+    """The zonal price choropleth plus every mapped physical row active in ``view.interval``.
+
+    ``basemap`` is a Plotly preset name or a Mapbox style document (see ``map_style.without_labels``).
+    """
     priced_zones = _priced_zones(zones, view.prices)
     centres = _zone_centres(priced_zones)
     placed = _placed(view.constraints, geometries)
@@ -285,7 +289,7 @@ def figure(
     fig.update_layout(
         hovermode="closest",
         margin=dict(r=0, t=0, l=0, b=0),
-        mapbox_style=map_style.MAP_STYLE,
+        mapbox_style=basemap,
         mapbox_accesstoken=mapbox_token,
         mapbox=_view(priced_zones),
         uirevision=True,

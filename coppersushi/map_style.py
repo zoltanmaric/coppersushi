@@ -9,3 +9,17 @@ NETWORK_VALUE_COLORSCALE = "tropic"
 ZONE_FILL_OPACITY = 0.45
 ZONE_BORDER = "rgba(255,255,255,0.55)"
 ZONE_BORDER_WIDTH = 1.2
+LABEL_LAYERS = "symbol"  # Every label in a Mapbox style is a symbol layer
+
+
+def without_labels(style: dict) -> dict:
+    """A Mapbox style document with its own labels removed.
+
+    Mapbox drops a label that collides with one it has already placed, and the dark
+    style writes each country's name where that country's value wants to be. Without
+    the basemap's symbol layers, the figure's text has the frame to itself.
+    """
+    return {
+        **style,
+        "layers": [layer for layer in style["layers"] if layer["type"] != LABEL_LAYERS],
+    }

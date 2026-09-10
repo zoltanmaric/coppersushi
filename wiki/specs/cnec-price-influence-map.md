@@ -52,9 +52,11 @@ real-time grid.
 - **Prices:** published NEMO or ENTSO-E day-ahead prices. Electricity Maps' price `actual` route is a
   second adapter already verified across all twelve Core zones, including future cleared hours; see
   [Electricity Maps API](../electricity-maps-api.md).
-- **Geometry:** JAO supplies element and substation identities but no coordinates. The matching work
-  in [JAO's elements on the grid](jao-grid.md) locates them on the OpenStreetMap/PyPSA network and is
-  the map's prerequisite.
+- **Geometry:** JAO supplies element and substation identities but no coordinates. As of 2026-09-10
+  `cnec_geometry` places each element by its published `substationFrom`/`substationTo` names on the
+  OSM-locator substation list (unlicensed, fetched locally), with `config/substation-aliases.csv`
+  for spelling differences. The matching work in [JAO's elements on the grid](jao-grid.md), which
+  locates elements on the PyPSA network itself, replaces it.
 
 No optimal power flow or reconstructed dispatch is required. Published prices provide the absolute
 level; published shadow prices and PTDF differences provide each binding row's relative contribution.
@@ -89,6 +91,5 @@ JAO-derived records remain fetched locally rather than committed under JAO's ter
 
 ## Next
 
-1. Wire the page controls and real 2024-08-29 caches to the element mapping after the independent
-   JAO geometry stack lands.
-2. Add the top navigation route, then verify both 2024-08-29 and the latest published day in-browser.
+1. Verify the latest published day in-browser; only 2024-08-29 has been.
+2. Replace `cnec_geometry` with [jao-grid](jao-grid.md)'s matcher once it lands.

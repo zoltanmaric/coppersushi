@@ -10,7 +10,7 @@ import dash_bootstrap_components as dbc
 from dash import dcc, html
 from pandera.typing import DataFrame
 
-from coppersushi import cnec_market, cnec_price_map, market
+from coppersushi import cnec_market, cnec_price_map, map_style, market
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
 from coppersushi.data_model.jao import (
     ActiveConstraints,
@@ -134,6 +134,7 @@ def render(
     selected_source_id: int | None,
     reference_zone: str,
     mapbox_token: str | None = None,
+    basemap: str | dict = map_style.MAP_STYLE,
 ) -> Rendered:
     """Render one coherent map/control state from already-loaded day inputs."""
     intervals = day.market_day.market_time_units()
@@ -158,7 +159,7 @@ def render(
     )
     return Rendered(
         figure=cnec_price_map.figure(
-            day.zones, day.mapped_elements, snapshot, mapbox_token
+            day.zones, day.mapped_elements, snapshot, mapbox_token, basemap
         ),
         interval_max=len(intervals) - 1,
         interval_marks=interval_marks(day.market_day),
