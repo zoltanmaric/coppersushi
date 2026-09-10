@@ -18,6 +18,7 @@ Rules older than this page carry no row and are the first ablation candidates.
 | `absolute-paths` | Twice, a `cd` at the start of a command chain sent a pin edit and a launch into the sibling repo |
 | `named-adds` | `git add -A` during a merge swept two tokens from an unignored `.secrets/` into a local commit; GitHub push protection caught it. Again on a rules-only branch: a 31 MB candidate network rode along and had to be amended out |
 | `early-stack-prs` | A finished first stack layer remained local while later layers were being planned; on the first occurrence, the user explicitly overrode the repetition bar and asked that every coherent layer be opened immediately, as draft until ready |
+| `pull-request` ready-review watch | Three stack layers were marked ready and their actionable review threads sat unread while the next layer was implemented; on the first occurrence, the user explicitly overrode the repetition bar and asked for monitoring from ready-time onward |
 | `sanction-by-hand` (`networks/AGENTS.md`) | A 31 MB solve was about to be committed as the day's network by an agent, with no human having looked at it |
 | `public-repo` | A private repository path was cited as a source in a skill and a PR body |
 | `main-push`; PR creation and updates need no confirmation | Opening PR #49 was blocked after the user had requested it because `no-push` demanded a redundant second confirmation; the user narrowed the gate to direct pushes to `main` |
