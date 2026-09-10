@@ -1,3 +1,4 @@
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -117,3 +118,36 @@ def test_the_config_has_no_duplicate_top_level_keys():
     top_level = re.findall(r"^([A-Za-z_][\w-]*):", pypsa_eur.CONFIG.read_text(), re.MULTILINE)
     duplicates = {key for key in top_level if top_level.count(key) > 1}
     assert not duplicates, f"config/coppersushi.yaml defines these keys twice: {sorted(duplicates)}"
+
+
+def test_overpass_retrieval_is_capped_below_the_core_count(monkeypatch):
+    """`-call` runs one retrieval per core, which Overpass answers with 429s and then refusals."""
+    captured = {}
+
+    real_run = pypsa_eur.subprocess.run
+
+    def fake_run(cmd, **kwargs):
+        if cmd[0] != "pixi":  # let the runner's own git calls through
+            return real_run(cmd, **kwargs)
+        captured["cmd"] = cmd
+        raise SystemExit  # stop before the workflow does any work
+
+    monkeypatch.setattr(pypsa_eur, "_checkout", lambda *a: None)
+    monkeypatch.setattr(pypsa_eur.subprocess, "run", fake_run)
+    with pytest.raises(SystemExit):
+        pypsa_eur.solve()
+
+    cmd = captured["cmd"]
+    assert f"overpass={pypsa_eur.OVERPASS_JOBS}" in cmd
+    assert "retrieve_osm_data_raw:overpass=1" in cmd
+    assert pypsa_eur.OVERPASS_JOBS < os.cpu_count()
+
+
+def test_cached_downloads_are_served_without_revalidating():
+    """A down endpoint must not stop the DAG building when the file is already cached."""
+    assert pypsa_eur._workflow_env()[pypsa_eur.SKIP_REMOTE_CHECKS] == "True"
+
+
+def test_the_environment_still_wins_over_the_default(monkeypatch):
+    monkeypatch.setenv(pypsa_eur.SKIP_REMOTE_CHECKS, "False")
+    assert pypsa_eur._workflow_env()[pypsa_eur.SKIP_REMOTE_CHECKS] == "False"

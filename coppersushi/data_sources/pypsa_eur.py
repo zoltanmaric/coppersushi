@@ -18,6 +18,22 @@ from coppersushi.market_day import MarketDay
 
 logger = logging.getLogger(__name__)
 
+# Overpass is a free public endpoint. `-call` fires one retrieval per core, which it answers with
+# HTTP 429 and then by refusing connections outright; the rule declares no resource of its own, so
+# the cap is applied from here rather than by patching the workflow.
+OVERPASS_JOBS = 2
+
+# The cached-http storage plugin already caches Zenodo and data.pypsa.org downloads, but by default
+# it revalidates each one against the remote *while building the DAG* — so an endpoint being down
+# stops the workflow starting even though the file is on disk. `versions.csv` pins every dataset, so
+# the revalidation buys little and costs a hard dependency on services outside our control.
+SKIP_REMOTE_CHECKS = "SNAKEMAKE_STORAGE_CACHED_HTTP_SKIP_REMOTE_CHECKS"
+
+
+def _workflow_env() -> dict[str, str]:
+    """The workflow's environment: serve cached downloads without revalidating, unless overridden."""
+    return {SKIP_REMOTE_CHECKS: "True"} | dict(os.environ)
+
 PIN_FILE = REPO / "pypsa-eur.pin"
 CONFIG = REPO / "config" / "coppersushi.yaml"
 
@@ -31,10 +47,11 @@ def solve(experiment: str | None = None) -> Path:
     """Run PyPSA-Eur with our config; the solved network becomes a candidate, kept but rejected if it sheds load."""
     pin, sibling = _read_pin(), _sibling_dir()
     _checkout(pin, sibling)
-    cmd = ["pixi", "run", "snakemake", "-call", "solve_elec_networks", "--configfile", str(CONFIG)]
+    cmd = ["pixi", "run", "snakemake", "-call", "solve_elec_networks", "--configfile", str(CONFIG),
+           "--resources", f"overpass={OVERPASS_JOBS}", "--set-resources", f"retrieve_osm_data_raw:overpass=1"]
     logger.info("pypsa-eur: `%s` in %s — a first run downloads ~20 GB and takes about an hour; snakemake narrates each rule",
                 " ".join(cmd), sibling)
-    subprocess.run(cmd, cwd=sibling, check=True)
+    subprocess.run(cmd, cwd=sibling, check=True, env=_workflow_env())
     cfg = yaml.safe_load(CONFIG.read_text())
     solved = sorted((sibling / "results" / cfg["run"]["name"] / "networks").glob("*.nc"))
     if len(solved) != 1:
