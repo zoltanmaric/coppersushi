@@ -74,24 +74,20 @@ def layout(day: str | None = None) -> html.Div:
             ),
             html.Div(
                 dcc.Slider(id="cnec-interval", min=0, max=1, step=1, value=0),
-                style={"padding": "0 1em 2.5em"},
+                style={"padding": "0 1em 1.5em"},
             ),
         ]
     )
 
 
 def interval_marks(day: MarketDay) -> dict[int, dict]:
-    """Hourly labels on either hourly or quarter-hourly controls, with DST disambiguated.
-
-    Written vertically: 24 hourly labels do not fit a page-width slider side by side, and
-    a quarter-hourly day carries four times as many intervals behind the same labels.
-    """
+    """A label every two hours on either hourly or quarter-hourly controls, in market time."""
     intervals = day.market_time_units()
-    stride = 1 if len(intervals) <= 25 else 4
+    stride = 2 if len(intervals) <= 25 else 8
     return {
         index: {
-            "label": interval.tz_convert(MARKET_TZ).strftime("%H:%M %Z"),
-            "style": {"writingMode": "vertical-rl", "fontSize": "0.7em", "color": "white"},
+            "label": interval.tz_convert(MARKET_TZ).strftime("%H:%M"),
+            "style": {"color": "white"},
         }
         for index, interval in enumerate(intervals)
         if index % stride == 0

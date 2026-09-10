@@ -65,5 +65,5 @@ def test_layout_starts_on_the_supplied_day_and_exposes_all_controls():
 def test_a_historical_day_has_every_hour_and_timezone_disambiguated_marks():
     rendered = cnec_page.render(inputs(), 0)
     assert rendered.interval_max == 23
-    assert rendered.interval_marks[0]["label"] == "00:00 CEST"
-    assert rendered.interval_marks[23]["label"] == "23:00 CEST"
+    assert rendered.interval_marks[0]["label"] == "00:00"
+    assert rendered.interval_marks[22]["label"] == "22:00" and 23 not in rendered.interval_marks

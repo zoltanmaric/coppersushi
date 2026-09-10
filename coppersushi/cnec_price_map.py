@@ -7,9 +7,10 @@ import pandas as pd
 import plotly.graph_objects as go
 from pandera.typing import DataFrame
 
-from coppersushi import map_style
+from coppersushi import map_style, market
 from coppersushi.cnec_market import Snapshot
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
+from coppersushi.market_day import MARKET_TZ
 
 POINT_TYPES = ("Transformer", "PST")
 MAPPED = "matched"
@@ -61,7 +62,19 @@ def _line_coordinates(rows: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
     return lon, lat
 
 
-def _price_traces(priced_zones: pd.DataFrame) -> list[go.Choroplethmapbox | go.Scattermapbox]:
+def _fill_anchor(basemap: str | dict) -> str | None:
+    """The basemap layer the price fill goes under.
+
+    Plotly's default puts a choropleth under the basemap's first symbol layer; the label-free
+    basemap has none, so the fill would land above the labels and markers drawn after it and
+    tint them. Under the topmost basemap layer, borders and roads also stay legible on it.
+    """
+    return basemap["layers"][-1]["id"] if isinstance(basemap, dict) else None
+
+
+def _price_traces(
+    priced_zones: pd.DataFrame, fill_anchor: str | None
+) -> list[go.Choroplethmapbox | go.Scattermapbox]:
     labels_at = _zone_centres(priced_zones)
     fill = go.Choroplethmapbox(
         name="published day-ahead price",
@@ -79,10 +92,11 @@ def _price_traces(priced_zones: pd.DataFrame) -> list[go.Choroplethmapbox | go.S
         },
         locations=priced_zones.zone,
         z=priced_zones.price,
-        colorscale=map_style.NETWORK_VALUE_COLORSCALE,
+        colorscale=map_style.PRICE_COLORSCALE,
         marker_opacity=map_style.ZONE_FILL_OPACITY,
         marker_line_color=map_style.ZONE_BORDER,
         marker_line_width=map_style.ZONE_BORDER_WIDTH,
+        below=fill_anchor,
         hoverinfo="text",
         text=(
             priced_zones.zone + " · " + priced_zones.price.map(lambda value: f"{value:,.2f} €/MWh")
@@ -101,8 +115,12 @@ def _price_traces(priced_zones: pd.DataFrame) -> list[go.Choroplethmapbox | go.S
         lat=labels_at.y,
         mode="text",
         hoverinfo="skip",
-        text=labels_at.zone + "<br>" + labels_at.price.map(lambda value: f"{value:,.0f} €"),
-        textfont=dict(color="white", size=13),
+        text=(
+            labels_at.zone.map(market.ZONE_NAMES).fillna(labels_at.zone)
+            + "<br>"
+            + labels_at.price.map(lambda value: f"€{value:,.0f}")
+        ),
+        textfont=dict(color="white", size=14),
         showlegend=False,
     )
     return [fill, labels]
@@ -155,7 +173,7 @@ def _constraint_traces(placed: pd.DataFrame) -> list[go.Scattermapbox]:
             text=targets.hover,
             customdata=targets[["source_ids"]].to_numpy(),
             marker=go.scattermapbox.Marker(color=map_style.BINDING, size=size, symbol=symbol),
-        )
+            )
 
     point_rows = mapped[mapped.element_type.isin(POINT_TYPES)]
     return [
@@ -200,7 +218,7 @@ def figure(
         f"<b>{mapped} of {len(placed)} active rows mapped</b><br>"
         "Purple means market-binding under contingency, not physically overloaded."
     )
-    traces = _price_traces(priced_zones) + _constraint_traces(placed)
+    traces = _price_traces(priced_zones, _fill_anchor(basemap)) + _constraint_traces(placed)
     fig = go.Figure(traces)
     fig.update_layout(
         hovermode="closest",
@@ -209,7 +227,7 @@ def figure(
         mapbox_accesstoken=mapbox_token,
         mapbox=_view(priced_zones),
         uirevision=True,
-        legend=dict(x=0.01, y=0.99, bgcolor=map_style.LEGEND_BACKGROUND),
+        legend=dict(x=0.01, y=0.92, bgcolor=map_style.LEGEND_BACKGROUND),
         annotations=[
             go.layout.Annotation(
                 text=annotation,
@@ -224,7 +242,20 @@ def figure(
                 bgcolor="rgba(0,0,0,0.65)",
                 bordercolor=map_style.BINDING,
                 borderpad=7,
-            )
+            ),
+            go.layout.Annotation(
+                text=f"<b>{view.interval.tz_convert(MARKET_TZ).strftime('%a %d %b %Y · %H:%M %Z')}</b>",
+                xref="paper",
+                yref="paper",
+                x=0.01,
+                y=0.99,
+                xanchor="left",
+                yanchor="top",
+                showarrow=False,
+                font=dict(size=15, color="white"),
+                bgcolor="rgba(0,0,0,0.65)",
+                borderpad=6,
+            ),
         ],
     )
     return fig

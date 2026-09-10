@@ -54,7 +54,7 @@ def test_choropleth_carries_one_price_per_priced_zone_and_labels_each(inputs):
     assert list(fill.locations) == ["AT", "BE"]
     assert list(fill.z) == [50.0, 70.0]
     assert [feature["id"] for feature in fill.geojson["features"]] == ["AT", "BE"]
-    assert list(trace(fig, "zone prices").text) == ["AT<br>50 €", "BE<br>70 €"]
+    assert list(trace(fig, "zone prices").text) == ["Austria<br>€50", "Belgium<br>€70"]
 
 
 def test_each_zone_label_sits_inside_its_own_zone(inputs):
@@ -62,7 +62,8 @@ def test_each_zone_label_sits_inside_its_own_zone(inputs):
     labels = trace(cnec_price_map.figure(*inputs), "zone prices")
     shapes = dict(zip(zones.zone, zones.geometry))
     for text, lon, lat in zip(labels.text, labels.lon, labels.lat):
-        assert shapes[text[:2]].contains(Point(lon, lat))
+        zone = next(code for code, name in market.ZONE_NAMES.items() if text.startswith(name))
+        assert shapes[zone].contains(Point(lon, lat))
 
 
 def test_unpriced_zones_are_left_off_the_map(inputs):
