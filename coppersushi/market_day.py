@@ -16,6 +16,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 MARKET_TZ = ZoneInfo("Europe/Brussels")  # CET/CEST, the zone Core's day-ahead market runs on
+FIFTEEN_MINUTE_START = date(2025, 10, 1)  # First SDAC delivery day with a 15-minute MTU
 
 
 @dataclass(frozen=True)
@@ -70,3 +71,13 @@ class MarketDay:
             inclusive="left",
             tz="UTC",
         )
+
+    def market_time_units(self) -> pd.DatetimeIndex:
+        """Every SDAC market time unit: hourly historically, quarter-hourly since 2025-10-01.
+
+        The transition date is the delivery-day go-live published by the Market Coupling
+        Steering Committee. This calendar rule also supplies intervals with no binding
+        Active FB row, which the sparse JAO response cannot do by itself.
+        """
+        frequency = "15min" if self.date >= FIFTEEN_MINUTE_START else "h"
+        return self.intervals(frequency)
