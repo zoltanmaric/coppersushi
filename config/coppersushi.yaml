@@ -66,9 +66,15 @@ clustering:
     # survive: the default maps everything onto one 380 kV layer and deletes every transformer.
     to_380: false
 
-# One failed feature makes Snakemake discard every already-retrieved file for that country, so a
-# flaky endpoint has to be retried hard rather than given up on.
+# The default endpoint cannot serve a whole-Europe rebuild: on 2026-09-10 it answered 429 to a
+# single-threaded retrieval that fits inside its two-slot rate limit, and moved zero files in twelve
+# minutes; pushed harder it stops answering at all for about an hour. Its own fair-use policy sends
+# bulk users to a mirror. This mirror was verified the same day against a local reference country --
+# an identical element count on a fresher database, and a full-geometry country in 9 s.
+# One failed feature makes Snakemake discard every already-retrieved file for that country, so the
+# endpoint is still retried hard.
 overpass_api:
+  url: "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
   max_tries: 12
 
 solving:
