@@ -38,9 +38,10 @@ def _placed(constraints: pd.DataFrame, geometries: DataFrame[CnecGeometries]) ->
 
 def _hover(rows: pd.DataFrame) -> pd.Series:
     ram = rows.ram.map(lambda value: "n/a" if pd.isna(value) else f"{value:,.0f} MW")
+    contingency = rows.cont_name.fillna("Base case (no contingency)")
     return (
         "<b>" + rows["name"] + "</b><br>"
-        + "Binding under: " + rows.cont_name + "<br>"
+        + "Binding under: " + contingency + "<br>"
         + "Direction: " + rows.direction + "<br>"
         + "RAM: " + ram + "<br>"
         + "Shadow price: " + rows.shadow_price.map(lambda value: f"{value:,.2f} €/MWh")
@@ -115,7 +116,7 @@ def _constraint_traces(placed: pd.DataFrame) -> list[go.Scattermapbox]:
             mode="markers",
             hoverinfo="text",
             text=_hover(rows),
-            customdata=rows[["eic", "direction", "cont_name"]].to_numpy(),
+            customdata=rows[["source_id"]].to_numpy(),
             marker=go.scattermapbox.Marker(color=PURPLE, size=size, symbol=symbol),
         )
 
@@ -129,11 +130,7 @@ def _constraint_traces(placed: pd.DataFrame) -> list[go.Scattermapbox]:
 
 def _selected_row(placed: pd.DataFrame, contribution: pd.DataFrame) -> pd.Series:
     first = contribution.iloc[0]
-    selected = placed[
-        placed.eic.eq(first.eic)
-        & placed.direction.eq(first.direction)
-        & placed.cont_name.eq(first.cont_name)
-    ]
+    selected = placed[placed.source_id.eq(first.source_id)]
     if len(selected) != 1:
         raise ValueError(f"contribution matched {len(selected)} active rows")
     return selected.iloc[0]

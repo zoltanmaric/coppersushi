@@ -9,19 +9,9 @@ from coppersushi.data_model.cnec_price_map import CnecGeometries
 FIXTURE = REPO / "tests" / "fixtures" / "synthetic-jao" / "active-fb-day.json"
 
 
-def payload(zone: str, price: float) -> dict:
-    return {
-        "data": [
-            {
-                "zone": zone,
-                "datetime": "2024-08-28T22:00:00Z",
-                "updatedAt": "2024-08-28T12:05:00Z",
-                "value": price,
-                "unit": "EUR/MWh",
-                "source": "example.test",
-            }
-        ]
-    }
+PRICE_FIXTURE = (
+    REPO / "tests" / "fixtures" / "synthetic-electricity-maps" / "day-ahead-prices-hour.json"
+)
 
 
 @pytest.fixture
@@ -30,7 +20,7 @@ def inputs():
     constraints = cnecs.active_constraints(rows)
     ptdfs = cnecs.constraint_ptdfs(rows)
     external = cnecs.active_external_constraints(rows)
-    prices = market.day_ahead_prices([payload("AT", 50.0), payload("BE", 70.0)])
+    prices = market.day_ahead_prices(json.loads(PRICE_FIXTURE.read_text())["responses"])
     view = cnec_market.snapshot(
         constraints, ptdfs, external, prices, pd.Timestamp("2024-08-28T22:00:00Z")
     )
@@ -75,7 +65,7 @@ def test_one_element_is_drawn_once_but_each_binding_contingency_remains_hoverabl
     rows = trace(fig, "binding rows")
     assert len(rows.lon) == 2
     assert any("Grayspire" in text for text in rows.text)
-    assert any("Kestrel" in text for text in rows.text)
+    assert any("Base case (no contingency)" in text for text in rows.text)
     assert all("not physically overloaded" not in text for text in rows.text)
 
 
