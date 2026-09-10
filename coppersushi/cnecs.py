@@ -52,7 +52,8 @@ PLACEHOLDER = "NA"  # what the domain feed writes where a row has no EIC, TSO or
 
 KEYS = ["hour", "eic", "direction"]
 CONSTRAINT_KEYS = ["hour", "name"]  # a constraint has no EIC, and only the price feed knows its direction
-ACTIVE_KEYS = ["interval", "eic", "direction", "cont_name"]
+ACTIVE_KEYS = ["source_id"]
+ACTIVE_PTDF_COLUMNS = ["source_id", "interval", "eic", "direction", "cont_name"]
 
 # Text columns in which the feeds write `"NA"` for "does not apply".
 PLACEHOLDER_COLUMNS = [
@@ -69,6 +70,7 @@ ELEMENT_COLUMNS = [
 # Both feeds' field names, mapped onto ours. The two pages never carry both spellings of
 # a field, so one dict serves them both.
 RENAME = {
+    "id": "source_id",
     "dateTimeUtc": "hour",
     "cneEic": "eic",
     "cnecEic": "eic",
@@ -193,7 +195,7 @@ def shadow_prices(rows: list[dict]) -> DataFrame[ShadowPrices]:
 
 
 def active_constraints(rows: list[dict]) -> DataFrame[ActiveConstraints]:
-    """The physical rows of JAO's post-auction Active FB publication.
+    """The physical rows of JAO's post-auction active flow-based publication.
 
     An element and direction can bind under more than one contingency in the same
     interval, so the contingency is part of the key. Collapsing to the element grain
@@ -202,36 +204,36 @@ def active_constraints(rows: list[dict]) -> DataFrame[ActiveConstraints]:
     frame = _physical(_frame(rows)).rename(columns={"hour": "interval"})
     frame = frame.assign(tso=normalise_tso(frame.tso))
     columns = [
-        "interval", "eic", "name", "tso", "direction", "cont_name", "branch_eic",
+        "source_id", "interval", "eic", "name", "tso", "direction", "cont_name", "branch_eic",
         "hub_from", "hub_to", "shadow_price", "ram", "ram_mcp",
     ]
     active = frame[columns].reset_index(drop=True)
     repeated = active[active.duplicated(ACTIVE_KEYS, keep=False)]
     if not repeated.empty:
         names = ", ".join(sorted(set(repeated.name)))
-        raise ValueError(f"several active rows for one element, interval, direction and contingency: {names}")
+        raise ValueError(f"repeated active flow-based row identifiers for: {names}")
     return active.pipe(ActiveConstraints.validate)
 
 
 def constraint_ptdfs(rows: list[dict]) -> DataFrame[ConstraintPtdfs]:
-    """Every physical Active FB row's PTDF vector, in long Core-zone form."""
+    """Every physical active flow-based row's PTDF vector, in long Core-zone form."""
     frame = _physical(_frame(rows)).rename(columns={"hour": "interval"})
     hub_columns = {f"hub_{zone}": zone for zone in CORE_ZONES}
     missing = sorted(set(hub_columns) - set(frame.columns))
     if missing:
         raise ValueError(f"Active FB response is missing Core PTDF columns: {missing}")
-    ptdfs = frame[ACTIVE_KEYS + list(hub_columns)].melt(
-        id_vars=ACTIVE_KEYS,
+    ptdfs = frame[ACTIVE_PTDF_COLUMNS + list(hub_columns)].melt(
+        id_vars=ACTIVE_PTDF_COLUMNS,
         value_vars=list(hub_columns),
         var_name="hub_column",
         value_name="ptdf",
     )
     ptdfs = ptdfs.assign(zone=ptdfs.hub_column.map(hub_columns)).drop(columns="hub_column")
-    return ptdfs.sort_values(ACTIVE_KEYS + ["zone"], ignore_index=True).pipe(ConstraintPtdfs.validate)
+    return ptdfs.sort_values(["interval", "source_id", "zone"], ignore_index=True).pipe(ConstraintPtdfs.validate)
 
 
 def active_external_constraints(rows: list[dict]) -> DataFrame[ActiveExternalConstraints]:
-    """Active FB rows with no physical element, retained for an honest completeness count."""
+    """Active flow-based rows with no physical element, retained for a completeness count."""
     frame = _frame(rows)
     frame = frame[_is_non_physical(frame)].rename(columns={"hour": "interval"})
     frame = frame.assign(tso=normalise_tso(frame.tso))

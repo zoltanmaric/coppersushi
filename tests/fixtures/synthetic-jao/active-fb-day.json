@@ -34,7 +34,7 @@
       "cnecName": "Elmridge - Fernhollow 247",
       "cnecEic": "99T-AA-BB-00003P",
       "direction": "DIRECT",
-      "contName": "Kestrel - Larkspur 202",
+      "contName": null,
       "branchEic": "99T-KE-LA-00002B",
       "hubFrom": "AT",
       "hubTo": "SI",

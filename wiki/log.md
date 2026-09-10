@@ -3,14 +3,13 @@
 Append-only chronology of wiki operations (ingests, queries, lints).
 Entry format: `## [YYYY-MM-DD] <operation> | <title>`
 
-## [2026-09-10] change | Active FB and published-price adapters
+## [2026-09-10] query | Active flow-based constraints and published prices
 
-The current JAO `activeFbConstraints` response supplies quarter-hourly binding physical rows with
+JAO's `activeFbConstraints` response on 2026-09-10 supplied quarter-hourly binding physical rows with
 their shadow prices and all twelve Core PTDFs, plus non-spatial external constraints; it does not
 require the full final-domain download for the price-influence calculation. Electricity Maps'
-`price-day-ahead/actual` route currently supplies hourly published prices for all twelve zones.
-Implemented both adapters with ignored local caches, retained both native resolutions, and defined
-the selected-row contribution as `-shadow price × (PTDF zone - PTDF reference)`.
+`price-day-ahead/actual` route supplied hourly published prices for all twelve zones on the same date.
+The selected-row contribution is `-shadow price × (PTDF zone - PTDF reference)`.
 
 ## [2026-09-10] query | What the Electricity Maps API provides
 

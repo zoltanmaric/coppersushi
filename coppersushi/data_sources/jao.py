@@ -53,7 +53,7 @@ class Day(NamedTuple):
 
 
 class ActiveDay(NamedTuple):
-    """The small post-auction publication: physical rows, their PTDFs and non-spatial rows."""
+    """Post-auction flow-based constraints: physical rows, PTDFs and non-spatial rows."""
 
     constraints: DataFrame[ActiveConstraints]
     ptdfs: DataFrame[ConstraintPtdfs]
@@ -134,7 +134,7 @@ def fetch_day(day: str) -> Path:
 
 
 def fetch_active_day(day: str) -> Path:
-    """Fetch the small post-auction Active FB publication for one market day."""
+    """Fetch the post-auction active flow-based constraints for one market day."""
     market_day = MarketDay.on(day)
     rows = _get(
         "activeFbConstraints",
@@ -170,11 +170,11 @@ def write_active_day(
     ptdfs: DataFrame[ConstraintPtdfs],
     external_constraints: DataFrame[ActiveExternalConstraints],
 ) -> Path:
-    """Cache the normalized Active FB tables locally; their directory is gitignored."""
+    """Cache normalized active flow-based tables locally; their directory is gitignored."""
     directory.mkdir(parents=True, exist_ok=True)
     for name, frame in zip(ActiveDay._fields, (constraints, ptdfs, external_constraints)):
         frame.to_csv(_path(directory, f"active_{name}"), index=False)
-    logger.info("jao: wrote active FB tables to %s", directory)
+    logger.info("jao: wrote active flow-based tables to %s", directory)
     return directory
 
 
@@ -219,7 +219,7 @@ def load_day(day: str) -> Day:
 
 
 def load_active_day(day: str, refresh: bool = False) -> ActiveDay:
-    """Read cached Active FB tables, fetching on first use or when explicitly refreshed."""
+    """Read cached active flow-based tables, fetching on first use or explicit refresh."""
     directory = day_dir(day)
     first = _path(directory, f"active_{ActiveDay._fields[0]}")
     if refresh or not first.is_file():

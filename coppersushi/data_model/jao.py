@@ -137,12 +137,13 @@ class ElementsWithPrices(Elements):
 class ActiveConstraints(pa.DataFrameModel):
     """One physical row that bound in EUPHEMIA, per market time unit and contingency."""
 
+    source_id: Series[int] = pa.Field(unique=True)  # Stable row identifier from the publication
     interval: Series[UtcTimestamp]
     eic: Series[str]
     name: Series[str]
     tso: Series[str]
     direction: Series[str] = pa.Field(isin=["DIRECT", "OPPOSITE"])
-    cont_name: Series[str]
+    cont_name: Series[str] = pa.Field(nullable=True)  # Null means the base case, without contingency
     branch_eic: Series[str] = pa.Field(nullable=True)
     hub_from: Series[str]
     hub_to: Series[str]
@@ -158,10 +159,11 @@ class ActiveConstraints(pa.DataFrameModel):
 class ConstraintPtdfs(pa.DataFrameModel):
     """A binding physical row's zonal PTDFs, one Core bidding zone per row."""
 
+    source_id: Series[int]
     interval: Series[UtcTimestamp]
     eic: Series[str]
     direction: Series[str]
-    cont_name: Series[str]
+    cont_name: Series[str] = pa.Field(nullable=True)
     zone: Series[str]
     ptdf: Series[float]  # Change in monitored flow per MW of zonal net-position change [MW/MW]
 
@@ -183,7 +185,7 @@ class ConstraintContributions(ConstraintPtdfs):
 
 
 class ActiveExternalConstraints(pa.DataFrameModel):
-    """A binding non-spatial row from Active FB, retained beside the mappable CNECs."""
+    """A binding non-spatial row, retained beside the mappable flow-based constraints."""
 
     interval: Series[UtcTimestamp]
     name: Series[str]

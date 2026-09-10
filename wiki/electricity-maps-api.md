@@ -85,8 +85,8 @@ The key and authenticated response values never belong in the wiki or git.
 ## Use in Copper Sushi
 
 `coppersushi.data_sources.electricity_maps` fetches and locally caches the `actual` price route for
-all twelve Core zones. It preserves the source interval — currently hourly even while JAO's Active
-FB publication is quarter-hourly — so the CNEC view can use one published hourly value across its
+all twelve Core zones. It preserves the source interval — hourly as verified on 2026-09-10 even
+while JAO's active flow-based publication is quarter-hourly — so the CNEC view can use one published hourly value across its
 four covered capacity intervals without fabricating intermediate prices.
 
 For a future forecast experiment, the Core-wide price vector is a comparison target; the German

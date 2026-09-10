@@ -169,7 +169,8 @@ def test_active_fb_keeps_two_contingencies_on_one_element_as_two_constraints():
     active = cnecs.active_constraints(active_fb())
     assert len(active) == 2
     assert active.eic.nunique() == 1
-    assert active.cont_name.nunique() == 2
+    assert active.cont_name.isna().sum() == 1
+    assert active.source_id.is_unique
     assert str(active.interval.dt.tz) == "UTC"
 
 
@@ -200,7 +201,7 @@ def test_active_non_spatial_rows_are_retained_separately():
     assert external.shadow_price.iloc[0] == 12.0
 
 
-def test_an_exact_duplicate_active_constraint_is_refused():
+def test_a_repeated_active_row_identifier_is_refused():
     duplicate = active_fb() + [dict(active_fb()[0])]
-    with pytest.raises(ValueError, match="several active rows"):
+    with pytest.raises(ValueError, match="repeated active"):
         cnecs.active_constraints(duplicate)

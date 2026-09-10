@@ -28,6 +28,12 @@ BASE_URL = "https://api.electricitymap.org/v4/price-day-ahead/actual"
 CACHE_DIR = REPO / "data" / "electricity-maps"
 TOKEN_FILE = REPO / ".secrets" / ".electricity_maps_api_key"
 TIMEOUT_SECONDS = 60
+GRANULARITIES = {
+    "hourly": "h",
+    "15-minute": "15min",
+    "15 minutes": "15min",
+    "quarter-hourly": "15min",
+}
 
 
 def api_token() -> str:
@@ -61,6 +67,29 @@ def _get(zone: str, day: MarketDay, token: str) -> dict:
         return json.load(response)
 
 
+def check_complete(zone: str, day: MarketDay, payload: dict) -> None:
+    """Refuse a missing, repeated or out-of-window price before it reaches the cache."""
+    if payload.get("zone") != zone:
+        raise RuntimeError(f"price response says zone {payload.get('zone')!r}, expected {zone!r}")
+    granularity = payload.get("temporalGranularity")
+    if granularity not in GRANULARITIES:
+        raise RuntimeError(f"unknown price temporal granularity: {granularity!r}")
+    rows = payload.get("data", [])
+    row_zones = {row.get("zone") for row in rows}
+    if row_zones != {zone}:
+        raise RuntimeError(f"price rows say zones {sorted(row_zones)}, expected only {zone}")
+    actual = pd.to_datetime([row.get("datetime") for row in rows], utc=True, format="ISO8601")
+    if actual.duplicated().any():
+        raise RuntimeError(f"repeated {zone} price intervals")
+    expected = day.intervals(GRANULARITIES[granularity])
+    missing = expected.difference(actual)
+    extra = actual.difference(expected)
+    if len(missing) or len(extra):
+        raise RuntimeError(
+            f"incomplete {zone} price timeline: {len(missing)} missing, {len(extra)} outside the market day"
+        )
+
+
 def fetch_day(
     day: str,
     zones: tuple[str, ...] = market.CORE_ZONES,
@@ -69,7 +98,12 @@ def fetch_day(
     """Fetch published prices for one Core market day at the source's own resolution."""
     market_day = MarketDay.on(day)
     credential = token or api_token()
-    prices = market.day_ahead_prices([_get(zone, market_day, credential) for zone in zones])
+    payloads = []
+    for zone in zones:
+        payload = _get(zone, market_day, credential)
+        check_complete(zone, market_day, payload)
+        payloads.append(payload)
+    prices = market.day_ahead_prices(payloads)
     expected = set(zones)
     present = set(prices.zone)
     if present != expected:
