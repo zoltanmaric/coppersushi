@@ -10,7 +10,7 @@ import dash_bootstrap_components as dbc
 from dash import dcc, html
 from pandera.typing import DataFrame
 
-from coppersushi import cnec_market, cnec_price_map, map_style
+from coppersushi import cnec_market, cnec_price_map, map_style, market
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
 from coppersushi.data_model.jao import (
     ActiveConstraints,
@@ -41,6 +41,8 @@ class Rendered(NamedTuple):
     interval_max: int
     interval_marks: dict[int, str]
     interval_value: int
+    constraint_options: list[dict]
+    constraint_value: str | None  # Bootstrap select values are strings
 
 
 def local_today() -> str:
@@ -58,10 +60,19 @@ def layout(day: str | None = None) -> html.Div:
                     # `dcc.DatePickerSingle` and `dcc.Dropdown` ship a light palette of their
                     # own and would render their own state white on white.
                     dbc.Input(id="cnec-date", type="date", value=day or local_today()),
+                    dbc.Select(
+                        id="cnec-constraint",
+                        placeholder="Select a binding row",
+                    ),
+                    dbc.Select(
+                        id="cnec-reference-zone",
+                        options=[{"label": zone, "value": zone} for zone in market.CORE_ZONES],
+                        value="AT",
+                    ),
                 ],
                 style={
                     "display": "grid",
-                    "gridTemplateColumns": "12em",
+                    "gridTemplateColumns": "12em minmax(24em, 1fr) 7em",
                     "gap": "0.6em",
                     "padding": "0.4em 1em",
                 },
@@ -94,9 +105,30 @@ def interval_marks(day: MarketDay) -> dict[int, dict]:
     }
 
 
+NO_SELECTION = {"label": "No constraint selected", "value": ""}
+
+
+def _constraint_options(constraints: pd.DataFrame) -> list[dict]:
+    options = [NO_SELECTION]
+    for row in constraints.sort_values("shadow_price", ascending=False).itertuples():
+        contingency = row.cont_name if pd.notna(row.cont_name) else "base case"
+        options.append(
+            {
+                "label": (
+                    f"{row.name} · {row.direction} · {contingency} · "
+                    f"{row.shadow_price:,.2f} €/MWh"
+                ),
+                "value": str(row.source_id),
+            }
+        )
+    return options
+
+
 def render(
     day: Day,
     interval_index: int,
+    selected_source_id: int | None,
+    reference_zone: str,
     mapbox_token: str | None = None,
     basemap: str | dict = map_style.MAP_STYLE,
 ) -> Rendered:
@@ -104,8 +136,22 @@ def render(
     intervals = day.market_day.market_time_units()
     index = min(max(int(interval_index), 0), len(intervals) - 1)
     interval = intervals[index]
+    active = day.constraints[day.constraints.interval.eq(interval)]
+    options = _constraint_options(active)
+    option_values = {option["value"] for option in options} - {NO_SELECTION["value"]}
+    chosen = "" if selected_source_id is None else str(selected_source_id)
+    selected_value = chosen if chosen in option_values else None
+    selected = (
+        cnec_market.ConstraintKey(int(selected_value)) if selected_value is not None else None
+    )
     snapshot = cnec_market.snapshot(
-        day.constraints, day.ptdfs, day.external_constraints, day.prices, interval
+        day.constraints,
+        day.ptdfs,
+        day.external_constraints,
+        day.prices,
+        interval,
+        selected,
+        reference_zone if selected is not None else None,
     )
     return Rendered(
         figure=cnec_price_map.figure(
@@ -114,4 +160,6 @@ def render(
         interval_max=len(intervals) - 1,
         interval_marks=interval_marks(day.market_day),
         interval_value=index,
+        constraint_options=options,
+        constraint_value=selected_value,
     )

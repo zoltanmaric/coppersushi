@@ -41,7 +41,7 @@ def test_a_failed_cnec_day_becomes_banner(monkeypatch):
         raise RuntimeError("no JAO domain day cached")
 
     monkeypatch.setattr(app, "cnec_day", broken)
-    *outputs, message, is_open = app.render_cnec("2024-08-29", 0)
+    *outputs, message, is_open = app.render_cnec("2024-08-29", 0, None, "AT")
     assert all(output is no_update for output in outputs)
     assert is_open and "no JAO domain day cached" in message
 
