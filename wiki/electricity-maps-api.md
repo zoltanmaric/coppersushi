@@ -84,9 +84,13 @@ The key and authenticated response values never belong in the wiki or git.
 
 ## Use in Copper Sushi
 
-Nothing in Copper Sushi consumes this API. For a future forecast experiment, the verified
-Core-wide price vector is a comparison target; the German grid forecasts are candidate inputs once
-their flow inconsistency is resolved. They remain outcomes and fundamentals, not bid curves. A
-future zonal clearing against [JAO's domain](core-day-ahead-capacity-calculation.md) therefore needs
-observed bid curves or a model of them. The 2024 backtest can take settled prices from `actual`, but
-still needs another source such as energy-charts for historical generation.
+`coppersushi.data_sources.electricity_maps` fetches and locally caches the `actual` price route for
+all twelve Core zones. It preserves the source interval — currently hourly even while JAO's Active
+FB publication is quarter-hourly — so the CNEC view can use one published hourly value across its
+four covered capacity intervals without fabricating intermediate prices.
+
+For a future forecast experiment, the Core-wide price vector is a comparison target; the German
+grid forecasts are candidate inputs once their flow inconsistency is resolved. They remain outcomes
+and fundamentals, not bid curves. A future zonal clearing against [JAO's domain](core-day-ahead-capacity-calculation.md)
+therefore needs observed bid curves or a model of them. The 2024 backtest can take settled prices
+from `actual`, but still needs another source such as energy-charts for historical generation.

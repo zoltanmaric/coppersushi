@@ -25,7 +25,10 @@ from pandera.typing import DataFrame
 
 from coppersushi import REPO, cnecs
 from coppersushi.data_model.jao import (
+    ActiveConstraints,
+    ActiveExternalConstraints,
     Contingencies,
+    ConstraintPtdfs,
     Elements,
     ExternalConstraints,
     ExternalConstraintsWithPrices,
@@ -49,7 +52,16 @@ class Day(NamedTuple):
     external_constraints: DataFrame[ExternalConstraintsWithPrices]
 
 
+class ActiveDay(NamedTuple):
+    """The small post-auction publication: physical rows, their PTDFs and non-spatial rows."""
+
+    constraints: DataFrame[ActiveConstraints]
+    ptdfs: DataFrame[ConstraintPtdfs]
+    external_constraints: DataFrame[ActiveExternalConstraints]
+
+
 MODELS = (Elements, Contingencies, ShadowPrices, ExternalConstraintsWithPrices)
+ACTIVE_MODELS = (ActiveConstraints, ConstraintPtdfs, ActiveExternalConstraints)
 
 
 def day_dir(day: str) -> Path:
@@ -121,6 +133,22 @@ def fetch_day(day: str) -> Path:
     )
 
 
+def fetch_active_day(day: str) -> Path:
+    """Fetch the small post-auction Active FB publication for one market day."""
+    market_day = MarketDay.on(day)
+    rows = _get(
+        "activeFbConstraints",
+        market_day.start_time_utc,
+        market_day.end_time_utc,
+    )
+    return write_active_day(
+        day_dir(day),
+        cnecs.active_constraints(rows),
+        cnecs.constraint_ptdfs(rows),
+        cnecs.active_external_constraints(rows),
+    )
+
+
 def write_day(
     directory: Path,
     elements: DataFrame[Elements],
@@ -136,6 +164,20 @@ def write_day(
     return directory
 
 
+def write_active_day(
+    directory: Path,
+    constraints: DataFrame[ActiveConstraints],
+    ptdfs: DataFrame[ConstraintPtdfs],
+    external_constraints: DataFrame[ActiveExternalConstraints],
+) -> Path:
+    """Cache the normalized Active FB tables locally; their directory is gitignored."""
+    directory.mkdir(parents=True, exist_ok=True)
+    for name, frame in zip(ActiveDay._fields, (constraints, ptdfs, external_constraints)):
+        frame.to_csv(_path(directory, f"active_{name}"), index=False)
+    logger.info("jao: wrote active FB tables to %s", directory)
+    return directory
+
+
 def read_day(directory: Path) -> Day:
     """The four tables back from CSV, each validated once its zone is restored."""
     frames = []
@@ -146,6 +188,15 @@ def read_day(directory: Path) -> Day:
         frame = frame.assign(hour=pd.to_datetime(frame.hour, utc=True))
         frames.append(_restore_blanks(frame, model).pipe(model.validate))
     return Day(*frames)
+
+
+def read_active_day(directory: Path) -> ActiveDay:
+    frames = []
+    for name, model in zip(ActiveDay._fields, ACTIVE_MODELS):
+        frame = pd.read_csv(_path(directory, f"active_{name}"))
+        frame = frame.assign(interval=pd.to_datetime(frame.interval, utc=True, format="ISO8601"))
+        frames.append(_restore_blanks(frame, model).pipe(model.validate))
+    return ActiveDay(*frames)
 
 
 def _restore_blanks(frame: pd.DataFrame, model: type) -> pd.DataFrame:
@@ -167,6 +218,15 @@ def load_day(day: str) -> Day:
     return read_day(day_dir(day))
 
 
+def load_active_day(day: str, refresh: bool = False) -> ActiveDay:
+    """Read cached Active FB tables, fetching on first use or when explicitly refreshed."""
+    directory = day_dir(day)
+    first = _path(directory, f"active_{ActiveDay._fields[0]}")
+    if refresh or not first.is_file():
+        fetch_active_day(day)
+    return read_active_day(directory)
+
+
 def _path(directory: Path, name: str) -> Path:
     return directory / f"{name.replace('_', '-')}.csv"
 
@@ -176,5 +236,7 @@ if __name__ == "__main__":
     match sys.argv[1:]:
         case ["fetch", day]:
             fetch_day(day)
+        case ["fetch-active", day]:
+            fetch_active_day(day)
         case _:
-            sys.exit(f"usage: python -m {__spec__.name} fetch <day>")
+            sys.exit(f"usage: python -m {__spec__.name} {{fetch|fetch-active}} <day>")

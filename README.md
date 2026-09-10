@@ -46,6 +46,17 @@ python app.py
 
 Once the server starts, the web app will be available at http://localhost:8050
 
+### Market Data
+
+The CNEC view uses public JAO Active FB constraints and Electricity Maps' published day-ahead
+prices. Put an Electricity Maps key in `.secrets/.electricity_maps_api_key`, or export
+`ELECTRICITY_MAPS_API_KEY`. Fetch one delivery day into the gitignored local cache with:
+
+```bash
+python -m coppersushi.data_sources.jao fetch-active 2024-08-29
+python -m coppersushi.data_sources.electricity_maps fetch 2024-08-29
+```
+
 ## Running the Tests
 ```bash
 pytest

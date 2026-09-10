@@ -1,5 +1,7 @@
 from datetime import UTC, date, datetime
 
+import pandas as pd
+
 from coppersushi.market_day import MARKET_TZ, MarketDay
 
 
@@ -33,6 +35,17 @@ def test_hours_are_utc_aware_and_span_the_window():
     assert str(hours.tz) == "UTC"
     assert hours[0] == day.start_time_utc
     assert hours[-1] < day.end_time_utc
+
+
+def test_a_normal_day_has_96_quarter_hours():
+    intervals = MarketDay.on("2024-08-29").intervals()
+    assert len(intervals) == 96
+    assert intervals[1] - intervals[0] == pd.Timedelta(minutes=15)
+
+
+def test_quarter_hours_follow_the_clock_change():
+    assert len(MarketDay.on("2024-03-31").intervals()) == 92
+    assert len(MarketDay.on("2024-10-27").intervals()) == 100
 
 
 def test_both_start_times_are_aware_and_name_the_same_instant():

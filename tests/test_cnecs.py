@@ -28,6 +28,11 @@ def untyped_element() -> list[dict]:
     return rows("final-computation-untyped-element.json")
 
 
+def active_fb() -> list[dict]:
+    """Invented rows in the current Active FB response shape; no JAO values are redistributed."""
+    return rows("active-fb-day.json")
+
+
 def test_non_physical_rows_are_filtered_from_final_computation_too():
     elements = cnecs.elements(final_computation())
     assert not elements.eic.eq(cnecs.PLACEHOLDER).any()
@@ -158,3 +163,44 @@ def test_a_price_for_a_constraint_the_domain_feed_never_published_is_an_error():
     stray.iloc[0, stray.columns.get_loc("name")] = "External Constraint NOWHERE"
     with pytest.raises(ValueError, match="NOWHERE"):
         cnecs.with_constraint_prices(hourly, stray)
+
+
+def test_active_fb_keeps_two_contingencies_on_one_element_as_two_constraints():
+    active = cnecs.active_constraints(active_fb())
+    assert len(active) == 2
+    assert active.eic.nunique() == 1
+    assert active.cont_name.nunique() == 2
+    assert str(active.interval.dt.tz) == "UTC"
+
+
+def test_active_fb_ptdfs_are_one_row_per_constraint_and_core_zone():
+    ptdfs = cnecs.constraint_ptdfs(active_fb())
+    assert len(ptdfs) == 2 * 12
+    assert set(ptdfs.zone) == {"AT", "BE", "CZ", "DE", "FR", "HR", "HU", "NL", "PL", "RO", "SI", "SK"}
+
+
+def test_contribution_is_shadow_price_times_the_ptdf_difference_with_the_documented_sign():
+    active = cnecs.active_constraints(active_fb()).iloc[0]
+    contribution = cnecs.price_contributions(active, cnecs.constraint_ptdfs(active_fb()), "AT")
+    values = contribution.set_index("zone").contribution
+    assert values["AT"] == pytest.approx(0.0)
+    assert values["BE"] == pytest.approx(2.87)
+    assert contribution.reference_zone.eq("AT").all()
+
+
+def test_contribution_requires_an_explicit_core_reference_zone():
+    active = cnecs.active_constraints(active_fb()).iloc[0]
+    with pytest.raises(ValueError, match="reference zone"):
+        cnecs.price_contributions(active, cnecs.constraint_ptdfs(active_fb()), "GB")
+
+
+def test_active_non_spatial_rows_are_retained_separately():
+    external = cnecs.active_external_constraints(active_fb())
+    assert list(external.name) == ["External Constraint ALPHA_export"]
+    assert external.shadow_price.iloc[0] == 12.0
+
+
+def test_an_exact_duplicate_active_constraint_is_refused():
+    duplicate = active_fb() + [dict(active_fb()[0])]
+    with pytest.raises(ValueError, match="several active rows"):
+        cnecs.active_constraints(duplicate)
