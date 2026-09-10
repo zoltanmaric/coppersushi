@@ -1,0 +1,16 @@
+{
+  "version": 8,
+  "name": "Synthetic dark",
+  "sprite": "mapbox://sprites/example/synthetic-dark",
+  "glyphs": "mapbox://fonts/example/{fontstack}/{range}.pbf",
+  "sources": {
+    "composite": {"type": "vector", "url": "mapbox://example.synthetic-streets"}
+  },
+  "layers": [
+    {"id": "land", "type": "background", "paint": {"background-color": "#1a1a1a"}},
+    {"id": "water", "type": "fill", "source": "composite", "source-layer": "water", "paint": {"fill-color": "#0d0d1f"}},
+    {"id": "admin-boundaries", "type": "line", "source": "composite", "source-layer": "admin", "paint": {"line-color": "#555555"}},
+    {"id": "settlement-label", "type": "symbol", "source": "composite", "source-layer": "place_label", "layout": {"text-field": ["get", "name"]}},
+    {"id": "country-label", "type": "symbol", "source": "composite", "source-layer": "place_label", "layout": {"text-field": ["get", "name"]}}
+  ]
+}
