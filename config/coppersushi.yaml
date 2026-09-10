@@ -61,6 +61,10 @@ clustering:
   aggregation_strategies:
     buses:
       osm_name: first  # a custom bus column reaches base.nc but is dropped at simplify without this
+  simplify_network:
+    # JAO monitors transformers and phase shifters as grid elements in their own right, so they have to
+    # survive: the default maps everything onto one 380 kV layer and deletes every transformer.
+    to_380: false
 
 # One failed feature makes Snakemake discard every already-retrieved file for that country, so a
 # flaky endpoint has to be retried hard rather than given up on.
