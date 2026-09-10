@@ -28,6 +28,9 @@ flowchart LR
 
     unsimplified["unsimplified_build<br/>skip PyPSA-Eur's 380 kV lift: keep voltage levels and transformers"]:::planned
     jao_elements["jao_elements<br/>JAO data + OSM substations → JAO's Core elements matched to our lines and transformers, with PTDFs, limits and shadow prices"]:::planned
+    jao_domain["jao_domain<br/>final flow-based domain: monitored elements with their substation names, PTDFs and RAM"]
+    osm_locator["osm_locator<br/>core-tso-data's OSM-locator substation coordinates, unlicensed, fetched locally"]
+    cnec_geometry["cnec_geometry<br/>each element EIC placed by its published substation names; interim until jao_elements"]
     day_ahead_prices["day_ahead_prices<br/>published zonal clearing prices by market time unit"]
     cnec_market_snapshot["cnec_market_snapshot<br/>one market time unit: zonal prices, active rows, selected relative contribution"]
     jao_map["jao_map<br/>/jao/&lt;day&gt;: cleared zonal prices, active CNECs and selected PTDF contribution"]:::planned
@@ -44,6 +47,9 @@ flowchart LR
     jao_active_constraints -.-> jao_elements
     jao_active_constraints --> cnec_market_snapshot
     day_ahead_prices --> cnec_market_snapshot
+    jao_domain --> cnec_geometry
+    osm_locator --> cnec_geometry
+    cnec_geometry -.-> jao_map
     jao_elements -.-> jao_map
     cnec_market_snapshot -.-> jao_map
     jao_elements -.-> trued_network
