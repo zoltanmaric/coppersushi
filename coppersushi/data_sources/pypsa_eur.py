@@ -48,7 +48,11 @@ def solve(experiment: str | None = None) -> Path:
     pin, sibling = _read_pin(), _sibling_dir()
     _checkout(pin, sibling)
     cmd = ["pixi", "run", "snakemake", "-call", "solve_elec_networks", "--configfile", str(CONFIG),
-           "--resources", f"overpass={OVERPASS_JOBS}", "--set-resources", f"retrieve_osm_data_raw:overpass=1"]
+           "--resources", f"overpass={OVERPASS_JOBS}", "--set-resources", f"retrieve_osm_data_raw:overpass=1",
+           # An interrupted run leaves its outputs flagged incomplete, and snakemake then refuses to
+           # start at all rather than redoing them — which reads as a hang, not a failure. Those
+           # outputs are known-suspect, so redoing them is always the right answer.
+           "--rerun-incomplete"]
     logger.info("pypsa-eur: `%s` in %s — a first run downloads ~20 GB and takes about an hour; snakemake narrates each rule",
                 " ".join(cmd), sibling)
     subprocess.run(cmd, cwd=sibling, check=True, env=_workflow_env())

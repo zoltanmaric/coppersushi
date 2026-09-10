@@ -151,3 +151,21 @@ def test_cached_downloads_are_served_without_revalidating():
 def test_the_environment_still_wins_over_the_default(monkeypatch):
     monkeypatch.setenv(pypsa_eur.SKIP_REMOTE_CHECKS, "False")
     assert pypsa_eur._workflow_env()[pypsa_eur.SKIP_REMOTE_CHECKS] == "False"
+
+
+def test_an_interrupted_run_does_not_block_the_next_one(monkeypatch):
+    """Incomplete outputs make snakemake refuse to start, which looks like a hang, not a failure."""
+    captured = {}
+    real_run = pypsa_eur.subprocess.run
+
+    def fake_run(cmd, **kwargs):
+        if cmd[0] != "pixi":
+            return real_run(cmd, **kwargs)
+        captured["cmd"] = cmd
+        raise SystemExit
+
+    monkeypatch.setattr(pypsa_eur, "_checkout", lambda *a: None)
+    monkeypatch.setattr(pypsa_eur.subprocess, "run", fake_run)
+    with pytest.raises(SystemExit):
+        pypsa_eur.solve()
+    assert "--rerun-incomplete" in captured["cmd"]
