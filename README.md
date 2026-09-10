@@ -57,6 +57,16 @@ python -m coppersushi.data_sources.jao fetch-active 2024-08-29
 python -m coppersushi.data_sources.electricity_maps fetch 2024-08-29
 ```
 
+The map places JAO's elements by their published substation names on the OSM-locator substation
+list in [core-tso-data](https://github.com/fneum/core-tso-data), which is unlicensed and therefore
+fetched locally rather than committed. Fetch it once, plus at least one day's final domain, which
+names each element's substations:
+
+```bash
+python -m coppersushi.data_sources.osm_locator fetch
+python -m coppersushi.data_sources.jao fetch 2024-08-29
+```
+
 ## Running the Tests
 ```bash
 pytest
