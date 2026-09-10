@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from coppersushi import REPO, cnec_market, cnec_price_map, cnecs, market
-from coppersushi.data_model.cnec_price_map import CnecGeometries
+from coppersushi.data_model.cnec_price_map import MappedCnecElements
 
 FIXTURE = REPO / "tests" / "fixtures" / "synthetic-jao" / "active-fb-day.json"
 
@@ -12,6 +12,7 @@ FIXTURE = REPO / "tests" / "fixtures" / "synthetic-jao" / "active-fb-day.json"
 PRICE_FIXTURE = (
     REPO / "tests" / "fixtures" / "synthetic-electricity-maps" / "day-ahead-prices-hour.json"
 )
+MAP_FIXTURES = REPO / "tests" / "fixtures" / "cnec-price-map"
 
 
 @pytest.fixture
@@ -24,25 +25,10 @@ def inputs():
     view = cnec_market.snapshot(
         constraints, ptdfs, external, prices, pd.Timestamp("2024-08-28T22:00:00Z")
     )
-    buses = pd.DataFrame(
-        {
-            "x": [14.0, 15.0, 4.0, 5.0],
-            "y": [47.5, 48.0, 50.7, 51.0],
-            "country": ["AT", "AT", "BE", "BE"],
-        },
-        index=pd.Index(["at-1", "at-2", "be-1", "be-2"], name="Bus"),
+    buses = pd.read_csv(MAP_FIXTURES / "buses.csv", index_col="bus")
+    geometries = pd.read_csv(MAP_FIXTURES / "mapped-elements.csv").pipe(
+        MappedCnecElements.validate
     )
-    geometries = pd.DataFrame(
-        {
-            "eic": ["99T-AA-BB-00003P"],
-            "element_type": ["TieLine"],
-            "x0": [14.4],
-            "y0": [46.7],
-            "x1": [15.1],
-            "y1": [46.2],
-            "match_status": ["matched"],
-        }
-    ).pipe(CnecGeometries.validate)
     return buses, geometries, view
 
 
@@ -57,16 +43,17 @@ def test_prices_colour_every_network_node_and_label_each_zone(inputs):
     assert list(trace(fig, "zone prices").text) == ["AT<br>50.00 €", "BE<br>70.00 €"]
 
 
-def test_one_element_is_drawn_once_but_each_binding_contingency_remains_hoverable(inputs):
+def test_one_element_is_drawn_once_and_one_target_carries_each_binding_row(inputs):
     fig = cnec_price_map.figure(*inputs)
     lines = trace(fig, "market-binding CNECs")
     assert list(lines.lon[:2]) == [14.4, 15.1]
     assert pd.isna(lines.lon[2])
     rows = trace(fig, "binding rows")
-    assert len(rows.lon) == 2
-    assert any("Grayspire" in text for text in rows.text)
-    assert any("Base case (no contingency)" in text for text in rows.text)
-    assert all("not physically overloaded" not in text for text in rows.text)
+    assert len(rows.lon) == 1
+    assert "Grayspire" in rows.text[0]
+    assert "Base case (no contingency)" in rows.text[0]
+    assert "not physically overloaded" not in rows.text[0]
+    assert rows.customdata[0][0] == "1,2"
 
 
 def test_hover_carries_contingency_direction_ram_and_shadow_price(inputs):
@@ -130,7 +117,7 @@ def test_unmapped_selected_row_keeps_zonal_contributions_but_has_no_rays(inputs)
     buses, geometries, view = selected_inputs(inputs)
     geometries = geometries.assign(
         x0=None, y0=None, x1=None, y1=None, match_status="no_branch"
-    ).pipe(CnecGeometries.validate)
+    ).pipe(MappedCnecElements.validate)
     fig = cnec_price_map.figure(buses, geometries, view)
     assert trace(fig, "contribution relative to AT") is not None
     assert not any(item.name.endswith(" contribution") for item in fig.data)

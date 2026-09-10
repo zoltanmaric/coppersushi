@@ -31,6 +31,9 @@ real-time grid.
 - Draw active physical CNECs in purple; distinguish lines from transformer and phase-shifting
   transformer points. Hover identifies the monitored element, contingency, direction, remaining
   available margin and shadow price.
+- Draw one physical PyPSA branch once. Its reachable marker aggregates every active direction and
+  contingency, and every EIC that the matcher resolves to that branch; published rows keep their
+  own source IDs for selection and analysis.
 - Selecting one CNEC preserves the price layer and overlays its signed contribution across zones.
   Relative to an explicit reference zone `r`, the contribution to zone `z` is
   `-shadow_price * (PTDF_z - PTDF_r)`. Only differences are meaningful.

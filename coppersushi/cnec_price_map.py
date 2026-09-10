@@ -5,11 +5,10 @@ import pandas as pd
 import plotly.graph_objects as go
 from pandera.typing import DataFrame
 
+from coppersushi import map_style
 from coppersushi.cnec_market import Snapshot
-from coppersushi.data_model.cnec_price_map import CnecGeometries
+from coppersushi.data_model.cnec_price_map import MappedCnecElements
 
-PURPLE = "#b45cff"
-NETWORK_GREY = "#5d6570"
 POSITIVE = "#42d9f5"
 NEGATIVE = "#ff9f43"
 POINT_TYPES = ("Transformer", "PST")
@@ -32,7 +31,7 @@ def _zone_centres(priced_buses: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def _placed(constraints: pd.DataFrame, geometries: DataFrame[CnecGeometries]) -> pd.DataFrame:
+def _placed(constraints: pd.DataFrame, geometries: DataFrame[MappedCnecElements]) -> pd.DataFrame:
     return constraints.merge(geometries, on="eic", how="left", validate="many_to_one")
 
 
@@ -68,7 +67,7 @@ def _price_traces(priced_buses: pd.DataFrame) -> list[go.Scattermapbox]:
         ),
         marker=go.scattermapbox.Marker(
             color=priced_buses.price,
-            colorscale="Turbo",
+            colorscale=map_style.NETWORK_VALUE_COLORSCALE,
             size=7,
             opacity=0.72,
             showscale=True,
@@ -94,10 +93,32 @@ def _price_traces(priced_buses: pd.DataFrame) -> list[go.Scattermapbox]:
     return [nodes, labels]
 
 
+def _hover_targets(rows: pd.DataFrame) -> pd.DataFrame:
+    """One reachable marker per plotted location, carrying every active row there."""
+    targets = rows.assign(
+        target_x=(rows.x0 + rows.x1) / 2,
+        target_y=(rows.y0 + rows.y1) / 2,
+        hover=_hover(rows),
+    )
+    return (
+        targets.groupby(["target_x", "target_y"], as_index=False, dropna=False)
+        .agg(
+            hover=("hover", lambda values: "<br><br>".join(values)),
+            source_ids=("source_id", lambda values: ",".join(map(str, values))),
+        )
+    )
+
+
 def _constraint_traces(placed: pd.DataFrame) -> list[go.Scattermapbox]:
+    """Draw each matched branch once and aggregate all binding rows at its hover target.
+
+    The domain can publish both directions and several contingencies for an element. More
+    than one EIC can also resolve to one PyPSA branch. Those are distinct market rows but
+    not distinct lines on the map, so the line and its marker have different grains.
+    """
     mapped = placed[placed.match_status.eq(MAPPED)]
     line_rows = mapped[~mapped.element_type.isin(POINT_TYPES)]
-    unique_lines = line_rows.drop_duplicates("eic")
+    unique_lines = line_rows.drop_duplicates("branch_id")
     lon, lat = _line_coordinates(unique_lines)
     lines = go.Scattermapbox(
         name="market-binding CNECs",
@@ -105,19 +126,20 @@ def _constraint_traces(placed: pd.DataFrame) -> list[go.Scattermapbox]:
         lat=lat,
         mode="lines",
         hoverinfo="none",
-        line=dict(color=PURPLE, width=5),
+        line=dict(color=map_style.BINDING, width=5),
     )
 
     def markers(rows: pd.DataFrame, name: str, symbol: str, size: int) -> go.Scattermapbox:
+        targets = _hover_targets(rows)
         return go.Scattermapbox(
             name=name,
-            lon=(rows.x0 + rows.x1) / 2,
-            lat=(rows.y0 + rows.y1) / 2,
+            lon=targets.target_x,
+            lat=targets.target_y,
             mode="markers",
             hoverinfo="text",
-            text=_hover(rows),
-            customdata=rows[["source_id"]].to_numpy(),
-            marker=go.scattermapbox.Marker(color=PURPLE, size=size, symbol=symbol),
+            text=targets.hover,
+            customdata=targets[["source_ids"]].to_numpy(),
+            marker=go.scattermapbox.Marker(color=map_style.BINDING, size=size, symbol=symbol),
         )
 
     point_rows = mapped[mapped.element_type.isin(POINT_TYPES)]
@@ -189,8 +211,8 @@ def _contribution_traces(
                 lat=[selected.y0, selected.y1],
                 mode="lines+markers",
                 hoverinfo="skip",
-                line=dict(color=PURPLE, width=9),
-                marker=go.scattermapbox.Marker(color=PURPLE, size=9),
+                line=dict(color=map_style.BINDING, width=9),
+                marker=go.scattermapbox.Marker(color=map_style.BINDING, size=9),
                 showlegend=False,
             )
         )
@@ -205,7 +227,7 @@ def _contribution_traces(
 
 def figure(
     buses: pd.DataFrame,
-    geometries: DataFrame[CnecGeometries],
+    geometries: DataFrame[MappedCnecElements],
     view: Snapshot,
     mapbox_token: str | None = None,
 ) -> go.Figure:
@@ -229,10 +251,10 @@ def figure(
     fig.update_layout(
         hovermode="closest",
         margin=dict(r=0, t=0, l=0, b=0),
-        mapbox_style="dark",
+        mapbox_style=map_style.MAP_STYLE,
         mapbox_accesstoken=mapbox_token,
         uirevision=True,
-        legend=dict(x=0.01, y=0.99, bgcolor="rgba(0,0,0,0.6)"),
+        legend=dict(x=0.01, y=0.99, bgcolor=map_style.LEGEND_BACKGROUND),
         annotations=[
             go.layout.Annotation(
                 text=annotation,
@@ -245,7 +267,7 @@ def figure(
                 align="right",
                 showarrow=False,
                 bgcolor="rgba(0,0,0,0.65)",
-                bordercolor=PURPLE,
+                bordercolor=map_style.BINDING,
                 borderpad=7,
             )
         ],
