@@ -16,6 +16,8 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 MARKET_TZ = ZoneInfo("Europe/Brussels")  # CET/CEST, the zone Core's day-ahead market runs on
+# A delivery-day label, not an instant. ``MarketDay`` applies ``MARKET_TZ`` at both midnights.
+FIFTEEN_MINUTE_DELIVERY_DAY = date(2025, 10, 1)
 
 
 @dataclass(frozen=True)
@@ -70,3 +72,17 @@ class MarketDay:
             inclusive="left",
             tz="UTC",
         )
+
+    def market_time_units(self) -> pd.DatetimeIndex:
+        """Every Single Day-Ahead Coupling market time unit.
+
+        Market time units are hourly historically and quarter-hourly from delivery day
+        2025-10-01. That date denotes the local market day; ``start_time_local`` and
+        ``end_time_local`` turn its two midnights into timezone-aware instants.
+
+        The transition date is the delivery-day go-live published by the Market Coupling
+        Steering Committee. This calendar rule also supplies intervals with no binding
+        active flow-based row, which the sparse JAO response cannot do by itself.
+        """
+        frequency = "15min" if self.date >= FIFTEEN_MINUTE_DELIVERY_DAY else "h"
+        return self.intervals(frequency)

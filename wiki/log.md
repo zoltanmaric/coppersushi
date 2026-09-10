@@ -10,6 +10,8 @@ their shadow prices and all twelve Core PTDFs, plus non-spatial external constra
 require the full final-domain download for the price-influence calculation. Electricity Maps'
 `price-day-ahead/actual` route supplied hourly published prices for all twelve zones on the same date.
 The selected-row contribution is `-shadow price × (PTDF zone - PTDF reference)`.
+The SDAC market-time-unit calendar is hourly through delivery day 2025-09-30 and quarter-hourly
+from 2025-10-01, so the view generates the full day independently of JAO's sparse binding-row feed.
 
 ## [2026-09-10] query | What the Electricity Maps API provides
 

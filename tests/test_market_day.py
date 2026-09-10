@@ -48,6 +48,13 @@ def test_quarter_hours_follow_the_clock_change():
     assert len(MarketDay.on("2024-10-27").intervals()) == 100
 
 
+def test_market_time_units_follow_the_single_day_ahead_coupling_transition():
+    assert len(MarketDay.on("2024-08-29").market_time_units()) == 24
+    assert len(MarketDay.on("2025-09-30").market_time_units()) == 24
+    assert len(MarketDay.on("2025-10-01").market_time_units()) == 96
+    assert len(MarketDay.on("2026-09-10").market_time_units()) == 96
+
+
 def test_both_start_times_are_aware_and_name_the_same_instant():
     day = MarketDay.on("2024-08-29")
     assert day.start_time_local.tzinfo is MARKET_TZ
