@@ -1,4 +1,4 @@
 # PyPSA-Eur checkout used by coppersushi/data_sources/pypsa_eur.py: repository URL, then commit SHA.
 # Tag the SHA on that repository once the commit lands on main: pin/<YYYY-MM-DD>-<what is new>, never moved or deleted.
 https://github.com/zoltanmaric/pypsa-eur.git
-ac82d10bc1837fc83c9e8e0bba9f085fdd24c9a6
+4886aa9a2c6015eae57646e8448bc8d2674d39fe
