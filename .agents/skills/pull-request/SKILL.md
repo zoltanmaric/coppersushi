@@ -19,6 +19,7 @@ description: Guides pull request creation and review, including posting findings
 - **When scope grows inside an open PR** (a piggyback lands), record it immediately in a "Piggybacks" ledger in the PR body, one line per item **stating the verdict**: "rides — must be understood with the feature: <reason>" or "separable — chop offered". The fission decision at ready-time then reads off the ledger instead of anyone's memory.
 - When a test fires, **offer the chop** into a stack (mechanics below); the user decides. Layers split by "must be understood together", never by file type: a rule or doc whose evidence is the feature's code rides with the feature.
 - Every PR body carries an "Architecture delta" section (root `architecture-delta` rule).
+- Once a PR is ready for review, watch its review threads and checks while other work continues; stop watching when it becomes draft, merges or closes.
 - When a goldfish reviews a PR touching `.agents/` or any `AGENTS.md`, the critic reads `.agents/skills/AGENTS.md` and the vendor guidelines it links before the diff.
 
 ## Review findings
