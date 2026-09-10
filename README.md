@@ -53,8 +53,8 @@ prices. Put an Electricity Maps key in `.secrets/.electricity_maps_api_key`, or 
 `ELECTRICITY_MAPS_API_KEY`. Fetch one delivery day into the gitignored local cache with:
 
 ```bash
-python -m coppersushi.data_sources.jao fetch-active 2024-08-29
-python -m coppersushi.data_sources.electricity_maps fetch 2024-08-29
+python -m coppersushi.data_sources.jao fetch-active 2026-09-11
+python -m coppersushi.data_sources.electricity_maps fetch 2026-09-11
 ```
 
 The map places JAO's elements by their published substation names on the OSM-locator substation
@@ -64,7 +64,7 @@ names each element's substations:
 
 ```bash
 python -m coppersushi.data_sources.osm_locator fetch
-python -m coppersushi.data_sources.jao fetch 2024-08-29
+python -m coppersushi.data_sources.jao fetch 2026-09-11
 ```
 
 ## Running the Tests

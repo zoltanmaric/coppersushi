@@ -14,8 +14,8 @@ is which located substation a published name means. Three things make that infer
   A monitored element joins substations near each other, so where a name means several
   places the combination with the shortest span wins.
 
-Measured against the locator on 2024-08-29's 145 published substations: 121 hit a key
-outright, 13 after a trim, and the rest are absent from the locator or ambiguous alone.
+Measured against the locator on 2026-09-11's 162 published substations: 133 hit a key
+outright, 10 after a trim, and the rest are absent from the locator or ambiguous alone.
 """
 
 import itertools

@@ -155,6 +155,17 @@ def test_a_constraint_that_bound_is_one_row_carrying_its_price():
     assert set(joined.loc[joined.shadow_price.notna(), "binding_direction"]) == {"OPPOSITE"}
 
 
+def test_a_constraint_assessed_under_several_contingencies_is_one_row_with_the_tightest_margin():
+    feed = final_computation()
+    constraint = next(row for row in feed if row["cneName"] == "External Constraint AA_XL_export")
+    under_outage = {**constraint, "contName": "Grayspire - Dunmoor", "ram": constraint["ram"] - 250}
+    hourly = cnecs.external_constraints(feed + [under_outage])
+    rows_for = hourly[hourly.name.eq("External Constraint AA_XL_export")]
+    assert len(rows_for) == 1
+    assert rows_for.ram.iloc[0] == constraint["ram"] - 250
+    assert rows_for.fmax.iloc[0] == constraint["fmax"]
+
+
 def test_a_price_for_a_constraint_the_domain_feed_never_published_is_an_error():
     hourly = cnecs.external_constraints(final_computation())
     priced = cnecs.external_constraints(rows("shadow-prices-day.json"))
