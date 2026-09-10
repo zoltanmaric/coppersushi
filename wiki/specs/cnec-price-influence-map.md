@@ -43,7 +43,7 @@ real-time grid.
 
 - **Domain and binding rows:** JAO's Core publication service. The final domain supplies monitored
   elements, contingencies, PTDFs, remaining available margin and identifiers; the post-auction
-  Active FB publication supplies the binding rows and shadow prices. The existing JAO adapter and
+  Active flow-based publication supplies the binding rows and shadow prices. The existing JAO adapter and
   typed tables cover the historical `finalComputation` and `shadowPrices` feeds; recent publications
   need their present schema checked.
 - **Prices:** published NEMO or ENTSO-E day-ahead prices. Electricity Maps' price `actual` route is a
@@ -75,8 +75,8 @@ JAO-derived records remain fetched locally rather than committed under JAO's ter
 
 - [ ] One view can load a complete historical delivery day and a next-day result after publication,
       with a control for every available market time unit.
-- [ ] Each interval shows published zonal prices and every mappable active FB CNEC; unmapped active
-      FB CNECs remain visible and explicit.
+- [ ] Each interval shows published zonal prices and every mappable active flow-based CNEC; unmapped
+      active flow-based CNECs remain visible and explicit.
 - [ ] Selecting a CNEC shows an explicit reference zone and reproduces the published row's
       shadow-price-weighted PTDF difference for every Core zone, with sign and EUR/MWh units.
 - [ ] The map and detail copy distinguish market binding under contingency from physical overload
@@ -88,5 +88,5 @@ JAO-derived records remain fetched locally rather than committed under JAO's ter
 
 1. Render 2024-08-29 from the existing JAO tables and published prices, consuming the element
    mapping rather than expanding this spec into that work.
-2. Check the current JAO Active FB service contract and load the next published day through the same
+2. Check the current JAO active flow-based service contract and load the next published day through the same
    view.
