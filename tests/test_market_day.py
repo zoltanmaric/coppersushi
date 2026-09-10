@@ -53,6 +53,8 @@ def test_market_time_units_follow_the_single_day_ahead_coupling_transition():
     assert len(MarketDay.on("2025-09-30").market_time_units()) == 24
     assert len(MarketDay.on("2025-10-01").market_time_units()) == 96
     assert len(MarketDay.on("2026-09-10").market_time_units()) == 96
+    assert MarketDay.on("2025-09-30").market_time_unit == "h"
+    assert MarketDay.on("2025-10-01").market_time_unit == "15min"
 
 
 def test_both_start_times_are_aware_and_name_the_same_instant():

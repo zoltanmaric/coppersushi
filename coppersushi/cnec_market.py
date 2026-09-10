@@ -4,7 +4,7 @@ from typing import NamedTuple
 
 import pandas as pd
 
-from coppersushi import cnecs, market
+from coppersushi import cnecs
 
 
 class ConstraintKey(NamedTuple):
@@ -55,7 +55,7 @@ def snapshot(
         contribution = cnecs.price_contributions(chosen.iloc[0], ptdfs, reference_zone)
     return Snapshot(
         interval=interval,
-        prices=market.prices_at(prices, interval),
+        prices=_at_interval(prices, interval),
         constraints=current,
         external_constraints=external,
         contribution=contribution,

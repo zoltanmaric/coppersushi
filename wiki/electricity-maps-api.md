@@ -79,15 +79,19 @@ Direct v4 checks with the project key on 2026-09-10 found:
 - Arbitrary `past` and `past-range` requests were denied for those grid signals and prices. The
   price-specific `actual` route nevertheless returned all 24 hours of 2024-08-29 for every Core
   zone.
+- `actual` answers hourly unless asked otherwise with `temporalGranularity`, whose values are
+  `hourly` and `15_minutes`. For a quarter-hourly day the hourly value is the mean of the four
+  cleared prices, and the map at app.electricitymaps.com shows the quarter-hours: on 2026-09-10 at
+  20:30 CEST, Germany was 366.57 quarter-hourly and 429.33 hourly.
 
 The key and authenticated response values never belong in the wiki or git.
 
 ## Use in Copper Sushi
 
 `coppersushi.data_sources.electricity_maps` fetches and locally caches the `actual` price route for
-all twelve Core zones. It preserves the source interval — hourly as verified on 2026-09-10 even
-while JAO's active flow-based publication is quarter-hourly — so the CNEC view can use one published hourly value across its
-four covered capacity intervals without fabricating intermediate prices.
+all twelve Core zones at the day's market time unit — hourly through delivery day 2025-09-30,
+quarter-hourly from 2025-10-01 — and refuses an answer at any other resolution, so the CNEC view
+reads one cleared price per zone and interval.
 
 For a future forecast experiment, the Core-wide price vector is a comparison target; the German
 grid forecasts are candidate inputs once their flow inconsistency is resolved. They remain outcomes
