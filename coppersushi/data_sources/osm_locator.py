@@ -23,6 +23,7 @@ pure matcher (`coppersushi/cnec_geometry.py`) because it depends on the key bein
 import io
 import logging
 import re
+import shutil
 import sys
 import tarfile
 import urllib.request
@@ -87,14 +88,23 @@ def locator_members(archive: tarfile.TarFile) -> list[tarfile.TarInfo]:
 
 
 def write_csvs(directory: Path, payload: bytes) -> Path:
-    """Extract the locator CSVs into `directory`, flattened to their basenames."""
-    directory.mkdir(parents=True, exist_ok=True)
+    """Extract the locator CSVs, flattened to their basenames, and replace the cache whole.
+
+    The cache is read back as every `*.csv` in it, so extracting in place would let a file
+    from an earlier pin or an interrupted fetch silently join the current set. The archive
+    is unpacked into a sibling directory first and swapped in only once complete.
+    """
+    staging = directory.with_name(f"{directory.name}.partial")
+    shutil.rmtree(staging, ignore_errors=True)
+    staging.mkdir(parents=True)
     with tarfile.open(fileobj=io.BytesIO(payload), mode="r:gz") as archive:
         for member in locator_members(archive):
             extracted = archive.extractfile(member)
             if extracted is None:
                 raise RuntimeError(f"{member.name}: not a regular file")
-            (directory / Path(member.name).name).write_bytes(extracted.read())
+            (staging / Path(member.name).name).write_bytes(extracted.read())
+    shutil.rmtree(directory, ignore_errors=True)
+    staging.rename(directory)
     logger.info("osm locator: wrote %d CSVs to %s", EXPECTED_CSVS, directory)
     return directory
 
