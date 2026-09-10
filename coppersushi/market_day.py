@@ -59,12 +59,7 @@ class MarketDay:
         return self.intervals("h")
 
     def intervals(self, frequency: str = "15min") -> pd.DatetimeIndex:
-        """Every market-time-unit start in the day, tz-aware UTC.
-
-        Core day-ahead capacity data is quarter-hourly while some price sources still
-        publish hourly values. Keeping the source resolution explicit avoids inventing
-        four distinct prices where the source supplied one.
-        """
+        """Every interval start of the day at ``frequency``, tz-aware UTC."""
         return pd.date_range(
             self.start_time_utc,
             self.end_time_utc,
@@ -73,16 +68,20 @@ class MarketDay:
             tz="UTC",
         )
 
-    def market_time_units(self) -> pd.DatetimeIndex:
-        """Every Single Day-Ahead Coupling market time unit.
+    @property
+    def market_time_unit(self) -> str:
+        """The Single Day-Ahead Coupling market time unit, as a pandas frequency.
 
-        Market time units are hourly historically and quarter-hourly from delivery day
-        2025-10-01. That date denotes the local market day; ``start_time_local`` and
-        ``end_time_local`` turn its two midnights into timezone-aware instants.
-
-        The transition date is the delivery-day go-live published by the Market Coupling
-        Steering Committee. This calendar rule also supplies intervals with no binding
-        active flow-based row, which the sparse JAO response cannot do by itself.
+        Hourly historically and quarter-hourly from delivery day 2025-10-01, the go-live the
+        Market Coupling Steering Committee published. That date denotes the local market day;
+        ``start_time_local`` and ``end_time_local`` turn its two midnights into instants.
         """
-        frequency = "15min" if self.date >= FIFTEEN_MINUTE_DELIVERY_DAY else "h"
-        return self.intervals(frequency)
+        return "15min" if self.date >= FIFTEEN_MINUTE_DELIVERY_DAY else "h"
+
+    def market_time_units(self) -> pd.DatetimeIndex:
+        """Every market time unit of the day: the grain everything the market publishes is read at.
+
+        This calendar rule also supplies intervals with no binding active flow-based row,
+        which the sparse JAO response cannot do by itself.
+        """
+        return self.intervals(self.market_time_unit)

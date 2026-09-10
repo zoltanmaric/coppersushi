@@ -3,6 +3,13 @@
 Append-only chronology of wiki operations (ingests, queries, lints).
 Entry format: `## [YYYY-MM-DD] <operation> | <title>`
 
+## [2026-09-10] query | Electricity Maps' default price resolution
+
+`price-day-ahead/actual` answers hourly unless `temporalGranularity=15_minutes` is asked for, and
+its hourly value for a quarter-hourly day is the mean of the four cleared prices. The finding below
+that the route "supplied hourly published prices" described that default, not the source's
+resolution; the map at app.electricitymaps.com shows the quarter-hours.
+
 ## [2026-09-10] query | Active flow-based constraints and published prices
 
 JAO's `activeFbConstraints` response on 2026-09-10 supplied quarter-hourly binding physical rows with

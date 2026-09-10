@@ -1,10 +1,14 @@
 """Electricity Maps' published European day-ahead prices, cached outside git.
 
-The v4 ``price-day-ahead/actual`` route accepts a UTC half-open window and one
-zone per request. Authentication comes from ``ELECTRICITY_MAPS_API_KEY`` or the
-gitignored ``.secrets/.electricity_maps_api_key``. Neither responses nor derived
-prices are distributable repository fixtures; cached CSVs live under ignored
-``data/electricity-maps/``.
+The v4 ``price-day-ahead/actual`` route takes one zone, a UTC half-open window and the
+resolution to answer at. The resolution is asked for explicitly, as the day's market time
+unit. Left unasked, the route answers hourly, and for a quarter-hourly day an hourly value is
+the mean of four cleared prices and equal to none of them; the map at app.electricitymaps.com
+shows the quarter-hours.
+
+Authentication comes from ``ELECTRICITY_MAPS_API_KEY`` or the gitignored
+``.secrets/.electricity_maps_api_key``. Neither responses nor derived prices are distributable
+repository fixtures; cached CSVs live under ignored ``data/electricity-maps/``.
 """
 
 import json
@@ -16,6 +20,7 @@ import urllib.request
 from pathlib import Path
 
 import pandas as pd
+import pandera as pa
 from pandera.typing import DataFrame
 
 from coppersushi import REPO, market
@@ -28,12 +33,8 @@ BASE_URL = "https://api.electricitymap.org/v4/price-day-ahead/actual"
 CACHE_DIR = REPO / "data" / "electricity-maps"
 TOKEN_FILE = REPO / ".secrets" / ".electricity_maps_api_key"
 TIMEOUT_SECONDS = 60
-GRANULARITIES = {
-    "hourly": "h",
-    "15-minute": "15min",
-    "15 minutes": "15min",
-    "quarter-hourly": "15min",
-}
+# The route's names for the market time units `MarketDay.market_time_unit` can name.
+TEMPORAL_GRANULARITY = {"h": "hourly", "15min": "15_minutes"}
 
 
 def api_token() -> str:
@@ -53,41 +54,36 @@ def _stamp(moment) -> str:
     return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def query(zone: str, day: MarketDay) -> dict[str, str]:
+    """The route's parameters: one zone, the day's UTC window, and its market time unit."""
+    return {
+        "zone": zone,
+        "start": _stamp(day.start_time_utc),
+        "end": _stamp(day.end_time_utc),
+        "temporalGranularity": TEMPORAL_GRANULARITY[day.market_time_unit],
+    }
+
+
 def _get(zone: str, day: MarketDay, token: str) -> dict:
-    query = urllib.parse.urlencode(
-        {
-            "zone": zone,
-            "start": _stamp(day.start_time_utc),
-            "end": _stamp(day.end_time_utc),
-        }
-    )
     logger.info("electricity maps: GET published prices for %s on %s", zone, day.date)
-    request = urllib.request.Request(f"{BASE_URL}?{query}", headers={"auth-token": token})
+    url = f"{BASE_URL}?{urllib.parse.urlencode(query(zone, day))}"
+    request = urllib.request.Request(url, headers={"auth-token": token})
     with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
         return json.load(response)
 
 
-def check_complete(zone: str, day: MarketDay, payload: dict) -> None:
-    """Refuse a missing, repeated or out-of-window price before it reaches the cache."""
+def check_answered_as_asked(zone: str, day: MarketDay, payload: dict) -> None:
+    """Raise unless the envelope names the zone and resolution the request asked for.
+
+    The rows are checked later, as one table against the market day; this is what the envelope
+    alone can answer, and what a default answer fails.
+    """
     if payload.get("zone") != zone:
         raise RuntimeError(f"price response says zone {payload.get('zone')!r}, expected {zone!r}")
-    granularity = payload.get("temporalGranularity")
-    if granularity not in GRANULARITIES:
-        raise RuntimeError(f"unknown price temporal granularity: {granularity!r}")
-    rows = payload.get("data", [])
-    row_zones = {row.get("zone") for row in rows}
-    if row_zones != {zone}:
-        raise RuntimeError(f"price rows say zones {sorted(row_zones)}, expected only {zone}")
-    actual = pd.to_datetime([row.get("datetime") for row in rows], utc=True, format="ISO8601")
-    if actual.duplicated().any():
-        raise RuntimeError(f"repeated {zone} price intervals")
-    expected = day.intervals(GRANULARITIES[granularity])
-    missing = expected.difference(actual)
-    extra = actual.difference(expected)
-    if len(missing) or len(extra):
-        raise RuntimeError(
-            f"incomplete {zone} price timeline: {len(missing)} missing, {len(extra)} outside the market day"
-        )
+    asked = TEMPORAL_GRANULARITY[day.market_time_unit]
+    answered = payload.get("temporalGranularity")
+    if answered != asked:
+        raise RuntimeError(f"{zone} prices for {day.date} came {answered!r}, asked {asked!r}")
 
 
 def fetch_day(
@@ -95,19 +91,16 @@ def fetch_day(
     zones: tuple[str, ...] = market.CORE_ZONES,
     token: str | None = None,
 ) -> DataFrame[DayAheadPrices]:
-    """Fetch published prices for one Core market day at the source's own resolution."""
+    """Fetch one Core market day's published prices, one per zone and market time unit."""
     market_day = MarketDay.on(day)
     credential = token or api_token()
     payloads = []
     for zone in zones:
         payload = _get(zone, market_day, credential)
-        check_complete(zone, market_day, payload)
+        check_answered_as_asked(zone, market_day, payload)
         payloads.append(payload)
     prices = market.day_ahead_prices(payloads)
-    expected = set(zones)
-    present = set(prices.zone)
-    if present != expected:
-        raise RuntimeError(f"price zones {sorted(present)}, expected {sorted(expected)}")
+    market.check_complete(prices, market_day, zones)
     return prices
 
 
@@ -134,10 +127,21 @@ def read_day(path: Path) -> DataFrame[DayAheadPrices]:
 
 
 def load_day(day: str, refresh: bool = False) -> DataFrame[DayAheadPrices]:
-    """Read the local cache, fetching it on first use or when explicitly refreshed."""
+    """The Core day's prices from the cache, fetched on first use, on request, or when stale.
+
+    A cached day is always every Core zone. A cache that fails the day's invariants — the
+    hourly default an older adapter wrote for a quarter-hourly day, a row lost or doubled —
+    is fetched once more. A failure after that is the service's and propagates.
+    """
     path = day_path(day)
-    if refresh or not path.is_file():
-        write_day(day, fetch_day(day))
+    if not refresh and path.is_file():
+        try:
+            prices = read_day(path)
+            market.check_complete(prices, MarketDay.on(day), market.CORE_ZONES)
+            return prices
+        except (pa.errors.SchemaError, ValueError) as stale:
+            logger.info("electricity maps: cached %s is fetched again: %s", day, stale)
+    write_day(day, fetch_day(day))
     return read_day(path)
 
 
