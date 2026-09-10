@@ -11,6 +11,9 @@ import urllib.request
 API = "https://api.mapbox.com"
 STYLES = f"{API}/styles/v1"
 DARK = "mapbox/dark-v11"
+# Plotly resolves every marker symbol to the sprite icon "<name>-15". Sprites from v10 on carry no
+# such icons, while the basemap's own label layers are dropped, so the sprite serves Plotly alone.
+MARKER_SPRITE = "mapbox/dark-v9"
 SCHEME = "mapbox://"
 TIMEOUT_SECONDS = 30
 
@@ -23,16 +26,15 @@ def fetch(token: str, style: str = DARK) -> dict:
 
 
 def resolve_urls(style: dict, token: str) -> dict:
-    """The style with every ``mapbox://`` reference turned into an HTTPS URL carrying the token.
+    """The style with every ``mapbox://`` reference turned into an HTTPS URL carrying the token,
+    and the sprite Plotly's marker symbols resolve against.
 
     Plotly gives mapbox-gl the access token only for a style it names itself; a style
     document passes through untouched, so its Mapbox-scheme sources, sprite and glyphs
     would be requested without credentials and refused.
     """
     query = urllib.parse.urlencode({"access_token": token})
-    resolved = {**style}
-    if style["sprite"].startswith(SCHEME):
-        resolved["sprite"] = f"{STYLES}/{_path(style['sprite'], 'sprites')}/sprite?{query}"
+    resolved = {**style, "sprite": f"{STYLES}/{MARKER_SPRITE}/sprite?{query}"}
     if style["glyphs"].startswith(SCHEME):
         resolved["glyphs"] = f"{API}/fonts/v1/{_path(style['glyphs'], 'fonts')}?{query}"
     resolved["sources"] = {

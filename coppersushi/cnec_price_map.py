@@ -163,7 +163,7 @@ def _constraint_traces(placed: pd.DataFrame) -> list[go.Scattermapbox]:
     return [
         lines,
         markers(line_rows, "binding rows", "circle", 8),
-        markers(point_rows, "binding transformers and PSTs", "square", 14),
+        markers(point_rows, "binding transformers and PSTs", "triangle", 14),
     ]
 
 

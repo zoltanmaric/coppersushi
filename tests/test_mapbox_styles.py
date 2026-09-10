@@ -7,10 +7,10 @@ STYLE = Path(__file__).parent / "fixtures" / "mapbox-style" / "synthetic-dark.js
 TOKEN = "pk.synthetic"
 
 
-def test_resolve_urls_turns_every_mapbox_scheme_reference_into_a_credentialed_https_url():
+def test_resolve_urls_credentials_every_reference_and_swaps_in_the_marker_sprite():
     resolved = mapbox_styles.resolve_urls(json.loads(STYLE.read_text()), TOKEN)
     assert resolved["sprite"] == (
-        "https://api.mapbox.com/styles/v1/example/synthetic-dark/sprite?access_token=pk.synthetic"
+        "https://api.mapbox.com/styles/v1/mapbox/dark-v9/sprite?access_token=pk.synthetic"
     )
     assert resolved["glyphs"] == (
         "https://api.mapbox.com/fonts/v1/example/{fontstack}/{range}.pbf?access_token=pk.synthetic"

@@ -91,5 +91,4 @@ JAO-derived records remain fetched locally rather than committed under JAO's ter
 
 ## Next
 
-1. Verify the latest published day in-browser; only 2024-08-29 has been.
-2. Replace `cnec_geometry` with [jao-grid](jao-grid.md)'s matcher once it lands.
+1. Replace `cnec_geometry` with [jao-grid](jao-grid.md)'s matcher once it lands.
