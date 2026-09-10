@@ -1,4 +1,4 @@
-"""One market-time-unit view of published prices and Active FB constraints."""
+"""One market-time-unit view of published prices and active flow-based constraints."""
 
 from typing import NamedTuple
 
