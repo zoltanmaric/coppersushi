@@ -3,6 +3,22 @@
 Append-only chronology of wiki operations (ingests, queries, lints).
 Entry format: `## [YYYY-MM-DD] <operation> | <title>`
 
+## [2026-09-10] query | What the Electricity Maps API provides
+
+The first inventory probed legacy v3 route names and mistook their 401 responses for product
+entitlements. The current v4 API separates electricity mix, flows, total and reported load, net
+load, European day-ahead prices, US locational prices and carbon signals. With the project key,
+day-ahead price forecasts returned 24 hourly points for all twelve Core zones; electricity mix,
+flows, total load, net load and carbon intensity returned the present hour plus 24 ahead for
+Germany. Their rolling histories worked, while arbitrary `past` and `past-range` requests remained
+denied. The price-specific `actual` route still returned all 24 hours of 2024-08-29 for every Core
+zone, so Electricity Maps can provide the backtest's settled prices but not its historical grid
+signals. The catalog contains no bids or bid curves. A same-hour check also found the mix's
+aggregate flows and the dedicated neighbour-flow forecast implying opposite German net-position
+signs, so that input is unsafe until clarified or guarded by an invariant. Created
+electricity-maps-api and corrected the backtest source decision. No credential or authenticated
+response value was retained.
+
 ## [2026-09-10] change | No JAO bytes in a public repository
 
 JAO's [terms](https://www.jao.eu/terms-conditions) reserve all reproduction rights, limit use to
