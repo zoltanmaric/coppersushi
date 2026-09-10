@@ -6,6 +6,7 @@ import pyproj
 import pypsa
 from pandera.typing import DataFrame
 
+from coppersushi import map_style
 from coppersushi.data_model.network_views import (
     BranchInfo,
     BranchInfoForSnapshot,
@@ -172,7 +173,7 @@ def create_traces(
 
     loaded_branches_trace = go.Scattermapbox(
         lon=edges_x[loaded_filter].dropna().explode(), lat=edges_y[loaded_filter].dropna().explode(),
-        line=dict(width=4.0, color='#a72af5'),  # violet
+        line=dict(width=4.0, color=map_style.BINDING),
         hoverinfo='none',
         mode='lines',
         visible=False
@@ -180,7 +181,7 @@ def create_traces(
 
     easy_branches_trace = go.Scattermapbox(
         lon=edges_x[(~loaded_filter)].dropna().explode(), lat=edges_y[(~loaded_filter)].dropna().explode(),
-        line=dict(width=0.5, color='gray'),
+        line=dict(width=0.5, color=map_style.MUTED_BRANCH),
         hoverinfo='none',
         mode='lines',
         visible=False
@@ -213,7 +214,7 @@ def create_traces(
         marker=go.scattermapbox.Marker(
             showscale=True,
             # colorscale options https://plotly.com/python/builtin-colorscales/
-            colorscale='tropic',
+            colorscale=map_style.NETWORK_VALUE_COLORSCALE,
             reversescale=True,
             color=node_info_t.p,
             cmin=-cmax,
@@ -314,11 +315,10 @@ def colored_network_figure(n: pypsa.Network, what: str, mapbox_token: str | None
 
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0},
                       # Available maps: https://plotly.com/python/mapbox-layers#base-maps-in-layoutmapboxstyle
-                      mapbox_style="dark",
+                      mapbox_style=map_style.MAP_STYLE,
                       # Only required for mapbox styles; without a token the figure builds but draws no tiles
                       mapbox_accesstoken=mapbox_token
                       )
     fig.update_geos(projection_type='mercator')
 
     return fig
-

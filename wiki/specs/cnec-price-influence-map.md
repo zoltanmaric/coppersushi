@@ -31,6 +31,9 @@ real-time grid.
 - Draw active physical CNECs in purple; distinguish lines from transformer and phase-shifting
   transformer points. Hover identifies the monitored element, contingency, direction, remaining
   available margin and shadow price.
+- Draw one physical PyPSA branch once. Its reachable marker aggregates every active direction and
+  contingency, and every EIC that the matcher resolves to that branch; published rows keep their
+  own source IDs for selection and analysis.
 - Selecting one CNEC preserves the price layer and overlays its signed contribution across zones.
   Relative to an explicit reference zone `r`, the contribution to zone `z` is
   `-shadow_price * (PTDF_z - PTDF_r)`. Only differences are meaningful.
@@ -49,9 +52,11 @@ real-time grid.
 - **Prices:** published NEMO or ENTSO-E day-ahead prices. Electricity Maps' price `actual` route is a
   second adapter already verified across all twelve Core zones, including future cleared hours; see
   [Electricity Maps API](../electricity-maps-api.md).
-- **Geometry:** JAO supplies element and substation identities but no coordinates. The matching work
-  in [JAO's elements on the grid](jao-grid.md) locates them on the OpenStreetMap/PyPSA network and is
-  the map's prerequisite.
+- **Geometry:** JAO supplies element and substation identities but no coordinates. As of 2026-09-10
+  `cnec_geometry` places each element by its published `substationFrom`/`substationTo` names on the
+  OSM-locator substation list (unlicensed, fetched locally), with `config/substation-aliases.csv`
+  for spelling differences. The matching work in [JAO's elements on the grid](jao-grid.md), which
+  locates elements on the PyPSA network itself, replaces it.
 
 No optimal power flow or reconstructed dispatch is required. Published prices provide the absolute
 level; published shadow prices and PTDF differences provide each binding row's relative contribution.
@@ -86,7 +91,4 @@ JAO-derived records remain fetched locally rather than committed under JAO's ter
 
 ## Next
 
-1. Render 2024-08-29 from the existing JAO tables and published prices, consuming the element
-   mapping rather than expanding this spec into that work.
-2. Check the current JAO active flow-based service contract and load the next published day through the same
-   view.
+1. Replace `cnec_geometry` with [jao-grid](jao-grid.md)'s matcher once it lands.
