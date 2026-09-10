@@ -92,7 +92,7 @@ def _price_traces(
         },
         locations=priced_zones.zone,
         z=priced_zones.price,
-        colorscale=map_style.PRICE_COLORSCALE,
+        colorscale=map_style.VALUE_COLORSCALE,
         marker_opacity=map_style.ZONE_FILL_OPACITY,
         marker_line_color=map_style.ZONE_BORDER,
         marker_line_width=map_style.ZONE_BORDER_WIDTH,

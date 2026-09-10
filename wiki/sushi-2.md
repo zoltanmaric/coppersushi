@@ -8,6 +8,7 @@ The in-place successor of [v1](copper-sushi-app.md). v1 visualized a *model's* o
 2. **Workflow**: PyPSA-Eur as of 2026, run from a [pinned sibling checkout](pypsa-eur-sibling.md) with a config committed here, HiGHS as solver. Load disaggregation, plant matching and renewable profiles are upstream's (JRC Energy Atlas, powerplantmatching, atlite).
 3. **Signal**: v1's family unchanged — net power per node, loaded-vs-easy branches, direction arrows, per-node tooltips.
 4. **Web tool**: this repo, the viewer of the solved network; `Scattermapbox` pinned ([codebase-v1](codebase-v1.md)).
+5. **Visual language** (settled 2026-09-10): one colourscale, Plotly's `tropic`, for every mapped value — node net power, zonal price — and purple reserved for market-binding elements. A second scale beside the purple was tried and rejected as a clash.
 
 ## Dataflow
 

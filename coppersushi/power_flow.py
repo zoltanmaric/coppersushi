@@ -214,7 +214,7 @@ def create_traces(
         marker=go.scattermapbox.Marker(
             showscale=True,
             # colorscale options https://plotly.com/python/builtin-colorscales/
-            colorscale=map_style.NETWORK_VALUE_COLORSCALE,
+            colorscale=map_style.VALUE_COLORSCALE,
             reversescale=True,
             color=node_info_t.p,
             cmin=-cmax,
