@@ -17,6 +17,7 @@ Rules older than this page carry no row and are the first ablation candidates.
 | `job-supervision`: kill the process group | `pkill -f` missed a download script's subshell; a second `curl` wrote the same file beside the new one |
 | `absolute-paths` | Twice, a `cd` at the start of a command chain sent a pin edit and a launch into the sibling repo |
 | `named-adds` | `git add -A` during a merge swept two tokens from an unignored `.secrets/` into a local commit; GitHub push protection caught it. Again on a rules-only branch: a 31 MB candidate network rode along and had to be amended out |
+| `pull-requests-via-skill` | A two-PR feature was chopped into five layers with `gh pr create --base` and hand rebases, without loading the skill; the user said "they're not stacked" three times before the agent understood that a `gh stack` was meant. Earlier, two layers opened the same way had to be repaired with `gh stack link` |
 | `early-stack-prs` | A finished first stack layer remained local while later layers were being planned; on the first occurrence, the user explicitly overrode the repetition bar and asked that every coherent layer be opened immediately, as draft until ready |
 | `sanction-by-hand` (`networks/AGENTS.md`) | A 31 MB solve was about to be committed as the day's network by an agent, with no human having looked at it |
 | `public-repo` | A private repository path was cited as a source in a skill and a PR body |
