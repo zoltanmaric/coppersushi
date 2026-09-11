@@ -32,7 +32,7 @@ class Overrides(pa.DataFrameModel):
     """Hand-made matches, one per JAO name, that win over anything the matcher computes."""
 
     jao_name: Series[str] = pa.Field(unique=True)  # Exactly as JAO spells it
-    bus_id: Series[str]  # The bus it means; must exist in the `BusNames` frame
+    bus_id: Series[str]  # The bus it means; must exist in the `BusNames` frame, or `match` raises
     note: Series[str]  # Why the match needed a human
 
     class Config:
@@ -43,8 +43,8 @@ class Overrides(pa.DataFrameModel):
 class Matches(pa.DataFrameModel):
     """One row per distinct JAO substation name, matched or not.
 
-    An unmatched name keeps its row with the bus columns null and `score` 0.0, so a
-    consumer sees the miss rather than a silently shorter table.
+    An unmatched or ambiguous name keeps its row with the bus columns null and `score`
+    0.0, so a consumer sees the miss rather than a silently shorter table.
     """
 
     jao_name: Series[str] = pa.Field(unique=True)  # JAO's spelling, digits and all: `Westtirol 1` ≠ `Westtirol 2`
@@ -53,7 +53,7 @@ class Matches(pa.DataFrameModel):
     osm_name: Series[str] = pa.Field(nullable=True)
     country: Series[str] = pa.Field(nullable=True)
     score: Series[float]  # difflib similarity of the two normalised names; 1.0 for an override or exact hit
-    source: Series[str]  # override, exact, fuzzy or unmatched
+    source: Series[str]  # override, exact, fuzzy, ambiguous (two sites share the key) or unmatched
 
     class Config:
         strict = False

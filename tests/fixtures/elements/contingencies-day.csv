@@ -1,0 +1,8 @@
+hour,eic,direction,cont_name,branch_eic,branch_name,substation_from,substation_to,element_type
+2024-08-29T00:00:00+00:00,SYN-LINE-380-A,DIRECT,Hagenwerder - Mikulowa corridor,SYN-CB-CIRCUIT-1,Hagenwerder - Mikulowa 1,HAGENWERDER,MIKULOWA,Line
+2024-08-29T00:00:00+00:00,SYN-LINE-380-A,DIRECT,Hagenwerder - Mikulowa corridor,SYN-CB-CIRCUIT-2,Hagenwerder - Mikulowa 2,HAGENWERDER,MIKULOWA,Line
+2024-08-29T01:00:00+00:00,SYN-LINE-380-A,DIRECT,Hagenwerder - Mikulowa corridor,SYN-CB-CIRCUIT-1,Hagenwerder - Mikulowa 1,HAGENWERDER,MIKULOWA,Line
+2024-08-29T01:00:00+00:00,SYN-LINE-380-A,DIRECT,Hagenwerder - Mikulowa corridor,SYN-CB-CIRCUIT-2,Hagenwerder - Mikulowa 2,HAGENWERDER,MIKULOWA,Line
+2024-08-29T00:00:00+00:00,SYN-LINE-380-A,DIRECT,Etzenricht PST out,SYN-CB-PST,Etzenricht PST1,ETZENRICHT,ETZENRICHT,PST
+2024-08-29T00:00:00+00:00,SYN-TIE-BOTHWAYS,DIRECT,Mostar out,SYN-CB-ABSENT,Mostar - Nosovice,MOSTAR,NOSOVICE,TieLine
+2024-08-29T01:00:00+00:00,SYN-TIE-BOTHWAYS,OPPOSITE,Mostar out,SYN-CB-ABSENT,Mostar - Nosovice,MOSTAR,NOSOVICE,TieLine

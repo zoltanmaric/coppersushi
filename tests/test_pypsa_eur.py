@@ -73,7 +73,7 @@ def test_reject_unfit_loads_each_network_once_and_runs_every_guard(monkeypatch, 
     candidate = tmp_path / "opf-2024-08-29-bccf56e8-0f1e2d3c-20260909T001532Z.nc"
     base = tmp_path / "base.nc"
     loaded, guards = [], []
-    monkeypatch.setattr(pypsa_eur, "_base_network", lambda: base)
+    monkeypatch.setattr(pypsa_eur, "base_network", lambda: base)
     monkeypatch.setattr(pypsa_eur.networks, "load", lambda path: loaded.append(path) or path.stem)
     monkeypatch.setattr(pypsa_eur.shedding, "reject", lambda n: guards.append(("shedding", n)))
     monkeypatch.setattr(pypsa_eur.simplification, "expected_transformers", lambda n: 821)

@@ -15,6 +15,8 @@ Field meanings: `wiki/literature/jao-core-publication-handbook.md`. Design: `wik
 import json
 import logging
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -43,6 +45,11 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://publicationtool.jao.eu/core/api/data"
 JAO_DIR = REPO / "data" / "jao"
 TIMEOUT_SECONDS = 300
+# A day is 24 sequential requests and the service answers a transient 500 often enough that
+# one of them landing unretried threw away three completed fetches on 2026-09-11. Backoff is
+# 2 s, 8 s, 32 s: long enough to outlast a blip, short enough that a real outage still fails.
+RETRIES = 3
+RETRY_BACKOFF_SECONDS = 2
 
 
 class Day(NamedTuple):
@@ -87,13 +94,36 @@ def _stamp(moment: pd.Timestamp) -> str:
     return moment.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
+def _read(url: str) -> dict:
+    """One request, retried through the service's transient 5xx and network errors.
+
+    Only the retryable failures come back here: a 4xx is our own bad request and re-sending it
+    would say the same thing, so it raises on the first try.
+    """
+    for attempt in range(RETRIES + 1):
+        try:
+            with urllib.request.urlopen(url, timeout=TIMEOUT_SECONDS) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as error:
+            if error.code < 500 or attempt == RETRIES:
+                raise
+            failure = f"HTTP {error.code}"
+        except (urllib.error.URLError, TimeoutError) as error:
+            if attempt == RETRIES:
+                raise
+            failure = str(error)
+        pause = RETRY_BACKOFF_SECONDS * 4**attempt
+        logger.warning("jao: %s; retrying in %ds (attempt %d of %d)", failure, pause, attempt + 1, RETRIES)
+        time.sleep(pause)
+    raise AssertionError("unreachable: the loop either returns or raises")
+
+
 def _get(endpoint: str, start: pd.Timestamp, end: pd.Timestamp) -> list[dict]:
     """The rows of one page over `[start, end)`, refusing a truncated response."""
     window = {"FromUtc": _stamp(start), "ToUtc": _stamp(end)}
     url = f"{BASE_URL}/{endpoint}?{urllib.parse.urlencode(window)}"
     logger.info("jao: GET %s %s..%s", endpoint, window["FromUtc"], window["ToUtc"])
-    with urllib.request.urlopen(url, timeout=TIMEOUT_SECONDS) as response:
-        payload = json.load(response)
+    payload = _read(url)
     rows = payload["data"]
     check_complete(endpoint, rows, payload["totalRows"])
     logger.info("jao: %s %s → %d rows", endpoint, window["FromUtc"], len(rows))
