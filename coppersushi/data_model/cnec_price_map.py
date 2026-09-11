@@ -1,9 +1,10 @@
 """Typed domain-element enrichment handed to the CNEC price map.
 
 ``ActiveConstraints`` models JAO's published, row-grained result. ``MappedCnecElements``
-models the separate enrichment step: the domain element is matched to a PyPSA branch and
-given coordinates. This is not the Static Grid Model table, whose EIC is not a unique key.
-An unresolved element keeps its row so the map reports true coverage.
+models the separate enrichment step: each TSO's publication of a domain element is matched
+to a PyPSA branch and given coordinates in that TSO's orientation, so its DIRECT runs from
+``(x0, y0)`` to ``(x1, y1)``. This is not the Static Grid Model table, whose EIC is not a
+unique key. An unresolved element keeps its row so the map reports true coverage.
 """
 
 import pandera.pandas as pa
@@ -11,9 +12,10 @@ from pandera.typing import Series
 
 
 class MappedCnecElements(pa.DataFrameModel):
-    """One domain element, enriched with its matched PyPSA branch and geometry."""
+    """One TSO's publication of one domain element, with its branch and oriented geometry."""
 
-    eic: Series[str] = pa.Field(unique=True)  # Domain element identity, not a static-grid row key
+    eic: Series[str]  # Domain element identity, not a static-grid row key
+    tso: Series[str]  # The publisher whose orientation the coordinates follow
     element_type: Series[str]
     branch_id: Series[str] = pa.Field(nullable=True)
     branch_type: Series[str]
@@ -30,3 +32,4 @@ class MappedCnecElements(pa.DataFrameModel):
     class Config:
         strict = False
         coerce = True
+        unique = ["eic", "tso"]

@@ -3,9 +3,9 @@
 `domain-elements.csv` is invented — its substation and element names are made up — but every
 quirk it carries is one the real feed has: umlauts spelled both ways, diacritics and
 punctuation, a `Y ` tap prefix, a trailing equipment token, one name meaning two places
-hundreds of kilometres apart, a tie-line published from both ends, and a row naming no
-substations and no element type. `located-substations.csv` is the locator's row shape, with
-one site recorded twice as the duplicated national templates record it.
+hundreds of kilometres apart, a tie-line published from both ends in two spellings, and a row
+naming no substations and no element type. `located-substations.csv` is the locator's row
+shape, with one site recorded twice as the duplicated national templates record it.
 """
 
 import pandas as pd
@@ -13,7 +13,7 @@ import pytest
 
 from coppersushi import REPO, cnec_geometry
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
-from coppersushi.data_model.jao import Elements
+from coppersushi.data_model.jao import ElementEnds, Elements
 from coppersushi.data_model.osm_locator import LocatedSubstations
 from coppersushi.data_sources import jao
 
@@ -33,19 +33,29 @@ def elements():
 
 
 @pytest.fixture
+def ends(elements):
+    """Each TSO's own ends, as `cnecs.element_ends` keeps them from the raw feed."""
+    return (
+        elements[["eic", "tso", "element_type", "substation_from", "substation_to"]]
+        .drop_duplicates(ignore_index=True)
+        .pipe(ElementEnds.validate)
+    )
+
+
+@pytest.fixture
 def substations():
     return pd.read_csv(FIXTURES / "located-substations.csv").pipe(LocatedSubstations.validate)
 
 
 @pytest.fixture
-def placements(elements, substations):
+def placements(ends, substations):
     """Every element placed, with the alias list the real run passes."""
-    located = cnec_geometry.locate_elements(elements, substations, ALIASES)
+    located = cnec_geometry.locate_elements(ends, substations, ALIASES)
     return located.set_index("eic")
 
 
 def span(row):
-    """The two ends a row is drawn between, as a set: the module sorts the pair by name."""
+    """The two ends a row is drawn between, as a set: which end is which is the TSO's."""
     return {(row.x0, row.y0), (row.x1, row.y1)}
 
 
@@ -68,10 +78,10 @@ def test_diacritics_and_punctuation_collapse(placements):
     assert span(underscored) == {(14.0, 49.0), (14.2, 49.2)}
 
 
-def test_the_alias_table_resolves_a_name_the_locator_files_differently(elements, substations):
-    without = cnec_geometry.locate_elements(elements, substations).set_index("eic")
+def test_the_alias_table_resolves_a_name_the_locator_files_differently(ends, substations):
+    without = cnec_geometry.locate_elements(ends, substations).set_index("eic")
     assert without.loc["99T-AA-BB-00004P"].match_status == "no_substation"
-    with_aliases = cnec_geometry.locate_elements(elements, substations, ALIASES).set_index("eic")
+    with_aliases = cnec_geometry.locate_elements(ends, substations, ALIASES).set_index("eic")
     aliased = with_aliases.loc["99T-AA-BB-00004P"]  # Suedhafen - Aufeld
     assert span(aliased) == {NORDKAMP, (15.0, 47.0)}
     assert aliased.score == 1.0
@@ -121,32 +131,18 @@ def test_an_ambiguous_point_element_has_no_span_to_choose_by_and_stays_unplaced(
     assert pd.isna(row.x0)
 
 
-def test_one_element_survives_both_orientations_directions_and_hours(
-    elements, substations, placements
-):
-    """One EIC, published `Aufeld - Bachheim` by one TSO and reversed by the other."""
-    assert (placements.index == TIE_LINE).sum() == 1
-    row = placements.loc[TIE_LINE]
-    assert span(row) == {(15.0, 47.0), (15.5, 47.5)}
+def test_each_publisher_is_drawn_from_its_own_end_over_one_line(placements):
+    """One EIC, published `Aufeld - Bachheim` by one TSO and `Baechheim - Aufeld` by the other.
 
-    published = elements[elements.eic == TIE_LINE]
-    forward = published[published.substation_from == "Aufeld"]
-    reverse = published[published.substation_from == "Bachheim"]
-    branch_ids = {
-        cnec_geometry.locate_elements(side, substations).branch_id.iloc[0]
-        for side in (forward, reverse)
-    }
-    assert branch_ids == {row.branch_id}
-
-
-def test_two_genuinely_different_substation_pairs_under_one_eic_are_refused(
-    elements, substations
-):
-    clashing = elements.copy()
-    row = clashing.index[(clashing.eic == TIE_LINE)][-1]
-    clashing.loc[row, "substation_to"] = "Nordkamp"
-    with pytest.raises(ValueError, match="more than one substation pair"):
-        cnec_geometry.locate_elements(clashing, substations)
+    The locator holds `Bächheim`, so the two publishers hit it under different keys; the
+    line's identity comes from the places found, not from the spellings that found them.
+    """
+    rows = placements.loc[[TIE_LINE]].set_index("tso")
+    assert len(rows) == 2
+    assert (rows.loc["ZATSO", "x0"], rows.loc["ZATSO", "y0"]) == (15.0, 47.0)  # Aufeld
+    assert (rows.loc["ZBTSO", "x0"], rows.loc["ZBTSO", "y0"]) == (15.5, 47.5)  # Bächheim
+    assert span(rows.loc["ZATSO"]) == span(rows.loc["ZBTSO"])
+    assert rows.branch_id.nunique() == 1
 
 
 @pytest.mark.parametrize(
@@ -164,10 +160,10 @@ def test_an_unplaceable_endpoint_keeps_its_row_without_coordinates(placements, e
     assert pd.isna(row.branch_id)
 
 
-def test_the_placed_table_validates_and_carries_one_row_per_published_eic(
-    elements, substations
+def test_the_placed_table_validates_and_carries_one_row_per_publisher_and_eic(
+    ends, substations
 ):
-    located = cnec_geometry.locate_elements(elements, substations, ALIASES)
+    located = cnec_geometry.locate_elements(ends, substations, ALIASES)
     MappedCnecElements.validate(located)
-    assert set(located.eic) == set(elements.eic)
-    assert not located.eic.duplicated().any()
+    assert set(zip(located.eic, located.tso)) == set(zip(ends.eic, ends.tso))
+    assert not located.duplicated(["eic", "tso"]).any()

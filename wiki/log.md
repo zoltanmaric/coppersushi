@@ -3,6 +3,16 @@
 Append-only chronology of wiki operations (ingests, queries, lints).
 Entry format: `## [YYYY-MM-DD] <operation> | <title>`
 
+## [2026-09-10] query | Which way a published row binds
+
+Checked on the 2026-09-11 final domain: `direction` is relative to the publishing TSO's own
+`substationFrom`. APG's `Duernrohr 1 - Slavetice 437` and ČEPS's `Slavetice - Durnrohr - V437`
+share one EIC and both have DIRECT rows, with PTDFs of opposite sign; TenneT's and APG's rows on
+`Pirach - St. Peter 256`, published from the same end, agree. `activeFbConstraints` cannot orient a
+row: its `hubFrom`/`hubTo` name the most constrained zone pair, not the element's ends (`Nosovice -
+Varin`, a CZ–SK line, is CZ→HU there; every one of the day's 173 rows has two different hubs,
+transformers included). Orientation therefore needs each TSO's own ends, kept per EIC and TSO.
+
 ## [2026-09-10] query | Electricity Maps' default price resolution
 
 `price-day-ahead/actual` answers hourly unless `temporalGranularity=15_minutes` is asked for, and

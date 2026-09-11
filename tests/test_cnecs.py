@@ -82,6 +82,23 @@ def test_a_differing_fmax_without_a_differing_tso_is_an_error():
         cnecs.elements(raw)
 
 
+def test_element_ends_keep_each_tsos_own_orientation():
+    """`Cindervale - Dunmoor` is published from Cindervale by MERIDIA and from Dunmoor by VOLTRA."""
+    ends = cnecs.element_ends(final_computation())
+    assert list(ends.columns) == cnecs.END_COLUMNS
+    assert not ends.duplicated(["eic", "tso"]).any()
+    both = ends[ends.eic.eq("99T1001C--00101B")].set_index("tso")
+    assert both.loc["MERIDIA", "substation_from"] == "Cindervale"
+    assert both.loc["VOLTRA", "substation_from"] == "Dunmoor"
+
+
+def test_one_tso_naming_two_pairs_for_one_element_is_refused():
+    feed = final_computation()
+    element = next(row for row in feed if row["cneEic"] == "99T-AA-BB-00003P")
+    with pytest.raises(ValueError, match="99T-AA-BB-00003P"):
+        cnecs.element_ends(feed + [{**element, "substationTo": "Nowhere"}])
+
+
 def test_contingencies_come_from_the_structured_field():
     conts = cnecs.contingencies(final_computation())
     monitored = conts[conts.eic == "99T-AA-BB-00003P"]
