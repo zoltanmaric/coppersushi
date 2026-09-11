@@ -56,6 +56,8 @@ def test_layout_starts_on_the_supplied_day_and_exposes_all_controls():
     }
     assert controls["cnec-date"].value == "2024-08-29"
     assert {
+        "cnec-constraint",
+        "cnec-reference-zone",
         "cnec-map",
         "cnec-interval",
         "cnec-status",
@@ -63,7 +65,29 @@ def test_layout_starts_on_the_supplied_day_and_exposes_all_controls():
 
 
 def test_a_historical_day_has_every_hour_and_timezone_disambiguated_marks():
-    rendered = cnec_page.render(inputs(), 0)
+    rendered = cnec_page.render(inputs(), 0, None, "AT")
     assert rendered.interval_max == 23
     assert rendered.interval_marks[0]["label"] == "00:00"
     assert rendered.interval_marks[22]["label"] == "22:00" and 23 not in rendered.interval_marks
+
+
+def test_binding_rows_are_sorted_by_shadow_price_and_keep_their_source_id():
+    rendered = cnec_page.render(inputs(), 0, None, "AT")
+    assert [option["value"] for option in rendered.constraint_options] == ["", "1", "2"]
+    assert "100.00 €/MWh" in rendered.constraint_options[1]["label"]
+    assert "base case" in rendered.constraint_options[2]["label"]
+
+
+def test_selecting_a_row_adds_its_reference_based_influence():
+    rendered = cnec_page.render(inputs(), 0, "1", "BE")
+    assert rendered.constraint_value == "1"
+    assert any(trace.name == "contribution relative to BE" for trace in rendered.figure.data)
+
+
+def test_a_selection_from_another_interval_is_cleared():
+    day = inputs()
+    later_prices = day.prices.assign(interval=pd.Timestamp("2024-08-28T23:00:00Z"))
+    later = cnec_page.Day(**{**day.__dict__, "prices": later_prices})
+    rendered = cnec_page.render(later, 1, "1", "AT")
+    assert rendered.constraint_value is None
+    assert rendered.constraint_options == [cnec_page.NO_SELECTION]

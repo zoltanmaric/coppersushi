@@ -203,20 +203,22 @@ def update_figure(pathname: str, snapshot_index: int):
     return render(pathname, snapshot_index, ctx.triggered_id == 'snapshot-slider')
 
 
-def render_cnec(day: str, interval_index: int) -> tuple:
+def render_cnec(day: str, interval_index: int, selected: str | None, reference_zone: str) -> tuple:
     """The CNEC page's map and controls for one day; a failed load becomes the banner."""
     try:
         rendered = cnec_page.render(
-            cnec_day(day), interval_index or 0, mapbox_token(), basemap()
+            cnec_day(day), interval_index or 0, selected, reference_zone, mapbox_token(), basemap()
         )
     except Exception as e:  # noqa: BLE001 — every loader failure must reach the page
         logging.exception('Loading the CNEC day %s failed', day)
-        return (no_update,) * 4 + (f'Could not load {day}: {e}', True)
+        return (no_update,) * 6 + (f'Could not load {day}: {e}', True)
     return (
         rendered.figure,
         rendered.interval_max,
         rendered.interval_marks,
         rendered.interval_value,
+        rendered.constraint_options,
+        rendered.constraint_value,
         '',
         False,
     )
@@ -227,12 +229,16 @@ def render_cnec(day: str, interval_index: int) -> tuple:
     Output('cnec-interval', 'max'),
     Output('cnec-interval', 'marks'),
     Output('cnec-interval', 'value'),
+    Output('cnec-constraint', 'options'),
+    Output('cnec-constraint', 'value'),
     Output('cnec-status', 'children'),
     Output('cnec-status', 'is_open'),
     Input('cnec-date', 'value'),
-    Input('cnec-interval', 'value'))
-def update_cnec(day: str, interval_index: int):
-    return render_cnec(day, interval_index)
+    Input('cnec-interval', 'value'),
+    Input('cnec-constraint', 'value'),
+    Input('cnec-reference-zone', 'value'))
+def update_cnec(day: str, interval_index: int, selected: str | None, reference_zone: str):
+    return render_cnec(day, interval_index, selected, reference_zone)
 
 
 if __name__ == '__main__':

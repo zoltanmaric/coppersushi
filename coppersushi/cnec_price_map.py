@@ -12,6 +12,8 @@ from coppersushi.cnec_market import Snapshot
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
 from coppersushi.market_day import MARKET_TZ
 
+POSITIVE = "#42d9f5"
+NEGATIVE = "#ff9f43"
 POINT_TYPES = ("Transformer", "PST")
 MAPPED = "matched"
 FRAME_ZOOM = 1.0  # Chosen against the rendered page, not derived: viewport aspect varies
@@ -125,17 +127,15 @@ def _price_traces(
             thickness=14,
         ),
     )
+    names = labels_at.zone.map(market.ZONE_NAMES).fillna(labels_at.zone)
     labels = go.Scattermapbox(
         name="zone prices",
         lon=labels_at.x,
         lat=labels_at.y,
         mode="text",
-        hoverinfo="skip",
-        text=(
-            labels_at.zone.map(market.ZONE_NAMES).fillna(labels_at.zone)
-            + "<br>"
-            + labels_at.price.map(lambda value: f"€{value:,.0f}")
-        ),
+        hoverinfo="text",
+        text=names + "<br>" + labels_at.price.map(lambda value: f"€{value:,.0f}"),
+        hovertext=names + " · " + labels_at.price.map(lambda value: f"{value:,.2f} €/MWh"),
         textfont=dict(color="white", size=14),
         showlegend=False,
     )
@@ -225,6 +225,81 @@ def _constraint_traces(placed: pd.DataFrame) -> list[go.Scattermapbox]:
     ]
 
 
+def _selected_row(placed: pd.DataFrame, contribution: pd.DataFrame) -> pd.Series:
+    first = contribution.iloc[0]
+    selected = placed[placed.source_id.eq(first.source_id)]
+    if len(selected) != 1:
+        raise ValueError(f"contribution matched {len(selected)} active rows")
+    return selected.iloc[0]
+
+
+def _contribution_traces(
+    placed: pd.DataFrame,
+    centres: pd.DataFrame,
+    contribution: pd.DataFrame,
+) -> tuple[list[go.Scattermapbox], str]:
+    """Signed zonal influence radiating from the selected element, never along grid edges."""
+    selected = _selected_row(placed, contribution)
+    zonal = contribution.merge(centres[["zone", "x", "y"]], on="zone", how="inner")
+    reference = str(contribution.reference_zone.iloc[0])
+    scale = zonal.contribution.abs().max() or 1.0
+    colours = [POSITIVE if value >= 0 else NEGATIVE for value in zonal.contribution]
+    sizes = 7 + 17 * zonal.contribution.abs() / scale
+    markers = go.Scattermapbox(
+        name=f"contribution relative to {reference}",
+        lon=zonal.x,
+        lat=zonal.y,
+        mode="markers",
+        hoverinfo="text",
+        text=(
+            zonal.zone + " · "
+            + zonal.contribution.map(lambda value: f"{value:+,.2f} €/MWh")
+            + f" relative to {reference}"
+        ),
+        marker=go.scattermapbox.Marker(color=colours, size=sizes, opacity=0.88),
+    )
+    traces = [markers]
+    mapped = selected.match_status == MAPPED
+    if mapped:
+        origin_x = (selected.x0 + selected.x1) / 2
+        origin_y = (selected.y0 + selected.y1) / 2
+        for row in zonal[zonal.contribution.abs() > 1e-9].itertuples():
+            traces.append(
+                go.Scattermapbox(
+                    name=f"{row.zone} contribution",
+                    lon=[origin_x, row.x],
+                    lat=[origin_y, row.y],
+                    mode="lines",
+                    hoverinfo="skip",
+                    showlegend=False,
+                    line=dict(
+                        color=POSITIVE if row.contribution > 0 else NEGATIVE,
+                        width=0.8 + 5.2 * abs(row.contribution) / scale,
+                    ),
+                    opacity=0.5,
+                )
+            )
+        traces.append(
+            go.Scattermapbox(
+                name="selected CNEC",
+                lon=[selected.x0, selected.x1],
+                lat=[selected.y0, selected.y1],
+                mode="lines+markers",
+                hoverinfo="skip",
+                line=dict(color=map_style.BINDING, width=9),
+                marker=go.scattermapbox.Marker(color=map_style.BINDING, size=9),
+                showlegend=False,
+            )
+        )
+    note = (
+        f"Selected contribution relative to <b>{reference}</b>. "
+        "Rays are zonal PTDF influence, not a power-flow path."
+    )
+    if not mapped:
+        note += " The selected CNEC has no mapped geometry, so its rays cannot be anchored."
+    return traces, note
+
+
 def _view(priced_zones: pd.DataFrame) -> dict:
     """Centre and zoom that frame the zones being drawn.
 
@@ -254,6 +329,7 @@ def figure(
     ``basemap`` is a Plotly preset name or a Mapbox style document (see ``map_style.without_labels``).
     """
     priced_zones = _priced_zones(zones, view.prices)
+    centres = _zone_centres(priced_zones)
     placed = _placed(view.constraints, geometries)
     mapped = placed.match_status.eq(MAPPED).sum()
     annotation = (
@@ -261,6 +337,12 @@ def figure(
         "Purple means market-binding under contingency, not physically overloaded."
     )
     traces = _price_traces(priced_zones, _fill_anchor(basemap)) + _constraint_traces(placed)
+    if view.contribution is not None:
+        contribution_traces, contribution_note = _contribution_traces(
+            placed, centres, view.contribution
+        )
+        traces += contribution_traces
+        annotation += "<br>" + contribution_note
     fig = go.Figure(traces)
     fig.update_layout(
         hovermode="closest",
