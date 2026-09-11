@@ -1,8 +1,11 @@
+import logging
 import os
 import re
 import subprocess
 from pathlib import Path
 
+import pandas as pd
+import pypsa
 import pytest
 import yaml
 
@@ -55,8 +58,7 @@ def test_promote_copies_the_candidate_to_the_days_network(monkeypatch, tmp_path)
     candidate = networks_dir / "candidates" / "opf-2013-07-17-bccf56e8-0f1e2d3c-20260909T001532Z.nc"
     candidate.parent.mkdir()
     candidate.write_bytes(b"net")
-    monkeypatch.setattr(pypsa_eur.shedding, "reject", lambda n: None)
-    monkeypatch.setattr(pypsa_eur.networks, "load", lambda path: path)
+    monkeypatch.setattr(pypsa_eur, "reject_unfit", lambda path: None)
     monkeypatch.setattr(pypsa_eur, "REPO", tmp_path)
     monkeypatch.setattr(networks, "NETWORKS_DIR", networks_dir)
 
@@ -66,6 +68,37 @@ def test_promote_copies_the_candidate_to_the_days_network(monkeypatch, tmp_path)
     staged = subprocess.run(["git", "diff", "--cached", "--name-only"], cwd=tmp_path, capture_output=True, text=True).stdout
     assert "networks/opf-2013-07-17.nc" in staged
 
+
+def test_reject_unfit_loads_each_network_once_and_runs_every_guard(monkeypatch, tmp_path):
+    candidate = tmp_path / "opf-2024-08-29-bccf56e8-0f1e2d3c-20260909T001532Z.nc"
+    base = tmp_path / "base.nc"
+    loaded, guards = [], []
+    monkeypatch.setattr(pypsa_eur, "_base_network", lambda: base)
+    monkeypatch.setattr(pypsa_eur.networks, "load", lambda path: loaded.append(path) or path.stem)
+    monkeypatch.setattr(pypsa_eur.shedding, "reject", lambda n: guards.append(("shedding", n)))
+    monkeypatch.setattr(pypsa_eur.simplification, "expected_transformers", lambda n: 821)
+    monkeypatch.setattr(pypsa_eur.simplification, "reject", lambda n, m: guards.append(("simplification", n, m)))
+    monkeypatch.setattr(pypsa_eur, "_monitored_sites", lambda n, day: pd.Series(["relation/1"]))
+    monkeypatch.setattr(
+        pypsa_eur.simplification, "reject_removed_monitored", lambda b, s, sites: guards.append(("removed", b, s))
+    )
+
+    pypsa_eur.reject_unfit(candidate)
+
+    assert loaded == [candidate, base]
+    assert guards == [
+        ("shedding", candidate.stem),
+        ("simplification", candidate.stem, 821),
+        ("removed", "base", candidate.stem),
+    ]
+
+
+def test_the_stub_check_is_skipped_loudly_while_the_buses_carry_no_name(caplog):
+    n = pypsa.Network()
+    n.add("Bus", "relation/1-380", v_nom=380.0)
+    with caplog.at_level(logging.WARNING):
+        assert pypsa_eur._monitored_sites(n, "2024-08-29") is None
+    assert "osm_name" in caplog.text
 
 
 def weather_year_mismatch(config: dict) -> str | None:
