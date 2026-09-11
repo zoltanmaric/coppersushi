@@ -79,15 +79,15 @@ JAO-derived records remain fetched locally rather than committed under JAO's ter
 
 ## Acceptance
 
-- [ ] One view can load a complete historical delivery day and a next-day result after publication,
+- [x] One view can load a complete historical delivery day and a next-day result after publication,
       with a control for every available market time unit.
-- [ ] Each interval shows published zonal prices and every mappable active flow-based CNEC; unmapped
+- [x] Each interval shows published zonal prices and every mappable active flow-based CNEC; unmapped
       active flow-based CNECs remain visible and explicit.
-- [ ] Selecting a CNEC shows an explicit reference zone and reproduces the published row's
+- [x] Selecting a CNEC shows an explicit reference zone and reproduces the published row's
       shadow-price-weighted PTDF difference for every Core zone, with sign and EUR/MWh units.
 - [ ] The map and detail copy distinguish market binding under contingency from physical overload
       and distinguish the influence overlay from a power-flow path.
-- [ ] No licensed JAO payload or authenticated Electricity Maps response is committed.
+- [x] No licensed JAO payload or authenticated Electricity Maps response is committed.
 - [ ] Spec burned down, durable findings distilled, and this file deleted.
 
 ## Next
