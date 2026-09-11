@@ -51,7 +51,14 @@ def test_element_ends_round_trip_one_row_per_publisher_and_element(tmp_path):
     day = written(tmp_path)
     assert list(day.element_ends.columns) == cnecs.END_COLUMNS
     assert not day.element_ends.duplicated(["eic", "tso"]).any()
-    assert jao.has_day.__doc__  # a cache written before this table lacks it, and says so
+
+
+def test_an_old_cache_without_element_ends_is_not_a_complete_day(tmp_path, monkeypatch):
+    written(tmp_path)
+    monkeypatch.setattr(jao, "day_dir", lambda _: tmp_path)
+    assert jao.has_day("any-day")
+    (tmp_path / "element-ends.csv").unlink()
+    assert not jao.has_day("any-day")
 
 
 def test_the_disagreement_flag_survives_the_csv(tmp_path):
