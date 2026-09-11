@@ -158,7 +158,7 @@ app.layout = html.Div([
             dcc.Link('2013 model (v1)', href='/', style={'marginRight': '1em'}),
             dcc.Link('2013 OPF on the 2025 grid', href='/opf-2013', style={'marginRight': '1em'}),
             dcc.Link('2024 OPF on the 2025 grid', href='/opf-2024', style={'marginRight': '1em'}),
-            dcc.Link('Prices and binding CNECs', href=f'/{CNEC_ROUTE}/{ZONE_SHAPES_FROM}'),
+            dcc.Link('Prices and binding CNECs', href=f'/{CNEC_ROUTE}'),  # No day: today's
         ],
         style={'padding': '0.4em 1em'}
     ),
