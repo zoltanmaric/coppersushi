@@ -50,7 +50,24 @@ def local_today() -> str:
     return datetime.now(tz=MARKET_TZ).date().isoformat()
 
 
-def layout(day: str | None = None) -> html.Div:
+def empty_map(mapbox_token: str | None = None) -> go.Figure:
+    """The geographic shell shown before the requested day's data arrives."""
+    figure = go.Figure(go.Scattermapbox(lon=[], lat=[], hoverinfo="skip", showlegend=False))
+    figure.update_layout(
+        margin=dict(r=0, t=0, l=0, b=0),
+        paper_bgcolor="#1b1b1b",
+        mapbox=dict(
+            style=map_style.MAP_STYLE,
+            accesstoken=mapbox_token,
+            center=dict(lat=50, lon=10),
+            zoom=3.5,
+        ),
+        showlegend=False,
+    )
+    return figure
+
+
+def layout(day: str | None = None, mapbox_token: str | None = None) -> html.Div:
     """The CNEC page controls; data loading and callbacks remain at the app boundary."""
     return html.Div(
         [
@@ -78,10 +95,23 @@ def layout(day: str | None = None) -> html.Div:
                 },
             ),
             dbc.Alert(id="cnec-status", color="danger", is_open=False, style={"margin": "0 1em"}),
-            dcc.Graph(
-                id="cnec-map",
-                style={"height": "82vh"},
-                config={"responsive": True, "displayModeBar": False, "scrollZoom": True},
+            dcc.Loading(
+                dcc.Graph(
+                    id="cnec-map",
+                    figure=empty_map(mapbox_token),
+                    style={"height": "100%"},
+                    config={"responsive": True, "displayModeBar": False, "scrollZoom": True},
+                ),
+                custom_spinner=html.Div(
+                    [
+                        html.Div(className="spinner-border spinner-border-sm", role="status"),
+                        html.Span("Loading market data…"),
+                    ],
+                    style={"display": "flex", "gap": "0.6em", "alignItems": "center"},
+                ),
+                delay_show=300,
+                parent_style={"height": "82vh"},
+                overlay_style={"visibility": "visible", "opacity": 0.4},
             ),
             html.Div(
                 dcc.Slider(id="cnec-interval", min=0, max=1, step=1, value=0),

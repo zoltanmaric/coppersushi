@@ -3,6 +3,12 @@
 Append-only chronology of wiki operations (ingests, queries, lints).
 Entry format: `## [YYYY-MM-DD] <operation> | <title>`
 
+## [2026-09-11] change | The CNEC page starts on its map
+
+The route now paints the Mapbox dark geographic shell immediately and keeps it visible under a
+short loading message until the requested day's market data replaces it. It no longer flashes
+Plotly's default white Cartesian axes while the first callback runs or switches map providers.
+
 ## [2026-09-10] query | Which way a published row binds
 
 Checked on the 2026-09-11 final domain: `direction` is relative to the publishing TSO's own
