@@ -36,7 +36,7 @@ def elements():
 def ends(elements):
     """Each TSO's own ends, as `cnecs.element_ends` keeps them from the raw feed."""
     return (
-        elements[["eic", "tso", "element_type", "substation_from", "substation_to"]]
+        elements[["eic", "tso", "name", "element_type", "substation_from", "substation_to"]]
         .drop_duplicates(ignore_index=True)
         .pipe(ElementEnds.validate)
     )
@@ -160,10 +160,13 @@ def test_an_unplaceable_endpoint_keeps_its_row_without_coordinates(placements, e
     assert pd.isna(row.branch_id)
 
 
-def test_the_placed_table_validates_and_carries_one_row_per_publisher_and_eic(
+def test_the_placed_table_validates_and_carries_one_row_per_named_publication(
     ends, substations
 ):
     located = cnec_geometry.locate_elements(ends, substations, ALIASES)
     MappedCnecElements.validate(located)
-    assert set(zip(located.eic, located.tso)) == set(zip(ends.eic, ends.tso))
-    assert not located.duplicated(["eic", "tso"]).any()
+    identity = ["eic", "tso", "name"]
+    assert set(located[identity].itertuples(index=False, name=None)) == set(
+        ends[identity].itertuples(index=False, name=None)
+    )
+    assert not located.duplicated(identity).any()

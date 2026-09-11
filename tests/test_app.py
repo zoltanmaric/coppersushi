@@ -1,3 +1,6 @@
+from types import SimpleNamespace
+
+import pandas as pd
 from dash import dcc, no_update
 
 import app
@@ -46,6 +49,70 @@ def test_a_failed_cnec_day_becomes_banner(monkeypatch):
     *outputs, message, is_open = app.render_cnec("2024-08-29", 0, None, "AT")
     assert all(output is no_update for output in outputs)
     assert is_open and "no JAO domain day cached" in message
+
+
+def test_domain_cache_generation_invalidates_geometry_and_day_caches(tmp_path, monkeypatch):
+    day = "2030-01-15"
+    (tmp_path / day).mkdir()
+    generation = ["first"]
+    mapped = []
+    active = SimpleNamespace(
+        constraints="constraints", ptdfs="ptdfs", external_constraints="external"
+    )
+    monkeypatch.setattr(app, "_geometries", {})
+    monkeypatch.setattr(app, "_geometry_generation", None)
+    monkeypatch.setattr(app, "_cnec_days", {})
+    monkeypatch.setattr(app.jao, "JAO_DIR", tmp_path)
+    monkeypatch.setattr(app.jao, "domain_generation", lambda _: generation[0])
+    monkeypatch.setattr(
+        app.jao,
+        "load_day",
+        lambda _: SimpleNamespace(
+            element_ends=pd.DataFrame({"eic": ["x"], "tso": ["TSO"], "name": ["line"]})
+        ),
+    )
+    monkeypatch.setattr(app.jao, "load_active_day", lambda _: active)
+    monkeypatch.setattr(app.osm_locator, "read_csvs", lambda: "substations")
+    monkeypatch.setattr(app.osm_locator, "load_aliases", lambda: "aliases")
+    monkeypatch.setattr(
+        app.cnec_geometry,
+        "locate_elements",
+        lambda *_: mapped.append(object()) or mapped[-1],
+    )
+    monkeypatch.setattr(app, "core_zones", lambda: "zones")
+    monkeypatch.setattr(app.electricity_maps, "load_day", lambda _: "prices")
+
+    first = app.cnec_day(day)
+    assert app.cnec_day(day) is first
+    generation[0] = "second"
+    second = app.cnec_day(day)
+    assert second is not first
+    assert second.mapped_elements is not first.mapped_elements
+    assert len(mapped) == 2
+
+
+def test_an_obsolete_requested_domain_cache_is_fetched_inside_the_request(tmp_path, monkeypatch):
+    day = "2030-01-15"
+    (tmp_path / day).mkdir()
+    generation = [None]
+    loaded = []
+    ends = pd.DataFrame({"eic": ["x"], "tso": ["TSO"], "name": ["line"]})
+    monkeypatch.setattr(app, "_geometries", {})
+    monkeypatch.setattr(app, "_geometry_generation", None)
+    monkeypatch.setattr(app.jao, "JAO_DIR", tmp_path)
+    monkeypatch.setattr(app.jao, "domain_generation", lambda _: generation[0])
+    monkeypatch.setattr(
+        app.jao,
+        "load_day",
+        lambda value: loaded.append(value)
+        or generation.__setitem__(0, "fresh")
+        or SimpleNamespace(element_ends=ends),
+    )
+    monkeypatch.setattr(app.osm_locator, "read_csvs", lambda: "substations")
+    monkeypatch.setattr(app.osm_locator, "load_aliases", lambda: "aliases")
+    monkeypatch.setattr(app.cnec_geometry, "locate_elements", lambda *_: "mapped")
+    assert app.cnec_geometries(day) == "mapped"
+    assert loaded == [day]
 
 
 def _components(component):

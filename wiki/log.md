@@ -9,6 +9,23 @@ The route now paints the Mapbox dark geographic shell immediately and keeps it v
 short loading message until the requested day's market data replaces it. It no longer flashes
 Plotly's default white Cartesian axes while the first callback runs or switches map providers.
 
+## [2026-09-11] change | Domain caches prove their generator and completeness
+
+The CNEC map accepted an `element-ends.csv` made by an intermediate generator: its columns still
+validated, but it held only 80 rows and omitted RTE's orientation of Ensdorf–Vigy even though the
+same domain cache retained that publisher in `elements.csv`. The active row therefore missed the
+map's geometry join. That join is now `(EIC, TSO, element name)`: JAO publishes the separately named
+Courcelles and Gramme legs of one ELIA Y-line under the same EIC, so `(EIC, TSO)` is not unique.
+Domain writes reject endpoint tables that do not cover every named publisher row retained by the
+hourly elements and same-hour shadow prices. A versioned manifest,
+written last, hashes every table, so caches from older generators, interrupted writes and later
+file changes are no longer accepted merely because the expected filenames and columns exist.
+The manifest generation also keys the app's in-memory geometry and day caches, so a completed
+refetch takes effect on the next callback without a server restart. A missing or obsolete domain
+day is fetched synchronously by the first request that needs it. Threads and web workers share one
+file-locked fetch, and a failed attempt is remembered for five minutes so queued callbacks surface
+its error instead of restarting the full download.
+
 ## [2026-09-10] query | Which way a published row binds
 
 Checked on the 2026-09-11 final domain: `direction` is relative to the publishing TSO's own
