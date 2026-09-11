@@ -8,6 +8,7 @@ The in-place successor of [v1](copper-sushi-app.md). v1 visualized a *model's* o
 2. **Workflow**: PyPSA-Eur as of 2026, run from a [pinned sibling checkout](pypsa-eur-sibling.md) with a config committed here, HiGHS as solver. Load disaggregation, plant matching and renewable profiles are upstream's (JRC Energy Atlas, powerplantmatching, atlite).
 3. **Signal**: v1's family unchanged — net power per node, loaded-vs-easy branches, direction arrows, per-node tooltips.
 4. **Web tool**: this repo, the viewer of the solved network; `Scattermapbox` pinned ([codebase-v1](codebase-v1.md)).
+5. **Visual language** (settled 2026-09-10): one colourscale, Plotly's `tropic`, for every mapped value — node net power, zonal price — and purple reserved for market-binding elements. A second scale beside the purple was tried and rejected as a clash.
 
 ## Dataflow
 
@@ -23,19 +24,20 @@ flowchart LR
     pypsa_eur_run["pypsa_eur_run<br/>coppersushi.data_sources.pypsa_eur → Snakemake in ../pypsa-eur (HiGHS)"]
     solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
     jao_active_constraints["jao_active_constraints<br/>post-auction binding constraints, shadow prices and zonal PTDFs by market time unit"]
-
-    jao_static_grid["jao_static_grid<br/>JAO's Core Static Grid Model, fetched per release: real ratings and R/X/B/G per element EIC"]
-
-    unsimplified["unsimplified_build<br/>skip PyPSA-Eur's 380 kV lift: keep voltage levels and transformers"]:::planned
-    jao_elements["jao_elements<br/>JAO data + OSM substations → JAO's Core elements matched to our lines and transformers, with PTDFs, limits and shadow prices"]:::planned
     jao_domain["jao_domain<br/>final flow-based domain: monitored elements with their substation names, PTDFs and RAM"]
     osm_locator["osm_locator<br/>core-tso-data's OSM-locator substation coordinates, unlicensed, fetched locally"]
     cnec_geometry["cnec_geometry<br/>each element EIC placed by its published substation names; interim until jao_elements"]
     zone_shapes["zone_shapes<br/>Core bidding-zone polygons read off solved_network's country shapes"]
     mapbox_basemap["mapbox_basemap<br/>Mapbox's dark style fetched per process, label layers removed"]
+
+    jao_static_grid["jao_static_grid<br/>JAO's Core Static Grid Model, fetched per release: real ratings and R/X/B/G per element EIC"]
+
+    unsimplified["unsimplified_build<br/>skip PyPSA-Eur's 380 kV lift: keep voltage levels and transformers"]:::planned
+    jao_elements["jao_elements<br/>JAO data + OSM substations → JAO's Core elements matched to our lines and transformers, with PTDFs, limits and shadow prices"]:::planned
     day_ahead_prices["day_ahead_prices<br/>published zonal clearing prices by market time unit"]
     cnec_market_snapshot["cnec_market_snapshot<br/>one market time unit: zonal prices, active rows, selected relative contribution"]
-    jao_map["jao_map<br/>/jao/&lt;day&gt;: cleared zonal prices, active CNECs and selected PTDF contribution"]:::planned
+    cnec_price_figure["cnec_price_figure<br/>go.Figure: zonal price choropleth and market-binding CNECs"]
+    jao_map["jao_map<br/>/cnec/&lt;day&gt;: cleared zonal prices, active CNECs and selected PTDF contribution"]
     trued_network["trued_network<br/>solved_network with JAO limits on matched lines and transformers, checked pairs attached"]:::planned
 
     pypsa_eur_pin --> pypsa_eur_run
@@ -44,19 +46,20 @@ flowchart LR
     pypsa_eur_run --> solved_network
     solved_network --> net_power_map
     solved_network --> zone_shapes
-    zone_shapes -.-> jao_map
+    zone_shapes --> cnec_price_figure
+    jao_domain --> cnec_geometry
+    osm_locator --> cnec_geometry
+    cnec_geometry --> cnec_price_figure
+    mapbox_basemap --> cnec_price_figure
     solved_network -.-> jao_elements
     jao_static_grid -.-> jao_elements
     jao_static_grid -.-> trued_network
     jao_active_constraints -.-> jao_elements
     jao_active_constraints --> cnec_market_snapshot
     day_ahead_prices --> cnec_market_snapshot
-    jao_domain --> cnec_geometry
-    osm_locator --> cnec_geometry
-    cnec_geometry -.-> jao_map
-    jao_elements -.-> jao_map
-    cnec_market_snapshot -.-> jao_map
-    mapbox_basemap -.-> jao_map
+    jao_elements -.-> cnec_price_figure
+    cnec_market_snapshot --> cnec_price_figure
+    cnec_price_figure --> jao_map
     jao_elements -.-> trued_network
     solved_network -.-> trued_network
 ```

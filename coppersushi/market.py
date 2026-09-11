@@ -7,6 +7,20 @@ from coppersushi.data_model.market import DayAheadPrices
 from coppersushi.market_day import MarketDay
 
 CORE_ZONES = ("AT", "BE", "CZ", "DE", "FR", "HR", "HU", "NL", "PL", "RO", "SI", "SK")
+ZONE_NAMES = {
+    "AT": "Austria",
+    "BE": "Belgium",
+    "CZ": "Czechia",
+    "DE": "Germany",
+    "FR": "France",
+    "HR": "Croatia",
+    "HU": "Hungary",
+    "NL": "Netherlands",
+    "PL": "Poland",
+    "RO": "Romania",
+    "SI": "Slovenia",
+    "SK": "Slovakia",
+}
 
 
 def day_ahead_prices(payloads: list[dict]) -> DataFrame[DayAheadPrices]:

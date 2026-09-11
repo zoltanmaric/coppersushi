@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 import pandas as pd
+import pandera as pa
 from pandera.typing import DataFrame
 
 from coppersushi import REPO, cnecs
@@ -238,12 +239,22 @@ def has_day(day: str) -> bool:
 
 
 def load_active_day(day: str, refresh: bool = False) -> ActiveDay:
-    """Read cached active flow-based tables, fetching on first use or explicit refresh."""
+    """Read cached active flow-based tables, fetching on first use or explicit refresh.
+
+    A cache an older adapter wrote lacks columns the tables have since gained; it fails
+    validation and is fetched again once. A failure after that is the feed's and propagates.
+    """
     directory = day_dir(day)
     first = _path(directory, f"active_{ActiveDay._fields[0]}")
     if refresh or not first.is_file():
         fetch_active_day(day)
-    return read_active_day(directory)
+        return read_active_day(directory)
+    try:
+        return read_active_day(directory)
+    except pa.errors.SchemaError as stale:
+        logger.info("jao: cached %s predates the current tables, fetching again: %s", day, stale)
+        fetch_active_day(day)
+        return read_active_day(directory)
 
 
 def _path(directory: Path, name: str) -> Path:
