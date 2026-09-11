@@ -78,6 +78,7 @@ The JAO fetch is an adapter (external I/O) and joins the architecture test's all
 3. **Substation geocoding**: Overpass per Core country, the normalisation, the override column; committed CSV with the OSM ids as provenance.
 4. **Element matching** and the map page for 2024-08-29.
 5. **True-up transform** with the ratio flag and the rating report.
+6. **Replace `cnec_geometry`** on `/cnec/<day>`: `cnec_price_figure` takes the matched elements instead of the substation-name placement and its alias table, the dashed `jao_elements → cnec_price_figure` edge on [sushi-2](../sushi-2.md).
 
 ## Acceptance criteria
 
