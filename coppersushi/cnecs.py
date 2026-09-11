@@ -275,13 +275,23 @@ def price_contributions(
 
 
 def external_constraints(rows: list[dict]) -> DataFrame[ExternalConstraints]:
-    """The non-physical rows of either feed — the ALEGrO external and equality constraints."""
+    """The non-physical rows of either feed — the ALEGrO external and equality constraints.
+
+    The domain feed writes a constraint once per contingency it was assessed under (as of
+    2026-09), the limit the same on each row and the margin per contingency, so one row per
+    hour and constraint keeps the tightest margin. The price feed names a constraint once per
+    binding; its rows pass through so that `with_constraint_prices` still sees a repeated price.
+    """
     frame = _frame(rows)
     frame = frame[_is_non_physical(frame)]
     frame = frame.assign(tso=normalise_tso(frame.tso))
     wanted = ["hour", "name", "tso", "direction", "fmax", "ram", "shadow_price"]
-    columns = [column for column in wanted if column in frame]
-    return frame[columns].reset_index(drop=True).pipe(ExternalConstraints.validate)
+    frame = frame[[column for column in wanted if column in frame]]
+    if "shadow_price" not in frame:
+        frame = frame.groupby(
+            CONSTRAINT_KEYS + ["tso", "direction"], as_index=False, dropna=False, sort=False
+        ).agg(fmax=("fmax", "min"), ram=("ram", "min"))
+    return frame.reset_index(drop=True).pipe(ExternalConstraints.validate)
 
 
 def with_shadow_prices(
