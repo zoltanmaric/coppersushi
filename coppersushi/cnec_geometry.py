@@ -149,8 +149,9 @@ def _placement(element, index: dict[str, list[Point]], aliases: dict[str, str]) 
         start, end = _closest(from_places, to_places)
     return {
         # No PyPSA branch is consulted, so the located pair is the drawn identity: both
-        # directions of one element, and both TSOs' orientations, share one line.
-        "branch_id": f"{SOURCE}/{'--'.join(sorted([from_key, to_key]))}",
+        # directions of one element, both TSOs' orientations and every spelling of a
+        # site share one line. The places identify it, not the keys that found them.
+        "branch_id": f"{SOURCE}/{'--'.join(f'{x:.5f},{y:.5f}' for x, y in sorted([start, end]))}",
         "x0": start[0],
         "y0": start[1],
         "x1": end[0],

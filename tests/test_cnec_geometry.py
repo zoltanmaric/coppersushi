@@ -3,9 +3,9 @@
 `domain-elements.csv` is invented — its substation and element names are made up — but every
 quirk it carries is one the real feed has: umlauts spelled both ways, diacritics and
 punctuation, a `Y ` tap prefix, a trailing equipment token, one name meaning two places
-hundreds of kilometres apart, a tie-line published from both ends, and a row naming no
-substations and no element type. `located-substations.csv` is the locator's row shape, with
-one site recorded twice as the duplicated national templates record it.
+hundreds of kilometres apart, a tie-line published from both ends in two spellings, and a row
+naming no substations and no element type. `located-substations.csv` is the locator's row
+shape, with one site recorded twice as the duplicated national templates record it.
 """
 
 import pandas as pd
@@ -132,11 +132,15 @@ def test_an_ambiguous_point_element_has_no_span_to_choose_by_and_stays_unplaced(
 
 
 def test_each_publisher_is_drawn_from_its_own_end_over_one_line(placements):
-    """One EIC, published `Aufeld - Bachheim` by one TSO and reversed by the other."""
+    """One EIC, published `Aufeld - Bachheim` by one TSO and `Baechheim - Aufeld` by the other.
+
+    The locator holds `Bächheim`, so the two publishers hit it under different keys; the
+    line's identity comes from the places found, not from the spellings that found them.
+    """
     rows = placements.loc[[TIE_LINE]].set_index("tso")
     assert len(rows) == 2
     assert (rows.loc["ZATSO", "x0"], rows.loc["ZATSO", "y0"]) == (15.0, 47.0)  # Aufeld
-    assert (rows.loc["ZBTSO", "x0"], rows.loc["ZBTSO", "y0"]) == (15.5, 47.5)  # Bachheim
+    assert (rows.loc["ZBTSO", "x0"], rows.loc["ZBTSO", "y0"]) == (15.5, 47.5)  # Bächheim
     assert span(rows.loc["ZATSO"]) == span(rows.loc["ZBTSO"])
     assert rows.branch_id.nunique() == 1
 

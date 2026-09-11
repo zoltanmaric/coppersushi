@@ -83,19 +83,13 @@ def test_a_differing_fmax_without_a_differing_tso_is_an_error():
 
 
 def test_element_ends_keep_each_tsos_own_orientation():
-    shared, other = "99T1001C--00101B", "VOLTRA"
-    feed = [
-        {**row, "substationFrom": row["substationTo"], "substationTo": row["substationFrom"]}
-        if row["cneEic"] == shared and row["tso"] == other
-        else row
-        for row in final_computation()
-    ]
-    ends = cnecs.element_ends(feed)
+    """`Cindervale - Dunmoor` is published from Cindervale by MERIDIA and from Dunmoor by VOLTRA."""
+    ends = cnecs.element_ends(final_computation())
     assert list(ends.columns) == cnecs.END_COLUMNS
     assert not ends.duplicated(["eic", "tso"]).any()
-    both = ends[ends.eic.eq(shared)].set_index("tso")
+    both = ends[ends.eic.eq("99T1001C--00101B")].set_index("tso")
     assert both.loc["MERIDIA", "substation_from"] == "Cindervale"
-    assert both.loc[other, "substation_from"] == "Dunmoor"
+    assert both.loc["VOLTRA", "substation_from"] == "Dunmoor"
 
 
 def test_one_tso_naming_two_pairs_for_one_element_is_refused():
