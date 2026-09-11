@@ -10,6 +10,8 @@ unique key. An unresolved element keeps its row so the map reports true coverage
 import pandera.pandas as pa
 from pandera.typing import Series
 
+MATCHED = "matched"  # The match status of an element with a branch and coordinates
+
 
 class MappedCnecElements(pa.DataFrameModel):
     """One TSO's publication of one domain element, with its branch and oriented geometry."""
@@ -24,7 +26,7 @@ class MappedCnecElements(pa.DataFrameModel):
     x1: Series[float] = pa.Field(nullable=True)
     y1: Series[float] = pa.Field(nullable=True)
     match_status: Series[str] = pa.Field(
-        isin=["matched", "no_substation", "no_branch", "no_component_in_network"]
+        isin=[MATCHED, "no_substation", "no_branch", "no_component_in_network"]
     )
     bus_source: Series[str]
     score: Series[float] = pa.Field(ge=0, le=1)

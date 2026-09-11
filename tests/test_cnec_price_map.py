@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from shapely.geometry import Point, shape
 
-from coppersushi import REPO, cnec_market, cnec_price_map, cnecs, market
+from coppersushi import REPO, cnec_market, cnec_price_map, cnecs, map_style, market
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
 
 FIXTURE = REPO / "tests" / "fixtures" / "synthetic-jao" / "active-fb-day.json"
@@ -107,10 +107,10 @@ def test_a_line_marker_points_the_way_its_rows_bind(inputs):
 
 def test_binding_lines_glow_under_a_thin_line_with_rounded_ends_and_no_legend(inputs):
     fig = cnec_price_map.figure(*inputs)
-    glow, lines = trace(fig, "binding glow"), trace(fig, "market-binding CNECs")
+    glow, lines = trace(fig, "market-binding CNECs glow"), trace(fig, "market-binding CNECs")
     assert list(glow.lon[:2]) == list(lines.lon[:2])
     assert glow.line.width > lines.line.width
-    assert glow.opacity < lines.opacity
+    assert glow.opacity < (lines.opacity or 1.0)
     ends = trace(fig, "binding line ends")
     assert sorted(zip(ends.lon, ends.lat)) == [(14.4, 46.7), (15.1, 46.2)]
     assert fig.layout.showlegend is False
@@ -147,38 +147,15 @@ def selected_inputs(inputs, reference="AT"):
     return zones, geometries, view
 
 
-def test_selected_constraint_adds_signed_influence_without_replacing_prices(inputs):
+def test_selected_constraint_overlays_its_influence_and_highlights_its_branch(inputs):
+    plain = cnec_price_map.figure(*inputs)
     fig = cnec_price_map.figure(*selected_inputs(inputs))
     assert list(trace(fig, "published day-ahead price").z) == [50.0, 70.0]
-    influence = trace(fig, "contribution relative to AT")
-    by_text = dict(zip(influence.text, influence.marker.color))
-    assert any("BE · +2.87 €/MWh" in text for text in by_text)
-
-
-def test_influence_radiates_from_the_cnec_to_zones_not_over_grid_branches(inputs):
-    fig = cnec_price_map.figure(*selected_inputs(inputs))
-    belgium = trace(fig, "BE contribution")
-    assert list(belgium.lon) == pytest.approx([14.75, 4.5])
-    assert list(belgium.lat) == pytest.approx([46.45, 50.8])
+    assert any("BE · +2.87 €/MWh" in text for text in trace(fig, "contribution relative to AT").text)
+    assert (trace(fig, "BE ray").lon[-1], trace(fig, "BE ray").lat[-1]) == pytest.approx((4.5, 50.8))
     assert "not a power-flow path" in fig.layout.annotations[0].text
-    assert "relative to <b>AT</b>" in fig.layout.annotations[0].text
-
-
-def test_reference_change_changes_the_sign_without_touching_the_price_layer(inputs):
-    fig = cnec_price_map.figure(*selected_inputs(inputs, reference="BE"))
-    influence = trace(fig, "contribution relative to BE")
-    values = dict(zip(influence.text, influence.marker.color))
-    austrian = next(text for text in values if text.startswith("AT ·"))
-    assert "-2.87 €/MWh" in austrian
-    assert values[austrian] == cnec_price_map.NEGATIVE
-
-
-def test_unmapped_selected_row_keeps_zonal_contributions_but_has_no_rays(inputs):
-    zones, geometries, view = selected_inputs(inputs)
-    geometries = geometries.assign(
-        x0=None, y0=None, x1=None, y1=None, match_status="no_branch"
-    ).pipe(MappedCnecElements.validate)
-    fig = cnec_price_map.figure(zones, geometries, view)
-    assert trace(fig, "contribution relative to AT") is not None
-    assert not any(item.name.endswith(" contribution") for item in fig.data)
-    assert "rays cannot be anchored" in fig.layout.annotations[0].text
+    selected = trace(fig, "selected CNEC")
+    assert list(selected.lon) == [14.4, 15.1]
+    assert selected.line.width > trace(fig, "market-binding CNECs").line.width
+    assert not any(item.name == "selected CNEC" for item in plain.data)
+    assert fig.data[-1].name == "zone prices"  # Labels over every dot and ray

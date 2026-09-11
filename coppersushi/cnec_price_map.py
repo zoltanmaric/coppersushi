@@ -7,19 +7,16 @@ import pandas as pd
 import plotly.graph_objects as go
 from pandera.typing import DataFrame
 
-from coppersushi import map_style, market
+from coppersushi import cnec_influence, map_style, market
 from coppersushi.cnec_market import Snapshot
-from coppersushi.data_model.cnec_price_map import MappedCnecElements
+from coppersushi.data_model.cnec_price_map import MATCHED, MappedCnecElements
 from coppersushi.market_day import MARKET_TZ
 
-POSITIVE = "#42d9f5"
-NEGATIVE = "#ff9f43"
 POINT_TYPES = ("Transformer", "PST")
-MAPPED = "matched"
 FRAME_ZOOM = 1.0  # Chosen against the rendered page, not derived: viewport aspect varies
 LINE_WIDTH = 2.5
-GLOW_WIDTH = 11  # A translucent copy of the line this wide reads as a halo, not a bar
-GLOW_OPACITY = 0.3
+SELECTED_WIDTH = 4  # The selected row's branch, under the same halo as the rest
+GLOW_FACTOR = 4.4  # Wider than map_style's default: a 2.5-px line wants an 11-px halo to read at all
 END_SIZE = 6  # Mapbox caps Plotly's lines flat; a dot at each end rounds them. Only
 # circles take the trace colour: every other symbol is the sprite's own grey icon.
 TARGET_SIZE = 8
@@ -95,7 +92,8 @@ def _fill_anchor(basemap: str | dict) -> str | None:
 
 def _price_traces(
     priced_zones: pd.DataFrame, fill_anchor: str | None
-) -> list[go.Choroplethmapbox | go.Scattermapbox]:
+) -> tuple[go.Choroplethmapbox, go.Scattermapbox]:
+    """The price fill and, apart, the labels: the figure draws those last, over every dot and ray."""
     labels_at = _zone_centres(priced_zones)
     fill = go.Choroplethmapbox(
         name="published day-ahead price",
@@ -139,7 +137,7 @@ def _price_traces(
         textfont=dict(color="white", size=14),
         showlegend=False,
     )
-    return [fill, labels]
+    return fill, labels
 
 
 def _hover_targets(rows: pd.DataFrame, directed: bool) -> pd.DataFrame:
@@ -165,7 +163,9 @@ def _hover_targets(rows: pd.DataFrame, directed: bool) -> pd.DataFrame:
     )
 
 
-def _constraint_traces(placed: pd.DataFrame) -> list[go.Scattermapbox]:
+def _constraint_traces(
+    placed: pd.DataFrame, selected: pd.Series | None = None
+) -> list[go.Scattermapbox]:
     """Draw each matched branch once and aggregate all binding rows at its hover target.
 
     The domain can publish both directions and several contingencies for an element. More
@@ -175,20 +175,26 @@ def _constraint_traces(placed: pd.DataFrame) -> list[go.Scattermapbox]:
     A line's hover target is a triangle pointing the way its rows bind; a transformer's or
     PST's is a square.
     """
-    mapped = placed[placed.match_status.eq(MAPPED)]
+    mapped = placed[placed.match_status.eq(MATCHED)]
     line_rows = mapped[~mapped.element_type.isin(POINT_TYPES)]
     unique_lines = line_rows.drop_duplicates("branch_id")
     lon, lat = _line_coordinates(unique_lines)
 
-    def line(name: str, width: float, opacity: float) -> go.Scattermapbox:
-        return go.Scattermapbox(
+    def line(name: str, width: float, lon, lat) -> list[go.Scattermapbox]:
+        core = go.Scattermapbox(
             name=name,
             lon=lon,
             lat=lat,
             mode="lines",
             hoverinfo="none",
-            opacity=opacity,
             line=dict(color=map_style.BINDING, width=width),
+        )
+        return map_style.haloed(core, factor=GLOW_FACTOR)
+
+    highlighted = []
+    if selected is not None and selected.match_status == MATCHED:
+        highlighted = line(
+            "selected CNEC", SELECTED_WIDTH, [selected.x0, selected.x1], [selected.y0, selected.y1]
         )
 
     ends = go.Scattermapbox(
@@ -217,87 +223,19 @@ def _constraint_traces(placed: pd.DataFrame) -> list[go.Scattermapbox]:
 
     point_rows = mapped[mapped.element_type.isin(POINT_TYPES)]
     return [
-        line("binding glow", GLOW_WIDTH, GLOW_OPACITY),
-        line("market-binding CNECs", LINE_WIDTH, 1.0),
+        *line("market-binding CNECs", LINE_WIDTH, lon, lat),
+        *highlighted,
         ends,
         markers(line_rows, "binding rows", "triangle", TARGET_SIZE, directed=True),
         markers(point_rows, "binding transformers and PSTs", "square", POINT_SIZE, directed=False),
     ]
 
 
-def _selected_row(placed: pd.DataFrame, contribution: pd.DataFrame) -> pd.Series:
-    first = contribution.iloc[0]
-    selected = placed[placed.source_id.eq(first.source_id)]
-    if len(selected) != 1:
-        raise ValueError(f"contribution matched {len(selected)} active rows")
-    return selected.iloc[0]
-
-
-def _contribution_traces(
-    placed: pd.DataFrame,
-    centres: pd.DataFrame,
-    contribution: pd.DataFrame,
-) -> tuple[list[go.Scattermapbox], str]:
-    """Signed zonal influence radiating from the selected element, never along grid edges."""
-    selected = _selected_row(placed, contribution)
-    zonal = contribution.merge(centres[["zone", "x", "y"]], on="zone", how="inner")
-    reference = str(contribution.reference_zone.iloc[0])
-    scale = zonal.contribution.abs().max() or 1.0
-    colours = [POSITIVE if value >= 0 else NEGATIVE for value in zonal.contribution]
-    sizes = 7 + 17 * zonal.contribution.abs() / scale
-    markers = go.Scattermapbox(
-        name=f"contribution relative to {reference}",
-        lon=zonal.x,
-        lat=zonal.y,
-        mode="markers",
-        hoverinfo="text",
-        text=(
-            zonal.zone + " · "
-            + zonal.contribution.map(lambda value: f"{value:+,.2f} €/MWh")
-            + f" relative to {reference}"
-        ),
-        marker=go.scattermapbox.Marker(color=colours, size=sizes, opacity=0.88),
-    )
-    traces = [markers]
-    mapped = selected.match_status == MAPPED
-    if mapped:
-        origin_x = (selected.x0 + selected.x1) / 2
-        origin_y = (selected.y0 + selected.y1) / 2
-        for row in zonal[zonal.contribution.abs() > 1e-9].itertuples():
-            traces.append(
-                go.Scattermapbox(
-                    name=f"{row.zone} contribution",
-                    lon=[origin_x, row.x],
-                    lat=[origin_y, row.y],
-                    mode="lines",
-                    hoverinfo="skip",
-                    showlegend=False,
-                    line=dict(
-                        color=POSITIVE if row.contribution > 0 else NEGATIVE,
-                        width=0.8 + 5.2 * abs(row.contribution) / scale,
-                    ),
-                    opacity=0.5,
-                )
-            )
-        traces.append(
-            go.Scattermapbox(
-                name="selected CNEC",
-                lon=[selected.x0, selected.x1],
-                lat=[selected.y0, selected.y1],
-                mode="lines+markers",
-                hoverinfo="skip",
-                line=dict(color=map_style.BINDING, width=9),
-                marker=go.scattermapbox.Marker(color=map_style.BINDING, size=9),
-                showlegend=False,
-            )
-        )
-    note = (
-        f"Selected contribution relative to <b>{reference}</b>. "
-        "Rays are zonal PTDF influence, not a power-flow path."
-    )
-    if not mapped:
-        note += " The selected CNEC has no mapped geometry, so its rays cannot be anchored."
-    return traces, note
+def _selected(placed: pd.DataFrame, contribution: pd.DataFrame | None) -> pd.Series | None:
+    """The placed row a contribution belongs to; ``cnec_market.snapshot`` made sure there is one."""
+    if contribution is None:
+        return None
+    return placed[placed.source_id.eq(contribution.source_id.iloc[0])].iloc[0]
 
 
 def _view(priced_zones: pd.DataFrame) -> dict:
@@ -329,20 +267,20 @@ def figure(
     ``basemap`` is a Plotly preset name or a Mapbox style document (see ``map_style.without_labels``).
     """
     priced_zones = _priced_zones(zones, view.prices)
-    centres = _zone_centres(priced_zones)
     placed = _placed(view.constraints, geometries)
-    mapped = placed.match_status.eq(MAPPED).sum()
+    mapped = placed.match_status.eq(MATCHED).sum()
     annotation = (
         f"<b>{mapped} of {len(placed)} active rows mapped</b><br>"
         "Purple means market-binding under contingency, not physically overloaded."
     )
-    traces = _price_traces(priced_zones, _fill_anchor(basemap)) + _constraint_traces(placed)
-    if view.contribution is not None:
-        contribution_traces, contribution_note = _contribution_traces(
-            placed, centres, view.contribution
-        )
-        traces += contribution_traces
-        annotation += "<br>" + contribution_note
+    fill, labels = _price_traces(priced_zones, _fill_anchor(basemap))
+    selected = _selected(placed, view.contribution)
+    traces = [fill, *_constraint_traces(placed, selected)]
+    if selected is not None:
+        influence = cnec_influence.overlay(selected, _zone_centres(priced_zones), view.contribution)
+        traces += influence.traces
+        annotation += "<br>" + influence.note
+    traces.append(labels)  # Last, so no dot or ray lands on a price
     fig = go.Figure(traces)
     fig.update_layout(
         hovermode="closest",
