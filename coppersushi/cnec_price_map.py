@@ -127,17 +127,15 @@ def _price_traces(
             thickness=14,
         ),
     )
+    names = labels_at.zone.map(market.ZONE_NAMES).fillna(labels_at.zone)
     labels = go.Scattermapbox(
         name="zone prices",
         lon=labels_at.x,
         lat=labels_at.y,
         mode="text",
-        hoverinfo="skip",
-        text=(
-            labels_at.zone.map(market.ZONE_NAMES).fillna(labels_at.zone)
-            + "<br>"
-            + labels_at.price.map(lambda value: f"€{value:,.0f}")
-        ),
+        hoverinfo="text",
+        text=names + "<br>" + labels_at.price.map(lambda value: f"€{value:,.0f}"),
+        hovertext=names + " · " + labels_at.price.map(lambda value: f"{value:,.2f} €/MWh"),
         textfont=dict(color="white", size=14),
         showlegend=False,
     )
