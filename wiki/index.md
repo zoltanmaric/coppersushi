@@ -15,13 +15,12 @@
 - [electricity-maps-api.md](electricity-maps-api.md) — Electricity Maps' v4 grid and market signals, this project's Core-wide price-forecast access, and why the data is not a bid curve
 - [backtest-2024-08-29.md](backtest-2024-08-29.md) — one solved day scored against JAO's binding CNECs and settled prices: what each config change bought, and what to fix next
 - [pypsa-eur-sibling.md](pypsa-eur-sibling.md) — PyPSA-Eur as a pinned sibling checkout: why not a submodule, fork refs and rules, the 2026-09-02 refresh record
-- [copper-sushi-app.md](copper-sushi-app.md) — what the app shows, the OPF behind it, data provenance and caveats
+- [copper-sushi-app.md](copper-sushi-app.md) — what the app shows: the OPF map and the CNEC price-influence page, data provenance and caveats
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026
 
 ## Specs (working memory — burn-down state, not settled knowledge)
 - [specs/sushi-2.md](specs/sushi-2.md) — the Sep 11 cut: next steps and acceptance criteria
 - [specs/jao-grid.md](specs/jao-grid.md) — JAO's Core elements matched to our OSM grid: a map of what limited trade on a day, and true line and transformer limits from JAO's own numbers
-- [specs/cnec-price-influence-map.md](specs/cnec-price-influence-map.md) — cleared zonal prices and binding CNECs on one map, with a selected row's PTDF-weighted contribution to price spreads
 - [specs/architecture-review-graph.md](specs/architecture-review-graph.md) — lightweight architecture-review experiment: manual DAG, PR deltas, and an I/O-boundary test
 
 ## Literature (one digest per authoritative document, link only)
