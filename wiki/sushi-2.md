@@ -36,7 +36,7 @@ flowchart LR
     jao_elements["jao_elements<br/>JAO data + OSM substations → JAO's Core elements matched to our lines and transformers, with PTDFs, limits and shadow prices"]:::planned
     day_ahead_prices["day_ahead_prices<br/>published zonal clearing prices by market time unit"]
     cnec_market_snapshot["cnec_market_snapshot<br/>one market time unit: zonal prices, active rows, selected relative contribution"]
-    cnec_price_figure["cnec_price_figure<br/>go.Figure: zonal price choropleth and market-binding CNECs"]
+    cnec_price_figure["cnec_price_figure<br/>go.Figure: zonal price choropleth, market-binding CNECs and the selected row's zonal influence"]
     jao_map["jao_map<br/>/cnec/&lt;day&gt;: cleared zonal prices, active CNECs and selected PTDF contribution"]
     trued_network["trued_network<br/>solved_network with JAO limits on matched lines and transformers, checked pairs attached"]:::planned
 
