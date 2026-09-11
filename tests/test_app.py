@@ -21,14 +21,16 @@ def test_a_cnec_path_opens_the_price_page_on_its_day():
     assert not app.is_cnec_path("/opf-2024")
 
 
-def test_the_cnec_link_names_no_day_so_the_page_opens_on_today():
+def test_the_cnec_link_names_no_day_so_the_page_opens_on_today(monkeypatch):
+    monkeypatch.setattr(app, "mapbox_token", lambda: "token")
     links = (c for c in _components(app.app.layout) if isinstance(c, dcc.Link))
     assert next(link for link in links if link.children == "Prices and binding CNECs").href == "/cnec"
     controls = {component.id: component for component in _ids(app.show_page("/cnec"))}
     assert controls["cnec-date"].value == cnec_page.local_today()
 
 
-def test_each_route_gets_only_its_own_controls():
+def test_each_route_gets_only_its_own_controls(monkeypatch):
+    monkeypatch.setattr(app, "mapbox_token", lambda: "token")
     network = {component.id for component in _ids(app.show_page("/opf-2024"))}
     cnec = {component.id for component in _ids(app.show_page("/cnec/2024-08-29"))}
     assert {"map", "snapshot-slider"} <= network
