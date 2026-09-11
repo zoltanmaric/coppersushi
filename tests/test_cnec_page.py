@@ -64,6 +64,31 @@ def test_layout_starts_on_the_supplied_day_and_exposes_all_controls():
     } <= set(controls)
 
 
+def test_layout_starts_with_a_visible_geographic_map_while_data_loads():
+    page = cnec_page.layout("2024-08-29", "public-mapbox-token")
+    loading = next(
+        component
+        for component in descendants(page)
+        if component.__class__.__name__ == "Loading"
+    )
+    graph = next(
+        component
+        for component in descendants(page)
+        if getattr(component, "id", None) == "cnec-map"
+    )
+
+    assert graph.figure.data[0].type == "scattermapbox"
+    assert graph.figure.layout.mapbox.style == "dark"
+    assert graph.figure.layout.mapbox.accesstoken == "public-mapbox-token"
+    assert graph.figure.layout.mapbox.center.lat == 50
+    assert loading.overlay_style["visibility"] == "visible"
+    assert "Loading market data…" in {
+        component.children
+        for component in descendants(loading.custom_spinner)
+        if isinstance(getattr(component, "children", None), str)
+    }
+
+
 def test_a_historical_day_has_every_hour_and_timezone_disambiguated_marks():
     rendered = cnec_page.render(inputs(), 0, None, "AT")
     assert rendered.interval_max == 23
