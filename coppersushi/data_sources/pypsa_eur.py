@@ -12,10 +12,8 @@ from typing import NamedTuple
 import pandas as pd
 import pypsa
 import yaml
-from pandera.typing import DataFrame
 
 from coppersushi import REPO, shedding, simplification, substations
-from coppersushi.data_model.substations import BusNames
 from coppersushi.data_sources import jao, networks
 from coppersushi.market_day import MarketDay
 
@@ -100,15 +98,19 @@ def promote(candidate: Path) -> Path:
 def reject_unfit(candidate: Path) -> None:
     """Every gate a network passes before it may be sanctioned, on a single load of the file."""
     solved = networks.load(candidate)
-    base = networks.load(_base_network())
+    base = networks.load(base_network())
     shedding.reject(solved)
     simplification.reject(solved, simplification.expected_transformers(base))
     if (sites := _monitored_sites(base, networks.day_of(candidate))) is not None:
         simplification.reject_removed_monitored(base, solved, sites)
 
 
-def _base_network(sibling: Path | None = None) -> Path:
-    """The unsimplified network the run started from, which the solved one is counted against."""
+def base_network(sibling: Path | None = None) -> Path:
+    """The unsimplified network the run started from, which the solved one is counted against.
+
+    Day-independent: OSM topology, with no snapshot of its own that means anything. `app.py`
+    leans on that to draw a JAO day nobody has solved yet.
+    """
     run = yaml.safe_load(CONFIG.read_text())["run"]["name"]
     path = (sibling or _sibling_dir()) / "resources" / run / "networks" / "base.nc"
     if not path.exists():
@@ -128,19 +130,7 @@ def _monitored_sites(base: pypsa.Network, day: str) -> pd.Series | None:
     elements = jao.load_day(day).elements
     monitored = elements[elements.element_type.isin(MONITORED_TRANSFORMERS)]
     names = pd.concat([monitored.substation_from, monitored.substation_to])
-    return substations.match(names, _bus_names(base)).osm_id.dropna()
-
-
-def _bus_names(base: pypsa.Network) -> DataFrame[BusNames]:
-    """The name side of the base network's bus table, as the substation join takes it."""
-    buses = base.buses
-    return (
-        pd.DataFrame(
-            {"bus_id": buses.index, "osm_name": buses.osm_name.fillna(""), "country": buses.country}
-        )
-        .reset_index(drop=True)
-        .pipe(BusNames.validate)
-    )
+    return substations.match(names, substations.bus_names(base)).osm_id.dropna()
 
 
 def _read_pin(path: Path = PIN_FILE) -> Pin:

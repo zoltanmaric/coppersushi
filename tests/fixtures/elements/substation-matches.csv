@@ -1,0 +1,11 @@
+jao_name,bus_id,osm_id,osm_name,country,score,source
+HAGENWERDER,way/59026005-380,way/59026005,Hagenwerder,DE,1.0,exact
+MIKULOWA,way/111615226-220,way/111615226,Mikułowa,PL,1.0,exact
+ETZENRICHT,way/29084374-380,way/29084374,Etzenricht,DE,1.0,exact
+HRADEC,way/28099187-220,way/28099187,Hradec,CZ,1.0,exact
+VERNEROV,way/693112798-400,way/693112798,Vernéřov,CZ,0.92,fuzzy
+DOBRZEN,way/255277953-400,way/255277953,Dobrzeń,PL,1.0,exact
+NOSOVICE,way/175071712-400,way/175071712,Nošovice,CZ,1.0,exact
+GEERTRUIDENBERG,way/23096966-380,way/23096966,Geertruidenberg,NL,1.0,exact
+WESTTIROL,way/727225348-220,way/727225348,Westtirol,AT,1.0,exact
+MOSTAR,,,,,0.0,unmatched

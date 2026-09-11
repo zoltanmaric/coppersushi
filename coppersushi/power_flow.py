@@ -140,9 +140,22 @@ def generators_to_html(rows: 'pd.Series[str]') -> str:
     return '<b>Generation:</b><br>' + '\n<b>+</b> '.join(rows) + '--<br>'
 
 
+def bus_labels(buses: pd.DataFrame) -> 'pd.Series[str]':
+    """Each bus as its OSM substation name followed by its id, or the bare id where it has no name.
+
+    The id alone (`way/943135226-380`) says nothing a reader recognises; the name is what a JAO
+    row or a TSO's own map calls the place. Not every bus has one, so the id always stays.
+    """
+    ids = buses.index.to_series()
+    if 'osm_name' not in buses:
+        return ids
+    names = buses.osm_name.fillna('').str.strip()
+    return (names + ' (' + ids + ')').where(names != '', ids)
+
+
 def get_tooltip_htmls(ns: NetworkSnapshot) -> 'pd.Series[str]':
     buses = ns.buses
-    header_htmls = ('<b>' + buses.index.to_series() + '</b> · ' + buses.country + ' · '
+    header_htmls = ('<b>' + bus_labels(buses) + '</b> · ' + buses.country + ' · '
                     + buses.v_nom.astype(int).astype(str) + ' kV<br>').rename('header')
 
     p = round(ns.generators.p, 2).astype(str)
@@ -253,9 +266,14 @@ def get_interquartile_range(df: pd.DataFrame) -> pd.DataFrame:
     return min, max
 
 
-def show_snapshot(fig: go.Figure, snapshot_index: int) -> go.Figure:
-    active_trace_id_start = snapshot_index * NUM_TRACES_PER_SNAPSHOT
-    active_trace_id_end = active_trace_id_start + NUM_TRACES_PER_SNAPSHOT
+def show_snapshot(fig: go.Figure, snapshot_index: int, traces_per_snapshot: int = NUM_TRACES_PER_SNAPSHOT) -> go.Figure:
+    """Make one snapshot's block of traces visible and every other block invisible.
+
+    `traces_per_snapshot` is the stride of that block, so a figure built elsewhere — `jao_map`
+    draws more traces per hour than this module does — cycles through the same code.
+    """
+    active_trace_id_start = snapshot_index * traces_per_snapshot
+    active_trace_id_end = active_trace_id_start + traces_per_snapshot
     for trace_id in range(len(fig.data)):
         if trace_id in range(active_trace_id_start, active_trace_id_end):
             fig.update_traces(dict(visible=True), selector=trace_id)

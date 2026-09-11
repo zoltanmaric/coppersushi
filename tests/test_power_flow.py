@@ -1,9 +1,11 @@
 import re
 
+import pandas as pd
 import pypsa
 import pytest
 from pytest import approx
 
+from coppersushi import REPO
 from coppersushi import power_flow as ppf
 
 
@@ -70,3 +72,26 @@ class TestPlotPowerFlow:
         assert node_powers[first_negative_load_index] == approx(-249.45, abs=0.01)
         assert node_absolute_powers[first_negative_load_index] == approx(249.45, abs=0.01)
         assert 'Net power: -249.45 MW' in first_negative_load_tooltip
+
+
+class TestBusLabels:
+    """A bus reads as its substation name; the id follows, and stands alone where there is no name."""
+
+    @pytest.fixture
+    def buses(self):
+        sample = pd.read_csv(REPO / "tests" / "fixtures" / "substations" / "bus-names-sample.csv")
+        return sample.set_index("bus_id")
+
+    def test_a_named_bus_leads_with_its_name(self, buses):
+        labels = ppf.bus_labels(buses)
+        assert labels["relation/10047998-380"] == "Horta (relation/10047998-380)"
+
+    def test_an_unnamed_bus_is_just_its_id(self, buses):
+        assert ppf.bus_labels(buses)["way/9999999-380"] == "way/9999999-380"
+
+    def test_every_label_still_carries_the_id(self, buses):
+        labels = ppf.bus_labels(buses)
+        assert all(bus_id in labels[bus_id] for bus_id in buses.index)
+
+    def test_a_network_without_the_column_falls_back_to_ids(self, buses):
+        assert list(ppf.bus_labels(buses.drop(columns="osm_name"))) == list(buses.index)
