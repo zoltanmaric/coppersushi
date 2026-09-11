@@ -39,6 +39,7 @@ ZONE_SHAPES_FROM = '2024-08-29'  # Any solved network carries the same country p
 _cache: dict[str, tuple[go.Figure, pd.Index]] = {}
 _zones: dict[str, pd.DataFrame] = {}
 _geometries: dict[str, MappedCnecElements] = {}
+_geometry_generation: tuple[tuple[str, str], ...] | None = None
 _cnec_days: dict[str, cnec_page.Day] = {}
 _basemap: dict[str, dict] = {}
 
@@ -74,7 +75,7 @@ def core_zones() -> pd.DataFrame:
     return _zones['core']
 
 
-def cnec_geometries() -> MappedCnecElements:
+def cnec_geometries(required_day: str | None = None) -> MappedCnecElements:
     """Element geometry from every cached JAO domain day, not from the day on screen.
 
     Which substations an element joins does not change by delivery day, while the domain
@@ -82,30 +83,47 @@ def cnec_geometries() -> MappedCnecElements:
     from whatever days are cached therefore lets a day whose own domain feed is absent
     still draw its binding elements. Where cached days disagree, the latest day's ends win.
     """
-    if 'core' not in _geometries:
-        days = sorted(day.name for day in jao.JAO_DIR.iterdir() if jao.day_dir(day.name).is_dir())
-        cached = [jao.load_day(day).element_ends for day in days if jao.has_day(day)]
+    global _geometry_generation
+    requested = None
+    if required_day and not jao.domain_generation(required_day):
+        requested = jao.load_day(required_day)
+    days = sorted(day.name for day in jao.JAO_DIR.iterdir() if jao.day_dir(day.name).is_dir())
+    generation = tuple(
+        (day, token) for day in days if (token := jao.domain_generation(day)) is not None
+    )
+    if 'core' not in _geometries or generation != _geometry_generation:
+        cached = [
+            requested.element_ends
+            if requested is not None and day == required_day
+            else jao.load_day(day).element_ends
+            for day, _ in generation
+        ]
         if not cached:
             raise RuntimeError(
-                f'no JAO domain day cached under {jao.JAO_DIR}; run '
+                f'no current, complete JAO domain day cached under {jao.JAO_DIR}; run '
                 '`python -m coppersushi.data_sources.jao fetch <day>`'
             )
         _geometries['core'] = cnec_geometry.locate_elements(
-            pd.concat(cached, ignore_index=True).drop_duplicates(['eic', 'tso'], keep='last'),
+            pd.concat(cached, ignore_index=True).drop_duplicates(
+                ['eic', 'tso', 'name'], keep='last'
+            ),
             osm_locator.read_csvs(),
             osm_locator.load_aliases(),
         )
+        _geometry_generation = generation
     return _geometries['core']
 
 
 def cnec_day(day: str) -> cnec_page.Day:
     """One delivery day's inputs, fetching the day's own feeds on first use."""
-    if day not in _cnec_days:
+    mapped_elements = cnec_geometries(day)
+    cached = _cnec_days.get(day)
+    if cached is None or cached.mapped_elements is not mapped_elements:
         active = jao.load_active_day(day)
         _cnec_days[day] = cnec_page.Day(
             market_day=MarketDay.on(day),
             zones=core_zones(),
-            mapped_elements=cnec_geometries(),
+            mapped_elements=mapped_elements,
             constraints=active.constraints,
             ptdfs=active.ptdfs,
             external_constraints=active.external_constraints,

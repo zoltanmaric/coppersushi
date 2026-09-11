@@ -12,9 +12,14 @@ a silently truncated hour is indistinguishable from a quiet one.
 Field meanings: `wiki/literature/jao-core-publication-handbook.md`. Design: `wiki/specs/jao-grid.md`.
 """
 
+import fcntl
+import hashlib
 import json
 import logging
 import sys
+import tempfile
+import threading
+import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -43,6 +48,18 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://publicationtool.jao.eu/core/api/data"
 JAO_DIR = REPO / "data" / "jao"
 TIMEOUT_SECONDS = 300
+# Bump when a table's meaning changes without a schema change. Old caches must never be
+# allowed to impersonate output from a newer normaliser, as the pre-manifest endpoint table did.
+DOMAIN_CACHE_VERSION = 1
+DOMAIN_MANIFEST = "domain-cache-manifest.json"
+DOMAIN_FETCH_LOCK = ".domain-fetch.lock"
+DOMAIN_FETCH_FAILURE = ".domain-fetch-failure.json"
+DOMAIN_FETCH_RETRY_SECONDS = 300
+_DOMAIN_FETCH_LOCK = threading.Lock()
+
+
+class InvalidDomainCache(RuntimeError):
+    """A domain cache that was not completely written by this adapter version."""
 
 
 class Day(NamedTuple):
@@ -169,11 +186,31 @@ def write_day(
     external_constraints: DataFrame[ExternalConstraintsWithPrices],
     element_ends: DataFrame[ElementEnds],
 ) -> Path:
-    """Write the five tables as CSV, creating the directory."""
+    """Publish one validated, versioned set of domain tables.
+
+    The manifest is the completion marker. Its version invalidates tables made by an
+    older normaliser even when their CSV schema still happens to validate; its hashes
+    reject interrupted writes that mixed two generations of the cache.
+    """
+    day = Day(elements, contingencies, shadow_prices, external_constraints, element_ends)
+    _check_domain_contract(day)
     directory.mkdir(parents=True, exist_ok=True)
-    tables = (elements, contingencies, shadow_prices, external_constraints, element_ends)
-    for name, frame in zip(Day._fields, tables):
-        frame.to_csv(_path(directory, name), index=False)
+    with tempfile.TemporaryDirectory(prefix=".domain-cache-", dir=directory) as staging_name:
+        staging = Path(staging_name)
+        files = {}
+        for name, frame in zip(Day._fields, day):
+            path = _path(staging, name)
+            frame.to_csv(path, index=False)
+            files[path.name] = _sha256(path)
+        manifest = {"version": DOMAIN_CACHE_VERSION, "files": files}
+        staged_manifest = staging / DOMAIN_MANIFEST
+        staged_manifest.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+
+        # Files move first and the manifest last. An interrupted update therefore leaves
+        # hashes that cannot authenticate a mixture of two cache generations.
+        for name in Day._fields:
+            _path(staging, name).replace(_path(directory, name))
+        staged_manifest.replace(directory / DOMAIN_MANIFEST)
     logger.info("jao: wrote %s", directory)
     return directory
 
@@ -193,16 +230,24 @@ def write_active_day(
 
 
 def read_day(directory: Path) -> Day:
-    """The five tables back from CSV, each validated once its zone is restored."""
-    frames = []
-    for name, model in zip(Day._fields, MODELS):
-        frame = pd.read_csv(_path(directory, name))
-        if "hour" in frame:
-            # `read_csv`'s own date parsing is inconsistent about tz across versions, so the
-            # column is read as text and converted here.
-            frame = frame.assign(hour=pd.to_datetime(frame.hour, utc=True))
-        frames.append(_restore_blanks(frame, model).pipe(model.validate))
-    return Day(*frames)
+    """The five tables back from one complete, current cache generation."""
+    _check_domain_manifest(directory)
+    try:
+        frames = []
+        for name, model in zip(Day._fields, MODELS):
+            frame = pd.read_csv(_path(directory, name))
+            if "hour" in frame:
+                # `read_csv`'s own date parsing is inconsistent about tz across versions, so the
+                # column is read as text and converted here.
+                frame = frame.assign(hour=pd.to_datetime(frame.hour, utc=True))
+            frames.append(_restore_blanks(frame, model).pipe(model.validate))
+        day = Day(*frames)
+        _check_domain_contract(day)
+        return day
+    except InvalidDomainCache:
+        raise
+    except (KeyError, OSError, ValueError, pa.errors.SchemaError) as error:
+        raise InvalidDomainCache(f"invalid JAO domain cache in {directory}: {error}") from error
 
 
 def read_active_day(directory: Path) -> ActiveDay:
@@ -229,13 +274,90 @@ def _restore_blanks(frame: pd.DataFrame, model: type) -> pd.DataFrame:
     return frame.fillna(blanks)
 
 
-def load_day(day: str) -> Day:
-    return read_day(day_dir(day))
+def load_day(day: str, refresh: bool = False) -> Day:
+    """Read a domain day, fetching it once inside the first request that needs it.
+
+    The file lock makes this single-flight across web workers as well as threads. A failed
+    attempt leaves a short-lived marker so callbacks already queued behind it surface the
+    same error instead of each restarting the half-gigabyte download.
+    """
+    directory = day_dir(day)
+    if not refresh:
+        try:
+            return read_day(directory)
+        except InvalidDomainCache as stale:
+            logger.info("jao: cached %s is fetched again: %s", day, stale)
+    directory.mkdir(parents=True, exist_ok=True)
+    # Dash may handle several initial callbacks concurrently. Serialising domain refreshes
+    # is deliberate: each one downloads roughly half a gigabyte from JAO.
+    with _DOMAIN_FETCH_LOCK:
+        with (directory / DOMAIN_FETCH_LOCK).open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            if not refresh:
+                try:
+                    loaded = read_day(directory)  # Another worker may have finished it.
+                    _clear_domain_fetch_failure(directory)
+                    return loaded
+                except InvalidDomainCache:
+                    pass
+                if failure := _recent_domain_fetch_failure(directory):
+                    raise RuntimeError(
+                        f"JAO domain fetch for {day} failed recently; not retrying yet: {failure}"
+                    )
+            try:
+                fetch_day(day)
+                loaded = read_day(directory)
+            except Exception as error:
+                _record_domain_fetch_failure(directory, error)
+                raise
+            _clear_domain_fetch_failure(directory)
+            return loaded
+
+
+def _recent_domain_fetch_failure(directory: Path) -> str | None:
+    path = directory / DOMAIN_FETCH_FAILURE
+    try:
+        failure = json.loads(path.read_text())
+        if time.time() - float(failure["failed_at"]) < DOMAIN_FETCH_RETRY_SECONDS:
+            return str(failure["message"])
+    except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError):
+        pass
+    return None
+
+
+def _record_domain_fetch_failure(directory: Path, error: Exception) -> None:
+    try:
+        (directory / DOMAIN_FETCH_FAILURE).write_text(
+            json.dumps({"failed_at": time.time(), "message": str(error)}) + "\n"
+        )
+    except OSError as marker_error:
+        logger.warning("jao: could not record failed domain fetch: %s", marker_error)
+
+
+def _clear_domain_fetch_failure(directory: Path) -> None:
+    try:
+        (directory / DOMAIN_FETCH_FAILURE).unlink(missing_ok=True)
+    except OSError as marker_error:
+        logger.warning("jao: could not clear failed domain fetch marker: %s", marker_error)
 
 
 def has_day(day: str) -> bool:
-    """Whether every table of a cached domain day is on disk; an older cache may lack one."""
-    return all(_path(day_dir(day), name).is_file() for name in Day._fields)
+    """Whether a current adapter completely wrote and can authenticate this domain day."""
+    try:
+        _check_domain_manifest(day_dir(day))
+        return True
+    except InvalidDomainCache:
+        return False
+
+
+def domain_generation(day: str) -> str | None:
+    """Cheap identity of a current cache generation, for invalidating in-memory derivatives."""
+    try:
+        manifest = _read_domain_manifest(day_dir(day))
+    except InvalidDomainCache:
+        return None
+    encoded = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def load_active_day(day: str, refresh: bool = False) -> ActiveDay:
@@ -259,6 +381,69 @@ def load_active_day(day: str, refresh: bool = False) -> ActiveDay:
 
 def _path(directory: Path, name: str) -> Path:
     return directory / f"{name.replace('_', '-')}.csv"
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _read_domain_manifest(directory: Path) -> dict:
+    """Read a current manifest and cheaply prove that every table it names exists."""
+    path = directory / DOMAIN_MANIFEST
+    try:
+        manifest = json.loads(path.read_text())
+        if manifest.get("version") != DOMAIN_CACHE_VERSION:
+            raise InvalidDomainCache(
+                f"JAO domain cache in {directory} has version {manifest.get('version')!r}, "
+                f"expected {DOMAIN_CACHE_VERSION}"
+            )
+        expected = {_path(directory, name).name for name in Day._fields}
+        files = manifest["files"]
+        if not isinstance(files, dict):
+            raise InvalidDomainCache(f"JAO domain cache in {directory} has an invalid manifest")
+        if set(files) != expected:
+            raise InvalidDomainCache(f"JAO domain cache in {directory} names the wrong tables")
+        missing = [name for name in files if not (directory / name).is_file()]
+        if missing:
+            raise InvalidDomainCache(f"JAO domain cache in {directory} misses {', '.join(missing)}")
+        return manifest
+    except InvalidDomainCache:
+        raise
+    except (json.JSONDecodeError, KeyError, OSError, TypeError) as error:
+        raise InvalidDomainCache(f"incomplete JAO domain cache in {directory}: {error}") from error
+
+
+def _check_domain_manifest(directory: Path) -> None:
+    """Refuse absent, obsolete, incomplete and mixed-generation domain caches."""
+    manifest = _read_domain_manifest(directory)
+    changed = [
+        name for name, digest in manifest["files"].items() if _sha256(directory / name) != digest
+    ]
+    if changed:
+        raise InvalidDomainCache(
+            f"JAO domain cache in {directory} failed its checksum: {', '.join(changed)}"
+        )
+
+
+def _check_domain_contract(day: Day) -> None:
+    """Every publisher retained by a domain consumer must retain its oriented endpoints."""
+    priced = day.shadow_prices[day.shadow_prices.hour.isin(day.elements.hour)]
+    identity = ["eic", "tso", "name"]
+    required = pd.concat(
+        [day.elements[identity], priced[identity]], ignore_index=True
+    ).drop_duplicates()
+    present = day.element_ends[identity].drop_duplicates()
+    missing = required.merge(present, on=identity, how="left", indicator=True)
+    missing = missing[missing._merge.eq("left_only")]
+    if not missing.empty:
+        pairs = ", ".join(
+            f"{row.name} / {row.eic} ({row.tso})" for row in missing.itertuples()
+        )
+        raise InvalidDomainCache(f"element ends missing named publisher/EIC rows: {pairs}")
 
 
 if __name__ == "__main__":

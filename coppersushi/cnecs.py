@@ -61,7 +61,7 @@ PLACEHOLDER_COLUMNS = [
     "eic", "direction", "hub_from", "hub_to", "substation_from", "substation_to", "element_type",
 ]
 
-END_COLUMNS = ["eic", "tso", "element_type", "substation_from", "substation_to"]
+END_COLUMNS = ["eic", "tso", "name", "element_type", "substation_from", "substation_to"]
 
 ELEMENT_COLUMNS = [
     "hour", "eic", "name", "tso", "direction", "hub_from", "hub_to",
@@ -178,12 +178,12 @@ def elements(rows: list[dict]) -> DataFrame[Elements]:
 
 
 def element_ends(rows: list[dict]) -> DataFrame[ElementEnds]:
-    """Each TSO's own ends of every presolved physical element, one row per EIC and TSO.
+    """Each TSO's own ends of every presolved physical element.
 
     `elements` folds the TSOs of a shared element together, yet each TSO's DIRECT runs from
     its own `substation_from`: APG's and ČEPS's DIRECT rows on one tie-line carry PTDFs of
-    opposite sign. Anything that wants to know which way a published row points needs the
-    publishing TSO's own ends.
+    opposite sign. An EIC can also name several elements from one TSO, as on a three-terminal
+    line, so the published element name completes the identity.
     """
     frame = _physical(_frame(rows))
     presolved = frame[frame.presolved]
@@ -191,10 +191,18 @@ def element_ends(rows: list[dict]) -> DataFrame[ElementEnds]:
         presolved.assign(tso=normalise_tso(presolved.tso))[END_COLUMNS]
         .drop_duplicates(ignore_index=True)
     )
-    clashing = ends[ends.duplicated(["eic", "tso"], keep=False)]
+    clashing = ends[ends.duplicated(["eic", "tso", "name"], keep=False)]
     if not clashing.empty:
-        names = ", ".join(sorted(set(clashing.eic)))
-        raise ValueError(f"one TSO published more than one substation pair for: {names}")
+        identities = ", ".join(
+            f"{row.name} / {row.eic} ({row.tso})"
+            for row in clashing[["eic", "tso", "name"]]
+            .drop_duplicates()
+            .sort_values(["eic", "tso", "name"])
+            .itertuples(index=False)
+        )
+        raise ValueError(
+            f"one named element published more than one substation pair: {identities}"
+        )
     return ends.pipe(ElementEnds.validate)
 
 

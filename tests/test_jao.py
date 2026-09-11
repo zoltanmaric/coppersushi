@@ -47,18 +47,96 @@ def test_every_hourly_table_comes_back_with_its_zone(tmp_path):
     assert [str(frame.hour.dt.tz) for frame in hourly] == ["UTC"] * len(hourly)
 
 
-def test_element_ends_round_trip_one_row_per_publisher_and_element(tmp_path):
+def test_element_ends_round_trip_one_row_per_named_publication(tmp_path):
     day = written(tmp_path)
     assert list(day.element_ends.columns) == cnecs.END_COLUMNS
-    assert not day.element_ends.duplicated(["eic", "tso"]).any()
+    assert not day.element_ends.duplicated(["eic", "tso", "name"]).any()
 
 
-def test_an_old_cache_without_element_ends_is_not_a_complete_day(tmp_path, monkeypatch):
+def test_an_old_cache_without_a_manifest_is_not_a_complete_day(tmp_path, monkeypatch):
     written(tmp_path)
     monkeypatch.setattr(jao, "day_dir", lambda _: tmp_path)
     assert jao.has_day("any-day")
-    (tmp_path / "element-ends.csv").unlink()
+    (tmp_path / jao.DOMAIN_MANIFEST).unlink()
     assert not jao.has_day("any-day")
+
+
+def test_a_cache_from_an_older_generator_is_not_a_complete_day(tmp_path, monkeypatch):
+    written(tmp_path)
+    monkeypatch.setattr(jao, "day_dir", lambda _: tmp_path)
+    path = tmp_path / jao.DOMAIN_MANIFEST
+    manifest = json.loads(path.read_text())
+    manifest["version"] = jao.DOMAIN_CACHE_VERSION - 1
+    path.write_text(json.dumps(manifest))
+    assert not jao.has_day("any-day")
+    with pytest.raises(jao.InvalidDomainCache, match="version"):
+        jao.read_day(tmp_path)
+
+
+def test_a_changed_domain_table_invalidates_the_generation(tmp_path, monkeypatch):
+    written(tmp_path)
+    monkeypatch.setattr(jao, "day_dir", lambda _: tmp_path)
+    ends = tmp_path / "element-ends.csv"
+    pd.read_csv(ends).iloc[:-1].to_csv(ends, index=False)
+    assert not jao.has_day("any-day")
+    with pytest.raises(jao.InvalidDomainCache, match="checksum.*element-ends.csv"):
+        jao.read_day(tmp_path)
+
+
+def test_an_obsolete_domain_cache_is_fetched_once_on_first_load(tmp_path, monkeypatch):
+    day = "2030-01-15"
+    directory = tmp_path / day
+    written(directory)
+    (directory / jao.DOMAIN_MANIFEST).unlink()
+    fetched = []
+    monkeypatch.setattr(jao, "JAO_DIR", tmp_path)
+    monkeypatch.setattr(jao, "fetch_day", lambda value: fetched.append(value) or written(directory))
+    assert not jao.load_day(day).elements.empty
+    assert not jao.load_day(day).elements.empty
+    assert fetched == [day]
+
+
+def test_a_failed_domain_fetch_is_not_restarted_by_the_next_callback(tmp_path, monkeypatch):
+    day = "2030-01-15"
+    fetched = []
+    monkeypatch.setattr(jao, "JAO_DIR", tmp_path)
+
+    def fail(value):
+        fetched.append(value)
+        raise ValueError("unrecognized domain shape")
+
+    monkeypatch.setattr(jao, "fetch_day", fail)
+    with pytest.raises(ValueError, match="unrecognized domain shape"):
+        jao.load_day(day)
+    with pytest.raises(RuntimeError, match="failed recently.*unrecognized domain shape"):
+        jao.load_day(day)
+    assert fetched == [day]
+
+
+def test_a_domain_generation_cannot_omit_a_publishers_element_ends(tmp_path):
+    fc, sp = rows("final-computation-hour.json"), rows("shadow-prices-day.json")
+    elements = cnecs.elements(fc)
+    ends = cnecs.element_ends(fc)
+    missing = elements.iloc[0]
+    ends = ends[
+        ~(
+            ends.eic.eq(missing.eic)
+            & ends.tso.eq(missing.tso)
+            & ends.name.eq(missing["name"])
+        )
+    ]
+    with pytest.raises(jao.InvalidDomainCache, match=f"{missing.eic}.*{missing.tso}"):
+        jao.write_day(
+            tmp_path,
+            elements,
+            cnecs.contingencies(fc),
+            cnecs.shadow_prices(sp),
+            cnecs.with_constraint_prices(
+                cnecs.external_constraints(fc), cnecs.external_constraints(sp)
+            ),
+            ends,
+        )
+    assert not (tmp_path / jao.DOMAIN_MANIFEST).exists()
 
 
 def test_the_disagreement_flag_survives_the_csv(tmp_path):

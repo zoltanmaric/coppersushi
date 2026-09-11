@@ -167,12 +167,13 @@ def locate_elements(
     substations: pd.DataFrame,
     aliases: dict[str, str] | None = None,
 ) -> DataFrame[MappedCnecElements]:
-    """One row per publishing TSO and element, placed between its substations where located.
+    """One row per publisher and named element, placed between its substations where located.
 
     `x0`/`y0` is the TSO's own `substation_from`, so that TSO's DIRECT runs from `(x0, y0)`
     to `(x1, y1)`. Two TSOs monitoring one tie-line publish it under one EIC but each from
     its own end — `Etzenricht - Hradec` and `Hradec - Etzenricht` — and get two rows drawn
-    over one another under one `branch_id`.
+    over one another under one `branch_id`. The name distinguishes several Y-line legs that
+    one TSO may publish under the same EIC.
 
     An element with an endpoint the locator does not hold keeps its row without coordinates,
     so the map can say how much of the published set it is showing. `aliases` names the
@@ -184,6 +185,7 @@ def locate_elements(
         {
             "eic": element.eic,
             "tso": element.tso,
+            "name": element.name,
             "element_type": element.element_type,
             "branch_type": "Transformer" if element.element_type in POINT_TYPES else "Line",
             **_placement(element, index, by_alias),
