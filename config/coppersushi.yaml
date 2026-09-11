@@ -17,6 +17,11 @@ countries: [AL, AT, BA, BE, BG, CH, CZ, DE, DK, EE, ES, FI, FR, GB, GR, HR, HU, 
 data:
   wdpa:
     source: primary
+  # OSM substation names are the only join key to JAO, which names an element's ends and never gives
+  # a coordinate. `archive` serves prebuilt CSVs with no name column, so the grid is rebuilt from the
+  # OSM extract instead; the fork carries the name through (wiki/pypsa-eur-sibling.md).
+  osm:
+    source: build
 
 # The Core market day in CET/CEST, not the UTC day.
 snapshots:
@@ -53,6 +58,24 @@ load:
 clustering:
   temporal:
     resolution_elec: 1h  # JAO publishes hourly; at this resolution the mapping needs no rule
+  aggregation_strategies:
+    buses:
+      osm_name: first  # a custom bus column reaches base.nc but is dropped at simplify without this
+  simplify_network:
+    # JAO monitors transformers and phase shifters as grid elements in their own right, so they have to
+    # survive: the default maps everything onto one 380 kV layer and deletes every transformer.
+    to_380: false
+
+# The default endpoint cannot serve a whole-Europe rebuild: on 2026-09-10 it answered 429 to a
+# single-threaded retrieval that fits inside its two-slot rate limit, and moved zero files in twelve
+# minutes; pushed harder it stops answering at all for about an hour. Its own fair-use policy sends
+# bulk users to a mirror. This mirror was verified the same day against a local reference country --
+# an identical element count on a fresher database, and a full-geometry country in 9 s.
+# One failed feature makes Snakemake discard every already-retrieved file for that country, so the
+# endpoint is still retried hard.
+overpass_api:
+  url: "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
+  max_tries: 12
 
 solving:
   solver:
