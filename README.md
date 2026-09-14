@@ -20,6 +20,14 @@ so git works from any shell or IDE, run `git lfs install` once to register the f
 files, then `git lfs pull`. The conda environment ships `git-lfs` too, for shells without it.
 Clone with `GIT_LFS_SKIP_SMUDGE=1` to skip the files, e.g. to run only the tests.
 
+## Working with Agents
+The repository is developed with coding agents (Claude Code and Codex), and the tooling for that is
+part of the repository:
+
+- [`AGENTS.md`](AGENTS.md) holds the rules the agents follow here. Every directory with rules of its own
+  has one.
+- [`.agents/skills/`](.agents/skills/) holds the skills those rules invoke.
+- [`wiki/`](wiki/) is an LLM-maintained wiki of domain knowledge, design decisions and specs.
 
 ## Local Installation
 Installing the dependencies requires Conda, but I recommend installing
