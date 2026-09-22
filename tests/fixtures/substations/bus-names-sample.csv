@@ -1,0 +1,16 @@
+bus_id,osm_name,country
+relation/10047997-380,"""Avelgem""",BE
+relation/10047998-380,Horta,BE
+way/2222222-380,APG Umspannwerk Westtirol,AT
+way/2222222-220,APG Umspannwerk Westtirol,AT
+way/3333333-220,Umspannwerk Bisamberg,AT
+way/4444444-380,Umspannwerk Mühlbach,AT
+node/5555555-380,Dürnrohr,AT
+node/5555556-380,Dürnkrut,AT
+relation/6666666-400,"Stacja elektroenergetyczna ""Krosno Iskrzynia"" 400/110 kV",PL
+relation/6666667-400,"Stacja elektroenergetyczna 400/110kV „SE Rzeszów Systemowa”",PL
+relation/6666668-400,Mikułowa,PL
+way/7777777-400,Horná Ždaňa,SK
+way/7777778-400,Považská Bystrica,SK
+way/8888888-220,RTP Cirkovce,SI
+way/9999999-380,,DE
