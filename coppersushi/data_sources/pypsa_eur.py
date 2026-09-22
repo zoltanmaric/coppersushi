@@ -10,10 +10,13 @@ from pathlib import Path
 from typing import NamedTuple
 
 import pandas as pd
+import pypsa
 import yaml
+from pandera.typing import DataFrame
 
-from coppersushi import REPO, shedding
-from coppersushi.data_sources import networks
+from coppersushi import REPO, shedding, simplification, substations
+from coppersushi.data_model.substations import BusNames
+from coppersushi.data_sources import jao, networks
 from coppersushi.market_day import MarketDay
 
 logger = logging.getLogger(__name__)
@@ -36,6 +39,7 @@ def _workflow_env() -> dict[str, str]:
 
 PIN_FILE = REPO / "pypsa-eur.pin"
 CONFIG = REPO / "config" / "coppersushi.yaml"
+MONITORED_TRANSFORMERS = ("Transformer", "PST")  # JAO element types that are a transformer branch here
 
 
 class Pin(NamedTuple):
@@ -64,7 +68,7 @@ def solve(experiment: str | None = None) -> Path:
     candidate = networks.candidate(day, pin.sha, CONFIG.read_bytes(), experiment)
     candidate.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(solved[0], candidate)
-    shedding.reject(networks.load(candidate))
+    reject_unfit(candidate)
     logger.info("pypsa-eur: done — candidate %s; sanction it with `promote` to make it the day's network", candidate.name)
     return candidate
 
@@ -86,11 +90,57 @@ def config_window(day: MarketDay) -> tuple[str, str]:
 def promote(candidate: Path) -> Path:
     """Sanction a candidate: copy it to ``networks/opf-<day>.nc`` (a Git LFS object once committed) and stage it."""
     day = networks.day_of(candidate)
-    shedding.reject(networks.load(candidate))
+    reject_unfit(candidate)
     target = Path(shutil.copy2(candidate, networks.solved(day)))
     subprocess.run(["git", "add", str(target)], cwd=REPO, check=True)
     logger.info("promoted %s to %s (staged; committing sanctions it)", candidate.name, target.name)
     return target
+
+
+def reject_unfit(candidate: Path) -> None:
+    """Every gate a network passes before it may be sanctioned, on a single load of the file."""
+    solved = networks.load(candidate)
+    base = networks.load(_base_network())
+    shedding.reject(solved)
+    simplification.reject(solved, simplification.expected_transformers(base))
+    if (sites := _monitored_sites(base, networks.day_of(candidate))) is not None:
+        simplification.reject_removed_monitored(base, solved, sites)
+
+
+def _base_network(sibling: Path | None = None) -> Path:
+    """The unsimplified network the run started from, which the solved one is counted against."""
+    run = yaml.safe_load(CONFIG.read_text())["run"]["name"]
+    path = (sibling or _sibling_dir()) / "resources" / run / "networks" / "base.nc"
+    if not path.exists():
+        raise FileNotFoundError(f"{path}: no base network to check the candidate's transformers against")
+    return path
+
+
+def _monitored_sites(base: pypsa.Network, day: str) -> pd.Series | None:
+    """The OSM sites of the transformers JAO monitored on `day`, or ``None`` while the buses carry no name.
+
+    Joining JAO's substation names needs a name on our side; until the buses have one there is
+    nothing to intersect, and the miss is logged rather than passed over silently.
+    """
+    if "osm_name" not in base.buses.columns:
+        logger.warning("base network buses carry no `osm_name`: not checking what stub removal took")
+        return None
+    elements = jao.load_day(day).elements
+    monitored = elements[elements.element_type.isin(MONITORED_TRANSFORMERS)]
+    names = pd.concat([monitored.substation_from, monitored.substation_to])
+    return substations.match(names, _bus_names(base)).osm_id.dropna()
+
+
+def _bus_names(base: pypsa.Network) -> DataFrame[BusNames]:
+    """The name side of the base network's bus table, as the substation join takes it."""
+    buses = base.buses
+    return (
+        pd.DataFrame(
+            {"bus_id": buses.index, "osm_name": buses.osm_name.fillna(""), "country": buses.country}
+        )
+        .reset_index(drop=True)
+        .pipe(BusNames.validate)
+    )
 
 
 def _read_pin(path: Path = PIN_FILE) -> Pin:
