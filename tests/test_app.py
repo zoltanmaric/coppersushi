@@ -1,7 +1,13 @@
+import importlib
+from pathlib import Path
+from unittest import mock
+
+import pytest
 from dash import dcc, no_update
 
 import app
 from coppersushi import cnec_page
+from coppersushi.data_sources import jao
 
 
 def test_failed_load_becomes_banner(monkeypatch):
@@ -59,3 +65,27 @@ def _components(component):
 def _ids(component):
     """Every component in a layout tree that carries an id."""
     return (c for c in _components(component) if getattr(c, "id", None))
+
+
+def test_the_jao_day_route_renders_one_hour_of_it(monkeypatch):
+    """The route composes JAO's day and hands the slider the hours to cycle it by."""
+    monkeypatch.setenv("MAPBOX_TOKEN", "not-a-token")
+    if not app.JAO_DAYS:  # gitignored: JAO's terms forbid redistributing its rows
+        pytest.skip("no market day in data/jao; run `python -m coppersushi.data_sources.jao fetch <day>`")
+    fig, maximum, marks, value, message, is_open = app.render(f"/jao/{app.JAO_DAYS[-1]}", 5, slider_moved=True)
+    assert not is_open and message == ""
+    assert (maximum, value) == (23, 5)  # the CET market day, an hour at a time
+    visible = [index for index, trace in enumerate(fig.data) if trace.visible]
+    assert visible == list(range(5 * app.jao_map.NUM_TRACES_PER_HOUR, 6 * app.jao_map.NUM_TRACES_PER_HOUR))
+
+
+def test_the_app_still_imports_where_no_market_day_was_fetched():
+    """`.dockerignore` drops `data/`, so the deployed image has no `data/jao` at all.
+
+    JAO's terms forbid redistributing its rows, so that directory can never ship. Reading it
+    with `iterdir` raised at import and took the whole app down with it, `/network` included.
+    """
+    with mock.patch.object(jao, "JAO_DIR", Path("/nonexistent/data/jao")):
+        reloaded = importlib.reload(app)
+    assert reloaded.JAO_DAYS == [] and reloaded.JAO_KEYS == {}
+    importlib.reload(app)  # the other tests share the module

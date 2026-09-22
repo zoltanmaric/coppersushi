@@ -29,6 +29,12 @@ abbreviations, `H.Zdana` for `Horná Ždaňa`. Nothing recovers the elided word,
 multi-token OSM name is *also* indexed under its own abbreviated form and the two meet
 there.
 
+Normalisation is lossy in both directions, so two genuinely different sites can share one
+key — the abbreviation index especially, since it cuts a whole word to one letter. A key
+held by more than one OSM object is therefore `ambiguous` and stays unresolved: a later
+stage writes a real thermal limit onto whatever bus this returns, and a confident wrong
+answer there is the one failure the chain must not have. An override settles it.
+
 Design: `wiki/specs/jao-grid.md`.
 """
 
@@ -38,6 +44,7 @@ import re
 import unicodedata
 
 import pandas as pd
+import pypsa
 from pandera.typing import DataFrame
 
 from coppersushi.data_model.substations import BusNames, Matches, Overrides
@@ -71,6 +78,10 @@ PREFIXES = frozenset(
     }
 )
 
+OVERRIDE = "override"
+EXACT = "exact"
+FUZZY = "fuzzy"
+AMBIGUOUS = "ambiguous"
 UNMATCHED = "unmatched"
 COLUMNS = ["jao_name", "bus_id", "osm_id", "osm_name", "country", "score", "source"]
 
@@ -102,7 +113,7 @@ def _abbreviated(key: str) -> str | None:
     return " ".join([tokens[0][0], *tokens[1:]])
 
 
-def _voltage(bus_id: str) -> int:
+def voltage(bus_id: str) -> int:
     """The substation voltage [kV] the bus id ends in, or −1 if it ends in anything else."""
     suffix = bus_id.rsplit("-", 1)[-1]
     return int(suffix) if suffix.isdigit() else -1
@@ -129,15 +140,24 @@ def _index(buses: DataFrame[BusNames]) -> dict[str, list[str]]:
     return index
 
 
-def _pick(jao_name: str, bus_ids: list[str]) -> str:
-    """The one bus a name resolves to: the highest voltage, ties broken on the id.
+def _pick(jao_name: str, bus_ids: list[str]) -> str | None:
+    """The one bus a name resolves to, or `None` where the name spans more than one site.
 
     One site commonly appears as a 380 kV and a 220 kV bus, and JAO's name distinguishes
-    neither. Returning both would break the one-row-per-name contract and picking
-    arbitrarily would be worse, so the highest voltage wins deterministically and the
-    ambiguity is logged.
+    neither: the highest voltage wins deterministically and the choice is logged. Two
+    *different* sites under one key is a different thing entirely — nothing here can tell
+    which was meant — so it is refused and left to an override.
     """
-    chosen = max(bus_ids, key=lambda bus_id: (_voltage(bus_id), bus_id))
+    sites = {osm_id(bus_id) for bus_id in bus_ids}
+    if len(sites) > 1:
+        logger.warning(
+            "%r matches %d substations (%s); refusing to guess — add an override",
+            jao_name,
+            len(sites),
+            ", ".join(sorted(sites)),
+        )
+        return None
+    chosen = max(bus_ids, key=lambda bus_id: (voltage(bus_id), bus_id))
     if len(bus_ids) > 1:
         logger.info(
             "%r matches %d buses (%s); taking the highest voltage, %s",
@@ -159,28 +179,37 @@ def match(
 
     Overrides win outright, then an exact hit on the normalised name, then the closest
     normalised name at or above `threshold`. A name that reaches none of those keeps its
-    row with `source` "unmatched" rather than disappearing.
+    row with `source` "unmatched" rather than disappearing, and a name whose key covers
+    two different substations keeps its row as "ambiguous" — unresolved, because guessing
+    between two real sites is worse than admitting the tie.
+
+    Raises `ValueError` where an override names a bus `buses` has not got.
     """
     index = _index(buses)
     keys = list(index)
     by_id = buses.set_index("bus_id")
     forced = {} if overrides is None else dict(zip(overrides.jao_name, overrides.bus_id))
+    for jao_name, bus_id in forced.items():
+        if bus_id not in by_id.index:
+            raise ValueError(f"override for {jao_name!r} names bus {bus_id!r}, absent from the bus table")
 
     rows = []
     for jao_name in pd.unique(jao_names.dropna()):
         key = normalise(jao_name)
         if jao_name in forced:
-            bus_id, score, source = forced[jao_name], 1.0, "override"
+            bus_id, score, source = forced[jao_name], 1.0, OVERRIDE
         elif key in index:
-            bus_id, score, source = _pick(jao_name, index[key]), 1.0, "exact"
+            bus_id, score, source = _pick(jao_name, index[key]), 1.0, EXACT
         else:
             close = difflib.get_close_matches(key, keys, n=1, cutoff=threshold) if key else []
             if close:
                 bus_id = _pick(jao_name, index[close[0]])
                 score = difflib.SequenceMatcher(None, key, close[0]).ratio()
-                source = "fuzzy"
+                source = FUZZY
             else:
                 bus_id, score, source = None, 0.0, UNMATCHED
+        if bus_id is None and source in (EXACT, FUZZY):
+            score, source = 0.0, AMBIGUOUS
         bus = by_id.loc[bus_id] if bus_id is not None else None
         rows.append(
             {
@@ -197,7 +226,28 @@ def match(
 
 
 def coverage(matches: DataFrame[Matches]) -> float:
-    """The share of JAO names that reached a bus, between 0 and 1."""
+    """The share of JAO names that reached a bus, between 0 and 1.
+
+    Read off `bus_id` rather than off `source`, so that every way of failing — unmatched,
+    ambiguous, or any added later — counts as a miss by construction.
+    """
     if matches.empty:
         return 0.0
-    return float((matches.source != UNMATCHED).mean())
+    return float(matches.bus_id.notna().mean())
+
+
+def bus_names(n: pypsa.Network) -> DataFrame[BusNames]:
+    """The name side of a network's bus table, as `match` takes it.
+
+    An unnamed bus keeps its row with an empty name rather than being dropped: `_index`
+    skips it, so it cannot be matched, but the caller can still count how much of the
+    network carries a name at all.
+    """
+    buses = n.buses
+    return (
+        pd.DataFrame(
+            {"bus_id": buses.index, "osm_name": buses.osm_name.fillna(""), "country": buses.country}
+        )
+        .reset_index(drop=True)
+        .pipe(BusNames.validate)
+    )

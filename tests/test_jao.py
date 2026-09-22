@@ -1,4 +1,6 @@
+import io
 import json
+import urllib.error
 
 import pandas as pd
 import pytest
@@ -102,3 +104,46 @@ def test_a_cache_from_an_older_adapter_is_fetched_again(tmp_path, monkeypatch):
     monkeypatch.setattr(jao, "fetch_active_day", lambda d: fetched.append(d) or active_written(directory))
     assert jao.load_active_day(day).constraints.source_id.is_unique
     assert fetched == [day]
+
+
+class TestRetries:
+    """A day is 24 sequential requests; one unretried blip throws away every hour before it."""
+
+    @staticmethod
+    def _urlopen(failures: list[Exception]):
+        """A `urlopen` that raises each of `failures` in turn, then serves an empty page."""
+        calls = []
+
+        def urlopen(url, timeout=None):
+            calls.append(url)
+            if failures:
+                raise failures.pop(0)
+            return io.BytesIO(json.dumps({"data": [], "totalRows": 0}).encode())
+
+        return urlopen, calls
+
+    def test_a_transient_server_error_is_retried(self, monkeypatch):
+        error = urllib.error.HTTPError("http://x", 500, "Internal Server Error", {}, None)
+        urlopen, calls = self._urlopen([error, error])
+        monkeypatch.setattr(jao.urllib.request, "urlopen", urlopen)
+        monkeypatch.setattr(jao.time, "sleep", lambda _: None)
+        assert jao._read("http://x") == {"data": [], "totalRows": 0}
+        assert len(calls) == 3
+
+    def test_a_bad_request_is_not_retried(self, monkeypatch):
+        urlopen, calls = self._urlopen(
+            [urllib.error.HTTPError("http://x", 400, "Bad Request", {}, None)]
+        )
+        monkeypatch.setattr(jao.urllib.request, "urlopen", urlopen)
+        with pytest.raises(urllib.error.HTTPError):
+            jao._read("http://x")
+        assert len(calls) == 1  # our own bad request; re-sending it says the same thing
+
+    def test_an_outage_that_outlasts_every_retry_raises(self, monkeypatch):
+        error = urllib.error.HTTPError("http://x", 503, "Service Unavailable", {}, None)
+        urlopen, calls = self._urlopen([error] * (jao.RETRIES + 1))
+        monkeypatch.setattr(jao.urllib.request, "urlopen", urlopen)
+        monkeypatch.setattr(jao.time, "sleep", lambda _: None)
+        with pytest.raises(urllib.error.HTTPError):
+            jao._read("http://x")
+        assert len(calls) == jao.RETRIES + 1

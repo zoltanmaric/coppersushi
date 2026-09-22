@@ -1,3 +1,4 @@
+import difflib
 import logging
 
 import pandas as pd
@@ -96,9 +97,54 @@ def test_a_confusable_neighbour_is_not_matched(buses):
     assert matched(buses, "Duernrohr 1").loc["Duernrohr 1"].bus_id != "node/5555556-380"
 
 
+@pytest.mark.parametrize(
+    ("jao_name", "osm_name", "source"),
+    [
+        ("Duernrohr 1", "Dürnrohr", "fuzzy"),  # 0.94: one site, two spellings of it
+        ("HRADEC", "Hrádek", "unmatched"),  # 0.83: two different Czech sites
+    ],
+)
+def test_the_threshold_separates_a_spelling_variant_from_a_different_site(buses, jao_name, osm_name, source):
+    """The default cut has to sit *between* these two scores, and this pins it there.
+
+    Hradec and Hrádek are different substations; Duernrohr and Dürnrohr are one. Nothing
+    but the cut tells the two cases apart, so raising it past 0.94 or lowering it below
+    0.83 breaks one of these.
+    """
+    ratio = difflib.SequenceMatcher(None, substations.normalise(jao_name), substations.normalise(osm_name)).ratio()
+    assert 0.83 <= ratio <= 0.95
+    assert matched(buses, jao_name).loc[jao_name].source == source
+
+
 def test_a_threshold_above_the_score_refuses_the_fuzzy_match(buses):
     row = matched(buses, "Duernrohr 1", threshold=0.95).loc["Duernrohr 1"]
     assert row.source == "unmatched"
+
+
+def test_one_key_held_by_two_substations_is_ambiguous_not_a_confident_guess(buses, caplog):
+    """`Chodov` and `Rozvodna Chodov` are two Czech sites under one normalised name.
+
+    Resolving to either would put a real thermal limit on a line 100 km from the one JAO
+    meant, and `exact`/1.0 would hide that it happened.
+    """
+    with caplog.at_level(logging.WARNING, logger="coppersushi.substations"):
+        row = matched(buses, "CHODOV").loc["CHODOV"]
+    assert (row.source, row.score) == ("ambiguous", 0.0)
+    assert pd.isna(row.bus_id) and pd.isna(row.osm_id)
+    assert "way/1212121" in caplog.text and "way/1212122" in caplog.text
+
+
+def test_an_override_settles_an_ambiguous_name(buses):
+    row = matched(
+        buses, "CHODOV", overrides=overrides(("CHODOV", "way/1212121-400", "JAO means the 400 kV site"))
+    ).loc["CHODOV"]
+    assert (row.bus_id, row.source) == ("way/1212121-400", "override")
+
+
+def test_an_override_naming_a_bus_the_table_lacks_is_refused(buses):
+    """The same typo in the element overrides raises; a bare KeyError here would not say so."""
+    with pytest.raises(ValueError, match="absent from the bus table"):
+        matched(buses, "HORTA", overrides=overrides(("HORTA", "way/does-not-exist", "typo")))
 
 
 def test_an_unmatchable_name_is_unmatched_not_wrong(buses):
@@ -154,3 +200,4 @@ def test_coverage_is_the_share_of_names_that_reached_a_bus(buses):
     assert substations.coverage(substations.match(pd.Series(["HORTA", "MOSTAR"]), buses)) == 0.5
     assert substations.coverage(substations.match(pd.Series(["HORTA"]), buses)) == 1.0
     assert substations.coverage(substations.match(pd.Series([], dtype=str), buses)) == 0.0
+    assert substations.coverage(substations.match(pd.Series(["CHODOV"]), buses)) == 0.0  # ambiguous is a miss

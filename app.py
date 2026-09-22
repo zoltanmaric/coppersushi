@@ -5,12 +5,17 @@ from pathlib import Path
 import pandas as pd
 
 import plotly.graph_objects as go
+import pypsa
 from dash import Dash, dcc, html, Input, Output, ctx, no_update
 import dash_bootstrap_components as dbc
 
-from coppersushi import bidding_zones, cnec_geometry, cnec_page, map_style, power_flow
+from coppersushi import (
+    bidding_zones, cnec_geometry, cnec_page, elements, jao_map, map_style, power_flow, substations,
+)
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
-from coppersushi.data_sources import electricity_maps, jao, mapbox_styles, networks, osm_locator
+from coppersushi.data_sources import (
+    electricity_maps, jao, mapbox_styles, networks, osm_locator, pypsa_eur,
+)
 from coppersushi.market_day import MarketDay
 
 # Every page's controls live in one tree that the router swaps, so a callback whose
@@ -36,7 +41,13 @@ NETWORK_LOADERS.update({
 })
 CNEC_ROUTE = 'cnec'  # /cnec, or /cnec/<delivery day> to open on one day
 ZONE_SHAPES_FROM = '2024-08-29'  # Any solved network carries the same country polygons
-_cache: dict[str, tuple[go.Figure, pd.Index]] = {}
+# Every market day fetched into `data/jao/`, newest first, each drawn at /jao/<day>. JAO's
+# terms forbid redistributing its rows, so the directory is gitignored and absent from the
+# deployed image: no days, no `/jao` links, and the rest of the app unaffected. `glob` on a
+# missing directory yields nothing, where `iterdir` would raise.
+JAO_DAYS = sorted((path.parent.name for path in jao.JAO_DIR.glob('*/elements.csv')), reverse=True)
+JAO_KEYS = {f'jao/{day}': day for day in JAO_DAYS}
+_cache: dict[str, tuple[go.Figure, pd.Index, int]] = {}
 _zones: dict[str, pd.DataFrame] = {}
 _geometries: dict[str, MappedCnecElements] = {}
 _cnec_days: dict[str, cnec_page.Day] = {}
@@ -55,14 +66,58 @@ def basemap() -> dict:
     return _basemap['dark']
 
 
-def figure_for(network_key: str) -> tuple[go.Figure, pd.Index]:
+def network_figure(network_key: str) -> tuple[go.Figure, pd.Index, int]:
+    n = NETWORK_LOADERS[network_key]()
+    fig = power_flow.colored_network_figure(n, 'net_power', mapbox_token())
+    fig.update_layout(
+        mapbox=dict(center=go.layout.mapbox.Center(lat=53, lon=9), zoom=3.9, pitch=60)
+    )
+    return fig, n.snapshots, power_flow.NUM_TRACES_PER_SNAPSHOT
+
+
+def jao_network(day: str) -> pypsa.Network:
+    """The unsimplified OSM topology, with `day`'s hours as its snapshots.
+
+    Deliberately never the day's solve. The map draws JAO's own limits and prices, and asks
+    the network only where a branch is and what it connects — which the topology carries and
+    a solve adds nothing to. Depending on one would have tied every day we can look at to a
+    day we can solve, and PyPSA-Eur's weather cutouts stop a year and a half short of today.
+
+    Simplification is the other reason. `cluster_network` merges the buses a solve runs on,
+    so a JAO element whose two substations land in one cluster has nowhere to be drawn; the
+    base network keeps every substation apart and every transformer alive.
+    """
+    n = networks.load(pypsa_eur.base_network())
+    n.set_snapshots(pypsa_eur.snapshots(MarketDay.on(day)))
+    return n
+
+
+def jao_figure(jao_day: str) -> tuple[go.Figure, pd.Index, int]:
+    """JAO's market day on our grid: which elements limited trade, hour by hour.
+
+    The sibling of `/cnec/<day>`, on the other grain: that page colours a whole bidding zone
+    by its price, this one colours the individual elements whose limits made those prices.
+    """
+    n = jao_network(jao_day)
+    day = jao.load_day(jao_day)
+    matches = substations.match(
+        pd.concat([day.elements.substation_from, day.elements.substation_to]).dropna(),
+        substations.bus_names(n),
+    )
+    matched = elements.branch_for(day.elements, matches, n)
+    fig = jao_map.figure(
+        n, matched, day.elements, day.shadow_prices, day.external_constraints,
+        mapbox_token(),
+    )
+    fig.update_layout(mapbox=dict(center=go.layout.mapbox.Center(lat=50.8, lon=15.0), zoom=4.6))
+    return fig, n.snapshots, jao_map.NUM_TRACES_PER_HOUR
+
+
+def figure_for(network_key: str) -> tuple[go.Figure, pd.Index, int]:
     if network_key not in _cache:
-        n = NETWORK_LOADERS[network_key]()
-        fig = power_flow.colored_network_figure(n, 'net_power', mapbox_token())
-        fig.update_layout(
-            mapbox=dict(center=go.layout.mapbox.Center(lat=53, lon=9), zoom=3.9, pitch=60)
+        _cache[network_key] = (
+            jao_figure(JAO_KEYS[network_key]) if network_key in JAO_KEYS else network_figure(network_key)
         )
-        _cache[network_key] = (fig, n.snapshots)
     return _cache[network_key]
 
 
@@ -116,7 +171,7 @@ def cnec_day(day: str) -> cnec_page.Day:
 
 def network_key_from_path(pathname: str) -> str:
     key = (pathname or '').strip('/')
-    return key if key in NETWORK_LOADERS else 'v1'
+    return key if key in NETWORK_LOADERS or key in JAO_KEYS else 'v1'
 
 
 def cnec_day_from_path(pathname: str) -> str | None:
@@ -158,7 +213,10 @@ app.layout = html.Div([
             dcc.Link('2013 model (v1)', href='/', style={'marginRight': '1em'}),
             dcc.Link('2013 OPF on the 2025 grid', href='/opf-2013', style={'marginRight': '1em'}),
             dcc.Link('2024 OPF on the 2025 grid', href='/opf-2024', style={'marginRight': '1em'}),
-            dcc.Link('Prices and binding CNECs', href=f'/{CNEC_ROUTE}'),  # No day: today's
+            dcc.Link('Prices and binding CNECs', href=f'/{CNEC_ROUTE}',
+                     style={'marginRight': '1em'}),  # No day: today's
+            *[dcc.Link(f"JAO's day, {day}", href=f'/jao/{day}', style={'marginRight': '1em'})
+              for day in JAO_DAYS],
         ],
         style={'padding': '0.4em 1em'}
     ),
@@ -177,7 +235,7 @@ def render(pathname: str, snapshot_index: int, slider_moved: bool) -> tuple:
     """Figure, slider state and status banner for one view; a failed load becomes the banner."""
     network_key = network_key_from_path(pathname)
     try:
-        fig, snapshots = figure_for(network_key)
+        fig, snapshots, traces_per_snapshot = figure_for(network_key)
     except Exception as e:  # noqa: BLE001 — every loader failure must reach the page
         logging.exception('Loading %s failed', network_key)
         return no_update, no_update, no_update, no_update, f'Could not load {network_key}: {e}', True
@@ -187,7 +245,10 @@ def render(pathname: str, snapshot_index: int, slider_moved: bool) -> tuple:
         idx: dict(label=str(snapshot.time()), style=dict(writingMode='vertical-rl'))
         for idx, snapshot in enumerate(snapshots)
     }
-    return power_flow.show_snapshot(fig, snapshot_index), len(snapshots) - 1, marks, snapshot_index, '', False
+    return (
+        power_flow.show_snapshot(fig, snapshot_index, traces_per_snapshot),
+        len(snapshots) - 1, marks, snapshot_index, '', False,
+    )
 
 
 @app.callback(
