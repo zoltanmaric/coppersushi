@@ -89,7 +89,8 @@ def _stamp(moment: pd.Timestamp) -> str:
 
 def _get(endpoint: str, start: pd.Timestamp, end: pd.Timestamp) -> list[dict]:
     """The rows of one page over `[start, end)`, refusing a truncated response."""
-    window = {"FromUtc": _stamp(start), "ToUtc": _stamp(end)}
+    # JAO requires a page size; its maximum keeps our bounded window in one response.
+    window = {"FromUtc": _stamp(start), "ToUtc": _stamp(end), "Take": 100_000_000}
     url = f"{BASE_URL}/{endpoint}?{urllib.parse.urlencode(window)}"
     logger.info("jao: GET %s %s..%s", endpoint, window["FromUtc"], window["ToUtc"])
     with urllib.request.urlopen(url, timeout=TIMEOUT_SECONDS) as response:
