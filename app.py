@@ -86,12 +86,14 @@ def cnec_geometries() -> MappedCnecElements:
         days = sorted(day.name for day in jao.JAO_DIR.iterdir() if jao.day_dir(day.name).is_dir())
         cached = [jao.load_day(day).element_ends for day in days if jao.has_day(day)]
         if not cached:
-            raise RuntimeError(
-                f'no JAO domain day cached under {jao.JAO_DIR}; run '
-                '`python -m coppersushi.data_sources.jao fetch <day>`'
+            logging.error(
+                'no JAO domain day cached under %s; run '
+                '`python -m coppersushi.data_sources.jao fetch <day>` and restart the app',
+                jao.JAO_DIR,
             )
+            raise RuntimeError('market data is unavailable')
         _geometries['core'] = cnec_geometry.locate_elements(
-            pd.concat(cached, ignore_index=True).drop_duplicates(['eic', 'tso'], keep='last'),
+            pd.concat(cached, ignore_index=True).drop_duplicates(['eic', 'tso', 'name'], keep='last'),
             osm_locator.read_csvs(),
             osm_locator.load_aliases(),
         )

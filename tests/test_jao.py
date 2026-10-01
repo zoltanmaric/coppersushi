@@ -49,10 +49,10 @@ def test_every_hourly_table_comes_back_with_its_zone(tmp_path):
     assert [str(frame.hour.dt.tz) for frame in hourly] == ["UTC"] * len(hourly)
 
 
-def test_element_ends_round_trip_one_row_per_publisher_and_element(tmp_path):
+def test_element_ends_round_trip_one_row_per_named_publication(tmp_path):
     day = written(tmp_path)
     assert list(day.element_ends.columns) == cnecs.END_COLUMNS
-    assert not day.element_ends.duplicated(["eic", "tso"]).any()
+    assert not day.element_ends.duplicated(["eic", "tso", "name"]).any()
 
 
 def test_an_old_cache_without_element_ends_is_not_a_complete_day(tmp_path, monkeypatch):
@@ -61,6 +61,43 @@ def test_an_old_cache_without_element_ends_is_not_a_complete_day(tmp_path, monke
     assert jao.has_day("any-day")
     (tmp_path / "element-ends.csv").unlink()
     assert not jao.has_day("any-day")
+
+
+def test_write_rejects_missing_publisher_endpoints(tmp_path):
+    day = written(tmp_path / "valid")
+    missing = day.elements.iloc[0]
+    ends = day.element_ends
+    incomplete = day._replace(element_ends=ends[
+        ~(ends.eic.eq(missing.eic) & ends.tso.eq(missing.tso) & ends.name.eq(missing["name"]))
+    ])
+    target = tmp_path / "invalid"
+    with pytest.raises(jao.InvalidDomainCache, match=f"{missing.eic}.*{missing.tso}"):
+        jao.write_day(target, *incomplete)
+    assert not target.exists()
+
+
+def test_read_rejects_missing_publisher_endpoints(tmp_path):
+    written(tmp_path)
+    path = tmp_path / "element-ends.csv"
+    pd.read_csv(path).iloc[0:0].to_csv(path, index=False)
+    with pytest.raises(jao.InvalidDomainCache, match="element ends missing"):
+        jao.read_day(tmp_path)
+
+
+def test_load_rejects_old_endpoint_schema_without_fetching(tmp_path, monkeypatch, caplog):
+    written(tmp_path)
+    path = tmp_path / "element-ends.csv"
+    pd.read_csv(path).drop(columns="name").to_csv(path, index=False)
+    monkeypatch.setattr(jao, "day_dir", lambda _: tmp_path)
+
+    def unexpected_fetch(_):
+        pytest.fail("domain cache recovery must be an explicit fetch")
+
+    monkeypatch.setattr(jao, "fetch_day", unexpected_fetch)
+    with pytest.raises(jao.InvalidDomainCache, match="^market data for 2030-01-15 is unavailable$"):
+        jao.load_day("2030-01-15")
+    assert "fetch 2030-01-15" in caplog.text
+    assert "restart the app" in caplog.text
 
 
 def test_the_disagreement_flag_survives_the_csv(tmp_path):

@@ -59,15 +59,16 @@ class Elements(pa.DataFrameModel):
 
 
 class ElementEnds(pa.DataFrameModel):
-    """One TSO's orientation of one physical element: the ends its DIRECT runs between.
+    """One TSO's orientation of one named element: the ends its DIRECT runs between.
 
     ``Elements`` folds the TSOs of a shared element into one row per hour, EIC and direction,
-    but each TSO's ``direction`` is relative to its own ``substation_from``, and two TSOs can
-    publish one tie-line from opposite ends. This table keeps every publisher's own ends.
+    but each TSO's ``direction`` is relative to its own ``substation_from``. The name is part
+    of the identity because one TSO can publish several legs of a Y-line under one EIC.
     """
 
     eic: Series[str]
     tso: Series[str]
+    name: Series[str]
     element_type: Series[str]
     substation_from: Series[str] = pa.Field(nullable=True)
     substation_to: Series[str] = pa.Field(nullable=True)
@@ -75,7 +76,7 @@ class ElementEnds(pa.DataFrameModel):
     class Config:
         strict = True
         coerce = True
-        unique = ["eic", "tso"]
+        unique = ["eic", "tso", "name"]
 
 
 class Contingencies(pa.DataFrameModel):
