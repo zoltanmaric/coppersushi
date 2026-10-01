@@ -42,10 +42,9 @@ conda activate coppersushi
 ```
 
 ### Mapbox Token
-The map background requires a (free) Mapbox access token.
-Register at [mapbox.com](https://www.mapbox.com/), then paste your token into
-a file at `.secrets/.mapbox_token`, or export it as `MAPBOX_TOKEN`. The app will
-not draw a map without it.
+A Mapbox access token is required to run the app. Tokenless startup is unsupported.
+Register for a free token at [mapbox.com](https://www.mapbox.com/), then paste it into
+`.secrets/.mapbox_token`, or export it as `MAPBOX_TOKEN`.
 
 Then you can start the server by running
 ```bash
@@ -80,7 +79,7 @@ python -m coppersushi.data_sources.jao fetch 2026-09-11
 pytest
 ```
 The tests run against small checked-in fixtures under `tests/fixtures/`, never against the
-networks, and need no Mapbox token: without one the figure builds but draws no map tiles.
+networks. Tests require no Mapbox token; they build figures without fetching map tiles.
 
 ## Solving a day with PyPSA-Eur
 The networks in `networks/` are produced by [PyPSA-Eur](https://github.com/PyPSA/pypsa-eur),
