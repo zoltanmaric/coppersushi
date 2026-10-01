@@ -169,7 +169,7 @@ app.layout = html.Div([
 @app.callback(Output('page', 'children'), Input('url', 'pathname'))
 def show_page(pathname: str):
     if is_cnec_path(pathname):
-        return cnec_page.layout(cnec_day_from_path(pathname))
+        return cnec_page.layout(cnec_day_from_path(pathname), mapbox_token())
     return network_layout()
 
 
