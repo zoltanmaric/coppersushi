@@ -45,6 +45,10 @@ JAO_DIR = REPO / "data" / "jao"
 TIMEOUT_SECONDS = 300
 
 
+class InvalidDomainCache(RuntimeError):
+    """Domain tables with missing or incompatible endpoint coverage."""
+
+
 class Day(NamedTuple):
     """One market day of JAO, as the five tables `cnecs` builds."""
 
@@ -170,9 +174,10 @@ def write_day(
     external_constraints: DataFrame[ExternalConstraintsWithPrices],
     element_ends: DataFrame[ElementEnds],
 ) -> Path:
-    """Write the five tables as CSV, creating the directory."""
+    """Write the five tables after checking endpoint coverage."""
+    tables = Day(elements, contingencies, shadow_prices, external_constraints, element_ends)
+    _check_domain_contract(tables)
     directory.mkdir(parents=True, exist_ok=True)
-    tables = (elements, contingencies, shadow_prices, external_constraints, element_ends)
     for name, frame in zip(Day._fields, tables):
         frame.to_csv(_path(directory, name), index=False)
     logger.info("jao: wrote %s", directory)
@@ -203,7 +208,9 @@ def read_day(directory: Path) -> Day:
             # column is read as text and converted here.
             frame = frame.assign(hour=pd.to_datetime(frame.hour, utc=True))
         frames.append(_restore_blanks(frame, model).pipe(model.validate))
-    return Day(*frames)
+    day = Day(*frames)
+    _check_domain_contract(day)
+    return day
 
 
 def read_active_day(directory: Path) -> ActiveDay:
@@ -231,7 +238,16 @@ def _restore_blanks(frame: pd.DataFrame, model: type) -> pd.DataFrame:
 
 
 def load_day(day: str) -> Day:
-    return read_day(day_dir(day))
+    """Read a cached domain day; repair is an explicit fetch followed by an app restart."""
+    try:
+        return read_day(day_dir(day))
+    except (InvalidDomainCache, OSError, ValueError, pa.errors.SchemaError) as error:
+        logger.error(
+            "invalid JAO domain cache for %s: %s; run "
+            "`python -m coppersushi.data_sources.jao fetch %s` and restart the app",
+            day, error, day,
+        )
+        raise InvalidDomainCache(f"market data for {day} is unavailable") from error
 
 
 def has_day(day: str) -> bool:
@@ -260,6 +276,23 @@ def load_active_day(day: str, refresh: bool = False) -> ActiveDay:
 
 def _path(directory: Path, name: str) -> Path:
     return directory / f"{name.replace('_', '-')}.csv"
+
+
+def _check_domain_contract(day: Day) -> None:
+    """Every publisher retained by a domain consumer must retain its oriented endpoints."""
+    priced = day.shadow_prices[day.shadow_prices.hour.isin(day.elements.hour)]
+    identity = ["eic", "tso", "name"]
+    required = pd.concat(
+        [day.elements[identity], priced[identity]], ignore_index=True
+    ).drop_duplicates()
+    present = day.element_ends[identity].drop_duplicates()
+    missing = required.merge(present, on=identity, how="left", indicator=True)
+    missing = missing[missing._merge.eq("left_only")]
+    if not missing.empty:
+        pairs = ", ".join(
+            f"{row.name} / {row.eic} ({row.tso})" for row in missing.itertuples()
+        )
+        raise InvalidDomainCache(f"element ends missing named publisher/EIC rows: {pairs}")
 
 
 if __name__ == "__main__":

@@ -74,6 +74,10 @@ python -m coppersushi.data_sources.osm_locator fetch
 python -m coppersushi.data_sources.jao fetch 2026-09-11
 ```
 
+Server operators: if the logs report an invalid domain cache, refetch the affected day with the
+command above and restart the server. Domain caches are read locally; fetching and refreshing them
+is explicit.
+
 ## Running the Tests
 ```bash
 pytest
