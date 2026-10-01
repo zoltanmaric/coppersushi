@@ -5,9 +5,15 @@
 run:
   name: coppersushi
 
-scenario:
-  clusters: [all]
-  opts: [""]
+foresight: overnight
+planning_horizons: [2024]
+
+sector:
+  enabled: false
+
+# Dispatch the historical fleet without imposing upstream's future CO2 trajectory.
+co2_budget:
+  upper: null
 
 # Upstream's default list plus Ukraine and Moldova, which the OSM grid covers.
 countries: [AL, AT, BA, BE, BG, CH, CZ, DE, DK, EE, ES, FI, FR, GB, GR, HR, HU, IE, IT, LT, LU, LV, MD, ME, MK, NL, "NO", PL, PT, RO, RS, SE, SI, SK, UA, XK]
@@ -51,8 +57,10 @@ load:
   supplement_synthetic: false
 
 clustering:
+  cluster_network:
+    n_clusters: all
   temporal:
-    resolution_elec: 1h  # JAO publishes hourly; at this resolution the mapping needs no rule
+    averaging: 1h  # JAO publishes hourly; at this resolution the mapping needs no rule
 
 solving:
   solver:

@@ -29,20 +29,21 @@ class Pin(NamedTuple):
 
 def solve(experiment: str | None = None) -> Path:
     """Run PyPSA-Eur with our config; the solved network becomes a candidate, kept but rejected if it sheds load."""
+    cfg = yaml.safe_load(CONFIG.read_text())
+    horizons = cfg["planning_horizons"]
+    if len(horizons) != 1:
+        raise ValueError(f"expected one planning horizon for a market-day solve, got {horizons}")
     pin, sibling = _read_pin(), _sibling_dir()
     _checkout(pin, sibling)
-    cmd = ["pixi", "run", "snakemake", "-call", "solve_elec_networks", "--configfile", str(CONFIG)]
+    cmd = ["pixi", "run", "snakemake", "-call", "solve_networks", "--configfile", str(CONFIG)]
     logger.info("pypsa-eur: `%s` in %s — a first run downloads ~20 GB and takes about an hour; snakemake narrates each rule",
                 " ".join(cmd), sibling)
     subprocess.run(cmd, cwd=sibling, check=True)
-    cfg = yaml.safe_load(CONFIG.read_text())
-    solved = sorted((sibling / "results" / cfg["run"]["name"] / "networks").glob("*.nc"))
-    if len(solved) != 1:
-        raise RuntimeError(f"expected exactly one solved network, found {solved}")
+    solved = sibling / "results" / cfg["run"]["name"] / "networks" / f"solved_{horizons[0]}.nc"
     day = MarketDay.containing(datetime.fromisoformat(cfg["snapshots"]["start"])).date.isoformat()
     candidate = networks.candidate(day, pin.sha, CONFIG.read_bytes(), experiment)
     candidate.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(solved[0], candidate)
+    shutil.copy2(solved, candidate)
     shedding.reject(networks.load(candidate))
     logger.info("pypsa-eur: done — candidate %s; sanction it with `promote` to make it the day's network", candidate.name)
     return candidate
