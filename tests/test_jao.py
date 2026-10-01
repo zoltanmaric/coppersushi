@@ -1,4 +1,6 @@
 import json
+from io import BytesIO
+from urllib.parse import parse_qs, urlsplit
 
 import pandas as pd
 import pytest
@@ -81,6 +83,24 @@ def test_the_day_fetched_is_the_market_day():
 
 def test_the_request_window_is_stamped_the_way_the_service_wants_it():
     assert jao._stamp(pd.Timestamp("2024-08-28T22:00:00Z")) == "2024-08-28T22:00:00.000Z"
+
+
+def test_the_live_request_includes_the_required_page_size(monkeypatch):
+    def urlopen(url, timeout):
+        query = parse_qs(urlsplit(url).query)
+        assert query == {
+            "FromUtc": ["2024-08-28T22:00:00.000Z"],
+            "ToUtc": ["2024-08-29T22:00:00.000Z"],
+            "Take": ["100000000"],
+        }
+        return BytesIO((FIXTURES / "active-fb-day.json").read_bytes())
+
+    monkeypatch.setattr(jao.urllib.request, "urlopen", urlopen)
+    assert jao._get(
+        "activeFbConstraints",
+        pd.Timestamp("2024-08-28T22:00:00Z"),
+        pd.Timestamp("2024-08-29T22:00:00Z"),
+    ) == rows("active-fb-day.json")
 
 
 def test_active_fb_tables_round_trip_at_quarter_hour_grain(tmp_path):
