@@ -47,6 +47,23 @@ def test_checkout_needs_a_git_checkout(tmp_path):
         pypsa_eur._checkout(pypsa_eur.Pin("url", "0" * 40), tmp_path)
 
 
+def test_solve_selects_the_requested_horizon_output(monkeypatch, tmp_path):
+    candidate = tmp_path / "candidate.nc"
+    copied = []
+    commands = []
+    monkeypatch.setattr(pypsa_eur, "_sibling_dir", lambda: tmp_path)
+    monkeypatch.setattr(pypsa_eur, "_checkout", lambda pin, sibling: None)
+    monkeypatch.setattr(pypsa_eur.subprocess, "run", lambda cmd, **kwargs: commands.append(cmd))
+    monkeypatch.setattr(pypsa_eur.networks, "candidate", lambda *args: candidate)
+    monkeypatch.setattr(pypsa_eur.shutil, "copy2", lambda source, dest: copied.append((source, dest)))
+    monkeypatch.setattr(pypsa_eur.networks, "load", lambda path: path)
+    monkeypatch.setattr(pypsa_eur.shedding, "reject", lambda network: None)
+
+    assert pypsa_eur.solve() == candidate
+    assert copied == [(tmp_path / "results/coppersushi/networks/solved_2024.nc", candidate)]
+    assert "solve_networks" in commands[0]
+
+
 def test_promote_copies_the_candidate_to_the_days_network(monkeypatch, tmp_path):
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     networks_dir = tmp_path / "networks"
