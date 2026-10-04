@@ -55,14 +55,6 @@ def test_element_ends_round_trip_one_row_per_named_publication(tmp_path):
     assert not day.element_ends.duplicated(["eic", "tso", "name"]).any()
 
 
-def test_an_old_cache_without_element_ends_is_not_a_complete_day(tmp_path, monkeypatch):
-    written(tmp_path)
-    monkeypatch.setattr(jao, "day_dir", lambda _: tmp_path)
-    assert jao.has_day("any-day")
-    (tmp_path / "element-ends.csv").unlink()
-    assert not jao.has_day("any-day")
-
-
 def test_write_rejects_missing_publisher_endpoints(tmp_path):
     day = written(tmp_path / "valid")
     missing = day.elements.iloc[0]
@@ -83,21 +75,6 @@ def test_read_rejects_missing_publisher_endpoints(tmp_path):
     with pytest.raises(jao.InvalidDomainCache, match="element ends missing"):
         jao.read_day(tmp_path)
 
-
-def test_load_rejects_old_endpoint_schema_without_fetching(tmp_path, monkeypatch, caplog):
-    written(tmp_path)
-    path = tmp_path / "element-ends.csv"
-    pd.read_csv(path).drop(columns="name").to_csv(path, index=False)
-    monkeypatch.setattr(jao, "day_dir", lambda _: tmp_path)
-
-    def unexpected_fetch(_):
-        pytest.fail("domain cache recovery must be an explicit fetch")
-
-    monkeypatch.setattr(jao, "fetch_day", unexpected_fetch)
-    with pytest.raises(jao.InvalidDomainCache, match="^market data for 2030-01-15 is unavailable$"):
-        jao.load_day("2030-01-15")
-    assert "fetch 2030-01-15" in caplog.text
-    assert "restart the app" in caplog.text
 
 
 def test_the_disagreement_flag_survives_the_csv(tmp_path):
@@ -159,3 +136,81 @@ def test_a_cache_from_an_older_adapter_is_fetched_again(tmp_path, monkeypatch):
     monkeypatch.setattr(jao, "fetch_active_day", lambda d: fetched.append(d) or active_written(directory))
     assert jao.load_active_day(day).constraints.source_id.is_unique
     assert fetched == [day]
+
+
+def test_endpoint_seed_is_validated_and_reused_across_days(tmp_path, monkeypatch):
+    monkeypatch.setattr(jao, "JAO_DIR", tmp_path)
+    day = written(tmp_path / "2024-08-29")
+    jao.seed_element_ends(["2024-08-29"])
+    monkeypatch.setattr(jao, "_get", lambda *a, **kw: pytest.fail("seed covers these elements"))
+    ends = jao.load_element_ends(pd.Timestamp("2024-09-01T12:00:00Z"), day.elements)
+    pd.testing.assert_frame_equal(ends, day.element_ends)
+    (tmp_path / "2024-08-29" / "element-ends.csv").unlink()
+    with pytest.raises(OSError):
+        jao.seed_element_ends(["2024-08-29"])
+    pd.testing.assert_frame_equal(jao.read_element_ends(), ends)
+
+
+@pytest.mark.parametrize("cache_state", ["absent", "old_schema", "empty", "incomplete"])
+def test_missing_endpoints_fetch_one_hour_then_survive_a_reload(tmp_path, monkeypatch, cache_state):
+    monkeypatch.setattr(jao, "JAO_DIR", tmp_path)
+    fc = rows("final-computation-hour.json")
+    required = cnecs.elements(fc)
+    ends = cnecs.element_ends(fc)
+    if cache_state == "old_schema":
+        ends.drop(columns="name").to_csv(tmp_path / "element-ends.csv", index=False)
+    elif cache_state == "empty":
+        (tmp_path / "element-ends.csv").touch()
+    elif cache_state == "incomplete":
+        jao.write_element_ends(ends.iloc[:1])
+    calls = []
+
+    def fetch(endpoint, start, end, timeout):
+        calls.append((endpoint, start, end))
+        return fc
+
+    monkeypatch.setattr(jao, "_get", fetch)
+    interval = pd.Timestamp("2024-08-29T00:15:00+02:00")
+    loaded = jao.load_element_ends(interval, required)
+    assert calls == [("finalComputation", interval.tz_convert("UTC").floor("h"),
+                      pd.Timestamp("2024-08-28T23:00:00Z"))]
+    pd.testing.assert_frame_equal(loaded.reset_index(drop=True), ends)
+    # A fresh read, including from another process, uses the successfully saved additions.
+    pd.testing.assert_frame_equal(jao.load_element_ends(interval, required), jao.read_element_ends())
+    assert len(calls) == 1
+
+
+def test_failed_endpoint_fetch_can_be_retried_without_restart(tmp_path, monkeypatch):
+    monkeypatch.setattr(jao, "JAO_DIR", tmp_path)
+    fc = rows("final-computation-hour.json")
+    ends = cnecs.element_ends(fc)
+    jao.write_element_ends(ends.iloc[:1])
+    before = (tmp_path / "element-ends.csv").read_bytes()
+
+    def offline(*args, **kwargs):
+        raise OSError("upstream unavailable")
+
+    monkeypatch.setattr(jao, "_get", offline)
+    interval = pd.Timestamp("2024-08-28T22:00:00Z")
+    with pytest.raises(RuntimeError, match="Please retry"):
+        jao.load_element_ends(interval, cnecs.elements(fc))
+    assert (tmp_path / "element-ends.csv").read_bytes() == before
+    monkeypatch.setattr(jao, "_get", lambda *a, **kw: fc)
+    assert len(jao.load_element_ends(interval, cnecs.elements(fc))) == len(ends)
+
+
+def test_incomplete_upstream_endpoints_are_an_error_not_an_unmapped_element(tmp_path, monkeypatch):
+    monkeypatch.setattr(jao, "JAO_DIR", tmp_path)
+    fc = rows("final-computation-hour.json")
+    required = cnecs.elements(fc).assign(name="missing from the publication")
+    monkeypatch.setattr(jao, "_get", lambda *a, **kw: fc)
+    with pytest.raises(RuntimeError, match="Please retry"):
+        jao.load_element_ends(pd.Timestamp("2024-08-28T22:00:00Z"), required)
+    assert not (tmp_path / "element-ends.csv").exists()
+
+
+def test_an_interval_without_binding_elements_does_not_fetch(tmp_path, monkeypatch):
+    monkeypatch.setattr(jao, "JAO_DIR", tmp_path)
+    monkeypatch.setattr(jao, "_get", lambda *a, **kw: pytest.fail("nothing to locate"))
+    required = cnecs.active_constraints(rows("active-fb-day.json")).iloc[:0]
+    assert jao.load_element_ends(pd.Timestamp("2024-08-28T22:00:00Z"), required).empty

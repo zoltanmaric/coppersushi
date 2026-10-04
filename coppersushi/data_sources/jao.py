@@ -15,6 +15,7 @@ Field meanings: `wiki/literature/jao-core-publication-handbook.md`. Design: `wik
 import json
 import logging
 import sys
+import tempfile
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -91,13 +92,15 @@ def _stamp(moment: pd.Timestamp) -> str:
     return moment.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
-def _get(endpoint: str, start: pd.Timestamp, end: pd.Timestamp) -> list[dict]:
+def _get(
+    endpoint: str, start: pd.Timestamp, end: pd.Timestamp, timeout: int = TIMEOUT_SECONDS,
+) -> list[dict]:
     """The rows of one page over `[start, end)`, refusing a truncated response."""
     # JAO requires a page size; its maximum keeps our bounded window in one response.
     window = {"FromUtc": _stamp(start), "ToUtc": _stamp(end), "Take": 100_000_000}
     url = f"{BASE_URL}/{endpoint}?{urllib.parse.urlencode(window)}"
     logger.info("jao: GET %s %s..%s", endpoint, window["FromUtc"], window["ToUtc"])
-    with urllib.request.urlopen(url, timeout=TIMEOUT_SECONDS) as response:
+    with urllib.request.urlopen(url, timeout=timeout) as response:
         payload = json.load(response)
     rows = payload["data"]
     check_complete(endpoint, rows, payload["totalRows"])
@@ -237,22 +240,63 @@ def _restore_blanks(frame: pd.DataFrame, model: type) -> pd.DataFrame:
     return frame.fillna(blanks)
 
 
-def load_day(day: str) -> Day:
-    """Read a cached domain day; repair is an explicit fetch followed by an app restart."""
+def read_element_ends() -> DataFrame[ElementEnds]:
+    """The small endpoint cache shared across delivery days."""
+    frame = pd.read_csv(JAO_DIR / "element-ends.csv")
+    return _restore_blanks(frame, ElementEnds).pipe(ElementEnds.validate)
+
+
+def write_element_ends(ends: DataFrame[ElementEnds]) -> Path:
+    """Replace one validated CSV atomically, so readers never see a half-written cache."""
+    ElementEnds.validate(ends)
+    JAO_DIR.mkdir(parents=True, exist_ok=True)
+    path = JAO_DIR / "element-ends.csv"
+    with tempfile.NamedTemporaryFile(dir=JAO_DIR, suffix=".csv", delete=False) as file:
+        temporary = Path(file.name)
     try:
-        return read_day(day_dir(day))
-    except (InvalidDomainCache, OSError, ValueError, pa.errors.SchemaError) as error:
-        logger.error(
-            "invalid JAO domain cache for %s: %s; run "
-            "`python -m coppersushi.data_sources.jao fetch %s` and restart the app",
-            day, error, day,
+        ends.to_csv(temporary, index=False)
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return path
+
+
+def seed_element_ends(days: list[str]) -> Path:
+    """Build a deployment seed from validated domain days; the latest day's ends win."""
+    ends = pd.concat([read_day(day_dir(day)).element_ends for day in sorted(days)], ignore_index=True)
+    ends = ends.drop_duplicates(["eic", "tso", "name"], keep="last")
+    if ends.empty:
+        raise InvalidDomainCache("endpoint seed is empty")
+    return write_element_ends(ends)
+
+
+def load_element_ends(interval: pd.Timestamp, required: pd.DataFrame) -> DataFrame[ElementEnds]:
+    """Use the seed, fetching only the viewed hour when an active element is absent.
+
+    The image carries the seed through dyno restarts. Runtime additions are disposable:
+    losing one only costs another hourly fetch, so no background job or lock is needed.
+    """
+    try:
+        ends = read_element_ends()
+    except (OSError, ValueError, pa.errors.SchemaError) as error:
+        logger.warning("jao: ignoring unusable endpoint cache: %s", error)
+        ends = pd.DataFrame(columns=cnecs.END_COLUMNS).pipe(ElementEnds.validate)
+    if _missing_element_ends(required, ends).empty:
+        return ends
+    # Work in UTC: flooring a local DST-change hour can be ambiguous.
+    hour = interval.tz_convert("UTC").floor("h")
+    try:
+        rows = _get("finalComputation", hour, hour + pd.Timedelta(hours=1), timeout=25)
+        fetched = cnecs.element_ends(rows)
+        combined = pd.concat([ends, fetched], ignore_index=True).drop_duplicates(
+            ["eic", "tso", "name"], keep="last"
         )
-        raise InvalidDomainCache(f"market data for {day} is unavailable") from error
-
-
-def has_day(day: str) -> bool:
-    """Whether every table of a cached domain day is on disk; an older cache may lack one."""
-    return all(_path(day_dir(day), name).is_file() for name in Day._fields)
+        _require_element_ends(required, combined)
+        write_element_ends(combined)
+    except Exception as error:
+        logger.exception("jao: endpoint fetch failed for %s", hour)
+        raise RuntimeError("Could not load line locations. Please retry.") from error
+    return combined
 
 
 def load_active_day(day: str, refresh: bool = False) -> ActiveDay:
@@ -285,9 +329,19 @@ def _check_domain_contract(day: Day) -> None:
     required = pd.concat(
         [day.elements[identity], priced[identity]], ignore_index=True
     ).drop_duplicates()
-    present = day.element_ends[identity].drop_duplicates()
-    missing = required.merge(present, on=identity, how="left", indicator=True)
-    missing = missing[missing._merge.eq("left_only")]
+    _require_element_ends(required, day.element_ends)
+
+
+def _missing_element_ends(required: pd.DataFrame, ends: pd.DataFrame) -> pd.DataFrame:
+    identity = ["eic", "tso", "name"]
+    missing = required[identity].drop_duplicates().merge(
+        ends[identity], on=identity, how="left", indicator=True
+    )
+    return missing[missing._merge.eq("left_only")]
+
+
+def _require_element_ends(required: pd.DataFrame, ends: pd.DataFrame) -> None:
+    missing = _missing_element_ends(required, ends)
     if not missing.empty:
         pairs = ", ".join(
             f"{row.name} / {row.eic} ({row.tso})" for row in missing.itertuples()
@@ -302,5 +356,10 @@ if __name__ == "__main__":
             fetch_day(day)
         case ["fetch-active", day]:
             fetch_active_day(day)
+        case ["seed", *days] if days:
+            seed_element_ends(days)
+        case ["check-seed"]:
+            if read_element_ends().empty:
+                sys.exit("endpoint seed is empty; run the seed command before building")
         case _:
-            sys.exit(f"usage: python -m {__spec__.name} {{fetch|fetch-active}} <day>")
+            sys.exit(f"usage: python -m {__spec__.name} {{fetch|fetch-active|seed}} <day> [days...] | check-seed")
