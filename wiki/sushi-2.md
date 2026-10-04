@@ -25,8 +25,9 @@ flowchart LR
     solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
     jao_active_constraints["jao_active_constraints<br/>post-auction binding constraints, shadow prices and zonal PTDFs by market time unit"]
     jao_domain["jao_domain<br/>final flow-based domain: monitored elements with their substation names, PTDFs and RAM"]
+    jao_endpoint_cache["jao_endpoint_cache<br/>validated seed bundled in the image; viewed-hour misses fetched and cached locally"]
     osm_locator["osm_locator<br/>core-tso-data's OSM-locator substation coordinates, unlicensed, fetched locally"]
-    cnec_geometry["cnec_geometry<br/>each element EIC placed by its published substation names; interim until jao_elements"]
+    cnec_geometry["cnec_geometry<br/>each named element and publisher placed by its published substations; interim until jao_elements"]
     zone_shapes["zone_shapes<br/>Core bidding-zone polygons read off solved_network's country shapes"]
     mapbox_basemap["mapbox_basemap<br/>Mapbox's dark style fetched per process, label layers removed"]
 
@@ -47,7 +48,9 @@ flowchart LR
     solved_network --> net_power_map
     solved_network --> zone_shapes
     zone_shapes --> cnec_price_figure
-    jao_domain --> cnec_geometry
+    jao_domain --> jao_endpoint_cache
+    jao_active_constraints --> jao_endpoint_cache
+    jao_endpoint_cache --> cnec_geometry
     osm_locator --> cnec_geometry
     cnec_geometry --> cnec_price_figure
     mapbox_basemap --> cnec_price_figure

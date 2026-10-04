@@ -38,7 +38,6 @@ CNEC_ROUTE = 'cnec'  # /cnec, or /cnec/<delivery day> to open on one day
 ZONE_SHAPES_FROM = '2024-08-29'  # Any solved network carries the same country polygons
 _cache: dict[str, tuple[go.Figure, pd.Index]] = {}
 _zones: dict[str, pd.DataFrame] = {}
-_geometries: dict[str, MappedCnecElements] = {}
 _cnec_days: dict[str, cnec_page.Day] = {}
 _basemap: dict[str, dict] = {}
 
@@ -74,28 +73,15 @@ def core_zones() -> pd.DataFrame:
     return _zones['core']
 
 
-def cnec_geometries() -> MappedCnecElements:
-    """Element geometry from every cached JAO domain day, not from the day on screen.
-
-    Which substations an element joins does not change by delivery day, while the domain
-    feed for the next day is published hours before its auction clears. Building geometry
-    from whatever days are cached therefore lets a day whose own domain feed is absent
-    still draw its binding elements. Where cached days disagree, the latest day's ends win.
-    """
-    if 'core' not in _geometries:
-        days = sorted(day.name for day in jao.JAO_DIR.iterdir() if jao.day_dir(day.name).is_dir())
-        cached = [jao.load_day(day).element_ends for day in days if jao.has_day(day)]
-        if not cached:
-            raise RuntimeError(
-                f'no JAO domain day cached under {jao.JAO_DIR}; run '
-                '`python -m coppersushi.data_sources.jao fetch <day>`'
-            )
-        _geometries['core'] = cnec_geometry.locate_elements(
-            pd.concat(cached, ignore_index=True).drop_duplicates(['eic', 'tso'], keep='last'),
-            osm_locator.read_csvs(),
-            osm_locator.load_aliases(),
-        )
-    return _geometries['core']
+def cnec_geometries(day: cnec_page.Day, interval_index: int) -> MappedCnecElements:
+    """Resolve the viewed interval before drawing; new endpoints must be visible immediately."""
+    intervals = day.market_day.market_time_units()
+    interval = intervals[min(max(interval_index, 0), len(intervals) - 1)]
+    required = day.constraints[day.constraints.interval.eq(interval)]
+    ends = jao.load_element_ends(interval, required)
+    return cnec_geometry.locate_elements(
+        ends, osm_locator.read_csvs(), osm_locator.load_aliases(),
+    )
 
 
 def cnec_day(day: str) -> cnec_page.Day:
@@ -105,7 +91,6 @@ def cnec_day(day: str) -> cnec_page.Day:
         _cnec_days[day] = cnec_page.Day(
             market_day=MarketDay.on(day),
             zones=core_zones(),
-            mapped_elements=cnec_geometries(),
             constraints=active.constraints,
             ptdfs=active.ptdfs,
             external_constraints=active.external_constraints,
@@ -206,8 +191,10 @@ def update_figure(pathname: str, snapshot_index: int):
 def render_cnec(day: str, interval_index: int, selected: str | None, reference_zone: str) -> tuple:
     """The CNEC page's map and controls for one day; a failed load becomes the banner."""
     try:
+        inputs = cnec_day(day)
         rendered = cnec_page.render(
-            cnec_day(day), interval_index or 0, selected, reference_zone, mapbox_token(), basemap()
+            inputs, cnec_geometries(inputs, interval_index or 0),
+            interval_index or 0, selected, reference_zone, mapbox_token(), basemap()
         )
     except Exception as e:  # noqa: BLE001 — every loader failure must reach the page
         logging.exception('Loading the CNEC day %s failed', day)
@@ -236,8 +223,9 @@ def render_cnec(day: str, interval_index: int, selected: str | None, reference_z
     Input('cnec-date', 'value'),
     Input('cnec-interval', 'value'),
     Input('cnec-constraint', 'value'),
-    Input('cnec-reference-zone', 'value'))
-def update_cnec(day: str, interval_index: int, selected: str | None, reference_zone: str):
+    Input('cnec-reference-zone', 'value'),
+    Input('cnec-retry', 'n_clicks'))
+def update_cnec(day: str, interval_index: int, selected: str | None, reference_zone: str, retries: int):
     return render_cnec(day, interval_index, selected, reference_zone)
 
 

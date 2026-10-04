@@ -72,7 +72,16 @@ names each element's substations:
 ```bash
 python -m coppersushi.data_sources.osm_locator fetch
 python -m coppersushi.data_sources.jao fetch 2026-09-11
+python -m coppersushi.data_sources.jao seed 2026-09-11
 ```
+
+The seed command validates the fetched domain day and writes `data/jao/element-ends.csv`.
+Supply several fetched days to combine their coverage; the latest day's endpoints win.
+The page reuses these endpoints across delivery days. If the viewed hour needs an element absent
+from the cache, it shows the loading indicator while fetching that hour and saves the additions.
+Failed fetches show an error: use **Retry** to try again, without restarting the server.
+An element whose endpoints are known but whose substations cannot be located remains explicitly
+unmapped; downloading the same endpoints again would not locate it.
 
 ## Running the Tests
 ```bash
@@ -106,10 +115,20 @@ committed version is a Git LFS object kept forever. Set `PYPSA_EUR_DIR` to use a
 
 ## Installation on Heroku
 The image is built from your working tree, so `git lfs pull` first: the build refuses LFS
-pointers. The token travels as a config var, never in the image (`.secrets/` is docker-ignored).
+pointers. Prepare the endpoint seed and OSM locator using the [market-data commands](#market-data)
+above before building. Docker includes only that seed and the locator CSVs from `data/` and
+validates both during the build. They survive dyno restarts as part of the image; runtime cache
+additions are disposable and may need another hourly fetch after a restart. Refresh the seed
+before subsequent deployments to retain broader coverage.
+
+Tokens travel as config vars, never in the image (`.secrets/` is docker-ignored).
 ```bash
 heroku config:set MAPBOX_TOKEN=<token>
+heroku config:set ELECTRICITY_MAPS_API_KEY=<key>
 heroku container:push web
 heroku container:release web
 ```
+Heroku's router can time out after 30 seconds. Gunicorn allows 90
+seconds so a slow request can finish saving its cache; **Retry** can then reuse it. There is no
+whole-day runtime fetch, background prefetcher, or additional cache service.
 (based on https://github.com/heroku-examples/python-miniconda)

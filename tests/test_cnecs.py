@@ -86,13 +86,27 @@ def test_element_ends_keep_each_tsos_own_orientation():
     """`Cindervale - Dunmoor` is published from Cindervale by MERIDIA and from Dunmoor by VOLTRA."""
     ends = cnecs.element_ends(final_computation())
     assert list(ends.columns) == cnecs.END_COLUMNS
-    assert not ends.duplicated(["eic", "tso"]).any()
+    assert not ends.duplicated(["eic", "tso", "name"]).any()
     both = ends[ends.eic.eq("99T1001C--00101B")].set_index("tso")
     assert both.loc["MERIDIA", "substation_from"] == "Cindervale"
     assert both.loc["VOLTRA", "substation_from"] == "Dunmoor"
 
 
-def test_one_tso_naming_two_pairs_for_one_element_is_refused():
+def test_one_tso_can_publish_separately_named_y_line_legs_under_one_eic():
+    feed = final_computation()
+    element = next(row for row in feed if row["cneEic"] == "99T-AA-BB-00003P")
+    other_leg = {
+        **element,
+        "cneName": "Y-Fernhollow (-Elmridge - Grayspire) 247",
+        "substationFrom": "Fernhollow",
+        "substationTo": "Grayspire",
+    }
+    ends = cnecs.element_ends(feed + [other_leg])
+    shared = ends[(ends.eic == element["cneEic"]) & (ends.tso == "AVALON")]
+    assert len(shared) == 2
+
+
+def test_one_named_element_with_two_pairs_is_refused():
     feed = final_computation()
     element = next(row for row in feed if row["cneEic"] == "99T-AA-BB-00003P")
     with pytest.raises(ValueError, match="99T-AA-BB-00003P"):

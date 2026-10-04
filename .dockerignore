@@ -1,9 +1,15 @@
-# The image gets the code, the config and the LFS-pulled networks; nothing else.
+# Only the endpoint seed and locator are included from downloaded data.
 .git
 .idea
 .secrets
 __pycache__
-data
+data/*
+!data/jao
+data/jao/*
+!data/jao/element-ends.csv
+!data/osm-locator
+data/osm-locator/*
+!data/osm-locator/*.csv
 specs
 worktrees
 wiki

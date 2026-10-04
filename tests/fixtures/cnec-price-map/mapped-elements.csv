@@ -1,2 +1,2 @@
-eic,tso,element_type,branch_id,branch_type,x0,y0,x1,y1,match_status,bus_source,score
-99T-AA-BB-00003P,AVALON,TieLine,synthetic/obersielach-podlog,Line,14.4,46.7,15.1,46.2,matched,exact,1.0
+eic,tso,name,element_type,branch_id,branch_type,x0,y0,x1,y1,match_status,bus_source,score
+99T-AA-BB-00003P,AVALON,Elmridge - Fernhollow 247,TieLine,synthetic/obersielach-podlog,Line,14.4,46.7,15.1,46.2,matched,exact,1.0

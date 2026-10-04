@@ -23,11 +23,10 @@ from coppersushi.market_day import MARKET_TZ, MarketDay
 
 @dataclass(frozen=True)
 class Day:
-    """All in-memory inputs for one delivery day's page."""
+    """Delivery-day inputs; geometry is resolved separately for the viewed interval."""
 
     market_day: MarketDay
     zones: pd.DataFrame
-    mapped_elements: DataFrame[MappedCnecElements]
     constraints: DataFrame[ActiveConstraints]
     ptdfs: DataFrame[ConstraintPtdfs]
     external_constraints: DataFrame[ActiveExternalConstraints]
@@ -86,10 +85,11 @@ def layout(day: str | None = None, mapbox_token: str | None = None) -> html.Div:
                         options=[{"label": zone, "value": zone} for zone in market.CORE_ZONES],
                         value="AT",
                     ),
+                    dbc.Button("Retry", id="cnec-retry", n_clicks=0, color="secondary"),
                 ],
                 style={
                     "display": "grid",
-                    "gridTemplateColumns": "12em minmax(24em, 1fr) 7em",
+                    "gridTemplateColumns": "12em minmax(24em, 1fr) 7em auto",
                     "gap": "0.6em",
                     "padding": "0.4em 1em",
                 },
@@ -156,6 +156,7 @@ def _constraint_options(constraints: pd.DataFrame) -> list[dict]:
 
 def render(
     day: Day,
+    mapped_elements: DataFrame[MappedCnecElements],
     interval_index: int,
     selected_source_id: int | None,
     reference_zone: str,
@@ -185,7 +186,7 @@ def render(
     )
     return Rendered(
         figure=cnec_price_map.figure(
-            day.zones, day.mapped_elements, snapshot, mapbox_token, basemap
+            day.zones, mapped_elements, snapshot, mapbox_token, basemap
         ),
         interval_max=len(intervals) - 1,
         interval_marks=interval_marks(day.market_day),

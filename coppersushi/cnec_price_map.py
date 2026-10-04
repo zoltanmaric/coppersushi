@@ -46,7 +46,9 @@ def _zone_centres(priced_zones: pd.DataFrame) -> pd.DataFrame:
 
 
 def _placed(constraints: pd.DataFrame, geometries: DataFrame[MappedCnecElements]) -> pd.DataFrame:
-    return constraints.merge(geometries, on=["eic", "tso"], how="left", validate="many_to_one")
+    return constraints.merge(
+        geometries, on=["eic", "tso", "name"], how="left", validate="many_to_one"
+    )
 
 
 def _hover(rows: pd.DataFrame) -> pd.Series:

@@ -1,7 +1,11 @@
 from dash import dcc, no_update
+import json
+import pandas as pd
 
 import app
-from coppersushi import cnec_page
+from coppersushi import REPO, cnec_page, cnecs
+from coppersushi.data_sources import jao, osm_locator
+from tests.test_cnec_page import inputs
 
 
 def test_failed_load_becomes_banner(monkeypatch):
@@ -46,6 +50,57 @@ def test_a_failed_cnec_day_becomes_banner(monkeypatch):
     *outputs, message, is_open = app.render_cnec("2024-08-29", 0, None, "AT")
     assert all(output is no_update for output in outputs)
     assert is_open and "no JAO domain day cached" in message
+
+
+def test_cnec_retry_draws_new_endpoints_without_reloading_the_day(tmp_path, monkeypatch):
+    day = inputs()
+    monkeypatch.setattr(app, "cnec_day", lambda _: day)
+    monkeypatch.setattr(app, "mapbox_token", lambda: "token")
+    monkeypatch.setattr(app, "basemap", lambda: "dark")
+    monkeypatch.setattr(jao, "JAO_DIR", tmp_path)
+    located = pd.read_csv(REPO / "tests/fixtures/cnec-price-map/located-substations.csv")
+    monkeypatch.setattr(osm_locator, "read_csvs", lambda: located)
+    monkeypatch.setattr(osm_locator, "load_aliases", lambda: {})
+
+    def offline(*args, **kwargs):
+        raise OSError("offline")
+
+    monkeypatch.setattr(jao, "_get", offline)
+    *_, message, is_open = app.update_cnec("2024-08-29", 0, None, "AT", 0)
+    assert is_open and "Please retry" in message
+    fc = json.loads((REPO / "tests/fixtures/synthetic-jao/final-computation-hour.json").read_text())["data"]
+    calls = []
+
+    def fetch(*args, **kwargs):
+        calls.append(args)
+        return fc
+
+    monkeypatch.setattr(jao, "_get", fetch)
+    figure, *_, message, is_open = app.update_cnec("2024-08-29", 0, None, "AT", 1)
+    assert not is_open and message == ""
+    assert "2 of 2 active rows mapped" in figure.layout.annotations[0].text
+    assert len(calls) == 1
+    app.update_cnec("2024-08-29", 0, "1", "BE", 1)
+    assert len(calls) == 1
+
+
+def test_only_the_viewed_intervals_missing_elements_are_fetched(monkeypatch):
+    day = inputs()
+    seen = []
+    fc = json.loads((REPO / "tests/fixtures/synthetic-jao/final-computation-hour.json").read_text())["data"]
+
+    def load(interval, required):
+        seen.append((interval, required))
+        return cnecs.element_ends(fc)
+
+    monkeypatch.setattr(jao, "load_element_ends", load)
+    monkeypatch.setattr(osm_locator, "read_csvs", lambda: pd.read_csv(
+        REPO / "tests/fixtures/cnec-price-map/located-substations.csv"
+    ))
+    monkeypatch.setattr(osm_locator, "load_aliases", lambda: {})
+    app.cnec_geometries(day, 1)
+    assert seen[0][0] == pd.Timestamp("2024-08-28T23:00:00Z")
+    assert seen[0][1].empty  # The day's binding rows belong to the preceding hour.
 
 
 def _components(component):
