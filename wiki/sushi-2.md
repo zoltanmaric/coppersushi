@@ -50,6 +50,15 @@ flowchart LR
     forecast_input_snapshot -.-> forecast_local_run
     forecast_local_run -.-> forecast_experiment
 
+    forecast_aws_infra["forecast_aws_infra<br/>Terraform-managed AWS resources, later stage"]:::planned
+    forecast_cloud_run["forecast_cloud_run<br/>Metaflow / Step Functions / AWS Batch on Fargate, deployment validation pending"]:::planned
+    forecast_daily_output["forecast_daily_output<br/>daily quantiles with input, code and model provenance"]:::planned
+
+    forecast_aws_infra -.-> forecast_cloud_run
+    forecast_input_snapshot -.-> forecast_cloud_run
+    forecast_experiment -.-> forecast_cloud_run
+    forecast_cloud_run -.-> forecast_daily_output
+
     pypsa_eur_pin --> pypsa_eur_run
     pypsa_eur_pin -.-> unsimplified
     unsimplified -.-> solved_network

@@ -202,3 +202,7 @@ Recorded the agreed [evaluation defaults](price-forecasting/evaluation.md#defaul
 ## [2026-10-09] decision | Forecast inputs in S3, local training first
 
 The [forecast infrastructure design](price-forecasting/forecast-infrastructure.md) selects fixed Parquet input snapshots in S3, local Metaflow execution and local MLflow experiment tracking. Storage follows batch access and reproducibility needs. Cloud scheduling, shared tracking and a separate catalog remain later decisions. The first iteration can evaluate models without deploying cloud compute.
+
+## [2026-10-09] decision | Forecast reproducibility and deployment principles
+
+The [infrastructure design](price-forecasting/forecast-infrastructure.md) makes exact provenance and one-command reproduction the forecast promise. Storage selection follows required reads and writes, with complexity justified by demonstrated needs. The later deployment preference is Metaflow with Step Functions and AWS Batch on Fargate, using Terraform for infrastructure; an end-to-end deployment check precedes adoption. The first iteration remains local execution with inputs in S3.
