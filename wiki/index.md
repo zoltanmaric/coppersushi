@@ -1,6 +1,9 @@
 # Wiki Index
 
 ## Concepts
+- [virtual-hub-interconnectors.md](virtual-hub-interconnectors.md) — explicit interface mapping, endpoint-price decomposition and remaining sign/scaling checks
+- [jao-constraint-types.md](jao-constraint-types.md) — row classification across physical assets, country caps, virtual hubs, equality and LTA constraints, with verified metadata gaps
+- [country-import-export-caps.md](country-import-export-caps.md) — all-Core country-cap coverage, price effects and the validated Polish alternative-price source
 - [copper-plate-problem.md](copper-plate-problem.md) — the EU market-design argument motivating this project (copper plate, redispatch, co-optimisation, locational pricing)
 - [flow-based-market-coupling.md](flow-based-market-coupling.md) — how cross-zonal capacity reaches the day-ahead market: NTC pipes versus Core's flow-based CNEC constraints, PTDF, RAM, shadow prices, and what a nodal OPF does and does not reproduce
 - [core-day-ahead-capacity-calculation.md](core-day-ahead-capacity-calculation.md) — how the August 2024 Core process turned grid models into auction constraints: actor map, vocabulary, one binding row carried through to its shadow price and zonal spread, the eleven-step chain and decision rights
@@ -24,18 +27,20 @@
 - [electricity-maps-api.md](electricity-maps-api.md) — Electricity Maps' v4 grid and market signals, this project's Core-wide price-forecast access, and why the data is not a bid curve
 - [backtest-2024-08-29.md](backtest-2024-08-29.md) — one solved day scored against JAO's binding CNECs and settled prices: what each config change bought, and what to fix next
 - [pypsa-eur-sibling.md](pypsa-eur-sibling.md) — PyPSA-Eur as a pinned sibling checkout: why not a submodule, fork refs and rules, the 2026-09-02 refresh record
-- [copper-sushi-app.md](copper-sushi-app.md) — what the app shows: the OPF map and the CNEC price-influence page, data provenance and caveats
+- [copper-sushi-app.md](copper-sushi-app.md) — the OPF and CNEC price-influence maps, data provenance, caveats, and the Lambda hosting direction
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026
 
 ## Specs (working memory — burn-down state, not settled knowledge)
+- [specs/cnec-constraint-selection.md](specs/cnec-constraint-selection.md) — direct map selection, signed constraint contributions and interval navigation
 - [specs/day-ahead-price-forecast.md](specs/day-ahead-price-forecast.md) — first forecast build: validated S3 snapshots, then local model/evaluation and reproducible experiment records
 - [specs/sushi-2.md](specs/sushi-2.md) — the Sep 11 cut: next steps and acceptance criteria
 - [specs/jao-grid.md](specs/jao-grid.md) — JAO's Core elements matched to our OSM grid: a map of what limited trade on a day, and true line and transformer limits from JAO's own numbers
 - [specs/architecture-review-graph.md](specs/architecture-review-graph.md) — lightweight architecture-review experiment: manual DAG, PR deltas, and an I/O-boundary test
 
 ## Literature (one digest per authoritative document, link only)
+- [literature/sdac-allocation-constraints-2026.md](literature/sdac-allocation-constraints-2026.md) — April 2026 Europe-wide inventory: Poland alone has an aggregate net-position cap; cable ramping and line sets are separate
 - [literature/core-da-ccm-explanatory-note.md](literature/core-da-ccm-explanatory-note.md) — Core TSOs' explanatory note on the flow-based capacity calculation methodology, June 2018, with what the amendments changed
-- [literature/jao-core-publication-handbook.md](literature/jao-core-publication-handbook.md) — JAO's Core publication tool handbook v1.8, Dec 2022: pages, columns, publication times
+- [literature/jao-core-publication-handbook.md](literature/jao-core-publication-handbook.md) — JAO's Core publication handbook v1.8 and v2.2: columns, publication times, country caps and FB/LTA scaling
 - [literature/euphemia-public-description.md](literature/euphemia-public-description.md) — the NEMOs' EUPHEMIA public description, Dec 2025: objective, network models, order types, algorithm
 
 ## Raw sources (immutable)

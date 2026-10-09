@@ -187,13 +187,45 @@ Review follow-up: the standard median of first-hour slack is 768 MW, the average
 
 core-capacity-calculation restructured and renamed core-day-ahead-capacity-calculation as the reference for the August 2024 process. An actor map leads into the vocabulary; one row, APG's Obersielach–Podlog tie-line under the outage of Maribor–Kainachtal 1, is read in dependency order on 2024-08-28 and 29, then carried through all fourteen net-position terms to binding, its shadow price and the exact €31.61/MWh Austria–Slovenia spread at 00:00. The eleven steps use a fixed actor, input, work, publication order; dataset-wide checks follow them. Lixhe–Gramme remains the worked minimum-margin lift. Verified on JAO's rows: `ram = fmax − frm − fcore + amr − cva − iva − fltn + ltaMargin` on all 116 presolved rows of the first hour; the minimum-RAM lift in its two-floor form, `minRamTarget = max(0.20, minRamFactor / 100 − fuaf / fmax)`, on all 11,560 non-equality rows; `fref = frefInit − fnrao` on all 7,019 rows with a remedial-action effect, with 3,512 negative and 3,507 positive values; `fmax = √3 · 400 kV · imax` on all 10,080 rows of the 380 kV level; `fcore = fref − Σ ptdf · NP` at D2CF's net positions with ALEGrO at its 713 MW reference flow, within 15 MW on all element rows. The 220 kV label is not one calculation voltage: 662 of 918 rows match 225 kV and 256 match 400 kV, but the page does not infer an unpublished calculation voltage from that pattern. Day to day: 479 of 487 elements, 97 % of rows and 89 of 108 presolved element rows shared between the two days. Goldfish reviews found what the first draft missed: the 116 presolved rows include four equality rows beside ALEGrO's four bounds; `fnrao` is signed relief; `ltaMargin` was zero everywhere and its exact role remains unstated; a binding facet outside the flow-based shadow-price feed has no published row; `frm` is the flat 10 % default; Poland's whole-market net position was capped every hour through the allocation-constraint feed; Coreso is the merging agent. The final pass also separated Core capacity calculation from Europe-wide zonal clearing, scoped the page explicitly to the hourly 2024 process, qualified the shadow price as a dual after order selection, and distinguished publication ownership: exchanges publish zonal prices; JAO publishes net positions, shadow prices and price spreads. New wiki rule `page-names`, after two generic names in one day.
 
+
+## [2026-10-04] decision | Lambda hosting direction
+
+Recorded the eventual Lambda and S3 direction in [copper-sushi-app](copper-sushi-app.md#hosting), separate from PR #95. The target is low idle cost and occasional visitors; roughly 30-second cache misses are acceptable, viral capacity and whole-day background fetching are not requirements. Migration still needs an end-to-end deployment check.
+
+
 ## [2026-10-09] decision | Independent day-ahead price forecast
 
 Established the `forecasts/` project: Germany–Luxembourg quarter-hour prices at an 11:00 German-local information cutoff, one CatBoost model with five quantiles and weighted interval score. Public fundamentals, fixed-lead weather, demand availability handling and chronological all-date evaluation form the first build. Filed the data checks and light evaluation contract, brought reusable diagnostic evidence into the repository, and added the dataset/evaluation implementation spec. Raw downloads remain ignored local inputs. This is a design handover; no quantile-model performance, competition participation or daily service is claimed.
 
+## [2026-10-09] ingest | Lovable CNEC interaction review
+
+Inspected the public WelfMaxxing port in Chrome: border, transformer and line-interior clicks select constraints and show comparison rays. Reproduced a stale tooltip across interval changes, incorrect export-cap wording using €/MWh, and ray labels without units. Recorded the port candidates and regression cases in the [port-back spec](specs/cnec-constraint-selection.md); source arithmetic and the feature subset remain to be checked and agreed.
+
+Agreed direct border/transformer/line selection, selected-border highlighting and comparison rays. The rays must isolate the selected constraint's signed contribution to the zonal price difference, including for border constraints; observed price spreads are not a substitute. Control layout and automatic versus explicit reference selection remain open. Captured the distinction between physical PTDFs and the coefficients of the actual border constraint, plus cancellation between contributions, in the spec.
+
+Added previous/next market-time-unit buttons and minor timeline ticks to the port scope; deferred collapsible controls. Reference-zone behaviour remains open.
+
+The border feature is defined by intent: highlight a country when its country-wide import/export cap binds, then show that cap's signed contribution to the price spread. Lovable's mapping of interconnector-labelled rows is not the specification. The remaining data question is availability of the intended cap and its published shadow price.
+
+The supplied Lovable implementation report identifies `activeFbConstraints` rows 286719, 286718 and 286717 at 2026-09-11 22:00 UTC (delivery day 2026-09-12, 00:00 CEST): SwePol, COBRA and ALEGrO export limits, with coefficient +1 respectively on `PL_SE4_SwePol`, `NL_DK1_COBRA` and `ALBE`, and zero on the Core-country hubs. This raw-row report has not been independently fetched. The supplied code maps names to country outlines and computes border rays as `price_other − price_reference`; physical-row rays instead use `-shadowPrice × (PTDF_zone − PTDF_reference)`. The former is the wrong quantity for the agreed feature.
+
+For those reported coefficient vectors, each row's direct contribution to a Core-country-pair spread is zero in this decomposition. That does not mean relaxing the cable cannot change the clearing outcome, nor that its shadow price alone is the complete cable-end country spread. [N-SIDE's AHC explanation](https://www.n-side.com/en/insights/introduction-of-advanced-hybrid-coupling-in-the-core-region-of-the-european-day-ahead-market/) distinguishes country-to-virtual-hub contributions from the interconnector and the other region's contributions. A row's signed coefficients must be verified before using an extra direction multiplier; the display's `OPPOSITE` label alone is not a reason to flip them again.
+
 ## [2026-10-09] query | Forecast implementation readiness
 
 [Reviewed the forecast handover](price-forecasting/evaluation.md#limitations) against its diagnostic scripts and provider documentation. Recommended the bounded research build, with the historical availability claim narrowed to match its evidence, prospective input snapshots, and fixed controls to separate price/calendar skill from weather and demand value. Archive-induced demand missingness can differ from live availability. These are review recommendations, not amendments to the agreed spec.
+
+## [2026-10-09] query | Country-cap duals and flow-based scaling
+
+Independently fetched the September 12 JAO rows: the three external rows limit virtual hubs, while Poland's aggregate allocation feed supplies limits without shadow prices. Filed the cap-sign algebra and source audit in [country import/export caps](country-import-export-caps.md). Cross-CCR `DA_PL_AC` is a possible adjusted-price source, but its `PL_ALT` definition is unconfirmed and 96 daily rows share only 24 timestamps. No reliable quarter-hour cap attribution is established from it.
+
+Corrected the earlier inference that the August 29 18:00 CEST spread lacked €113/MWh of published constraints: 595.318814 divided by JAO's α=0.8401168134 reproduces 708.61 €/MWh. This demonstrates the need to distinguish raw FB terms from normalized attribution; it does not establish a universal divide-by-α rule. Updated the fundamental pages and refocused the selection spec on intended behaviour, independent of the prototype implementation.
+
+## [2026-10-09] query | Polish cap attribution established empirically
+
+Compared cached quarter-hour prices and physical constraints against JAO feeds for six days: September 10, 12, 30 and October 2, 7, 8. Across 576 intervals, `market price − PL_ALT` is zero in all 341 slack intervals, negative in all 206 export-bound intervals and positive in all 29 import-bound intervals. Independently, `PL_ALT − Slovakia price` matches the alpha-normalized physical-constraint sum within €0.02/MWh in every interval. This supports using the difference as the Polish cap component without waiting for provider clarification.
+
+Recovered the truncated quarter-hour timestamps by ascending within-hour row ID, independently checked through net positions: 506 unique matches, no contradictions; chronological order is the only fixed permutation fitting each day. Documented guarded reconstruction and the limit of the inference: Poland is covered, other country caps are not established. Raw and derived price data remain in the ignored local cache; the wiki records aggregate validation only.
 
 ## [2026-10-09] decision | Forecast defaults and feature comparisons
 
@@ -214,3 +246,32 @@ The [forecast product overview](price-forecasting.md) owns its independent dataf
 ## [2026-10-09] decision | Point-in-time correctness as a forecast promise
 
 Elevated point-in-time correctness beside reproducibility in the forecast design. The input contract distinguishes valid time, source issue/update time and retrieval time, with explicit availability evidence. Acceptance now includes an adversarial leakage test against an enlarged candidate history, covering input selection, training labels and learned transformations. Historical timing assumptions remain visible in reports.
+## [2026-10-09] ingest | SDAC 2026 country-cap inventory
+
+The Market Coupling TSOs' April 2026 inventory lists Poland alone under net-position allocation constraints. TenneT's official notice ends the Dutch country cap on 2023-12-15. Corrected the interpretation of older handbook examples: absent Dutch/Belgian cap duals are not unexplained coverage gaps for 2026. Filed every Core bidding zone's status, including Luxembourg's shared zone with Germany, and distinguished cable ramping and Italy's line-set constraint from aggregate country caps.
+
+Corroboration: all non-Polish zones' price differences against Slovakia match the physical-constraint reconstruction within €0.02/MWh across the six cached days; the reference comparison is an identity. A wider scan completed 101 UTC days, 9,696 allocation rows with no Belgian cap and 35,081 active FB rows with no aggregate country external constraint. The full-year attempt encountered rate limiting and is not claimed complete. Verified the API's two-day range limit. Updated the spec to use Polish attribution and leave countries without aggregate caps unhighlighted.
+
+## [2026-10-09] query | Classifying every collected JAO row
+
+Corrected the overly narrow country-cap-versus-lines/transformers taxonomy. A complete 19,904-row final-domain interval on September 12 also contains 22 virtual-hub bounds and four coupling equalities. After joining cached types by EIC, 128 rows still lack an asset subtype and another 68 lack usable EIC/type/endpoints. Filed the taxonomy, counts and unresolved cases in [JAO constraint types](jao-constraint-types.md), with local per-row audit CSVs.
+
+Classified the 3,444 cached active physical rows: 114 rows across seven EICs retain subtype gaps. A separate October 8 active-LTA export has 42 of 49 rows with positive duals. The annual download attempt remains incomplete: bulk exports share the JSON API's two-day limit, and the earlier scan reached rate limiting. No full-year absence of unknown constraints is claimed.
+
+## [2026-10-09] query | Arithmetic attribution checks
+
+Checked all 38,016 Core zone-pair spreads across six cached days: alpha-normalized physical terms plus Poland's cap component agree within €0.02/MWh, maximum €0.01371/MWh. Seeded antisymmetry, additivity, reference/slack invariance and cap-complementarity checks pass. Removing the cap or alpha correction produces thousands of failures. Filed the empirical tolerance and the Polish-price dependency in [price attribution](flow-based-market-coupling.md#attribution-validation), rather than claiming a universal proof.
+
+For October 8, 568 positive LTA facets agree with `(1−α)` times the adjusted directed spread within the observed integer publication precision; 15 virtual-hub facets remain unchecked without hub prices. This supports the scaling interpretation and warns against adding two normalized representations of the same spread.
+
+## [2026-10-09] query | Complete paced annual constraint audit
+
+Completed 549 sequential public API requests for 2025-10-09–2026-10-09 UTC, with zero rate-limit responses. Verified all 35,040 allocation quarter-hours, FB published `totalRows`, absence of duplicate source rows and agreement between CSV and summary totals. Allocation and LTA omit `totalRows`; sparse LTA completeness is not independently established. The year contains 129,001 active FB rows, 35,040 allocation rows and 9,327 active LTA timestamp rows. Poland alone has aggregate country limits; the external FB rows are virtual-hub bounds.
+
+Filed 287,354 classified rows/facets and the audit scope in [JAO constraint types](jao-constraint-types.md#active-audit). Retained 4,448 physical rows across 22 EICs with unresolved subtypes. Clarified that “separate” means separate feeds, not absent from the year, and that an annual active-feed audit is not an exhaustive download of non-binding final domains or all SDAC mechanisms.
+
+## [2026-10-09] ingest | Virtual-hub mapping and endpoint attribution
+
+Filed the published Core interface mapping and N-SIDE's three-part price decomposition in [virtual-hub interconnectors](virtual-hub-interconnectors.md). Distinguish topology from validated direction and dual scaling, and retain adjacent bidding-zone identities. Zero Core-country coefficients do not establish zero contribution in an endpoint-to-endpoint decomposition. The annual sweep has positive virtual-hub bounds in 74.1% of intervals, including ALEGrO in 66.0%; interface frequencies overlap.
+
+Agreed automatic references: local bidding zone for in-zone assets, oriented sending endpoint for interconnectors, PL for the country cap. Added virtual-hub interface selection and validation of its endpoint-price contribution to the feature scope; equality and standalone LTA selection remain separate. Missing attribution never becomes an observed-spread fallback.
