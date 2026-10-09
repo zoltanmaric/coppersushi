@@ -287,3 +287,7 @@ Downloaded contiguous 11:00-cutoff chart windows for five participants. [Benchma
 ## [2026-10-09] decision | Forecast experiment history
 
 The [research-history design](price-forecasting/forecast-infrastructure.md#research-history) extends reproducible runs with proposals saved before execution, links to motivating experiments, and conclusions with evidence and decisions. MLflow holds this history; the wiki holds accepted design decisions. The harness is follow-up work after the first local baseline. Reused evaluation results are development evidence, not an untouched holdout.
+
+## [2026-10-09] decision | Experiment procedure belongs in a skill
+
+The [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) owns the procedure for proposals, evidence and conclusions, with a pointer in forecast agent instructions. Agents follow it manually; only automation remains follow-up work. The [infrastructure page](price-forecasting/forecast-infrastructure.md#research-history) retains the storage decision without repeating the procedure.
