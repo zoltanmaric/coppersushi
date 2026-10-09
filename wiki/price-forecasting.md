@@ -27,6 +27,9 @@ flowchart LR
     forecast_input_snapshot --> forecast_local_run
     forecast_local_run --> forecast_experiment
 
+    forecast_research_history["forecast_research_history<br/>workflow automation of agent experiment records, after continuation decision"]:::planned
+    forecast_experiment -.-> forecast_research_history
+
     forecast_aws_infra["forecast_aws_infra<br/>Terraform-managed AWS resources, later stage"]:::planned
     forecast_cloud_run["forecast_cloud_run<br/>Metaflow / Step Functions / AWS Batch on Fargate, deployment validation pending"]:::planned
     forecast_daily_output["forecast_daily_output<br/>daily quantiles with input, code and model provenance"]:::planned
