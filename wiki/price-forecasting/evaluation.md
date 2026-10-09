@@ -53,6 +53,8 @@ Fit three fixed feature sets with the same CatBoost settings, seed, training dat
 
 ## Reference
 
+[Energy-Arena history findings](energy-arena-benchmarks.md) identify a compatible external fundamentals forecast at our cutoff, with short coverage; the local reference below covers the full evaluation.
+
 The simple price estimate is the equal-weight average of yesterday's and last week's same-local-quarter prices. Apply the clock-matching rule above. If one price is missing, use the other; if both are missing, use the training-history median for that local quarter.
 
 Calculate historical errors as actual price minus that estimate, using training dates only. Replay the same missing-price rules; any median used for a historical estimate must use only earlier available history. Exclude initial rows with insufficient history from error estimation, not evaluation dates, and record their count.

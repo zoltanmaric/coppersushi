@@ -270,8 +270,16 @@ Completed 549 sequential public API requests for 2025-10-09–2026-10-09 UTC, wi
 
 Filed 287,354 classified rows/facets and the audit scope in [JAO constraint types](jao-constraint-types.md#active-audit). Retained 4,448 physical rows across 22 EICs with unresolved subtypes. Clarified that “separate” means separate feeds, not absent from the year, and that an annual active-feed audit is not an exhaustive download of non-binding final domains or all SDAC mechanisms.
 
+## [2026-10-09] query | Energy-Arena historical forecast benchmarks
+
+Verified challenge 8 and archived submission selection through the authenticated API. [Benchmark findings](price-forecasting/energy-arena-benchmarks.md) recommend Eiser's pre-11:00 fundamentals forecast: 20 completed eligible dates and our exact five quantiles. Its later EXAA versions must be excluded. The chart API also exposes evaluation-only histories, including NaiveBenchmark from January 15. Short Eiser coverage leaves the full-period local reference necessary.
+
 ## [2026-10-09] ingest | Virtual-hub mapping and endpoint attribution
 
 Filed the published Core interface mapping and N-SIDE's three-part price decomposition in [virtual-hub interconnectors](virtual-hub-interconnectors.md). Distinguish topology from validated direction and dual scaling, and retain adjacent bidding-zone identities. Zero Core-country coefficients do not establish zero contribution in an endpoint-to-endpoint decomposition. The annual sweep has positive virtual-hub bounds in 74.1% of intervals, including ALEGrO in 66.0%; interface frequencies overlap.
 
 Agreed automatic references: local bidding zone for in-zone assets, oriented sending endpoint for interconnectors, PL for the country cap. Added virtual-hub interface selection and validation of its endpoint-price contribution to the feature scope; equality and standalone LTA selection remain separate. Missing attribution never becomes an observed-spread fallback.
+
+## [2026-10-09] query | Longer Energy-Arena benchmark histories
+
+Downloaded contiguous 11:00-cutoff chart windows for five participants. [Benchmark findings](price-forecasting/energy-arena-benchmarks.md) establish BerriJ's 170 complete days from April 22 and NaiveBenchmark's 267 from January 15, through October 9; both omit the platform-excluded July 12. TelescopeEnergy has 100 eligible days, concentrated from July. BerriJ offers longer comparison coverage, but its model and input provenance remain undocumented.
