@@ -188,6 +188,7 @@ def evaluate(reader, config, output, restore_models=None):
                 record.update(target=reader.truth.get(stamp(row["delivery_utc"])), selected_model=chosen, fallback_reason=reason,
                               fold=fold.isoformat(),
                               **{k: v for k, v in row.items() if k.endswith(("_missing", "_unavailable")) or k == "demand_selected_update_utc"})
+                record["target_missing"] = int(record["target"] is None)
                 for name, q in ordered.items():
                     for j, quantile in enumerate(config["quantiles"]):
                         record[f"{name}_q{quantile}"] = float(q[i, j])
