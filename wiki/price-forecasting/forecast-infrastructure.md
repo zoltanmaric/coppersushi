@@ -6,6 +6,8 @@ Agreed direction, 2026-10-09; not implemented. This supports the [forecast desig
 
 Every forecast can explain exactly which data and code produced it, and an agent can reproduce it with one command. The run records the exact inputs, code, configuration and environment. Engineering quality means clear contracts, reliable execution and fast experiments.
 
+Every forecast uses only information available by its issue deadline. Historical evaluation follows the same rule; unverified availability is recorded as an assumption. Reproducing a result does not prove that it was free of future information. The [point-in-time contract](data-sources.md#point-in-time) defines eligibility.
+
 ### Selection-principle
 
 Choose storage from the reads and writes the system needs. Add complexity only for a demonstrated requirement.
@@ -40,7 +42,7 @@ snapshots/<snapshot-id>/manifest.json
 
 A snapshot is a fixed set of input files. Write new object keys for each snapshot and never overwrite a published one. Write its manifest last, after validation and upload. Readers require that manifest; an interrupted upload is not a usable snapshot. The manifest records schema version, exact file keys and checksums, row counts, time coverage and links to raw retrieval records. Training receives an explicit snapshot identifier, never a changing `latest` folder.
 
-Keep schemas in version-controlled Python: column types, nullability, units and row keys, checked before publication and after loading. Preserve delivery time, source issue/update time where supplied, retrieval time and timing-evidence status. Unknown historical publication time remains unknown; retrieval of an archive does not prove historical availability. Preserve source revisions, and apply the existing cutoff rules when constructing features.
+Keep schemas in version-controlled Python: column types, nullability, units and row keys, checked before publication and after loading. Preserve the timestamps, revisions and evidence required by the [point-in-time contract](data-sources.md#point-in-time); apply that contract when constructing features.
 
 One file per dataset per snapshot is the starting layout. At the initial data volume, prefer this to daily partitions and compaction jobs. Measure bytes and cold-load time before changing it. A reader loads the fixed files locally and then performs model-specific feature construction in Python. Training and prediction use the same reader and feature functions.
 

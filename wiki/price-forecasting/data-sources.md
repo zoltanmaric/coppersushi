@@ -2,6 +2,20 @@
 
 Data contract for the [price forecast](germany-luxembourg.md). Checks below were completed on 2026-10-01–08. Small scripts and results are in [forecast evidence](../../forecasts/evidence/README.md); downloaded inputs are local under ignored `data/forecasts/`.
 
+### Point-in-time
+
+Point-in-time correctness means selecting only the information available at the forecast's issue cutoff. Keep these times distinct, in UTC:
+
+| Time | Meaning |
+|---|---|
+| Valid/delivery time | When the value applies; it may be in the future for a weather or demand forecast. |
+| Source issue/update time | When the source issued this forecast or revision. This establishes public availability only if the source contract supports that interpretation. |
+| Retrieval time | When this system obtained this exact version. A later archive download does not prove earlier availability. |
+
+Retain source versions and record whether eligibility is witnessed, supported by documented timing, assumed, or unknown. Do not manufacture a publication timestamp from delivery time or a later download. Preserve the exact eligible version rather than replacing it with the archive's latest value. Apply each source's selection rule below; a newer model run is not a substitute for the specified fixed weather lead.
+
+For live forecasts, the input must have been retrieved by the actual issue time, which must be no later than the deadline. Historical replay may use the documented source screens and timing assumptions, but must disclose them. If no version qualifies under that declared policy, keep the input missing. A future valid time is allowed; future knowledge is not: tomorrow's weather forecast can be used, tomorrow's realised weather cannot.
+
 ### Prices
 
 [SMARD's Germany–Luxembourg price feed](https://www.smard.de/app/chart_data/4169/DE/index_quarterhour.json), filter `4169`, provides the weekly quarter-hour series. The diagnostic collector records the exact requests. October 2025–September 2026 contains 35,040 quarter-hours with native market resolution. Attribute Bundesnetzagentur | SMARD.de.

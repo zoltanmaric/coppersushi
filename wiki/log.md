@@ -210,3 +210,7 @@ The [infrastructure design](price-forecasting/forecast-infrastructure.md) makes 
 ## [2026-10-09] decision | Separate forecasting product architecture
 
 The [forecast product overview](price-forecasting.md) owns its independent dataflow graph. The power-flow product page contains only its own pipeline. Architecture deltas belong to the affected product; the root rule now expresses that boundary.
+
+## [2026-10-09] decision | Point-in-time correctness as a forecast promise
+
+Elevated point-in-time correctness beside reproducibility in the forecast design. The input contract distinguishes valid time, source issue/update time and retrieval time, with explicit availability evidence. Acceptance now includes an adversarial leakage test against an enlarged candidate history, covering input selection, training labels and learned transformations. Historical timing assumptions remain visible in reports.

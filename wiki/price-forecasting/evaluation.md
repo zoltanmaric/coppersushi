@@ -26,6 +26,8 @@ Report median-price mean absolute error, root mean squared error of that same me
 
 ## Replay
 
+Apply the [point-in-time contract](data-sources.md#point-in-time) to features, training-label versions, learned preprocessing and reference calibration at their respective issue or fit cutoffs. Later outcomes may enter scoring, but must never feed back into the historical forecast. Reports state which sources have witnessed availability and which rely on assumptions; a repeatable replay is not evidence of verified historical availability.
+
 - Fix the data snapshot, transformations, locations, training dates, monthly refit schedule, settings, seed and references before fitting. Freeze them in a saved run manifest. No test-guided feature or parameter search.
 - Train only on earlier dates and labels available by each fold's first forecast issue time. Recompute each day's price lags from information available by that day's 11:00 deadline, even while reusing a monthly fitted model. Any learned preprocessing uses training data only.
 - Keep UTC timestamps internally; derive German calendar features explicitly. Include the actual 92/96/100 quarter-hours on clock-change days and apply the [agreed defaults](#defaults).
