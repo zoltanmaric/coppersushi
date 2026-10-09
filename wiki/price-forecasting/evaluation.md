@@ -87,4 +87,6 @@ The [first fixed baseline report](../../forecasts/reports/evaluation.json) recor
 
 Both nominal uncertainty bands substantially under-cover. This is a measured calibration limitation, not a reason to retune the fixed baseline after viewing its scores. Historical availability remains assumed/conditional and the year is retrospective development evidence. Further experiments need the [continuation decision](germany-luxembourg.md#continuation) and the manual [forecast-experiment procedure](../../.agents/skills/forecast-experiment/SKILL.md); neither calibrated daily use nor trading value is established.
 
+MLflow research record `852ac19ec9f942f6931c3673a74750f7` links the accepted execution, earlier complete run, integration smoke run and interrupted attempt. Its rationale is explicitly retrospective: no proposal was saved before these executions. The conclusion recommends further investigation only if the continuation decision approves it.
+
 Local Metaflow and MLflow retain predictions, selected features/audit flags, models, reference calibration and full monthly/demand reports. One-command reproduction restored the saved committed code and frozen environment, loaded the snapshot from S3 and matched predictions/scores at the declared tolerance. [Setup and preservation requirements](../../forecasts/README.md#local-model-evaluation).
