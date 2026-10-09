@@ -188,8 +188,9 @@ def holidays(year):
     }
 
 
-def build_rows(prices, weather, demand, start=START, end=END):
+def build_rows(prices, weather, demand, start=START, end=END, targets=None):
     history = PriceHistory(prices)
+    targets = prices if targets is None else targets
     rows = []
     holiday_dates = set().union(*(holidays(y) for y in range(start.year, end.year + 1)))
     for timestamp in quarters(start, end):
@@ -198,7 +199,7 @@ def build_rows(prices, weather, demand, start=START, end=END):
         deadline = cutoff(day)
         row = {"delivery_utc": timestamp.isoformat(), "delivery_date": day.isoformat(), "issue_cutoff_utc": deadline.isoformat(),
                "utc_offset_minutes": int(local.utcoffset().total_seconds() / 60), "clock_fold": local.fold,
-               "price_eur_mwh": prices.get(timestamp), "target_missing": int(prices.get(timestamp) is None),
+               "price_eur_mwh": targets.get(timestamp), "target_missing": int(targets.get(timestamp) is None),
                "quarter_of_day": quarter, "day_of_week": local.weekday(), "month": local.month,
                "public_holiday": int(day in holiday_dates), "price_timing_assumed": 1,
                "weather_timing_assumed": 1, "demand_timing_conditional": 1}
@@ -275,16 +276,25 @@ def reconcile(counts, rows):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-root", type=Path, default=ROOT / "data/forecasts")
+    parser.add_argument("--snapshot", type=Path, help="Validated local snapshot loaded from S3; no source-provider calls")
     parser.add_argument("--output", type=Path, default=ROOT / "data/forecasts/dataset")
     args = parser.parse_args()
-    inputs = verify_payloads(args.data_root)
-    print("Verified three input snapshots", flush=True)
-    prices = load_prices(args.data_root / PAYLOADS["prices"])
-    design = json.loads((ROOT / "forecasts/evidence/forecast-bounded-evidence-20261007/design.json").read_text())
-    weather, metadata = load_weather(args.data_root / PAYLOADS["weather"], design["locations"])
-    demand = load_demand(args.data_root / PAYLOADS["demand"], START, END)
-    print("Loaded prices, fixed-lead weather and country demand", flush=True)
-    rows = build_rows(prices, weather, demand)
+    if args.snapshot:
+        from forecasts.snapshot import InputReader, read_local
+        manifest, tables = read_local(args.snapshot)
+        inputs = manifest["raw"]
+        metadata = {"snapshot_id": manifest["snapshot_id"]}
+        reader = InputReader(tables)
+        rows = reader.replay(START, END)
+        weather = reader.weather_fields
+    else:
+        inputs = verify_payloads(args.data_root)
+        print("Verified three input archives", flush=True)
+        prices = load_prices(args.data_root / PAYLOADS["prices"])
+        design = json.loads((ROOT / "forecasts/evidence/forecast-bounded-evidence-20261007/design.json").read_text())
+        weather, metadata = load_weather(args.data_root / PAYLOADS["weather"], design["locations"])
+        demand = load_demand(args.data_root / PAYLOADS["demand"], START, END)
+        rows = build_rows(prices, weather, demand)
     counts = summarize(rows, weather)
     expected = reconcile(counts, rows)
     args.output.mkdir(parents=True, exist_ok=True)
@@ -301,7 +311,7 @@ def main():
                                   "weather": "repeat UTC hours across quarters; radiation shifted back one hour; gaps missing",
                                   "demand": "latest retained nonmissing country version updated by preceding-day 11:00 Berlin",
                                   "calendar": "quarter of day, Monday=0 weekday, month, nationwide German holidays"},
-              "runtime": {"python": platform.python_version(), "dependencies": "standard library"},
+              "runtime": {"python": platform.python_version(), "inputs": "typed Parquet snapshot" if args.snapshot else "raw archive diagnostic"},
               "implementation_sha256": digest(Path(__file__)),
               "dataset": {"file": path.name, "sha256": digest(path), "columns": list(rows[0])}}
     (args.output / "report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")

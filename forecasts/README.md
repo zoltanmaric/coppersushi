@@ -1,54 +1,73 @@
 # Forecasts
 
-Germany–Luxembourg day-ahead price forecasting. Start with the [wiki handover](../wiki/price-forecasting/germany-luxembourg.md) and [implementation spec](../wiki/specs/day-ahead-price-forecast.md).
+Independent Germany–Luxembourg price forecasting. The [implementation spec](../wiki/specs/day-ahead-price-forecast.md) lists remaining work; the [infrastructure design](../wiki/price-forecasting/forecast-infrastructure.md) owns the storage contract.
 
-## Dataset
+## Setup
 
-Python 3.11 or newer with system IANA timezone data; no Python packages required. Run from the repository root:
+Python 3.11+ with IANA timezone data, AWS CLI v2 and an authenticated **user-local AWS profile**. Profile configuration and credentials belong outside this repository, normally in the user's AWS configuration directory. Never check in credentials, profile files, bucket names, Terraform state or account-specific settings. Generated inputs, snapshots, reports and environments stay in ignored `data/forecasts/`.
 
-```sh
-python3 -m forecasts.dataset
-python3 -m unittest discover -s forecasts/tests -v
-```
-
-The builder reads three immutable archives listed in the [payload manifest](evidence/payload-manifest.json): the bounded diagnostic's `inputs.zip`, weather compatibility's `responses.zip`, and `entsoe-files.zip`. Place them at their manifest paths under ignored `data/forecasts/`. A fresh clone needs the saved downloads; the [evidence instructions](evidence/README.md) describe the source collectors and demand access. Re-downloading mutable feeds may yield different hashes; the builder rejects that snapshot rather than silently changing the experiment.
-
-To reuse downloads from another checkout:
+From the repository root:
 
 ```sh
-python3 -m forecasts.dataset --data-root /absolute/path/to/other/checkout/data/forecasts
+python3 -m venv data/forecasts/venv
+data/forecasts/venv/bin/python -m pip --isolated install --index-url https://pypi.org/simple -r forecasts/requirements.txt
+data/forecasts/venv/bin/python -m unittest discover -s forecasts/tests -v
 ```
 
-Outputs stay under `data/forecasts/dataset/` (`--output` can override it): `quarters.csv` and `report.json`. Empty CSV cells are missing values. The report records source hashes, the weather request/retrieval, transformations, implementation hash, Python version, columns and output hash. [Verified counts](reports/dataset.json) reconcile with the evidence, including every day's demand screen. Prices are attributed to Bundesnetzagentur | SMARD.de.
+The Parquet dependency is pinned; snapshot manifests also record Python/PyArrow versions, the requirements hash, code revision and whether code was uncommitted. Exploratory snapshots are marked; they do not establish an accepted reproducible model run.
 
-Every delivery quarter is retained, including negative prices, missing features and the 92/100-quarter clock-change days. Local-clock lags average duplicated quarters and leave nonexistent quarters missing. Weather hours repeat across quarters; radiation moves back one hour. Country demand uses the latest retained nonmissing version updated by the preceding day's 11:00 German cutoff. Rejected versions retain their latest archived timestamp and version count for audit; their values never enter features. Missing flags and whole-day source availability support the later evaluation's fallback rules.
+## S3 inputs
 
-Targets, archive timestamps/version counts, and retrieval/clock metadata are audit fields, not model features. The next step must freeze explicit feature lists and training/evaluation dates before fitting.
+The input path stores three typed tables: `prices`, `weather` and `demand`. [Python schemas](schemas.py) define column types, nullability, units and row keys; validation runs before publication and after loading. Delivery/valid time, source update time and original retrieval time remain distinct. Unknown original timestamps remain null. Source versions and raw archive links are retained.
 
-Historical price publication/revision timing and original weather publication times remain unverified. Demand availability is conditional on the meaning of its update timestamp. Row flags and the report preserve these limits; this dataset does not establish a witnessed historical replay.
-
-## Private storage
-
-AWS CLI v2 and an authenticated **user-local AWS profile** are required. Keep profile configuration and credentials outside the repository, normally in the user's AWS configuration directory. Never check in credentials, profile files, account identifiers or account-specific resource state. The profile needs CloudFormation deployment and S3 bucket/object permissions for this stack. Local dataset builds do not need AWS.
+To collect the recorded year, place the three exact archives at their [manifest paths](evidence/payload-manifest.json), under `data/forecasts/`. The [evidence instructions](evidence/README.md) describe their sources. `--data-root` can reuse another checkout's downloads. Recollection from mutable feeds may produce different bytes; the recorded experiment requires matching archives or access to the private S3 snapshot.
 
 ```sh
-python3 -m forecasts.storage --profile YOUR_LOCAL_PROFILE provision
-python3 -m forecasts.storage --profile YOUR_LOCAL_PROFILE upload
+data/forecasts/venv/bin/python -m forecasts.snapshot --profile YOUR_LOCAL_PROFILE --bucket YOUR_PRIVATE_BUCKET collect --publish
 ```
 
-Provisioning can exceed a minute; use the repository's job-supervision workflow. The region defaults to `eu-west-1`; set `--region` before `provision` to override it. The [CloudFormation template](storage.json) creates one private S3 bucket: all public access blocked, ACLs disabled, AES256 encryption, versioning and a TLS-only policy. It retains the bucket on stack deletion and aborts incomplete multipart uploads after seven days. [AWS S3 CLI guidance](https://docs.aws.amazon.com/AmazonS3/latest/userguide/GettingStartedS3CLI.html).
-
-Provisioning verifies the deployed controls and saves the bucket name in ignored `data/forecasts/aws-storage.json`. Upload verifies inputs against the manifest and the dataset against its report, then uses content-hash keys under `inputs/` and `datasets/`. Conditional writes prevent overwrites; remote SHA-256 checksums and sizes are verified. Version IDs and keys go in ignored `data/forecasts/aws-upload.json`. No provider payloads or account-specific state are tracked. Upload also accepts `--data-root` and `--dataset-root`.
-
-An authorized fresh checkout can restore the exact input snapshots without provisioning another bucket. Obtain its private bucket name from the owner or the ignored local state:
+Use the printed snapshot ID explicitly:
 
 ```sh
-python3 -m forecasts.storage --profile YOUR_LOCAL_PROFILE restore --bucket YOUR_PRIVATE_BUCKET
-python3 -m forecasts.dataset
+data/forecasts/venv/bin/python -m forecasts.snapshot --profile YOUR_LOCAL_PROFILE --bucket YOUR_PRIVATE_BUCKET load SNAPSHOT_ID
+data/forecasts/venv/bin/python -m forecasts.dataset --snapshot data/forecasts/loaded-snapshot
 ```
 
-Restore checks each downloaded file against the tracked manifest before replacing a local input. It also accepts `--data-root`. Transfers may exceed a minute; use job supervision. Access to the owner's private bucket, or independently supplied matching snapshots, is required for this recorded experiment; AWS access and bucket names are not public repository assets.
+`--region` defaults to `eu-west-1`. Collection/publication accept `--directory`; loading also accepts it. A fresh checkout can load the selected snapshot directly, without raw downloads or source-provider requests.
 
-[Evidence](evidence/README.md) contains reusable collection/audit scripts and compact results. Downloaded inputs are under ignored `data/forecasts/`. The agreed model produces five price quantiles in one CatBoost fit; the wiki owns its design and evaluation contract.
+S3 keys follow the agreed layout:
 
-As of 2026-10-09, the dataset pipeline and private storage exist. Quantile fitting, its evaluation report and a daily runner remain separate steps.
+```text
+raw/<source>/<archive-sha256>/<archive-name>
+raw/<source>/<archive-sha256>/retrieval.json
+snapshots/<snapshot-id>/prices.parquet
+snapshots/<snapshot-id>/weather.parquet
+snapshots/<snapshot-id>/demand.parquet
+snapshots/<snapshot-id>/manifest.json
+```
+
+The manifest records schemas, checksums, row counts, time coverage, exact file keys and raw retrieval metadata links. Its content determines the snapshot ID. Publication verifies local and remote bytes and writes the manifest last. Conditional object creation prevents retrying from replacing a published object; a conflicting existing object is rejected. Loading requires the manifest and verifies every selected file. `load-report.json` records input bytes and cold-load duration; no cache or partition service is required.
+
+## Features
+
+The shared `InputReader.features()` path applies historical or live eligibility before calling ordinary feature functions. Replay joins retrospective price truth afterwards. It retains all delivery quarters, negative prices, missing inputs and 92/100-quarter clock-change days. Same-clock lags average duplicate quarters and leave nonexistent quarters missing; weather hours repeat across quarters, with radiation aligned back one hour. Country demand uses the latest nonmissing eligible update by the preceding day's 11:00 Berlin deadline.
+
+`forecasts.dataset --snapshot ...` writes a diagnostic `quarters.csv` and `report.json` under ignored `data/forecasts/dataset/`. These are feature/report outputs; the S3 input contract is the three Parquet tables. The raw-archive CLI remains available for evidence reconciliation. Targets, archive timestamps and audit metadata are not model features; explicit feature lists must be frozen before fitting.
+
+Historical price publication/revision timing and original weather publication times remain unverified. Demand timing depends on the meaning of its update timestamp. The manifest/report state these assumptions. Live selection requires an explicit actual issue timestamp, no later than the deadline, and rejects inputs retrieved or updated after it. Selector tests append late source revisions, realised weather and new labels, and retain a future-valid forecast retrieved before cutoff. The full test covering fitting, learned transformations, reference calibration and predictions remains part of the model step.
+
+## Infrastructure
+
+[Terraform](infra/main.tf) manages one private S3 bucket and its controls: all public access blocked, ACLs disabled, AES256 encryption, versioning, TLS-only access and seven-day abort of incomplete multipart uploads. Bucket destruction is prevented. No cloud compute, scheduling or orchestration is provisioned.
+
+Terraform 1.5+ and the user-local AWS profile are required. Keep state and variables local and ignored; preserve state to manage the same bucket later:
+
+```sh
+terraform -chdir=forecasts/infra init
+terraform -chdir=forecasts/infra apply -state="$PWD/data/forecasts/terraform.tfstate" -var=profile=YOUR_LOCAL_PROFILE
+terraform -chdir=forecasts/infra output -state="$PWD/data/forecasts/terraform.tfstate" -raw bucket_name
+```
+
+For an existing bucket, import the bucket and its public-access, ownership, encryption, versioning, lifecycle and policy resources before applying, with `-var=bucket_name=YOUR_PRIVATE_BUCKET`. Inspect the plan; adoption must not replace the bucket. [Terraform S3 import documentation](https://registry.terraform.io/providers/hashicorp/aws/5.100.0/docs/resources/s3_bucket).
+
+Uploads and provider installation may exceed a minute; follow the repository's job-supervision workflow. As of 2026-10-09, input collection/storage and feature replay are implemented. Local Metaflow training, MLflow comparisons, quantile fitting and accepted-run reproduction remain in the next spec step.

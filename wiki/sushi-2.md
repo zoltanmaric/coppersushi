@@ -41,10 +41,6 @@ flowchart LR
     jao_map["jao_map<br/>/cnec/&lt;day&gt;: cleared zonal prices, active CNECs and selected PTDF contribution"]
     trued_network["trued_network<br/>solved_network with JAO limits on matched lines and transformers, checked pairs attached"]:::planned
 
-    forecast_inputs["forecast_inputs<br/>hash-verified SMARD prices, fixed-lead weather and country demand snapshots"]
-    forecast_dataset["forecast_dataset<br/>forecasts.dataset: all delivery quarters, cutoff screen and missing flags"]
-    forecast_storage["forecast_storage<br/>private versioned S3 inputs and dataset outputs"]
-
     pypsa_eur_pin --> pypsa_eur_run
     pypsa_eur_pin -.-> unsimplified
     unsimplified -.-> solved_network
@@ -69,14 +65,9 @@ flowchart LR
     cnec_price_figure --> jao_map
     jao_elements -.-> trued_network
     solved_network -.-> trued_network
-    forecast_inputs --> forecast_dataset
-    forecast_inputs --> forecast_storage
-    forecast_dataset --> forecast_storage
 ```
 
-Map and power-flow code lives in `coppersushi/`, organised by domain noun; `io-boundary` in `coppersushi/AGENTS.md` names the two modules that touch the world.
-
-The independent price-forecast research pipeline lives in `forecasts/`; [dataset and storage commands](../forecasts/README.md) do not depend on the map or power-flow application.
+Code is one package, `coppersushi/`, organised by domain noun; `io-boundary` in `coppersushi/AGENTS.md` names the two modules that touch the world.
 
 ## Future chapters
 
