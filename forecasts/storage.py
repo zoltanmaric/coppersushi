@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import tempfile
 
 from forecasts.dataset import ROOT, PAYLOADS, digest, verify_payloads
 
@@ -20,6 +21,23 @@ def aws(profile, region, *args):
         env={**os.environ, "AWS_RETRY_MODE": "standard", "AWS_MAX_ATTEMPTS": "3"},
     )
     return json.loads(result.stdout) if result.stdout.strip() else {}
+
+
+def requires_tls(policy, bucket):
+    resources = {f"arn:aws:s3:::{bucket}", f"arn:aws:s3:::{bucket}/*"}
+    for statement in policy["Statement"]:
+        action = statement.get("Action")
+        resource = statement.get("Resource", [])
+        if isinstance(resource, str):
+            resource = [resource]
+        condition = statement.get("Condition", {})
+        if (statement.get("Effect") == "Deny"
+                and statement.get("Principal") in ("*", {"AWS": "*"})
+                and action in ("s3:*", ["s3:*"])
+                and resources.issubset(resource)
+                and condition in ({"Bool": {"aws:SecureTransport": "false"}}, {"Bool": {"aws:SecureTransport": False}})):
+            return True
+    return False
 
 
 def verify_bucket(profile, region, bucket):
@@ -37,8 +55,8 @@ def verify_bucket(profile, region, bucket):
         raise ValueError("S3 encryption differs from template")
     if versioning.get("Status") != "Enabled" or status["PolicyStatus"]["IsPublic"]:
         raise ValueError("S3 versioning/privacy differs from template")
-    if not any(s["Effect"] == "Deny" and s.get("Condition", {}).get("Bool", {}).get("aws:SecureTransport") in (False, "false") for s in policy["Statement"]):
-        raise ValueError("S3 TLS policy is missing")
+    if not requires_tls(policy, bucket):
+        raise ValueError("S3 policy does not require TLS for every principal, operation and bucket/object resource")
     return {"public_access_blocked": True, "acl_disabled": True, "encryption": "AES256", "versioning": "Enabled", "tls_required": True}
 
 
@@ -85,6 +103,31 @@ def upload(args):
     (args.state.parent / "aws-upload.json").write_text(json.dumps({"bucket": bucket, "objects": uploaded}, indent=2) + "\n")
 
 
+def restore(args):
+    manifest = json.loads((ROOT / "forecasts/evidence/payload-manifest.json").read_text())
+    expected = {p["path"].removeprefix("data/forecasts/"): p for p in manifest["payloads"]}
+    for relative in PAYLOADS.values():
+        entry = expected[relative]
+        path = args.data_root / relative
+        if path.exists() and path.stat().st_size == entry["bytes"] and digest(path) == entry["sha256"]:
+            print(f"Verified existing {path.name}", flush=True)
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as temporary:
+            downloaded = Path(temporary.name)
+        try:
+            key = f"inputs/{entry['sha256']}/{path.name}"
+            aws(args.profile, args.region, "s3api", "get-object", "--bucket", args.bucket,
+                "--key", key, "--checksum-mode", "ENABLED", str(downloaded))
+            if downloaded.stat().st_size != entry["bytes"] or digest(downloaded) != entry["sha256"]:
+                raise ValueError(f"Downloaded snapshot checksum mismatch: {relative}")
+            downloaded.replace(path)
+        finally:
+            downloaded.unlink(missing_ok=True)
+        print(f"Restored and verified {path.name}", flush=True)
+    verify_payloads(args.data_root)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile", required=True, help="User-local AWS CLI profile; never commit its configuration")
@@ -96,11 +139,14 @@ def main():
     transfer = sub.add_parser("upload")
     transfer.add_argument("--data-root", type=Path, default=ROOT / "data/forecasts")
     transfer.add_argument("--dataset-root", type=Path, default=ROOT / "data/forecasts/dataset")
+    download = sub.add_parser("restore")
+    download.add_argument("--bucket", required=True, help="Private bucket name supplied by its owner; never commit account-specific state")
+    download.add_argument("--data-root", type=Path, default=ROOT / "data/forecasts")
     args = parser.parse_args()
     # Account identifiers and resource names must stay in the ignored local data tree.
     if not args.state.resolve().is_relative_to((ROOT / "data/forecasts").resolve()):
         parser.error("--state must be inside this checkout's ignored data/forecasts directory")
-    provision(args) if args.command == "provision" else upload(args)
+    {"provision": provision, "upload": upload, "restore": restore}[args.command](args)
 
 
 if __name__ == "__main__":
