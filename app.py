@@ -5,8 +5,9 @@ from pathlib import Path
 import pandas as pd
 
 import plotly.graph_objects as go
-from dash import Dash, dcc, html, Input, Output, ctx, no_update
+from dash import Dash, dcc, html, Input, Output, State, ctx, no_update
 import dash_bootstrap_components as dbc
+from dash.exceptions import PreventUpdate
 
 from coppersushi import bidding_zones, cnec_geometry, cnec_page, map_style, power_flow
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
@@ -212,6 +213,49 @@ def render_cnec(day: str, interval_index: int, selected: str | None, reference_z
 
 
 @app.callback(
+    Output('cnec-active-ready', 'data'),
+    Input('cnec-date', 'value'),
+    Input('cnec-retry', 'n_clicks'))
+def load_cnec_constraints(day: str, retries: int) -> dict:
+    try:
+        jao.load_active_day(day)
+        return {'day': day, 'request': retries}
+    except Exception as error:
+        logging.exception('Loading CNEC constraints for %s failed', day)
+        return {'day': day, 'request': retries, 'error': str(error)}
+
+
+@app.callback(
+    Output('cnec-prices-ready', 'data'),
+    Input('cnec-active-ready', 'data'),
+    State('cnec-date', 'value'))
+def load_cnec_prices(active: dict | None, day: str) -> dict:
+    if not active or active['day'] != day:
+        raise PreventUpdate
+    if 'error' in active:
+        return active
+    try:
+        electricity_maps.load_day(day)
+        return active
+    except Exception as error:
+        logging.exception('Loading CNEC prices for %s failed', day)
+        return {**active, 'error': str(error)}
+
+
+app.clientside_callback(
+    """function(day, active, prices, retries) {
+        if (!active || active.day !== day || active.request !== retries) return 'Loading binding constraints…';
+        if (!prices || prices.day !== day || prices.request !== retries) return 'Loading prices for the 12 Core zones…';
+        return 'Locating binding lines and drawing the map…';
+    }""",
+    Output('cnec-progress', 'children'),
+    Input('cnec-date', 'value'),
+    Input('cnec-active-ready', 'data'),
+    Input('cnec-prices-ready', 'data'),
+    Input('cnec-retry', 'n_clicks'))
+
+
+@app.callback(
     Output('cnec-map', 'figure'),
     Output('cnec-interval', 'max'),
     Output('cnec-interval', 'marks'),
@@ -224,8 +268,12 @@ def render_cnec(day: str, interval_index: int, selected: str | None, reference_z
     Input('cnec-interval', 'value'),
     Input('cnec-constraint', 'value'),
     Input('cnec-reference-zone', 'value'),
-    Input('cnec-retry', 'n_clicks'))
-def update_cnec(day: str, interval_index: int, selected: str | None, reference_zone: str, retries: int):
+    Input('cnec-prices-ready', 'data'))
+def update_cnec(day: str, interval_index: int, selected: str | None, reference_zone: str, ready: dict | None):
+    if not ready or ready['day'] != day:
+        raise PreventUpdate
+    if 'error' in ready:
+        return (no_update,) * 6 + (f"Could not load {day}: {ready['error']}", True)
     return render_cnec(day, interval_index, selected, reference_zone)
 
 

@@ -1,4 +1,5 @@
 import json
+from threading import Barrier
 from pathlib import Path
 
 import pandas as pd
@@ -109,3 +110,34 @@ def test_a_damaged_cache_is_fetched_again(tmp_path, monkeypatch, damage):
 
 def test_stamp_is_utc_api_format():
     assert electricity_maps._stamp(pd.Timestamp("2024-08-28T22:00:00Z")) == "2024-08-28T22:00:00Z"
+
+
+def test_zone_requests_overlap_and_still_return_a_complete_day(monkeypatch):
+    payloads = json.loads((FIXTURES / "day-ahead-prices-core-day.json").read_text())
+    by_zone = {payload["zone"]: payload for payload in payloads}
+    all_started = Barrier(len(by_zone), timeout=5)
+
+    def get(zone, day, token):
+        all_started.wait()  # No response arrives until every request has started.
+        return by_zone[zone]
+
+    monkeypatch.setattr(electricity_maps, "_get", get)
+    prices = electricity_maps.fetch_day("2024-08-29", zones=tuple(by_zone), token="secret")
+    assert prices.groupby("zone").size().to_dict() == dict.fromkeys(by_zone, 24)
+
+
+def test_one_failed_zone_does_not_cache_a_partial_day(tmp_path, monkeypatch):
+    payloads = json.loads((FIXTURES / "day-ahead-prices-core-day.json").read_text())
+    by_zone = {payload["zone"]: payload for payload in payloads}
+    monkeypatch.setattr(electricity_maps, "CACHE_DIR", tmp_path)
+    monkeypatch.setattr(electricity_maps, "api_token", lambda: "secret")
+
+    def get(zone, day, token):
+        if zone == "BE":
+            raise OSError("prices unavailable")
+        return by_zone[zone]
+
+    monkeypatch.setattr(electricity_maps, "_get", get)
+    with pytest.raises(OSError, match="prices unavailable"):
+        electricity_maps.load_day("2024-08-29")
+    assert not electricity_maps.day_path("2024-08-29").exists()

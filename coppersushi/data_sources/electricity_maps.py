@@ -11,6 +11,7 @@ Authentication comes from ``ELECTRICITY_MAPS_API_KEY`` or the gitignored
 repository fixtures; cached CSVs live under ignored ``data/electricity-maps/``.
 """
 
+from concurrent.futures import ThreadPoolExecutor
 import json
 import logging
 import os
@@ -94,11 +95,14 @@ def fetch_day(
     """Fetch one Core market day's published prices, one per zone and market time unit."""
     market_day = MarketDay.on(day)
     credential = token or api_token()
-    payloads = []
-    for zone in zones:
+
+    def fetch_zone(zone):
         payload = _get(zone, market_day, credential)
         check_answered_as_asked(zone, market_day, payload)
-        payloads.append(payload)
+        return payload
+
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        payloads = list(pool.map(fetch_zone, zones))
     prices = market.day_ahead_prices(payloads)
     market.check_complete(prices, market_day, zones)
     return prices

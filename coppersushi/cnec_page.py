@@ -96,16 +96,20 @@ def layout(day: str | None = None, mapbox_token: str | None = None) -> html.Div:
             ),
             dbc.Alert(id="cnec-status", color="danger", is_open=False, style={"margin": "0 1em"}),
             dcc.Loading(
-                dcc.Graph(
-                    id="cnec-map",
-                    figure=empty_map(mapbox_token),
-                    style={"height": "100%"},
-                    config={"responsive": True, "displayModeBar": False, "scrollZoom": True},
-                ),
+                [
+                    dcc.Store(id="cnec-active-ready"),
+                    dcc.Store(id="cnec-prices-ready"),
+                    dcc.Graph(
+                        id="cnec-map",
+                        figure=empty_map(mapbox_token),
+                        style={"height": "100%"},
+                        config={"responsive": True, "displayModeBar": False, "scrollZoom": True},
+                    ),
+                ],
                 custom_spinner=html.Div(
                     [
                         html.Div(className="spinner-border spinner-border-sm", role="status"),
-                        html.Span("Loading market data…"),
+                        html.Span("Loading binding constraints…", id="cnec-progress"),
                     ],
                     style={"display": "flex", "gap": "0.6em", "alignItems": "center"},
                 ),

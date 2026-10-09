@@ -83,7 +83,7 @@ def test_layout_starts_with_a_visible_geographic_map_while_data_loads():
     assert graph.figure.layout.mapbox.accesstoken == "public-mapbox-token"
     assert graph.figure.layout.mapbox.center.lat == 50
     assert loading.overlay_style["visibility"] == "visible"
-    assert "Loading market data…" in {
+    assert "Loading binding constraints…" in {
         component.children
         for component in descendants(loading.custom_spinner)
         if isinstance(getattr(component, "children", None), str)
