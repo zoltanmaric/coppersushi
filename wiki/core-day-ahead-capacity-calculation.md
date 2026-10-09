@@ -62,7 +62,7 @@ Four rows beside the external constraints, pairs of ≤ 0 and ≥ 0 that made al
 
 ### Allocation-constraint
 
-A separate feed that can cap a zone's **whole-market** net position, including trade outside Core ([JAO's distinction](literature/jao-core-publication-handbook.md)). On 2024-08-29 Poland was capped in every hour and Belgium's import cap never applied.
+A separate feed that can cap a zone's **whole-market** net position, including trade outside Core ([JAO's distinction](literature/jao-core-publication-handbook.md)). On 2024-08-29 Poland had a published limit in every hour and Belgium's import cap never applied. Published limits do not establish binding; [country-cap attribution and data availability](country-import-export-caps.md) are separate questions.
 
 ### Rating
 
@@ -156,7 +156,7 @@ The 218 MW already flowing without Core exchange has been accounted for in the r
 
 The auction therefore chose a point exactly on this row's limit.
 
-The row alone determines neither whether it binds nor the zonal prices. EUPHEMIA accepts supply and demand bids; the accepted supply minus demand in each zone determines its net position. If more welfare-improving trade would push `PTDF × net positions` above `RAM`, the auction stops at that limit and the row becomes binding. At the optimum, the dual of each zone's balance—the marginal value of one more MWh in that zone—is its price; the dual of the row is its shadow price, the value of one more MW of RAM. With no binding trade constraint, connected zones share one marginal price. Each binding row changes zone `z` from that common energy component by `− shadow price × PTDF_z`: bids set the energy value and binding constraints create the zonal differences.
+The row alone determines neither whether it binds nor the zonal prices. EUPHEMIA accepts supply and demand bids; the accepted supply minus demand in each zone determines its net position. If more welfare-improving trade would push `PTDF × net positions` above `RAM`, the auction stops at that limit and the row becomes binding. At the optimum, the dual of each zone's balance—the marginal value of one more MWh in that zone—is its price; the dual of the row is its shadow price, the value of one more MW of RAM. With no binding trade constraint, connected zones share one marginal price. In the FB-only formulation, each binding row changes zone `z` from that common energy component by `− shadow price × PTDF_z`. Extended-LTA clearing requires the [scaling qualification](flow-based-market-coupling.md#price-contribution).
 
 ## Binding
 
@@ -170,7 +170,7 @@ At 13:00 on 28 August JAO published the rows that the auction had used to the la
 
 Binding means equal, not close: the chosen net positions used all 175 MW of the Obersielach row's room. In EUPHEMIA's price calculation, one more MW was worth €156.83. Of the hour's other 106 element rows, none was at its limit; across all 108 their slack ran from 0 to 3,066 MW, with a median of 768 MW.
 
-The same three rows also explain the zonal price split. JAO defines `border_AT_SI` as `price_SI − price_AT`. Relative to the common energy component, Obersielach shifts Austria's price by `−156.83 × 0.08888 = −13.94 €/MWh` and Slovenia's by `−156.83 × (−0.05197) = +8.15 €/MWh`; their difference is `156.83 × (0.08888 − (−0.05197)) = 22.09 €/MWh`. Nosovice–Varin contributes another €9.52/MWh and the ALEGrO bound contributes zero. Together they reproduce the published €31.61/MWh spread to the cent. At 18:00 CEST, the day's busiest hour with seven binding rows, Obersielach had only 100 MW of room and a €4,325/MW shadow price. It contributed about €627/MWh; all seven published binding-row terms netted to about €595/MWh, leaving about €113/MWh of the published €709/MWh spread unexplained by those rows. The full calculation is on [flow-based-market-coupling](flow-based-market-coupling.md).
+The same three rows also explain the zonal price split. JAO defines `border_AT_SI` as `price_SI − price_AT`. Relative to the common energy component, Obersielach shifts Austria's price by `−156.83 × 0.08888 = −13.94 €/MWh` and Slovenia's by `−156.83 × (−0.05197) = +8.15 €/MWh`; their difference is `156.83 × (0.08888 − (−0.05197)) = 22.09 €/MWh`. Nosovice–Varin contributes another €9.52/MWh and the ALEGrO bound contributes zero. Together they reproduce the published €31.61/MWh spread to the cent. At 18:00 CEST, the seven raw terms total €595.318814/MWh. Dividing by the published α=0.8401168134 reproduces the €708.61/MWh spread to the cent. The [scaling audit](flow-based-market-coupling.md#price-contribution) explains why raw FB terms alone must not be assumed to exhaust every interval's spread.
 
 ## The chain, step by step
 
@@ -241,7 +241,7 @@ These checks use JAO's rows for 2024-08-29 unless noted otherwise.
 - **Step 4:** The methodology provides for a yearly statistical reliability margin per element, reducible by a TSO to between 5 and 20 % of the rating; every published row on both sampled days carried the flat default of 10 % of `fmax`. For lines and tie-lines labelled 380 kV, `fmax` matched `√3 · 400 kV · imax` on all 10,080 sampled rows. Rows labelled 220 kV were mixed: 662 of 918 matched the identity at 225 kV, including Obersielach, while 256 matched it at 400 kV. JAO does not publish the reason for either calculation voltage.
 - **Step 6:** `fref = frefInit − fnrao` on all 7,019 rows with a non-zero `fnrao`; `fnrao` was positive on 3,507 and negative on 3,512, so it is a signed change rather than a relief-only field. `fcore` also equals `fref` minus the aligned net positions' PTDF contribution, with the ALEGrO hubs at the cable's 713 MW reference flow that hour, carried as `fref` by `BE_AL_export`. The identity was within 15 MW on all 11,554 element rows of the first hour and within 5 MW on 88 %. Rounded D2CF net positions explain a few megawatts of the residual; the rest is unexplained.
 - **Step 7:** `minRamTarget = max(0.20, minRamFactor / 100 − fuaf / fmax)` on all 11,560 non-equality rows of the first hour; `amr = max(0, minRamTarget · fmax − (fmax − frm − fcore))` was within 2 MW on all but six. `minRamFactor` was 70 % for about half the presolved rows and 20–62 % for the rest.
-- **Step 8:** A binding facet of the long-term domain has no shadow-price row, one candidate for the unlisted part of the spread identity on [flow-based-market-coupling](flow-based-market-coupling.md).
+- **Step 8:** The flow-based shadow-price feed alone does not describe the whole extended-LTA domain. Account for the published α and distinguish FB from LTA duals when interpreting [price contributions](flow-based-market-coupling.md#price-contribution).
 - **Step 9:** Of 11,564 rows, 116 survived presolve: 108 element rows, four external constraints and four equality rows. `cva` was zero on all 116; `iva` was non-zero on four.
 - **Step 10:** `fltn` was non-zero on 3,981 rows of the first hour, while `ltaMargin` was zero on every row of both days. The full final-RAM identity above held exactly on all 116 presolved rows of the first hour.
 

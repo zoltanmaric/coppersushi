@@ -2,7 +2,7 @@
 
 **Issued by** JAO, the Joint Allocation Office, as the handbook Article 25 of the Core day-ahead capacity calculation methodology requires alongside the publication platform. Version 1.8, December 2022: [PDF, 29 pages](https://publicationtool.jao.eu/PublicationHandbook/Core_PublicationTool_Handbook_v1.8.pdf). It is the data dictionary for [publicationtool.jao.eu/core](https://publicationtool.jao.eu/core/) and its web service at `/core/api`. An intraday counterpart exists ([Core IDCC handbook v1.6, October 2025](https://www.jao.eu/sites/default/files/2025-10/Core_IDCC_PublicationTool_Handbook_v1.6.pdf)).
 
-**Draws on it:** [specs/jao-grid](../specs/jao-grid.md), [specs/core-congestion-forecast](../specs/core-congestion-forecast.md), [core-day-ahead-capacity-calculation](../core-day-ahead-capacity-calculation.md).
+**Draws on it:** [specs/jao-grid](../specs/jao-grid.md), [core-day-ahead-capacity-calculation](../core-day-ahead-capacity-calculation.md).
 
 ## What it settles
 
@@ -22,7 +22,7 @@
 
 **RefProg** gives the exchanges assumed when merging: Core-to-Core from the merged model's net positions, DC links from the individual models, Core-to-Swiss and Core-to-Italian from a forecast tool, all others from a reference day.
 
-**External constraints** appear inside the domain when they cap the Core net position (Netherlands) and as a separate allocation-constraints feed when they cap the whole-market net position (Belgium import, Poland both ways).
+**External constraints:** the handbook describes Core-net-position caps inside the domain (Netherlands) and whole-market caps in a separate allocation feed (Belgium import, Poland both ways). These examples describe mechanisms, not proof that each cap is used in 2026; the [2026 country inventory](../country-import-export-caps.md#country-coverage) owns applicability.
 
 **Naming.** Lines as `SUBSTATION-SUBSTATION voltage.circuit`, e.g. `AVELGEM-HORTA 380.101`; phase shifters as `PST NAME n`; tripods with a leading `Y-`. Remedial actions as `TOP_OPEN_`, `TOP_CLOSE_`, `TOP_2N_`, `PST_`, `SPS`, `AT_` prefixes, optionally suffixed `_PRA` or `_CRA`.
 
@@ -39,3 +39,7 @@ The handbook documents the pages. The web service, `/core/api/data/<page>?FromUt
 - `d2CF` and `netPos` are one row per hour with one column per hub.
 
 Nothing in it ties an element to coordinates; substations are names only.
+
+## Version-2.2
+
+The [July 2024 v2.2 handbook](https://publicationtool.jao.eu/PublicationHandbook/Core_PublicationTool_Handbook_v2.2.pdf) adds relevant detail: §5.30 documents the FB/LTA alpha factor; §5.15 distinguishes Core and whole-SDAC caps. `hubFrom`/`hubTo` identify the maximum zone-to-zone PTDF exchange, not physical element endpoints. The [country-cap API audit](../country-import-export-caps.md#public-data) and [spread-scaling audit](../flow-based-market-coupling.md#price-contribution) cover checks made on 2026-10-09; the hourly API observations above describe the 2024 sample, not a guarantee for quarter-hour feeds.
