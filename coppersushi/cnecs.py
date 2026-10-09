@@ -239,7 +239,7 @@ def active_constraints(rows: list[dict]) -> DataFrame[ActiveConstraints]:
         "source_id", "interval", "eic", "name", "tso", "direction", "cont_name", "branch_eic",
         "hub_from", "hub_to", "shadow_price", "ram", "ram_mcp",
     ]
-    active = frame[columns].reset_index(drop=True)
+    active = frame.assign(capacity=frame.get("fmax", float("nan")))[columns + ["capacity"]].reset_index(drop=True)
     repeated = active[active.duplicated(ACTIVE_KEYS, keep=False)]
     if not repeated.empty:
         names = ", ".join(sorted(set(repeated.name)))
@@ -248,10 +248,10 @@ def active_constraints(rows: list[dict]) -> DataFrame[ActiveConstraints]:
 
 
 def constraint_ptdfs(rows: list[dict]) -> DataFrame[ConstraintPtdfs]:
-    """Every physical active flow-based row's PTDF vector, in long Core-zone form."""
+    """Every physical active row’s Core and virtual-hub PTDF vector in long form."""
     frame = _physical(_frame(rows)).rename(columns={"hour": "interval"})
-    hub_columns = {f"hub_{zone}": zone for zone in CORE_ZONES}
-    missing = sorted(set(hub_columns) - set(frame.columns))
+    hub_columns = {column: column[4:] for column in frame if column.startswith("hub_") and column not in {"hub_from", "hub_to"}}
+    missing = sorted({f"hub_{zone}" for zone in CORE_ZONES} - set(frame.columns))
     if missing:
         raise ValueError(f"active flow-based response is missing Core PTDF columns: {missing}")
     ptdfs = frame[ACTIVE_PTDF_COLUMNS + list(hub_columns)].melt(
@@ -269,7 +269,14 @@ def active_external_constraints(rows: list[dict]) -> DataFrame[ActiveExternalCon
     frame = _frame(rows)
     frame = frame[_is_non_physical(frame)].rename(columns={"hour": "interval"})
     frame = frame.assign(tso=normalise_tso(frame.tso))
-    columns = ["interval", "name", "tso", "direction", "shadow_price", "ram", "ram_mcp"]
+    hub_columns = [c for c in frame if c.startswith("hub_") and c not in {"hub_from", "hub_to"}]
+    vectors = frame[hub_columns].fillna(0)
+    single = vectors.ne(0).sum(axis=1).eq(1)
+    hub = vectors.abs().idxmax(axis=1).str.removeprefix("hub_")
+    coefficient = vectors.sum(axis=1)
+    frame = frame.assign(hub=hub.where(single, ""), coefficient=coefficient.where(single),
+                         capacity=frame.get("fmax", float("nan")))
+    columns = ["source_id", "interval", "name", "tso", "direction", "shadow_price", "ram", "ram_mcp", "hub", "coefficient", "capacity"]
     return frame[columns].reset_index(drop=True).pipe(ActiveExternalConstraints.validate)
 
 
@@ -277,16 +284,20 @@ def price_contributions(
     constraint: pd.Series,
     ptdfs: DataFrame[ConstraintPtdfs],
     reference_zone: str,
+    alpha: float,
 ) -> DataFrame[ConstraintContributions]:
     """A binding row's zonal price contribution relative to ``reference_zone``.
 
     EUPHEMIA's congestion duals do not contain the common energy-price component.
     The selected row therefore explains only relative prices:
-    ``-shadow_price * (PTDF_z - PTDF_reference)``.
+    ``-shadow_price * (PTDF_z - PTDF_reference) / alpha``.
+    This normalized-FB term is not an exhaustive decomposition of FB plus LTA welfare.
     """
     if reference_zone not in CORE_ZONES:
         raise ValueError(f"reference zone must be one of {CORE_ZONES}: {reference_zone}")
-    selected = ptdfs
+    if not 0 < alpha <= 1:
+        raise ValueError("normalized FB attribution requires 0 < alpha <= 1")
+    selected = ptdfs[ptdfs.zone.isin(CORE_ZONES)]
     for key in ACTIVE_KEYS:
         selected = selected[selected[key].eq(constraint[key])]
     if len(selected) != len(CORE_ZONES):
@@ -299,7 +310,7 @@ def price_contributions(
         selected.assign(
             reference_zone=reference_zone,
             ptdf_difference=difference,
-            contribution=-float(constraint.shadow_price) * difference,
+            contribution=-float(constraint.shadow_price) * difference / alpha,
         )
         .reset_index(drop=True)
         .pipe(ConstraintContributions.validate)

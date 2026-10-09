@@ -49,7 +49,8 @@ def test_a_failed_cnec_day_becomes_banner(monkeypatch):
         raise RuntimeError("no JAO domain day cached")
 
     monkeypatch.setattr(app, "cnec_day", broken)
-    *outputs, message, is_open = app.render_cnec("2024-08-29", 0, None, "AT")
+    result = app.render_cnec("2024-08-29", 0, None)
+    outputs, (message, is_open) = result[:6], result[6:8]
     assert all(output is no_update for output in outputs)
     assert is_open and "no JAO domain day cached" in message
 
@@ -68,7 +69,7 @@ def test_cnec_retry_draws_new_endpoints_without_reloading_the_day(tmp_path, monk
         raise OSError("offline")
 
     monkeypatch.setattr(jao, "_get", offline)
-    *_, message, is_open = app.update_cnec("2024-08-29", 0, None, "AT", {"day": "2024-08-29"})
+    message, is_open = app.render_cnec("2024-08-29", 0, None)[6:8]
     assert is_open and "Please retry" in message
     fc = json.loads((REPO / "tests/fixtures/synthetic-jao/final-computation-hour.json").read_text())["data"]
     calls = []
@@ -78,11 +79,12 @@ def test_cnec_retry_draws_new_endpoints_without_reloading_the_day(tmp_path, monk
         return fc
 
     monkeypatch.setattr(jao, "_get", fetch)
-    figure, *_, message, is_open = app.update_cnec("2024-08-29", 0, None, "AT", {"day": "2024-08-29"})
+    result = app.render_cnec("2024-08-29", 0, None)
+    figure, (message, is_open) = result[0], result[6:8]
     assert not is_open and message == ""
     assert "2 of 2 active rows mapped" in figure.layout.annotations[0].text
     assert len(calls) == 1
-    app.update_cnec("2024-08-29", 0, "1", "BE", {"day": "2024-08-29"})
+    app.render_cnec("2024-08-29", 0, "1")
     assert len(calls) == 1
 
 
@@ -128,7 +130,8 @@ def test_loading_failure_reaches_the_banner_without_fetching_prices(monkeypatch)
     monkeypatch.setattr(app.electricity_maps, "load_day", lambda day: pytest.fail("price fetch after failure"))
     active = app.load_cnec_constraints("2024-08-29", 1)
     ready = app.load_cnec_prices(active, "2024-08-29")
-    *_, message, is_open = app.update_cnec("2024-08-29", 0, None, "AT", ready)
+    result = app.update_cnec(None, 0, 0, "2024-08-29", 0, None, ready, [], None)
+    message, is_open = result[6:8]
     assert is_open and "constraints unavailable" in message
     assert ready["request"] == 1
 
@@ -140,4 +143,4 @@ def test_a_previous_days_completion_cannot_load_or_draw_the_selected_day(monkeyp
     with pytest.raises(PreventUpdate):
         app.load_cnec_prices(stale, "2024-08-30")
     with pytest.raises(PreventUpdate):
-        app.update_cnec("2024-08-30", 0, None, "AT", stale)
+        app.update_cnec(None, 0, 0, "2024-08-30", 0, None, stale, [], None)

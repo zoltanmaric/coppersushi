@@ -159,6 +159,7 @@ class ActiveConstraints(pa.DataFrameModel):
     """One physical row that bound in EUPHEMIA, per market time unit and contingency."""
 
     source_id: Series[int] = pa.Field(unique=True)  # Stable row identifier from the publication
+    capacity: Series[float] = pa.Field(nullable=True)  # Published maximum admissible flow [MW]
     interval: Series[UtcTimestamp]
     eic: Series[str]
     name: Series[str]
@@ -178,7 +179,7 @@ class ActiveConstraints(pa.DataFrameModel):
 
 
 class ConstraintPtdfs(pa.DataFrameModel):
-    """A binding physical row's zonal PTDFs, one Core bidding zone per row."""
+    """A binding physical row’s Core and virtual-hub PTDFs, one hub per row."""
 
     source_id: Series[int]
     interval: Series[UtcTimestamp]
@@ -198,7 +199,7 @@ class ConstraintContributions(ConstraintPtdfs):
 
     reference_zone: Series[str]
     ptdf_difference: Series[float]
-    contribution: Series[float]  # -shadow_price * ptdf_difference [EUR/MWh]
+    contribution: Series[float]  # -shadow_price * ptdf_difference / alpha [EUR/MWh]
 
     class Config:
         strict = False
@@ -206,7 +207,12 @@ class ConstraintContributions(ConstraintPtdfs):
 
 
 class ActiveExternalConstraints(pa.DataFrameModel):
-    """A binding non-spatial row, retained beside the mappable flow-based constraints."""
+    """A binding non-spatial row, retaining its signed hub vector and stable identity."""
+
+    source_id: Series[int] = pa.Field(unique=True)
+    hub: Series[str]
+    coefficient: Series[float] = pa.Field(nullable=True)
+    capacity: Series[float] = pa.Field(nullable=True)
 
     interval: Series[UtcTimestamp]
     name: Series[str]

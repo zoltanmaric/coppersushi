@@ -1,0 +1,2 @@
+eic,tso,name,element_type,branch_id,branch_type,x0,y0,x1,y1,match_status,bus_source,score
+99T-AA-BB-00003P,SYNTHETIC,Synthetic BE–DE line,TieLine,synthetic-be-de,Line,4,51,9,51,matched,exact,1

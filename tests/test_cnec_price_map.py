@@ -55,7 +55,7 @@ def test_choropleth_carries_one_price_per_priced_zone_and_labels_each(inputs):
     assert list(fill.z) == [50.0, 70.0]
     assert [feature["id"] for feature in fill.geojson["features"]] == ["AT", "BE"]
     labels = trace(fig, "zone prices")
-    assert list(labels.text) == ["Austria<br>€50", "Belgium<br>€70"]
+    assert list(labels.text) == ["Austria<br>€50.00", "Belgium<br>€70.00"]
     assert list(labels.hovertext) == ["Austria · 50.00 €/MWh", "Belgium · 70.00 €/MWh"]
 
 
@@ -143,6 +143,7 @@ def selected_inputs(inputs, reference="AT"):
         base.interval,
         selected,
         reference,
+        alpha=1.0,
     )
     return zones, geometries, view
 

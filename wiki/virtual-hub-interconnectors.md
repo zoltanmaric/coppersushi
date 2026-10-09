@@ -33,4 +33,16 @@ P_B − P_A = (P_VA − P_A) + (P_VB − P_VA) + (P_B − P_VB)
 
 Regional PTDFs and shadow prices determine the outer terms. The interconnector restriction determines the middle term. A zero Core-country coefficient therefore gives zero direct term in that basis, not proof of zero interconnector contribution in this endpoint decomposition.
 
-The topology is documented; the numerical mapping from the swept bound duals to the middle term remains to be validated. N-SIDE's illustration omits LTA. Check signs, published-dual scaling and paired-hub representations against observed spreads, including any required adjacent-region terms. Do not add two descriptions of one bound twice or use the full observed spread as its contribution. Display the selected row's published dual separately from its validated price contribution. Unsupported attribution remains unavailable while the constraint stays selectable. The [FB/LTA audit](flow-based-market-coupling.md#attribution-validation) owns the existing scaling evidence.
+### ALEGrO-validation
+
+As of 2026-10-09, the adapter validates each selected interval against independent virtual-hub stationarity and the observed BE–DE price spread. With normalized physical potentials `F_h = −Σ μ_k PTDF_k,h / α`, the middle term is:
+
+```
+F_ALDE − F_ALBE = Σ_ALDE μ_k c_k / α − Σ_ALBE μ_k c_k / α
+```
+
+Here `c_k` is the published ±1 hub coefficient. The outer terms are `F_ALBE − F_BE` and `F_DE − F_ALDE`. Their sum with the middle term must match `P_DE − P_BE` within €0.02/MWh. Both checks passed in all 114 binding intervals on 2026-09-12 and 2026-10-08, including α<1. A failed check or α=0 leaves attribution unavailable.
+
+Positive virtual injection enters Core. A +1 bound uses the other endpoint as reference; a −1 bound uses its owning Core zone. The selected bound's contribution to `P_owner − P_other` is `c_k μ_k / α`. ALBE and ALDE share one drawn asset but retain distinct published row IDs and dual terms; never discard a term merely because it names the same cable.
+
+The nine newer interfaces remain selectable with capacity and published dual, but numerical endpoint attribution is unavailable. Their adjacent-region terms are not yet validated against observed prices. N-SIDE's illustration omits LTA; the [FB/LTA audit](flow-based-market-coupling.md#attribution-validation) owns the scaling evidence. No interface uses its full observed spread as a substitute contribution.

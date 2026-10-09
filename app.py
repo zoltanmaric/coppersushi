@@ -11,7 +11,7 @@ from dash.exceptions import PreventUpdate
 
 from coppersushi import bidding_zones, cnec_geometry, cnec_page, map_style, power_flow
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
-from coppersushi.data_sources import electricity_maps, jao, mapbox_styles, networks, osm_locator
+from coppersushi.data_sources import cnec_attribution as attribution_source, electricity_maps, jao, mapbox_styles, networks, osm_locator
 from coppersushi.market_day import MarketDay
 
 # Every page's controls live in one tree that the router swaps, so a callback whose
@@ -96,6 +96,7 @@ def cnec_day(day: str) -> cnec_page.Day:
             ptdfs=active.ptdfs,
             external_constraints=active.external_constraints,
             prices=electricity_maps.load_day(day),
+            context=attribution_source.load_day(day),
         )
     return _cnec_days[day]
 
@@ -189,17 +190,17 @@ def update_figure(pathname: str, snapshot_index: int):
     return render(pathname, snapshot_index, ctx.triggered_id == 'snapshot-slider')
 
 
-def render_cnec(day: str, interval_index: int, selected: str | None, reference_zone: str) -> tuple:
+def render_cnec(day: str, interval_index: int, selected: str | None) -> tuple:
     """The CNEC page's map and controls for one day; a failed load becomes the banner."""
     try:
         inputs = cnec_day(day)
         rendered = cnec_page.render(
             inputs, cnec_geometries(inputs, interval_index or 0),
-            interval_index or 0, selected, reference_zone, mapbox_token(), basemap()
+            interval_index or 0, selected, mapbox_token=mapbox_token(), basemap=basemap()
         )
     except Exception as e:  # noqa: BLE001 — every loader failure must reach the page
         logging.exception('Loading the CNEC day %s failed', day)
-        return (no_update,) * 6 + (f'Could not load {day}: {e}', True)
+        return (no_update,) * 6 + (f'Could not load {day}: {e}', True) + (no_update,) * 5
     return (
         rendered.figure,
         rendered.interval_max,
@@ -209,6 +210,11 @@ def render_cnec(day: str, interval_index: int, selected: str | None, reference_z
         rendered.constraint_value,
         '',
         False,
+        f'Reference: {rendered.reference or "unavailable"}',
+        rendered.interval_value == 0,
+        rendered.interval_value == rendered.interval_max,
+        None,
+        day,
     )
 
 
@@ -218,6 +224,7 @@ def render_cnec(day: str, interval_index: int, selected: str | None, reference_z
     Input('cnec-retry', 'n_clicks'))
 def load_cnec_constraints(day: str, retries: int) -> dict:
     try:
+        _cnec_days.pop(day, None)
         jao.load_active_day(day)
         return {'day': day, 'request': retries}
     except Exception as error:
@@ -264,17 +271,36 @@ app.clientside_callback(
     Output('cnec-constraint', 'value'),
     Output('cnec-status', 'children'),
     Output('cnec-status', 'is_open'),
+    Output('cnec-reference-zone', 'children'),
+    Output('cnec-previous', 'disabled'),
+    Output('cnec-next', 'disabled'),
+    Output('cnec-map', 'clickData'),
+    Output('cnec-view-day', 'data'),
+    Input('cnec-map', 'clickData'),
+    Input('cnec-previous', 'n_clicks'),
+    Input('cnec-next', 'n_clicks'),
     Input('cnec-date', 'value'),
     Input('cnec-interval', 'value'),
     Input('cnec-constraint', 'value'),
-    Input('cnec-reference-zone', 'value'),
-    Input('cnec-prices-ready', 'data'))
-def update_cnec(day: str, interval_index: int, selected: str | None, reference_zone: str, ready: dict | None):
+    Input('cnec-prices-ready', 'data'),
+    State('cnec-constraint', 'options'),
+    State('cnec-view-day', 'data'))
+def update_cnec(click, previous, next_, day: str, interval_index: int, selected: str | None, ready: dict | None, options, viewed_day):
     if not ready or ready['day'] != day:
         raise PreventUpdate
     if 'error' in ready:
-        return (no_update,) * 6 + (f"Could not load {day}: {ready['error']}", True)
-    return render_cnec(day, interval_index, selected, reference_zone)
+        return (no_update,) * 6 + (f"Could not load {day}: {ready['error']}", True) + (no_update,) * 5
+    if viewed_day != day:
+        interval_index, selected = 0, None
+    elif ctx.triggered_id == 'cnec-map':
+        if not click:
+            raise PreventUpdate
+        selected = cnec_page.clicked_selection(click, options or [], selected)
+    elif ctx.triggered_id == 'cnec-previous':
+        interval_index = cnec_page.advance_interval(MarketDay.on(day), interval_index or 0, -1)
+    elif ctx.triggered_id == 'cnec-next':
+        interval_index = cnec_page.advance_interval(MarketDay.on(day), interval_index or 0, 1)
+    return render_cnec(day, interval_index, selected)
 
 
 if __name__ == '__main__':
