@@ -283,3 +283,7 @@ Agreed automatic references: local bidding zone for in-zone assets, oriented sen
 ## [2026-10-09] query | Longer Energy-Arena benchmark histories
 
 Downloaded contiguous 11:00-cutoff chart windows for five participants. [Benchmark findings](price-forecasting/energy-arena-benchmarks.md) establish BerriJ's 170 complete days from April 22 and NaiveBenchmark's 267 from January 15, through October 9; both omit the platform-excluded July 12. TelescopeEnergy has 100 eligible days, concentrated from July. BerriJ offers longer comparison coverage, but its model and input provenance remain undocumented.
+
+## [2026-10-09] decision | Forecast experiment history
+
+The [research-history design](price-forecasting/forecast-infrastructure.md#research-history) extends reproducible runs with proposals saved before execution, links to motivating experiments, and conclusions with evidence and decisions. MLflow holds this history; the wiki holds accepted design decisions. The harness is follow-up work after the first local baseline. Reused evaluation results are development evidence, not an untouched holdout.
