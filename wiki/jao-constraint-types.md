@@ -41,7 +41,7 @@ Reproduce using `https://publicationtool.jao.eu/core/api/data/finalComputation?F
 
 ### Active-audit
 
-A complete paced audit on **2026-10-09** covers **2025-10-09 00:00Z–2026-10-09 00:00Z**, in 183 windows of at most two days. All 549 requests succeeded without a rate-limit response. The three feeds return 129,001 active FB rows, 35,040 allocation rows and 9,327 active LTA timestamp rows. Every allocation quarter-hour is present; all returned counts match `totalRows`, and no source row is duplicated across windows.
+A complete paced audit on **2026-10-09** covers **2025-10-09 00:00Z–2026-10-09 00:00Z**, in 183 windows of at most two days. All 549 requests succeeded without a rate-limit response. The three feeds return 129,001 active FB rows, 35,040 allocation rows and 9,327 active LTA timestamp rows. FB counts match published `totalRows`; allocation completeness is independently checked against every expected quarter-hour. Allocation and LTA responses omit `totalRows`, so LTA counts describe the successfully retrieved responses, without an independent completeness check. No source row is duplicated across windows.
 
 | Classified row/facet | Count |
 |---|---:|
@@ -59,7 +59,7 @@ All aggregate limits are Poland's import/export pair, each published in all 35,0
 
 The 4,448 unresolved physical rows cover 22 EICs and 25 names. Most are `PST MEE 2` (3,692 rows), but the name alone does not verify its subtype. All retain their IDs and EICs; none is silently forced into a line/transformer category. There are no rows lacking a usable asset identifier in this annual active sample. That does not remove the wider metadata gaps in the full-domain sample.
 
-Local ignored evidence: `data/research/country-caps/annual-constraint-classification.csv` records each classification; `annual-json/` retains every raw response, including null allocation fields and zero LTA facets. `paced_annual_audit.py` requests sequentially at no more than 40 starts/minute, caches responses and backs off on HTTP 429. `verify_annual_audit.py` checks coverage, duplication and totals; its results are in `annual-verification.json`. [Arithmetic checks](flow-based-market-coupling.md#attribution-validation) test selected price outcomes separately.
+Local ignored evidence: `data/research/country-caps/annual-constraint-classification.csv` records each classification; `annual-json/` retains every raw response, including null allocation fields and zero LTA facets. `paced_annual_audit.py` requests sequentially at no more than 40 starts/minute, caches responses and backs off on HTTP 429. `verify_annual_audit.py` checks allocation coverage, duplication, FB published totals and classification totals; its results are in `annual-verification.json`. [Arithmetic checks](flow-based-market-coupling.md#attribution-validation) test selected price outcomes separately.
 
 ### Limits
 

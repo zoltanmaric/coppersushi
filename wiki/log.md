@@ -266,6 +266,6 @@ For October 8, 568 positive LTA facets agree with `(1−α)` times the adjusted 
 
 ## [2026-10-09] query | Complete paced annual constraint audit
 
-Completed 549 sequential public API requests for 2025-10-09–2026-10-09 UTC, with zero rate-limit responses. Verified all 35,040 allocation quarter-hours, returned `totalRows`, absence of duplicate source rows and agreement between CSV and summary totals. The year contains 129,001 active FB rows, 35,040 allocation rows and 9,327 active LTA timestamp rows. Poland alone has aggregate country limits; the external FB rows are virtual-hub bounds.
+Completed 549 sequential public API requests for 2025-10-09–2026-10-09 UTC, with zero rate-limit responses. Verified all 35,040 allocation quarter-hours, FB published `totalRows`, absence of duplicate source rows and agreement between CSV and summary totals. Allocation and LTA omit `totalRows`; sparse LTA completeness is not independently established. The year contains 129,001 active FB rows, 35,040 allocation rows and 9,327 active LTA timestamp rows. Poland alone has aggregate country limits; the external FB rows are virtual-hub bounds.
 
 Filed 287,354 classified rows/facets and the audit scope in [JAO constraint types](jao-constraint-types.md#active-audit). Retained 4,448 physical rows across 22 EICs with unresolved subtypes. Clarified that “separate” means separate feeds, not absent from the year, and that an annual active-feed audit is not an exhaustive download of non-binding final domains or all SDAC mechanisms.

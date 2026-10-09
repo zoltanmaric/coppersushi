@@ -12,14 +12,14 @@ Agreed: direct selection of country outlines, transformer markers and existing p
 
 Deferred: collapsible map controls. Open: reference-zone behaviour. The 2026 country-cap inventory is complete: Poland has an aggregate cap; the other Core zones have none listed. For Poland, use the empirically validated market-price minus `PL_ALT` calculation and guarded quarter-hour reconstruction described in the research page. Missing attribution remains unavailable, never an observed-spread fallback.
 
-Physical-row attribution must explicitly handle the documented FB/LTA scaling distinction. Hosting and forecasting are separate work. Main includes concurrent zone-price fetching and staged loading feedback ([PR #100](https://github.com/zoltanmaric/coppersushi/pull/100)).
+The first implementation covers physical constraints and Poland’s aggregate cap. The wider taxonomy is research context; virtual-hub, equality and LTA selection are outside this layer. Physical-row attribution must explicitly handle the documented FB/LTA scaling distinction; at α=0, show attribution as unavailable rather than requiring LTA reconstruction. Hosting and forecasting are separate work. Main includes concurrent zone-price fetching and staged loading feedback ([PR #100](https://github.com/zoltanmaric/coppersushi/pull/100)).
 
 ## Acceptance criteria
 
 - [x] Validate a usable Polish cap-price source and interval mapping: six days, 576 intervals, independent FB-price reconstruction within €0.02/MWh.
 - [x] Establish country-cap coverage for every Core zone using the 2026 SDAC inventory, phase-out notice and cache/API checks.
 - [ ] Resolve reference-zone behaviour and implement the Polish adapter with data checks. Countries with no aggregate cap remain unhighlighted; any historical cap support must be explicit. Use the [audited taxonomy](../jao-constraint-types.md): distinguish physical assets, aggregate caps, virtual hubs, equalities and LTA facets; preserve unresolved metadata rather than guessing from names.
-- [ ] Define and validate FB/LTA attribution against published spreads; handle α=0 and α<1 without double-counting or presenting raw FB terms as an exhaustive decomposition.
+- [ ] Define and validate physical-row attribution for α>0 against published spreads, including α<1; do not double-count or present raw FB terms as an exhaustive decomposition. At α=0, attribution is unavailable. LTA-facet reconstruction is not required for this layer.
 - [ ] Previous/next moves one interval and disables at day boundaries. Minor ticks and exact selected time work for hourly/quarter-hourly data and daylight-saving transition days.
 - [ ] Country outlines, transformer points and line interiors select the intended row and update the selector. Day/interval changes update or clear selection, tooltip and rays together.
 - [ ] Labels state the selected constraint, reference, signed €/MWh contribution and MW capacity separately. Cover offsetting contributions and unavailable data; reject raw-spread fallback.
