@@ -80,6 +80,8 @@ Reproduce the first two through `https://publicationtool.jao.eu/core/api/data/{e
 
 No sign or slackness counterexamples. Position-to-limit tolerance was 0.11 MW to allow published rounding; price equality tolerance was €0.01/MWh. An older August 29 price cache was hourly and excluded rather than compared with quarter-hour data.
 
+**Publication precision:** `PL_ALT` and the displayed country prices can differ by one cent even without active physical rows. At 2026-09-12 03:15 CEST, JAO publishes `PL_ALT=189.83`, while the displayed other-Core price is 189.82 and Poland is 170.53 €/MWh. The inferred cap term in `P_other−P_PL` is therefore +19.30; the observed spread is +19.29, with a −0.01 remainder. Keep the source values and expose the remainder; do not replace the cap term with the observed spread to force agreement.
+
 An independent magnitude check also passes **all 576 intervals within €0.02/MWh**:
 
 ```

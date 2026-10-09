@@ -158,6 +158,7 @@ def test_country_outline_hits_and_selected_contribution_are_separate_from_the_ob
     assert 'Spread: DE − PL' in ray.hovertext
     assert 'contribution: +20.00 €/MWh' in ray.hovertext
     assert 'Total observed spread: +10.00 €/MWh' in ray.hovertext
+    assert 'Remainder (other constraints / source precision): -10.00 €/MWh' in ray.hovertext
     assert any('Spread: DE − PL' in text and 'Total observed spread: +10.00' in text for text in dots.hovertext)
 
 
@@ -206,3 +207,22 @@ def test_previous_next_moves_exactly_one_mtu_and_stops_at_day_boundaries(date):
     for index in range(1, len(times)-1):
         assert cnec_page.advance_interval(day, index, -1) == index-1
         assert cnec_page.advance_interval(day, index, 1) == index+1
+
+
+@pytest.mark.parametrize("country, adjusted, other, effect, observed, remainder", [
+    (170.53, 189.83, 189.82, -19.30, 19.29, -0.01),
+    (189.83, 170.53, 170.54, 19.30, -19.29, 0.01),
+    (100.0, 120.0, 110.0, -20.0, 10.0, -10.0),
+    (120.0, 120.0, 120.0, 0.0, 0.0, 0.0),
+])
+def test_pure_country_cap_spread_preserves_cents_and_other_terms(
+        country, adjusted, other, effect, observed, remainder):
+    cap_effect = attribution.country_cap_effect(country, adjusted)
+    spread = attribution.price_spread(country, other, -cap_effect)
+    assert cap_effect == pytest.approx(effect)
+    assert spread.observed == pytest.approx(observed)
+    assert spread.selected == pytest.approx(-effect)
+    assert spread.remainder == pytest.approx(remainder)
+    assert spread.selected + spread.remainder == pytest.approx(spread.observed)
+    assert f"{spread.observed:.2f}" == f"{observed:.2f}"
+    assert f"{spread.selected:.2f}" == f"{-effect:.2f}"

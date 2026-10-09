@@ -15,6 +15,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from coppersushi import map_style
+from coppersushi.cnec_attribution import price_spread
 from coppersushi.data_model.cnec_price_map import MATCHED
 
 ARC_POINTS = 24
@@ -143,15 +144,23 @@ def overlay(selected: pd.Series, centres: pd.DataFrame, contribution: pd.DataFra
     zonal = contribution.merge(centres[columns], on="zone", how="inner")
     reference_price = centres[centres.zone.eq(reference)]
     if "price" in centres and len(reference_price) == 1:
-        spread = zonal.price - reference_price.price.iloc[0]
-        observed = spread.map(lambda value: f"{value:+,.2f} €/MWh" if pd.notna(value) else "unavailable")
+        spreads = [price_spread(reference_price.price.iloc[0], row.price, row.contribution)
+                   for row in zonal.itertuples()]
+        observed = [f"{spread.observed:+,.2f} €/MWh" if pd.notna(spread.observed) else "unavailable"
+                    for spread in spreads]
+        remainder = [f"{spread.remainder:+,.2f} €/MWh" if pd.notna(spread.remainder) else "unavailable"
+                     for spread in spreads]
     else:
         observed = "unavailable"
+        remainder = "unavailable"
+    zonal["observed"] = observed
+    zonal["remainder"] = remainder
     zonal["hover"] = (
         "<b>Spread: " + zonal.zone + f" − {reference}</b><br>"
         + "This constraint’s contribution: "
         + zonal.contribution.map(lambda value: f"{value:+,.2f} €/MWh")
-        + "<br>Total observed spread: " + observed
+        + "<br>Total observed spread: " + zonal.observed
+        + "<br>Remainder (other constraints / source precision): " + zonal.remainder
     )
     dots = _dots(zonal, reference)
     note = (

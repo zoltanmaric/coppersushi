@@ -1,5 +1,7 @@
 """Validated normalized-FB attribution inputs and explicit virtual-interface mapping."""
 
+from typing import NamedTuple
+
 import numpy as np
 import pandas as pd
 from shapely.geometry import Point
@@ -66,6 +68,29 @@ def context(day: MarketDay, alpha_rows: list[dict], cap_rows: list[dict],
     return result
 
 
+class PriceSpread(NamedTuple):
+    """Signed €/MWh terms for other-zone price minus reference-zone price."""
+
+    observed: float
+    selected: float
+    remainder: float
+
+
+def country_cap_effect(country_price: float, adjusted_price: float) -> float:
+    """The cap's signed effect on its country's price; retain source precision."""
+    return country_price - adjusted_price
+
+
+def price_spread(reference_price: float, other_price: float, contribution: float) -> PriceSpread:
+    """Separate the observed spread from one selected term, without rounding either.
+
+    The remainder includes other constraints and discrepancies between price publications.
+    A selected term need not equal, or be smaller than, the observed spread.
+    """
+    observed = other_price - reference_price
+    return PriceSpread(observed, contribution, observed - contribution)
+
+
 def country_caps(inputs: pd.DataFrame, prices: pd.DataFrame, interval: pd.Timestamp) -> pd.DataFrame:
     """Only a saturated PL cap with a correctly signed, nonzero validated dual is binding."""
     columns = ["source_id", "interval", "name", "shadow_price", "direction", "capacity", "delta"]
@@ -76,7 +101,7 @@ def country_caps(inputs: pd.DataFrame, prices: pd.DataFrame, interval: pd.Timest
     if len(rows) != 1 or len(price) != 1:
         return pd.DataFrame(columns=columns)
     row = rows.iloc[0]
-    delta = float(price.price.iloc[0] - row.polish_alt)
+    delta = country_cap_effect(float(price.price.iloc[0]), float(row.polish_alt))
     if not np.isfinite(delta) or abs(delta) <= 1e-9:
         return pd.DataFrame(columns=columns)
     if delta < 0 and abs(row.polish_position - row.export_limit) <= 0.051:

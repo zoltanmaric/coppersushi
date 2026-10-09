@@ -291,3 +291,7 @@ The [research-history design](price-forecasting/forecast-infrastructure.md#resea
 ## [2026-10-09] query | ALEGrO bound attribution
 
 Independent stationarity and observed BE–DE spread checks passed on all 114 ALEGrO binding intervals on 2026-09-12 and 2026-10-08. [Virtual-hub interconnectors](virtual-hub-interconnectors.md#alegro-validation) defines the signed middle term and paired-end treatment: shared asset identity does not make distinct dual rows duplicates. Newer interfaces still need adjacent-region validation.
+
+## [2026-10-09] query | Polish cap publication precision
+
+The 03:15 CEST September 12 example has a one-cent difference between JAO’s adjusted Polish price and the displayed other-Core price. [Country caps](country-import-export-caps.md#poland-validation) records the selected term, observed spread and remainder separately.
