@@ -151,6 +151,13 @@ def test_country_outline_hits_and_selected_contribution_are_separate_from_the_ob
     # Actual DE–PL prices differ by only €10; the selected cap contributes €20, offset elsewhere.
     dots = next(t for t in rendered.figure.data if t.name == 'contribution relative to PL')
     assert any('DE · +20.00' in v for v in dots.text)
+    ray = next(t for t in rendered.figure.data if t.name == 'DE ray')
+    assert ray.hoverinfo == 'text'
+    assert [text for text in ray.text if text] == ['+€20.00']
+    assert 'Spread: DE − PL' in ray.hovertext
+    assert 'contribution: +20.00 €/MWh' in ray.hovertext
+    assert 'Total observed spread: +10.00 €/MWh' in ray.hovertext
+    assert any('Spread: DE − PL' in text and 'Total observed spread: +10.00' in text for text in dots.hovertext)
 
 
 def test_line_interior_hits_keep_row_identity_and_missing_alpha_keeps_selection():

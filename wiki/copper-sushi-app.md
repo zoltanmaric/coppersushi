@@ -30,7 +30,7 @@ Selection uses an automatic reference: the local bidding zone for an in-zone ass
 
 Physical rows show the [normalized flow-based contribution](flow-based-market-coupling.md#price-contribution), `−μ × (PTDF_z − PTDF_r) / α`, in €/MWh. Missing or zero α leaves it unavailable. Poland's cap uses its [validated alternative-price adapter](country-import-export-caps.md), requiring saturation and the correctly signed nonzero price difference. [ALEGrO](virtual-hub-interconnectors.md#alegro-validation) additionally requires virtual-hub stationarity and observed endpoint-spread checks. Other interfaces retain selection, published shadow price and capacity with an explicit unavailable endpoint contribution.
 
-Rays show the selected constraint's signed contribution, never the full observed spread or a physical power-flow path. The published dual and MW capacity are separate from that contribution. Normalized FB terms are not an exhaustive decomposition of FB plus long-term allocation welfare.
+Rays carry signed euro labels for the selected constraint's contribution in €/MWh. Hover names the country pair and separates that contribution from the total observed spread. Poland's aggregate-cap contribution is identical across its rays; physical-row contributions depend on the zonal PTDF difference. Rays never represent a physical power-flow path. The published dual and MW capacity are separate from that contribution. Normalized FB terms are not an exhaustive decomposition of FB plus long-term allocation welfare.
 
 ![Illustrative CNEC price-influence map](assets/cnec-price-influence-map-preview.png)
 

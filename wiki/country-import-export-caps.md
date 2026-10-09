@@ -46,7 +46,7 @@ With positive net position meaning exports, write the bounds as `−import_limit
 P_adjusted = P_country − δ_country
 ```
 
-Thus a selected import cap contributes `+μ_import` to `P_country − P_other`; an export cap contributes `−μ_export`. Reverse the signs for rays showing `P_other − P_country`. A cap on neither compared zone has zero direct term. These signs follow Article 6 of the [all-TSOs congestion-income methodology amendment proposal, 30 June 2023](https://eepublicdownloads.entsoe.eu/clean-documents/nc-tasks/230630_CACM_CIDm%20Amendment.pdf); this citation establishes the algebra, not the proposal's subsequent legal status.
+Thus a selected import cap contributes `+μ_import` to `P_country − P_other`; an export cap contributes `−μ_export`. Reverse the signs for rays showing `P_other − P_country`. A cap on neither compared zone has zero direct term. For a selected Polish cap, its contribution to `P_other − P_PL` is therefore identical for every other country. Differences between those total spreads come from the remaining constraints. These signs follow Article 6 of the [all-TSOs congestion-income methodology amendment proposal, 30 June 2023](https://eepublicdownloads.entsoe.eu/clean-documents/nc-tasks/230630_CACM_CIDm%20Amendment.pdf); this citation establishes the algebra, not the proposal's subsequent legal status.
 
 Use price-normalized duals in €/MWh; distinguish these from an interval's welfare sensitivity in euros per MW. The result attributes the cleared price spread, not the price change after rerunning the auction without the cap. Other constraints can offset it, so an individual contribution may exceed the observed spread. A published limit does not prove it binds; saturation alone does not prove a positive shadow price.
 

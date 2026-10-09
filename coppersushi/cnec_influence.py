@@ -81,16 +81,25 @@ def _rays(origin: tuple[float, float], zonal: pd.DataFrame) -> list[go.Scatterma
     haloed = []
     for row, width in zip(influenced.itertuples(), widths):
         lon, lat = arc(origin, (row.x, row.y))
+        labels = [""] * len(lon)
+        sign = "+" if row.contribution > 0 else "−"
+        labels[len(lon) // 2] = f"{sign}€{abs(row.contribution):,.2f}"
         core = go.Scattermapbox(
             name=f"{row.zone} ray",
             lon=lon,
             lat=lat,
-            mode="lines",
-            hoverinfo="skip",
+            mode="lines+text",
+            text=labels,
+            textposition="top center",
+            textfont=dict(color="white", size=12),
+            hoverinfo="text",
+            hovertext=row.hover,
             showlegend=False,
             line=dict(color=_colour(row.contribution), width=width),
         )
-        haloed.append(map_style.haloed(core))
+        glow, core = map_style.haloed(core)
+        glow.update(mode="lines", text=None)
+        haloed.append((glow, core))
     return [glow for glow, _ in haloed] + [core for _, core in haloed]
 
 
@@ -109,6 +118,7 @@ def _dots(zonal: pd.DataFrame, reference: str) -> list[go.Scattermapbox]:
         mode="markers",
         hoverinfo="text",
         text=text,
+        hovertext=zonal.hover,
         marker=go.scattermapbox.Marker(
             color=[_colour(value) for value in zonal.contribution],
             size=_sized(zonal.contribution, *DOT_SIZE),
@@ -123,11 +133,24 @@ def overlay(selected: pd.Series, centres: pd.DataFrame, contribution: pd.DataFra
     ``selected`` is the row with its geometry, ``centres`` one label point per drawn zone.
     An unmapped selected row keeps its dots: its rays have nowhere to start.
     """
-    zonal = contribution.merge(centres[["zone", "x", "y"]], on="zone", how="inner")
     reference = str(contribution.reference_zone.iloc[0])
+    columns = ["zone", "x", "y"] + (["price"] if "price" in centres else [])
+    zonal = contribution.merge(centres[columns], on="zone", how="inner")
+    reference_price = centres[centres.zone.eq(reference)]
+    if "price" in centres and len(reference_price) == 1:
+        spread = zonal.price - reference_price.price.iloc[0]
+        observed = spread.map(lambda value: f"{value:+,.2f} €/MWh" if pd.notna(value) else "unavailable")
+    else:
+        observed = "unavailable"
+    zonal["hover"] = (
+        "<b>Spread: " + zonal.zone + f" − {reference}</b><br>"
+        + "This constraint’s contribution: "
+        + zonal.contribution.map(lambda value: f"{value:+,.2f} €/MWh")
+        + "<br>Total observed spread: " + observed
+    )
     dots = _dots(zonal, reference)
     note = (
-        f"Selected contribution relative to <b>{reference}</b>. "
+        f"Selected contribution in €/MWh relative to <b>{reference}</b>. "
         "Rays show this constraint’s price contribution, not a power-flow path."
     )
     if selected.match_status != MATCHED:
