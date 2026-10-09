@@ -198,3 +198,7 @@ Established the `forecasts/` project: Germany–Luxembourg quarter-hour prices a
 ## [2026-10-09] decision | Forecast defaults and feature comparisons
 
 Recorded the agreed [evaluation defaults](price-forecasting/evaluation.md#defaults): local-clock price matching, missing weather, fixed calendar features, source-failure fallbacks and pooled training-error quantiles for the simple reference. Three fixed feature sets measure the added value of weather and demand. The implementation spec links these decisions; exact dates, remaining price features, model settings and minimum reference history remain to be frozen before fitting.
+
+## [2026-10-09] decision | Forecast inputs in S3, local training first
+
+The [forecast infrastructure design](price-forecasting/forecast-infrastructure.md) selects fixed Parquet input snapshots in S3, local Metaflow execution and local MLflow experiment tracking. Storage follows batch access and reproducibility needs. Cloud scheduling, shared tracking and a separate catalog remain later decisions. The first iteration can evaluate models without deploying cloud compute.

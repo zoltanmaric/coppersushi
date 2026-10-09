@@ -41,6 +41,15 @@ flowchart LR
     jao_map["jao_map<br/>/cnec/&lt;day&gt;: cleared zonal prices, active CNECs and selected PTDF contribution"]
     trued_network["trued_network<br/>solved_network with JAO limits on matched lines and transformers, checked pairs attached"]:::planned
 
+    forecast_raw_inputs["forecast_raw_inputs<br/>S3 source responses and retrieval metadata"]:::planned
+    forecast_input_snapshot["forecast_input_snapshot<br/>S3 validated Parquet tables and fixed manifest"]:::planned
+    forecast_local_run["forecast_local_run<br/>local Metaflow training and evaluation"]:::planned
+    forecast_experiment["forecast_experiment<br/>local MLflow scores, models and reports"]:::planned
+
+    forecast_raw_inputs -.-> forecast_input_snapshot
+    forecast_input_snapshot -.-> forecast_local_run
+    forecast_local_run -.-> forecast_experiment
+
     pypsa_eur_pin --> pypsa_eur_run
     pypsa_eur_pin -.-> unsimplified
     unsimplified -.-> solved_network
@@ -68,6 +77,8 @@ flowchart LR
 ```
 
 Code is one package, `coppersushi/`, organised by domain noun; `io-boundary` in `coppersushi/AGENTS.md` names the two modules that touch the world.
+
+The planned independent `forecasts/` workflow starts with [S3 inputs and local execution](price-forecasting/forecast-infrastructure.md); it has no dependency on the power-flow application.
 
 ## Future chapters
 

@@ -33,7 +33,7 @@ The preliminary point-model experiment found that broader geography mattered mor
 
 ## Start
 
-Read the [implementation spec](../specs/day-ahead-price-forecast.md), then the [evaluation contract](evaluation.md). Build the reproducible historical dataset first. Resolve and record the remaining mechanical defaults before fitting; do not reopen settled scope without contradictory evidence.
+Read the [implementation spec](../specs/day-ahead-price-forecast.md), then the [evaluation contract](evaluation.md). The [infrastructure design](forecast-infrastructure.md) starts with S3 inputs and local Metaflow/MLflow runs. Build the reproducible historical dataset first. Resolve and record the remaining mechanical defaults before fitting; do not reopen settled scope without contradictory evidence.
 
 As of 2026-10-09, the handover and diagnostic evidence exist; the five-quantile model, production dataset pipeline and daily forecast runner do not. Competition entry, publishing forecasts and deployment are separate work.
 
