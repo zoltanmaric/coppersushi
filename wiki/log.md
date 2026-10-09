@@ -307,3 +307,6 @@ The [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) 
 ## [2026-10-20] decision | Separate forecast proposals from executions
 
 Proposal-only MLflow records appeared as finished runs in the forecast UI. The [research-record contract](price-forecasting/forecast-infrastructure.md#research-history) now places proposals, selection decisions and a decision index in the wiki. Actual MLflow executions retain frozen proposal copies, results and conclusions; wiki outcomes link back to that evidence. The [skill](../.agents/skills/forecast-experiment/SKILL.md) replaces the earlier storage convention and requests readable run names. Migration of the open forecast stack's existing records remains separate from this harness change.
+## [2026-10-09] ingest | First quantile forecast evaluation
+
+The fixed baseline improves weighted interval score against its distributional reference, while both nominal uncertainty bands under-cover. Weather accounts for the headline gain; adding demand does not improve the weather-only headline score. Further quality experiments and prospective evidence need a separate continuation decision. [Result and limits](price-forecasting/evaluation.md#result).
