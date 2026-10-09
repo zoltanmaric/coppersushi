@@ -16,7 +16,7 @@
 ## Price forecasting
 
 - [price-forecasting.md](price-forecasting.md) — independent forecast product, architecture graph and links to design and implementation
-- [price-forecasting/forecast-infrastructure.md](price-forecasting/forecast-infrastructure.md) — S3 input snapshots, local Metaflow/MLflow training, planned research history and later AWS execution
+- [price-forecasting/forecast-infrastructure.md](price-forecasting/forecast-infrastructure.md) — S3 input snapshots, local Metaflow/MLflow training, experiment records and later AWS execution
 - [price-forecasting/germany-luxembourg.md](price-forecasting/germany-luxembourg.md) — independent Germany–Luxembourg quarter-hour forecast: agreed CatBoost quantiles, public fundamentals and implementation handover
 - [price-forecasting/data-sources.md](price-forecasting/data-sources.md) — verified price, weather and demand contracts, twelve locations, timing gaps and diagnostic evidence
 - [price-forecasting/evaluation.md](price-forecasting/evaluation.md) — five quantiles, weighted interval score, chronological all-date replay and comparison controls
