@@ -29,6 +29,18 @@ part of the repository:
 - [`.agents/skills/`](.agents/skills/) holds the skills those rules invoke.
 - [`wiki/`](wiki/) is an LLM-maintained wiki of domain knowledge, design decisions and specs.
 
+Install the checkout base guard once per clone:
+
+```sh
+python3 scripts/install-checkout-guard.py
+```
+
+New worktree checkouts fetch `origin/main` and fail unless `HEAD` contains that commit.
+The worktree remains created; rebase it before starting work. A failed fetch also fails
+the command. Ordinary branch switches are unaffected, and the existing checkout hook
+(including Git LFS) is preserved. `git worktree add --no-checkout` does not run checkout
+hooks. Clones with a custom `core.hooksPath` need to integrate the guard there manually.
+
 ## Local Installation
 Installing the dependencies requires Conda, but I recommend installing
 [`Mamba`](https://mamba.readthedocs.io/en/latest/installation.html)

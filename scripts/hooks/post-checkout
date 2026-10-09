@@ -1,0 +1,30 @@
+#!/bin/sh
+# Copper Sushi stale-base guard
+# Git creates the worktree before this hook; a failure leaves it available for repair.
+status=0
+case "$1" in
+    0000000000000000000000000000000000000000|0000000000000000000000000000000000000000000000000000000000000000000000)
+        if [ "$3" = 1 ]; then
+            if ! git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'; then
+                printf >&2 '\nCannot verify the new checkout base: fetching origin/main failed.\n'
+                status=1
+            elif ! git merge-base --is-ancestor refs/remotes/origin/main "$2"; then
+                printf >&2 '\nNew checkout is stale: HEAD does not contain freshly fetched origin/main.\n'
+                printf >&2 'The worktree exists. Rebase it onto origin/main before starting work.\n'
+                status=1
+            fi
+        fi
+        ;;
+esac
+
+# Preserve the existing checkout hook, including Git LFS.
+common=$(git rev-parse --path-format=absolute --git-common-dir) || exit 1
+previous="$common/hooks/post-checkout.before-base-guard"
+if [ -x "$previous" ]; then
+    "$previous" "$@"
+    previous_status=$?
+    if [ "$previous_status" != 0 ]; then
+        status=$previous_status
+    fi
+fi
+exit "$status"

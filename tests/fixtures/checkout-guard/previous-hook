@@ -1,0 +1,2 @@
+#!/bin/sh
+printf 'PREVIOUS_HOOK_RAN\n'
