@@ -1,6 +1,6 @@
 # Forecasts
 
-Germany–Luxembourg day-ahead price forecasting. Start with the [wiki handover](../wiki/day-ahead-price-forecast.md) and [implementation spec](../wiki/specs/day-ahead-price-forecast.md).
+Germany–Luxembourg day-ahead price forecasting. Start with the [wiki handover](../wiki/price-forecasting/germany-luxembourg.md) and [implementation spec](../wiki/specs/day-ahead-price-forecast.md).
 
 As of 2026-10-09 this directory contains diagnostic evidence, not a runnable daily forecasting service. No installation command is claimed yet; the implementation should add its own reproducible dependency setup and commands here.
 

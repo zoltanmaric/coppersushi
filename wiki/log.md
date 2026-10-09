@@ -193,8 +193,8 @@ Established the `forecasts/` project: Germany–Luxembourg quarter-hour prices a
 
 ## [2026-10-09] query | Forecast implementation readiness
 
-[Reviewed the forecast handover](day-ahead-forecast-review.md) against its diagnostic scripts and provider documentation. Recommended the bounded research build, with the historical availability claim narrowed to match its evidence, prospective input snapshots, and fixed controls to separate price/calendar skill from weather and demand value. Archive-induced demand missingness can differ from live availability. These are review recommendations, not amendments to the agreed spec.
+[Reviewed the forecast handover](price-forecasting/evaluation.md#limitations) against its diagnostic scripts and provider documentation. Recommended the bounded research build, with the historical availability claim narrowed to match its evidence, prospective input snapshots, and fixed controls to separate price/calendar skill from weather and demand value. Archive-induced demand missingness can differ from live availability. These are review recommendations, not amendments to the agreed spec.
 
 ## [2026-10-09] decision | Forecast defaults and feature comparisons
 
-Recorded the agreed [evaluation defaults](day-ahead-forecast-evaluation.md#defaults): local-clock price matching, missing weather, fixed calendar features, source-failure fallbacks and pooled training-error quantiles for the simple reference. Three fixed feature sets measure the added value of weather and demand. The implementation spec links these decisions; exact dates, remaining price features, model settings and minimum reference history remain to be frozen before fitting.
+Recorded the agreed [evaluation defaults](price-forecasting/evaluation.md#defaults): local-clock price matching, missing weather, fixed calendar features, source-failure fallbacks and pooled training-error quantiles for the simple reference. Three fixed feature sets measure the added value of weather and demand. The implementation spec links these decisions; exact dates, remaining price features, model settings and minimum reference history remain to be frozen before fitting.

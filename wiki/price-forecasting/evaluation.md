@@ -1,6 +1,6 @@
 # Day-ahead forecast evaluation
 
-The [forecast design](day-ahead-price-forecast.md) fixes five price quantiles and weighted interval score as the main measure, agreed 2026-10-09. This page is the small evaluation contract; it does not require a general experiment platform.
+The [forecast design](germany-luxembourg.md) fixes five price quantiles and weighted interval score as the main measure, agreed 2026-10-09. This page is the small evaluation contract; it does not require a general experiment platform.
 
 ### Quantiles
 
@@ -62,6 +62,14 @@ Pool errors across all hours and days. Add their five empirical quantiles to the
 Report the score difference against the reference with paired resampling of contiguous seven-day blocks of whole German local days. Do not treat quarter-hours as independent or stitch across missing dates/separate evaluation windows. Fix the resampling seed/count and recompute aggregate scores from the sampled rows. Show effect size and uncertainty; do not claim an established gain if its interval includes no improvement.
 
 Preserve raw inputs or content hashes, request and retrieval metadata, row-level availability flags, configuration, library versions, raw/ordered quantiles, reference forecasts, per-quarter outcomes and the report. A change after looking at scores starts a new development experiment. Forecast-quality improvement does not establish trading profitability.
+
+### Limitations
+
+The proposed first fit uses October–December 2025 to predict January 2026; later monthly fits add the preceding months. This is a date choice, not a limit imposed by missing demand. More months can be used for initial training within the assembled year, leaving fewer months for evaluation. Earlier compatible data has not been established.
+
+One annual cycle gives limited evidence about rare extreme prices. Many consecutive quarter-hours can describe a single storm or price event. A nominal 95% range is therefore not proof of reliable coverage during extremes. Recommended additional checks are separate counts below and above the predicted ranges, and coverage by delivery hour; these are review recommendations, not added first-build acceptance criteria.
+
+Historical input timing remains subject to the [availability limits](data-sources.md#availability). Prospective forecasts made after settings are fixed provide fresh evidence. Acceptance of a reproducible report does not establish readiness for daily use; see the [continuation decision](germany-luxembourg.md#continuation).
 
 ## Freeze
 
