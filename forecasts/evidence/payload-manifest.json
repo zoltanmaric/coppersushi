@@ -1,0 +1,40 @@
+{
+  "created": "2026-10-09",
+  "payloads": [
+    {
+      "path": "data/forecasts/evidence/forecast-bounded-evidence-20261007/inputs.zip",
+      "bytes": 1641853,
+      "sha256": "36468f77a7436e86b991fd64b668af8dc2d6bfc612b1e7c1df0081f520083053"
+    },
+    {
+      "path": "data/forecasts/evidence/forecast-bounded-evidence-20261007/predictions.csv",
+      "bytes": 2495069,
+      "sha256": "233da4b054a2e8ede92d4f47baac462f4c5d88a9277fa5aee675fd45181080f4"
+    },
+    {
+      "path": "data/forecasts/evidence/forecast-bounded-evidence-20261007/daily-errors.csv",
+      "bytes": 24610,
+      "sha256": "f6c419043feeaf58a84a6de785ad2a44556122c8c41f19f4062a6603f0797803"
+    },
+    {
+      "path": "data/forecasts/evidence/forecast-bounded-evidence-20261007/monthly-errors.csv",
+      "bytes": 1066,
+      "sha256": "89f750f2e3db26667321ed5824fdf9b2183b3128ecc52cd5971e6fc68f8a55c4"
+    },
+    {
+      "path": "data/forecasts/evidence/demand-recovery-evidence-20261008/german-demand-rows.zip",
+      "bytes": 2861899,
+      "sha256": "4626e176f7d9d850d359aa0472fdd81697b51c9de2d02f92b7e3cf912e5abedd"
+    },
+    {
+      "path": "data/forecasts/evidence/weather-compatibility-evidence-20261008/responses.zip",
+      "bytes": 725204,
+      "sha256": "f65510bdbeaf2a1c9ed3afee038d8ff0619e69311543ae724716d1d4d35675ea"
+    },
+    {
+      "path": "data/forecasts/entsoe-files.zip",
+      "bytes": 11731980,
+      "sha256": "3493b97647b04317edb0818b808f3bcd8e0fd5819aa0ca803d0dd398a341cc89"
+    }
+  ]
+}

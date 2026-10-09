@@ -1,0 +1,76 @@
+{
+  "locations": [
+    [
+      "Hamburg",
+      53.55,
+      9.99
+    ],
+    [
+      "Essen",
+      51.45,
+      7.01
+    ],
+    [
+      "Munich",
+      48.14,
+      11.58
+    ],
+    [
+      "Emden",
+      53.37,
+      7.21
+    ],
+    [
+      "Husum",
+      54.48,
+      9.05
+    ],
+    [
+      "Rostock",
+      54.09,
+      12.14
+    ],
+    [
+      "Magdeburg",
+      52.13,
+      11.63
+    ],
+    [
+      "Berlin",
+      52.52,
+      13.41
+    ],
+    [
+      "Leipzig",
+      51.34,
+      12.37
+    ],
+    [
+      "Frankfurt",
+      50.11,
+      8.68
+    ],
+    [
+      "Stuttgart",
+      48.78,
+      9.18
+    ],
+    [
+      "Nuremberg",
+      49.45,
+      11.08
+    ]
+  ],
+  "start": "2026-04-03",
+  "end_inclusive": "2026-10-05",
+  "first_test": "2026-06-01",
+  "seeds": [
+    42,
+    7,
+    2026
+  ],
+  "fit": "expanding training window, refit at each month start",
+  "complete_case": "same complete days for all arms",
+  "primary": "12 locations seed42; other seeds sensitivity only",
+  "settings": "same 400 iterations depth6 rate.05 absolute error as prior; no tuning"
+}

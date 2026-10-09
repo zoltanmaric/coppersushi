@@ -49,8 +49,9 @@ point. Read three fields together:
 ## Forecast example
 
 `GET /v4/electricity-mix/forecast?zone=DE&horizonHours=24&breakdownType=normal` returns future German
-mix points. `updatedAt` is the forecast's as-of time; each `data[].datetime` is a target operating
-hour, so a tomorrow example must select tomorrow's timestamp rather than the first point.
+mix points. `updatedAt` identifies the stored version's update time; it is not a selector for
+superseded forecast runs. Each `data[].datetime` is a target operating hour, so a next-day example
+must select the intended delivery timestamp rather than the first point.
 
 Where the aggregate flow totals are internally consistent, the point implies:
 
@@ -98,3 +99,10 @@ grid forecasts are candidate inputs once their flow inconsistency is resolved. T
 and fundamentals, not bid curves. A future zonal clearing against [JAO's domain](core-day-ahead-capacity-calculation.md)
 therefore needs observed bid curves or a model of them. The 2024 backtest can take settled prices
 from `actual`, but still needs another source such as energy-charts for historical generation.
+
+
+### Forecast-history
+
+Authenticated checks on 2026-10-06 returned Germany’s live 48-hour price, total-load, total-reported-load, net-load and mix forecasts. The `total-reported-load/past-range` route also returned historical reported actuals, so the September access observation is not a blanket statement about subsequent access. These actuals are not the forecasts originally issued before delivery.
+
+The documented [reported-load forecast endpoint](https://app.electricitymaps.com/docs/reference/total-reported-load/forecast) has no past issue-time selector. `createdAt` and `updatedAt` do not retrieve superseded values. An original-run archive through another arrangement remains unconfirmed. The independent [day-ahead price forecast](day-ahead-price-forecast.md) therefore uses its own public-fundamentals inputs; current forecast access does not fill its historical demand gaps. No authenticated payloads or keys are included in the handover.

@@ -1,0 +1,105 @@
+{
+  "start": "2025-10-01 00:00:00+02:00",
+  "end_exclusive": "2026-10-01 00:00:00+02:00",
+  "sources": [
+    "2025_11_DayAheadTotalLoadForecast_6.1.B_r3.csv",
+    "2026_08_DayAheadTotalLoadForecast_6.1.B_r3.csv",
+    "2026_02_DayAheadTotalLoadForecast_6.1.B_r3.csv",
+    "2026_01_DayAheadTotalLoadForecast_6.1.B_r3.csv",
+    "2025_12_DayAheadTotalLoadForecast_6.1.B_r3.csv",
+    "2026_04_DayAheadTotalLoadForecast_6.1.B_r3.csv",
+    "2026_03_DayAheadTotalLoadForecast_6.1.B_r3.csv",
+    "2025_10_DayAheadTotalLoadForecast_6.1.B_r3.csv",
+    "2026_06_DayAheadTotalLoadForecast_6.1.B_r3.csv",
+    "2026_07_DayAheadTotalLoadForecast_6.1.B_r3.csv",
+    "2025_09_DayAheadTotalLoadForecast_6.1.B_r3.csv",
+    "2026_09_DayAheadTotalLoadForecast_6.1.B_r3.csv",
+    "2026_05_DayAheadTotalLoadForecast_6.1.B_r3.csv"
+  ],
+  "summary": [
+    {
+      "area": "Germany country",
+      "rows": 35040,
+      "unique_times": 35040,
+      "duplicate_rows": 0,
+      "expected": 35040,
+      "missing_times": 0,
+      "pre_cutoff": 28224,
+      "late_or_missing_update": 6816,
+      "pct_expected_pre_cutoff": 80.548,
+      "resolutions": {
+        "PT15M": 35040
+      }
+    },
+    {
+      "area": "Germany\u2013Luxembourg zone",
+      "rows": 35040,
+      "unique_times": 35040,
+      "duplicate_rows": 0,
+      "expected": 35040,
+      "missing_times": 0,
+      "pre_cutoff": 885,
+      "late_or_missing_update": 34155,
+      "pct_expected_pre_cutoff": 2.526,
+      "resolutions": {
+        "PT15M": 35040
+      }
+    },
+    {
+      "area": "50Hertz",
+      "rows": 35040,
+      "unique_times": 35040,
+      "duplicate_rows": 0,
+      "expected": 35040,
+      "missing_times": 0,
+      "pre_cutoff": 28704,
+      "late_or_missing_update": 6336,
+      "pct_expected_pre_cutoff": 81.918,
+      "resolutions": {
+        "PT15M": 35040
+      }
+    },
+    {
+      "area": "Amprion",
+      "rows": 35040,
+      "unique_times": 35040,
+      "duplicate_rows": 0,
+      "expected": 35040,
+      "missing_times": 0,
+      "pre_cutoff": 29664,
+      "late_or_missing_update": 5376,
+      "pct_expected_pre_cutoff": 84.658,
+      "resolutions": {
+        "PT15M": 35040
+      }
+    },
+    {
+      "area": "TenneT Germany",
+      "rows": 35040,
+      "unique_times": 35040,
+      "duplicate_rows": 0,
+      "expected": 35040,
+      "missing_times": 0,
+      "pre_cutoff": 30236,
+      "late_or_missing_update": 4804,
+      "pct_expected_pre_cutoff": 86.29,
+      "resolutions": {
+        "PT15M": 35040
+      }
+    },
+    {
+      "area": "TransnetBW",
+      "rows": 35040,
+      "unique_times": 35040,
+      "duplicate_rows": 0,
+      "expected": 35040,
+      "missing_times": 0,
+      "pre_cutoff": 29660,
+      "late_or_missing_update": 5380,
+      "pct_expected_pre_cutoff": 84.646,
+      "resolutions": {
+        "PT15M": 35040
+      }
+    }
+  ]
+}

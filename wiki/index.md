@@ -11,6 +11,10 @@
 - [timezone-handling.md](timezone-handling.md) — the `explicit-timezones` convention, its rationale, and the PyPSA naive-UTC boundary
 
 ## Entities
+- [day-ahead-price-forecast.md](day-ahead-price-forecast.md) — independent Germany–Luxembourg quarter-hour forecast: agreed CatBoost quantiles, public fundamentals and implementation handover
+- [day-ahead-forecast-data.md](day-ahead-forecast-data.md) — verified price, weather and demand contracts, twelve locations, timing gaps and diagnostic evidence
+- [day-ahead-forecast-evaluation.md](day-ahead-forecast-evaluation.md) — five quantiles, weighted interval score, chronological all-date replay and comparison controls
+- [day-ahead-forecast-review.md](day-ahead-forecast-review.md) — implementation recommendation, replay limitations, missing-demand bias and controls needed to assess fundamentals
 - [sushi-2.md](sushi-2.md) — Copper Sushi 2: optimal power flow on the 2025 OSM grid via PyPSA-Eur as of 2026; architecture
 - [electricity-maps-api.md](electricity-maps-api.md) — Electricity Maps' v4 grid and market signals, this project's Core-wide price-forecast access, and why the data is not a bid curve
 - [backtest-2024-08-29.md](backtest-2024-08-29.md) — one solved day scored against JAO's binding CNECs and settled prices: what each config change bought, and what to fix next
@@ -19,6 +23,7 @@
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026
 
 ## Specs (working memory — burn-down state, not settled knowledge)
+- [specs/day-ahead-price-forecast.md](specs/day-ahead-price-forecast.md) — first forecast build: historical dataset, frozen evaluation and reproducible uncertainty report
 - [specs/sushi-2.md](specs/sushi-2.md) — the Sep 11 cut: next steps and acceptance criteria
 - [specs/jao-grid.md](specs/jao-grid.md) — JAO's Core elements matched to our OSM grid: a map of what limited trade on a day, and true line and transformer limits from JAO's own numbers
 - [specs/architecture-review-graph.md](specs/architecture-review-graph.md) — lightweight architecture-review experiment: manual DAG, PR deltas, and an I/O-boundary test

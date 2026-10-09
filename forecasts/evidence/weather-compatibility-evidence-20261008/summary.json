@@ -1,0 +1,255 @@
+{
+  "checked_at_utc": "2026-10-08T17:39:37.480312+00:00",
+  "historical_period_local": "2025-10-01/2026-10-01 exclusive",
+  "tomorrow_local": "2026-10-09",
+  "units": {
+    "time": "unixtime",
+    "temperature_2m_previous_day2": "\u00b0C",
+    "wind_speed_120m_previous_day2": "km/h",
+    "shortwave_radiation_previous_day2": "W/m\u00b2"
+  },
+  "historical_and_future_schema_grid_elevation_units_match": true,
+  "locations": [
+    {
+      "name": "Hamburg",
+      "latitude": 53.5625,
+      "longitude": 10.0,
+      "elevation": 13.0,
+      "history_hours": 8760,
+      "history_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 95,
+        "shortwave_radiation_previous_day2": 95
+      },
+      "tomorrow_hours": 24,
+      "tomorrow_aligned_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 0,
+        "shortwave_radiation_previous_day2": 0
+      },
+      "prior_snapshot_compared_values": 13176,
+      "prior_snapshot_changed_values": 0
+    },
+    {
+      "name": "Essen",
+      "latitude": 51.4375,
+      "longitude": 7.0,
+      "elevation": 90.0,
+      "history_hours": 8760,
+      "history_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 95,
+        "shortwave_radiation_previous_day2": 95
+      },
+      "tomorrow_hours": 24,
+      "tomorrow_aligned_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 0,
+        "shortwave_radiation_previous_day2": 0
+      },
+      "prior_snapshot_compared_values": 13176,
+      "prior_snapshot_changed_values": 0
+    },
+    {
+      "name": "Munich",
+      "latitude": 48.125,
+      "longitude": 11.5625,
+      "elevation": 524.0,
+      "history_hours": 8760,
+      "history_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 95,
+        "shortwave_radiation_previous_day2": 95
+      },
+      "tomorrow_hours": 24,
+      "tomorrow_aligned_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 0,
+        "shortwave_radiation_previous_day2": 0
+      },
+      "prior_snapshot_compared_values": 13176,
+      "prior_snapshot_changed_values": 0
+    },
+    {
+      "name": "Emden",
+      "latitude": 53.375,
+      "longitude": 7.1875,
+      "elevation": 3.0,
+      "history_hours": 8760,
+      "history_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 95,
+        "shortwave_radiation_previous_day2": 95
+      },
+      "tomorrow_hours": 24,
+      "tomorrow_aligned_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 0,
+        "shortwave_radiation_previous_day2": 0
+      },
+      "prior_snapshot_compared_values": 13176,
+      "prior_snapshot_changed_values": 0
+    },
+    {
+      "name": "Husum",
+      "latitude": 54.5,
+      "longitude": 9.0625,
+      "elevation": 25.0,
+      "history_hours": 8760,
+      "history_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 95,
+        "shortwave_radiation_previous_day2": 95
+      },
+      "tomorrow_hours": 24,
+      "tomorrow_aligned_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 0,
+        "shortwave_radiation_previous_day2": 0
+      },
+      "prior_snapshot_compared_values": 13176,
+      "prior_snapshot_changed_values": 0
+    },
+    {
+      "name": "Rostock",
+      "latitude": 54.0625,
+      "longitude": 12.125,
+      "elevation": 13.0,
+      "history_hours": 8760,
+      "history_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 95,
+        "shortwave_radiation_previous_day2": 95
+      },
+      "tomorrow_hours": 24,
+      "tomorrow_aligned_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 0,
+        "shortwave_radiation_previous_day2": 0
+      },
+      "prior_snapshot_compared_values": 13176,
+      "prior_snapshot_changed_values": 0
+    },
+    {
+      "name": "Magdeburg",
+      "latitude": 52.125,
+      "longitude": 11.625,
+      "elevation": 64.0,
+      "history_hours": 8760,
+      "history_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 95,
+        "shortwave_radiation_previous_day2": 95
+      },
+      "tomorrow_hours": 24,
+      "tomorrow_aligned_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 0,
+        "shortwave_radiation_previous_day2": 0
+      },
+      "prior_snapshot_compared_values": 13176,
+      "prior_snapshot_changed_values": 0
+    },
+    {
+      "name": "Berlin",
+      "latitude": 52.5,
+      "longitude": 13.4375,
+      "elevation": 38.0,
+      "history_hours": 8760,
+      "history_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 95,
+        "shortwave_radiation_previous_day2": 95
+      },
+      "tomorrow_hours": 24,
+      "tomorrow_aligned_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 0,
+        "shortwave_radiation_previous_day2": 0
+      },
+      "prior_snapshot_compared_values": 13176,
+      "prior_snapshot_changed_values": 0
+    },
+    {
+      "name": "Leipzig",
+      "latitude": 51.3125,
+      "longitude": 12.375,
+      "elevation": 111.0,
+      "history_hours": 8760,
+      "history_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 95,
+        "shortwave_radiation_previous_day2": 95
+      },
+      "tomorrow_hours": 24,
+      "tomorrow_aligned_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 0,
+        "shortwave_radiation_previous_day2": 0
+      },
+      "prior_snapshot_compared_values": 13176,
+      "prior_snapshot_changed_values": 0
+    },
+    {
+      "name": "Frankfurt",
+      "latitude": 50.125,
+      "longitude": 8.6875,
+      "elevation": 105.0,
+      "history_hours": 8760,
+      "history_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 95,
+        "shortwave_radiation_previous_day2": 95
+      },
+      "tomorrow_hours": 24,
+      "tomorrow_aligned_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 0,
+        "shortwave_radiation_previous_day2": 0
+      },
+      "prior_snapshot_compared_values": 13176,
+      "prior_snapshot_changed_values": 0
+    },
+    {
+      "name": "Stuttgart",
+      "latitude": 48.75,
+      "longitude": 9.1875,
+      "elevation": 255.0,
+      "history_hours": 8760,
+      "history_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 95,
+        "shortwave_radiation_previous_day2": 95
+      },
+      "tomorrow_hours": 24,
+      "tomorrow_aligned_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 0,
+        "shortwave_radiation_previous_day2": 0
+      },
+      "prior_snapshot_compared_values": 13176,
+      "prior_snapshot_changed_values": 0
+    },
+    {
+      "name": "Nuremberg",
+      "latitude": 49.4375,
+      "longitude": 11.0625,
+      "elevation": 318.0,
+      "history_hours": 8760,
+      "history_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 95,
+        "shortwave_radiation_previous_day2": 95
+      },
+      "tomorrow_hours": 24,
+      "tomorrow_aligned_nulls": {
+        "temperature_2m_previous_day2": 0,
+        "wind_speed_120m_previous_day2": 0,
+        "shortwave_radiation_previous_day2": 0
+      },
+      "prior_snapshot_compared_values": 13176,
+      "prior_snapshot_changed_values": 0
+    }
+  ],
+  "limitation": "Fetched after 11:00; this is not a contemporaneous pre-11 availability observation. Fixed 48-hour lead gives margin according to documented semantics, not a recovered historical publication-time audit."
+}
