@@ -6,6 +6,7 @@ Rules older than this page carry no row and are the first ablation candidates.
 
 | Line | Stumble |
 |---|---|
+| `conciseness`: Simplified Technical English | The forecast review on 2026-10-09 required two clarifications: "tail reliability" obscured the concern about rare extreme prices, then "first training period" omitted the proposed training/test dates. Adopted common words, short sentences and explicit context at the user's request, following Karpathy's recommendation of Simplified Technical English. |
 | `information-home` | Config comments carried backtest narrative and a spec step number, a PR description recounted the agent's own corrected drafts, and a test helper's docstring explained its caller and the bug's history — three corrections in one session, each information that belonged in the wiki, the PR body, or nowhere |
 | `design-first`, `ablation`, `grill`/`spec`/`goldfish` skills | Design conversation, see [agent-workflow-design](agent-workflow-design.md) |
 | `watch-long-runs`, `job-supervision`: detach from the tool's timeout | The first PyPSA-Eur run was a background tool call capped at 10 min; stopped and relaunched |
