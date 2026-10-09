@@ -275,7 +275,7 @@ def _cap_traces(zones: pd.DataFrame, caps: pd.DataFrame, selected_id: int | None
             lon.extend([p.x for p in points] + [None])
             lat.extend([p.y for p in points] + [None])
     row = caps.iloc[0]
-    hover = (f"{row['name']}<br>Capacity: {row.capacity:,.0f} MW<br>"
+    hover = (f"{row['name']}<br>Net {row.direction} limit: {row.capacity:,.0f} MW<br>"
              f"Cap shadow price: {row.shadow_price:,.2f} €/MWh")
     outline = go.Scattermapbox(name="binding country cap", lon=lon,
         lat=lat, mode="lines", line=dict(color=map_style.BINDING,

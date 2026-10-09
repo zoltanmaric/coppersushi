@@ -1,5 +1,7 @@
 """Synthetic, public fixtures exercise attribution independently of API or private cache."""
 
+from dataclasses import replace
+
 import copy
 import json
 
@@ -71,6 +73,11 @@ def test_import_cap_sign_and_capacity():
     assert caps.source_id.tolist() == [-1]
     assert caps.capacity.iloc[0] == 200
     assert caps.delta.iloc[0] == 20
+    day, mapped = page_inputs()
+    day = replace(day, context=data)
+    rendered = cnec_page.render(day, mapped, 0, -1)
+    hit = next(t for t in rendered.figure.data if t.name == 'select country cap')
+    assert any('Net import limit: 200 MW' in text for text in hit.text if text)
 
 
 @pytest.mark.parametrize('alpha', [.1, .5, 1])
@@ -146,6 +153,7 @@ def test_country_outline_hits_and_selected_contribution_are_separate_from_the_ob
     rendered = cnec_page.render(day, mapped, 0, -2)
     hit = next(t for t in rendered.figure.data if t.name == 'select country cap')
     assert set(v[0] for v in hit.customdata) == {'-2'}
+    assert any('Net export limit: 0 MW' in text for text in hit.text if text)
     assert rendered.reference == 'PL'
     assert 'Other Core zones: +20.00 €/MWh' in rendered.figure.layout.annotations[0].text
     # Actual DE–PL prices differ by only €10; the selected cap contributes €20, offset elsewhere.
