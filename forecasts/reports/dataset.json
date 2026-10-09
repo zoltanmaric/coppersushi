@@ -67,5 +67,47 @@
     "weather": "Assume documented previous_day2 fixed 48-hour lead; original publication times are unknown. Retrospective retrieval is not witnessed availability.",
     "demand": "Conditional on UpdateTime(UTC) describing availability; retain only archived versions updated by cutoff. Later revisions cannot recover overwritten earlier values."
   },
-  "verification": "Typed snapshot replay reconciles with the recorded raw-input evidence; publication measurements follow verification."
+  "verification": {
+    "date": "2026-10-09",
+    "published_to_private_s3": true,
+    "idempotent_publication": true,
+    "downloaded_bytes_match": true,
+    "two_replays_identical": true,
+    "input_bytes": 15529408,
+    "cold_load_seconds": 5.006,
+    "unit_tests": 18,
+    "full_fitting_leakage_test": "Pending model step"
+  },
+  "snapshot": {
+    "snapshot_id": "8bf5b5de2dc94d9d5db62fe9178dee50ac7e08005c2c6790e351e95081910a6d",
+    "code_revision": "41873354124e9fd8ead6d95d1510bfd1464e2a9c",
+    "environment": {
+      "pyarrow": "25.0.1",
+      "python": "3.14.5",
+      "requirements_sha256": "c8d942b4f137ab3dedb56cfe8ed0c5d82c211d37f3237882ff65ef31328e7e3f"
+    },
+    "tables": {
+      "demand": {
+        "rows": 35040,
+        "bytes": 1823316,
+        "sha256": "05b41728cebf1f9133fe077554388411ee7c893ad32d966d9bdce7a7fd9b6bfa",
+        "valid_min": "2025-09-30T22:00:00+00:00",
+        "valid_max": "2026-09-30T21:45:00+00:00"
+      },
+      "prices": {
+        "rows": 37632,
+        "bytes": 1719070,
+        "sha256": "fb84fde92ba3bb810c48c258eb2f3e3dbc9e782fba6bab2b2bc77cc80d595667",
+        "valid_min": "2025-09-14T22:00:00+00:00",
+        "valid_max": "2026-10-11T21:45:00+00:00"
+      },
+      "weather": {
+        "rows": 317088,
+        "bytes": 11987022,
+        "sha256": "03aef049c6521efc377cf0712b2510e31191af5f66e3fa2b1bbc8572cdb7cc5f",
+        "valid_min": "2025-09-29T23:00:00+00:00",
+        "valid_max": "2026-10-01T23:00:00+00:00"
+      }
+    }
+  }
 }
