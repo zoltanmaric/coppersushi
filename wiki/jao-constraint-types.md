@@ -9,13 +9,15 @@ The published Core constraints do not reduce to country caps plus lines/transfor
 | Line / tie-line | Domain `elementType=Line/TieLine` | Physical element, with or without a contingency |
 | Transformer | Domain `elementType=Transformer` | Physical transformer |
 | Phase-shifting transformer | Domain `elementType=PST` | Physical phase shifter; retain its published subtype |
-| Virtual-hub bound | External row with a single ±1 coefficient on a virtual hub | Interconnector/interface flow bound; some hubs represent an AC interface rather than one HVDC cable |
+| [Virtual-hub bound](virtual-hub-interconnectors.md#virtual-hub) | External row with a single ±1 coefficient on a virtual hub | Interconnector/interface flow bound; some hubs represent an AC interface rather than one HVDC cable |
 | Aggregate country cap | ±1 coefficient on a country position, or separate allocation feed | Poland's import/export caps in the 2026 inventory; see the [country coverage](country-import-export-caps.md#country-coverage) |
 | Coupling equality | Domain `Equality Constraint…`, opposite coefficient vectors, RAM zero | Core position balance / matching virtual-hub positions; not a scarce line capacity |
 | LTA constraint | Separate `activeLtaConstraint` feed | Long-term-allocation-domain facet, with its own shadow-price columns |
 | Unresolved metadata | Missing type, identifier or formulation evidence | Retain the row and explain what cannot be classified |
 
 The [Core handbook](literature/jao-core-publication-handbook.md) owns publication schemas and timing. The [2026 SDAC overview](literature/sdac-allocation-constraints-2026.md) additionally lists cable ramping and Italy-border line-set constraints. Those are distinct mechanisms and are not all carried by `activeFbConstraints`; downloading that endpoint alone is not downloading every constraint in the coupled market.
+
+The [virtual-hub guide](virtual-hub-interconnectors.md) owns interface mapping and endpoint-price decomposition.
 
 ### Domain-audit
 
@@ -50,12 +52,29 @@ A complete paced audit on **2026-10-09** covers **2025-10-09 00:00Z–2026-10-09
 | Transformer | 4,569 |
 | Phase-shifting transformer | 9,757 |
 | Physical element, subtype unresolved | 4,448 |
-| Virtual-hub bound | 38,147 |
+| [Virtual-hub bound](virtual-hub-interconnectors.md#virtual-hub) | 38,147 |
 | Aggregate country-cap limit | 70,080 |
 | Positive LTA facet | 88,273 |
 | **Classified rows/facets** | **287,354** |
 
 All aggregate limits are Poland's import/export pair, each published in all 35,040 quarter-hours. Their presence does not imply they bind. Every external FB row has a single ±1 virtual-hub coefficient, with no Core-country coefficient. There are 22 distinct external names, including ALEGrO, SwePol, COBRA, NorNed and other interfaces. No aggregate country-cap FB row, coupling-equality row or unresolved external formulation occurs in this active-feed audit. The [domain audit](#domain-audit) does contain equalities, which need not appear among active rows.
+
+At least one positive-shadow-price virtual-hub bound appears in **25,968 of 35,040 quarter-hours (74.1%)**. ALEGrO alone appears in 23,138 (66.0%), counting the union of ALBE and ALDE rather than adding their overlapping rows. All 38,147 virtual-hub rows have positive shadow prices.
+
+| Virtual-hub interconnector/interface | Distinct quarter-hours | Share of all annual intervals |
+|---|---:|---:|
+| ALEGrO, either ALBE or ALDE | 23,138 | 66.03% |
+| COBRA, NL–DK1 | 3,115 | 8.89% |
+| NorNed, NL–NO2 | 2,533 | 7.23% |
+| DE–NO2 BigHub | 2,172 | 6.20% |
+| SwePol, PL–SE4 | 1,787 | 5.10% |
+| DE–SE4 Baltic | 1,466 | 4.18% |
+| PL–LT BigHub | 1,213 | 3.46% |
+| DE–DK1 virtual hub | 967 | 2.76% |
+| DE–DK2 BigHub | 775 | 2.21% |
+| RO–BG virtual hub | 223 | 0.64% |
+
+These shares overlap across interfaces and use the whole year as denominator. The non-ALEGrO rows first appear in this sweep in June 2026; annual shares are not their frequency conditional on being represented in the feed. Hub labels identify published interfaces and must not be assumed to identify one cable each.
 
 The 4,448 unresolved physical rows cover 22 EICs and 25 names. Most are `PST MEE 2` (3,692 rows), but the name alone does not verify its subtype. All retain their IDs and EICs; none is silently forced into a line/transformer category. There are no rows lacking a usable asset identifier in this annual active sample. That does not remove the wider metadata gaps in the full-domain sample.
 

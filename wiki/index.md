@@ -1,6 +1,7 @@
 # Wiki Index
 
 ## Concepts
+- [virtual-hub-interconnectors.md](virtual-hub-interconnectors.md) — explicit interface mapping, endpoint-price decomposition and remaining sign/scaling checks
 - [jao-constraint-types.md](jao-constraint-types.md) — row classification across physical assets, country caps, virtual hubs, equality and LTA constraints, with verified metadata gaps
 - [country-import-export-caps.md](country-import-export-caps.md) — all-Core country-cap coverage, price effects and the validated Polish alternative-price source
 - [copper-plate-problem.md](copper-plate-problem.md) — the EU market-design argument motivating this project (copper plate, redispatch, co-optimisation, locational pricing)

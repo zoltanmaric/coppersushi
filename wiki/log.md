@@ -269,3 +269,9 @@ For October 8, 568 positive LTA facets agree with `(1−α)` times the adjusted 
 Completed 549 sequential public API requests for 2025-10-09–2026-10-09 UTC, with zero rate-limit responses. Verified all 35,040 allocation quarter-hours, FB published `totalRows`, absence of duplicate source rows and agreement between CSV and summary totals. Allocation and LTA omit `totalRows`; sparse LTA completeness is not independently established. The year contains 129,001 active FB rows, 35,040 allocation rows and 9,327 active LTA timestamp rows. Poland alone has aggregate country limits; the external FB rows are virtual-hub bounds.
 
 Filed 287,354 classified rows/facets and the audit scope in [JAO constraint types](jao-constraint-types.md#active-audit). Retained 4,448 physical rows across 22 EICs with unresolved subtypes. Clarified that “separate” means separate feeds, not absent from the year, and that an annual active-feed audit is not an exhaustive download of non-binding final domains or all SDAC mechanisms.
+
+## [2026-10-09] ingest | Virtual-hub mapping and endpoint attribution
+
+Filed the published Core interface mapping and N-SIDE's three-part price decomposition in [virtual-hub interconnectors](virtual-hub-interconnectors.md). Distinguish topology from validated direction and dual scaling, and retain adjacent bidding-zone identities. Zero Core-country coefficients do not establish zero contribution in an endpoint-to-endpoint decomposition. The annual sweep has positive virtual-hub bounds in 74.1% of intervals, including ALEGrO in 66.0%; interface frequencies overlap.
+
+Agreed automatic references: local bidding zone for in-zone assets, oriented sending endpoint for interconnectors, PL for the country cap. Added virtual-hub interface selection and validation of its endpoint-price contribution to the feature scope; equality and standalone LTA selection remain separate. Missing attribution never becomes an observed-spread fallback.
