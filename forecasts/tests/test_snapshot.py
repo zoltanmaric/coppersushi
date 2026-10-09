@@ -1,18 +1,19 @@
 """Adversarial selector and publication checks using small invented input histories."""
 import base64
 from datetime import date
+import hashlib
 import json
 from pathlib import Path
-import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
 
 import pyarrow as pa
+import pyarrow.parquet as pq
 
-from forecasts.dataset import cutoff, digest, stamp
-from forecasts.schemas import SCHEMAS, validate
-from forecasts.snapshot import InputReader, load, publish, select_records
+from forecasts.dataset import PAYLOADS, cutoff, digest, stamp
+from forecasts.schemas import SCHEMAS, VERSION, describe, validate
+from forecasts.snapshot import InputReader, canonical, identity, load, publish, select_records
 from forecasts.storage import put_verified
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -27,6 +28,60 @@ def history():
                     if key in row:
                         row[key] = stamp(row[key]) if row[key] else None
     return result
+
+
+class MemoryStore:
+    """Only the object operations used by the real upload/download helpers."""
+    def __init__(self):
+        self.objects = {}
+        self.interrupt_key = None
+
+    def aws(self, profile, region, service, operation, *args):
+        def option(name):
+            return args[args.index(name) + 1]
+        if operation == "list-objects-v2":
+            return {"Contents": [{"Key": k} for k in self.objects if k.startswith(option("--prefix"))]}
+        key = option("--key")
+        if operation == "put-object":
+            if key == self.interrupt_key:
+                raise RuntimeError("interrupted")
+            if key in self.objects and option("--if-none-match") == "*":
+                raise FileExistsError(key)
+            self.objects[key] = Path(option("--body")).read_bytes()
+            return {}
+        payload = self.objects[key]  # Missing objects fail, including unpublished manifests.
+        if operation == "get-object":
+            Path(args[-1]).write_bytes(payload)
+            return {}
+        if operation == "head-object":
+            return {"ContentLength": len(payload), "ChecksumSHA256": base64.b64encode(hashlib.sha256(payload).digest()).decode(), "VersionId": "fixture"}
+        raise AssertionError(f"Unexpected object operation: {operation}")
+
+
+def write_snapshot(directory):
+    """Write a small valid snapshot from the same invented selector history."""
+    records = history()
+    files, raw = {}, {}
+    for name in SCHEMAS:
+        path = directory / f"{name}.parquet"
+        table = validate(name, pa.Table.from_pylist(records[name], schema=SCHEMAS[name]))
+        pq.write_table(table, path)
+        files[name] = {"file": path.name, "sha256": digest(path), "bytes": path.stat().st_size,
+                       "rows": table.num_rows, "schema": describe(name)}
+        archive = directory / PAYLOADS[name]
+        archive.parent.mkdir(parents=True, exist_ok=True)
+        archive.write_bytes(b"invented raw input")
+        metadata = directory / f"{name}-retrieval.json"
+        metadata.write_text('{}')
+        raw[name] = {"key": f"raw/{name}/fixture/input", "sha256": digest(archive),
+                     "metadata_key": f"raw/{name}/fixture/retrieval.json", "metadata_sha256": digest(metadata)}
+    manifest = {"schema_version": VERSION, "files": files, "raw": raw}
+    snapshot_id = identity(manifest)
+    for name, entry in files.items():
+        entry["key"] = f"snapshots/{snapshot_id}/{name}.parquet"
+    manifest["snapshot_id"] = snapshot_id
+    (directory / "manifest.json").write_bytes(canonical(manifest))
+    return manifest
 
 
 class SnapshotTests(unittest.TestCase):
@@ -86,37 +141,49 @@ class SnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "units"):
             validate("weather", pa.Table.from_pylist(rows, schema=SCHEMAS["weather"]))
 
-    def test_missing_manifest_rejects_partial_upload_before_file_reads(self):
-        with tempfile.TemporaryDirectory() as directory, patch("forecasts.snapshot.get_verified", side_effect=subprocess.CalledProcessError(1, "get-object")) as get:
-            with self.assertRaises(subprocess.CalledProcessError):
-                load("fixture", "eu-west-1", "fixture-bucket", "a" * 64, Path(directory))
-            self.assertEqual(get.call_count, 1)
-            self.assertTrue(get.call_args.args[3].endswith("/manifest.json"))
-
-    def test_existing_object_mismatch_is_not_overwritten(self):
-        path = FIXTURES / "prices.json"
-        def response(*args):
-            if args[2:4] == ("s3api", "list-objects-v2"):
-                return {"Contents": [{"Key": "snapshots/fixture/prices.parquet"}]}
-            return {"ContentLength": path.stat().st_size, "ChecksumSHA256": base64.b64encode(bytes(32)).decode(), "VersionId": "original"}
-        with patch("forecasts.storage.aws", side_effect=response) as calls:
-            with self.assertRaisesRegex(ValueError, "checksum/size"):
-                put_verified("fixture", "eu-west-1", "fixture-bucket", "snapshots/fixture/prices.parquet", path)
-            self.assertTrue(all("put-object" not in call.args for call in calls.call_args_list))
-
-    def test_publication_writes_manifest_after_all_verified_objects(self):
-        # Small source fixtures stand in for local inputs; read_local validation is tested separately.
-        path = FIXTURES / "prices.json"
-        manifest = {"snapshot_id": "fixture", "raw": {"prices": {"key": "raw/prices/fixture/input", "sha256": digest(path), "metadata_key": "raw/prices/fixture/retrieval.json", "metadata_sha256": digest(path)}},
-                    "files": {"prices": {"key": "snapshots/fixture/prices.parquet", "file": "prices.parquet"}}}
-        with patch("forecasts.snapshot.read_local", return_value=(manifest, {})), patch("forecasts.snapshot.verify_bucket"), patch("forecasts.snapshot.digest", return_value=digest(path)), patch("forecasts.snapshot.PAYLOADS", {"prices": "prices.json"}), patch("forecasts.snapshot.put_verified") as put:
-            publish("fixture", "eu-west-1", "fixture-bucket", FIXTURES, FIXTURES)
-            self.assertTrue(put.call_args.args[3].endswith("/manifest.json"))
-            self.assertEqual(put.call_count, 4)
-        with patch("forecasts.snapshot.read_local", return_value=(manifest, {})), patch("forecasts.snapshot.verify_bucket"), patch("forecasts.snapshot.digest", return_value=digest(path)), patch("forecasts.snapshot.PAYLOADS", {"prices": "prices.json"}), patch("forecasts.snapshot.put_verified", side_effect=RuntimeError("interrupted")) as put:
+    def test_interrupted_publication_cannot_load(self):
+        store = MemoryStore()
+        with tempfile.TemporaryDirectory() as temporary, patch("forecasts.storage.aws", store.aws), patch("forecasts.snapshot.verify_bucket"):
+            directory = Path(temporary)
+            manifest = write_snapshot(directory)
+            store.interrupt_key = manifest["files"]["weather"]["key"]
             with self.assertRaisesRegex(RuntimeError, "interrupted"):
-                publish("fixture", "eu-west-1", "fixture-bucket", FIXTURES, FIXTURES)
-            self.assertTrue(all(not call.args[3].endswith("manifest.json") for call in put.call_args_list))
+                publish("fixture", "eu-west-1", "fixture-bucket", directory, directory)
+            self.assertIn(manifest["files"]["prices"]["key"], store.objects)
+            self.assertNotIn(f"snapshots/{manifest['snapshot_id']}/manifest.json", store.objects)
+            with self.assertRaises(KeyError):
+                load("fixture", "eu-west-1", "fixture-bucket", manifest["snapshot_id"], directory / "partial-load")
+
+    def test_complete_publication_and_retry_load_identical_content(self):
+        store = MemoryStore()
+        with tempfile.TemporaryDirectory() as temporary, patch("forecasts.storage.aws", store.aws), patch("forecasts.snapshot.verify_bucket"):
+            directory = Path(temporary)
+            manifest = write_snapshot(directory)
+            publish("fixture", "eu-west-1", "fixture-bucket", directory, directory)
+            original = dict(store.objects)
+            publish("fixture", "eu-west-1", "fixture-bucket", directory, directory)
+            self.assertEqual(store.objects, original)
+            destination = directory / "loaded"
+            loaded, tables = load("fixture", "eu-west-1", "fixture-bucket", manifest["snapshot_id"], destination)
+            self.assertEqual(loaded, manifest)
+            for name in SCHEMAS:
+                self.assertEqual(tables[name].num_rows, manifest["files"][name]["rows"])
+                self.assertEqual((destination / f"{name}.parquet").read_bytes(), (directory / f"{name}.parquet").read_bytes())
+
+    def test_conflicting_retry_preserves_published_content(self):
+        store = MemoryStore()
+        with tempfile.TemporaryDirectory() as temporary, patch("forecasts.storage.aws", store.aws), patch("forecasts.snapshot.verify_bucket"):
+            directory = Path(temporary)
+            manifest = write_snapshot(directory)
+            publish("fixture", "eu-west-1", "fixture-bucket", directory, directory)
+            original = dict(store.objects)
+            changed = directory / "changed.parquet"
+            changed.write_bytes(b"different content")
+            with self.assertRaisesRegex(ValueError, "checksum/size"):
+                put_verified("fixture", "eu-west-1", "fixture-bucket", manifest["files"]["prices"]["key"], changed)
+            self.assertEqual(store.objects, original)
+            loaded, _ = load("fixture", "eu-west-1", "fixture-bucket", manifest["snapshot_id"], directory / "loaded")
+            self.assertEqual(loaded, manifest)
 
 
 if __name__ == "__main__":
