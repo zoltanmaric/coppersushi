@@ -41,24 +41,6 @@ flowchart LR
     jao_map["jao_map<br/>/cnec/&lt;day&gt;: cleared zonal prices, active CNECs and selected PTDF contribution"]
     trued_network["trued_network<br/>solved_network with JAO limits on matched lines and transformers, checked pairs attached"]:::planned
 
-    forecast_raw_inputs["forecast_raw_inputs<br/>S3 source responses and retrieval metadata"]:::planned
-    forecast_input_snapshot["forecast_input_snapshot<br/>S3 validated Parquet tables and fixed manifest"]:::planned
-    forecast_local_run["forecast_local_run<br/>local Metaflow training and evaluation"]:::planned
-    forecast_experiment["forecast_experiment<br/>local MLflow scores, models and reports"]:::planned
-
-    forecast_raw_inputs -.-> forecast_input_snapshot
-    forecast_input_snapshot -.-> forecast_local_run
-    forecast_local_run -.-> forecast_experiment
-
-    forecast_aws_infra["forecast_aws_infra<br/>Terraform-managed AWS resources, later stage"]:::planned
-    forecast_cloud_run["forecast_cloud_run<br/>Metaflow / Step Functions / AWS Batch on Fargate, deployment validation pending"]:::planned
-    forecast_daily_output["forecast_daily_output<br/>daily quantiles with input, code and model provenance"]:::planned
-
-    forecast_aws_infra -.-> forecast_cloud_run
-    forecast_input_snapshot -.-> forecast_cloud_run
-    forecast_experiment -.-> forecast_cloud_run
-    forecast_cloud_run -.-> forecast_daily_output
-
     pypsa_eur_pin --> pypsa_eur_run
     pypsa_eur_pin -.-> unsimplified
     unsimplified -.-> solved_network
@@ -86,8 +68,6 @@ flowchart LR
 ```
 
 Code is one package, `coppersushi/`, organised by domain noun; `io-boundary` in `coppersushi/AGENTS.md` names the two modules that touch the world.
-
-The planned independent `forecasts/` workflow starts with [S3 inputs and local execution](price-forecasting/forecast-infrastructure.md); it has no dependency on the power-flow application.
 
 ## Future chapters
 

@@ -206,3 +206,7 @@ The [forecast infrastructure design](price-forecasting/forecast-infrastructure.m
 ## [2026-10-09] decision | Forecast reproducibility and deployment principles
 
 The [infrastructure design](price-forecasting/forecast-infrastructure.md) makes exact provenance and one-command reproduction the forecast promise. Storage selection follows required reads and writes, with complexity justified by demonstrated needs. The later deployment preference is Metaflow with Step Functions and AWS Batch on Fargate, using Terraform for infrastructure; an end-to-end deployment check precedes adoption. The first iteration remains local execution with inputs in S3.
+
+## [2026-10-09] decision | Separate forecasting product architecture
+
+The [forecast product overview](price-forecasting.md) owns its independent dataflow graph. The power-flow product page contains only its own pipeline. Architecture deltas belong to the affected product; the root rule now expresses that boundary.
