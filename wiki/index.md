@@ -28,7 +28,7 @@
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026
 
 ## Specs (working memory — burn-down state, not settled knowledge)
-- [specs/day-ahead-price-forecast.md](specs/day-ahead-price-forecast.md) — first forecast build: historical dataset, frozen evaluation and reproducible uncertainty report
+- [specs/day-ahead-price-forecast.md](specs/day-ahead-price-forecast.md) — first forecast build: freeze model/evaluation settings and produce a reproducible uncertainty report
 - [specs/sushi-2.md](specs/sushi-2.md) — the Sep 11 cut: next steps and acceptance criteria
 - [specs/jao-grid.md](specs/jao-grid.md) — JAO's Core elements matched to our OSM grid: a map of what limited trade on a day, and true line and transformer limits from JAO's own numbers
 - [specs/architecture-review-graph.md](specs/architecture-review-graph.md) — lightweight architecture-review experiment: manual DAG, PR deltas, and an I/O-boundary test
