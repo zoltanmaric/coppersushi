@@ -7,7 +7,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from pandera.typing import DataFrame
 
-from coppersushi import cnec_influence, map_style, market
+from coppersushi import cnec_attribution, cnec_influence, map_style, market
 from coppersushi.cnec_market import Snapshot
 from coppersushi.data_model.cnec_price_map import MATCHED, MappedCnecElements
 from coppersushi.market_day import MARKET_TZ
@@ -53,12 +53,14 @@ def _placed(constraints: pd.DataFrame, geometries: DataFrame[MappedCnecElements]
 
 def _hover(rows: pd.DataFrame) -> pd.Series:
     ram = rows.ram.map(lambda value: "n/a" if pd.isna(value) else f"{value:,.0f} MW")
+    capacity = rows.capacity.map(lambda value: "n/a" if pd.isna(value) else f"{value:,.0f} MW")
     contingency = rows.cont_name.fillna("Base case (no contingency)")
     return (
         "<b>" + rows["name"] + "</b><br>"
         + "Binding under: " + contingency + "<br>"
         + "Direction: " + rows.direction + "<br>"
         + "RAM: " + ram + "<br>"
+        + "Capacity: " + capacity + "<br>"
         + "Shadow price: " + rows.shadow_price.map(lambda value: f"{value:,.2f} €/MWh")
     )
 
@@ -228,16 +230,101 @@ def _constraint_traces(
         *line("market-binding CNECs", LINE_WIDTH, lon, lat),
         *highlighted,
         ends,
+        _line_hit_targets(line_rows),
         markers(line_rows, "binding rows", "triangle", TARGET_SIZE, directed=True),
         markers(point_rows, "binding transformers and PSTs", "square", POINT_SIZE, directed=False),
     ]
 
 
-def _selected(placed: pd.DataFrame, contribution: pd.DataFrame | None) -> pd.Series | None:
-    """The placed row a contribution belongs to; ``cnec_market.snapshot`` made sure there is one."""
-    if contribution is None:
-        return None
-    return placed[placed.source_id.eq(contribution.source_id.iloc[0])].iloc[0]
+def _selected(placed: pd.DataFrame, source_id: int | None) -> pd.Series | None:
+    rows = placed[placed.source_id.eq(source_id)]
+    return rows.iloc[0] if len(rows) == 1 else None
+
+
+def _line_hit_targets(rows: pd.DataFrame) -> go.Scattermapbox:
+    """Continuous-looking hit areas along line interiors, carrying all source row IDs."""
+    lon, lat, data, hover = [], [], [], []
+    for _, group in rows.groupby(["x0", "y0", "x1", "y1"], dropna=True):
+        row = group.iloc[0]
+        ids = ",".join(group.source_id.astype(str))
+        for t in np.linspace(0, 1, 41):
+            lon.append(row.x0 + t * (row.x1 - row.x0))
+            lat.append(row.y0 + t * (row.y1 - row.y0))
+            data.append([ids])
+            hover.append("<br><br>".join(_hover(group)))
+    return go.Scattermapbox(name="select line", lon=lon, lat=lat, mode="markers",
+        marker=dict(size=16, color="rgba(128,80,255,0.01)"), customdata=data,
+        text=hover, hoverinfo="text", showlegend=False)
+
+
+def _cap_traces(zones: pd.DataFrame, caps: pd.DataFrame, selected_id: int | None) -> list:
+    traces = []
+    if caps is None or caps.empty:
+        return traces
+    polish = zones[zones.zone.eq("PL")]
+    if len(polish) != 1:
+        return traces
+    geometry = polish.geometry.iloc[0]
+    polygons = list(geometry.geoms) if geometry.geom_type == "MultiPolygon" else [geometry]
+    lon, lat = [], []
+    for polygon in polygons:
+        for ring in [polygon.exterior, *polygon.interiors]:
+            # Include gaps between rings so islands do not gain invented connecting borders.
+            n = max(20, int(ring.length * 20))
+            points = [ring.interpolate(t, normalized=True) for t in np.linspace(0, 1, n)]
+            lon.extend([p.x for p in points] + [None])
+            lat.extend([p.y for p in points] + [None])
+    row = caps.iloc[0]
+    hover = (f"{row['name']}<br>Capacity: {row.capacity:,.0f} MW<br>"
+             f"Cap shadow price: {row.shadow_price:,.2f} €/MWh")
+    outline = go.Scattermapbox(name="binding country cap", lon=lon,
+        lat=lat, mode="lines", line=dict(color=map_style.BINDING,
+        width=SELECTED_WIDTH if selected_id == row.source_id else LINE_WIDTH), hoverinfo="skip")
+    traces += map_style.haloed(outline)
+    traces.append(go.Scattermapbox(name="select country cap", lon=outline.lon, lat=outline.lat,
+        mode="markers", marker=dict(size=14, color="rgba(128,80,255,0.01)"),
+        customdata=[[str(row.source_id)]] * len(lon), text=[hover] * len(lon), hoverinfo="text"))
+    return traces
+
+
+def _interfaces(external: pd.DataFrame, centres: pd.DataFrame) -> pd.DataFrame:
+    """Schematic endpoint anchors; never represent a combined interface as one cable route."""
+    anchors = {r.zone: (r.x, r.y) for r in centres.itertuples()}
+    anchors.update(cnec_attribution.ADJACENT_ANCHORS)
+    records = []
+    for row in external.to_dict("records"):
+        mapping = cnec_attribution.INTERFACES.get(row["hub"])
+        if mapping is None or row["coefficient"] not in (-1, 1) or not row["name"].startswith("External Constraint") or not all(z in anchors for z in mapping[:2]):
+            continue
+        owner, other, asset = mapping
+        x0, y0 = anchors[owner]
+        x1, y1 = anchors[other]
+        records.append({**row, "x0": x0, "y0": y0, "x1": x1, "y1": y1,
+                        "asset": asset, "owner": owner, "other": other, "match_status": MATCHED})
+    return pd.DataFrame(records, columns=[*external.columns, "x0", "y0", "x1", "y1", "asset", "owner", "other", "match_status"])
+
+
+def _interface_traces(interfaces: pd.DataFrame, selected_id: int | None) -> list:
+    traces = []
+    for asset, group in interfaces.groupby("asset"):
+        row = group.iloc[0]
+        ids = ",".join(group.source_id.astype(str))
+        text = "<br><br>".join(
+            f"{r.name}<br>Schematic {asset}: {r.owner}–{r.other}<br>"
+            f"Sending end: {cnec_attribution.virtual_reference(pd.Series(r._asdict())) or 'unavailable'}<br>"
+            f"Capacity: {r.capacity:,.0f} MW · Shadow price: {r.shadow_price:,.2f} €/MWh"
+            for r in group.itertuples())
+        n = 41
+        traces.append(go.Scattermapbox(name=f"{asset} interface", lon=np.linspace(row.x0, row.x1, n),
+            lat=np.linspace(row.y0, row.y1, n), mode="lines+markers",
+            line=dict(color=map_style.BINDING, width=SELECTED_WIDTH if selected_id in group.source_id.values else 1.5),
+            marker=dict(size=14, color="rgba(128,80,255,0.03)"),
+            customdata=[[ids]] * n, text=[text] * n, hoverinfo="text"))
+        traces.append(go.Scattermapbox(name=f"{asset} label", lon=[(row.x0+row.x1)/2],
+            lat=[(row.y0+row.y1)/2], mode="markers+text", text=[asset], textposition="top center",
+            textfont=dict(color="white", size=11), marker=dict(size=9, color=map_style.BINDING),
+            customdata=[[ids]], hovertext=[text], hoverinfo="text"))
+    return traces
 
 
 def _view(priced_zones: pd.DataFrame) -> dict:
@@ -276,9 +363,33 @@ def figure(
         "Purple means market-binding under contingency, not physically overloaded."
     )
     fill, labels = _price_traces(priced_zones, _fill_anchor(basemap))
-    selected = _selected(placed, view.contribution)
-    traces = [fill, *_constraint_traces(placed, selected)]
-    if selected is not None:
+    selected = _selected(placed, view.selected_id)
+    centres = _zone_centres(priced_zones)
+    interfaces = _interfaces(view.external_constraints, centres)
+    virtual = _selected(interfaces, view.selected_id)
+    if virtual is not None:
+        selected = virtual
+    if view.caps is not None and view.selected_id in view.caps.source_id.values:
+        anchor = centres[centres.zone.eq("PL")]
+        if len(anchor) == 1:
+            point = anchor.iloc[0]
+            selected = pd.Series(dict(x0=point.x, y0=point.y, x1=point.x, y1=point.y, match_status=MATCHED))
+    physical_selection = _selected(placed, view.selected_id)
+    traces = [fill, *_constraint_traces(placed, physical_selection),
+              *_cap_traces(zones, view.caps, view.selected_id),
+              *_interface_traces(interfaces, view.selected_id)]
+    annotation += "<br>Schematic interfaces connect bidding zones, not physical routes."
+    if view.selected_id is not None:
+        annotation += f"<br>Selected row {view.selected_id} · Reference: {view.reference or 'unavailable'}"
+    if view.note:
+        annotation += "<br>" + view.note
+    if selected is not None and view.contribution is not None:
+        effects = view.contribution[view.contribution.zone.ne(view.reference)]
+        if virtual is not None:
+            effect = effects.iloc[0]
+            annotation += f"<br><b>{effect.zone}: {effect.contribution:+,.2f} €/MWh relative to {view.reference}</b>"
+        elif view.selected_id in view.caps.source_id.values:
+            annotation += f"<br><b>Other Core zones: {effects.contribution.iloc[0]:+,.2f} €/MWh relative to PL</b>"
         influence = cnec_influence.overlay(selected, _zone_centres(priced_zones), view.contribution)
         traces += influence.traces
         annotation += "<br>" + influence.note

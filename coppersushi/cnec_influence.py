@@ -128,7 +128,7 @@ def overlay(selected: pd.Series, centres: pd.DataFrame, contribution: pd.DataFra
     dots = _dots(zonal, reference)
     note = (
         f"Selected contribution relative to <b>{reference}</b>. "
-        "Rays are zonal PTDF influence, not a power-flow path."
+        "Rays show this constraint’s price contribution, not a power-flow path."
     )
     if selected.match_status != MATCHED:
         note += " The selected CNEC has no mapped geometry, so its rays cannot be anchored."

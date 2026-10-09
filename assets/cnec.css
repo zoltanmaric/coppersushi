@@ -1,0 +1,11 @@
+/* Delivery-time marks need visible ticks between labels on Dash's slider. */
+#cnec-interval .dash-slider-mark::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 10px);
+    width: 1px;
+    height: 5px;
+    background: #9ca3af;
+}
+#cnec-interval .dash-slider-track { background: #61656b; }

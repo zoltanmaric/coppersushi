@@ -10,7 +10,7 @@ import dash_bootstrap_components as dbc
 from dash import dcc, html
 from pandera.typing import DataFrame
 
-from coppersushi import cnec_market, cnec_price_map, map_style, market
+from coppersushi import cnec_attribution, cnec_market, cnec_price_map, map_style, market
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
 from coppersushi.data_model.jao import (
     ActiveConstraints,
@@ -31,6 +31,7 @@ class Day:
     ptdfs: DataFrame[ConstraintPtdfs]
     external_constraints: DataFrame[ActiveExternalConstraints]
     prices: DataFrame[DayAheadPrices]
+    context: pd.DataFrame | None = None
 
 
 class Rendered(NamedTuple):
@@ -42,6 +43,7 @@ class Rendered(NamedTuple):
     interval_value: int
     constraint_options: list[dict]
     constraint_value: str | None  # Bootstrap select values are strings
+    reference: str | None
 
 
 def local_today() -> str:
@@ -80,16 +82,12 @@ def layout(day: str | None = None, mapbox_token: str | None = None) -> html.Div:
                         id="cnec-constraint",
                         placeholder="Select a binding row",
                     ),
-                    dbc.Select(
-                        id="cnec-reference-zone",
-                        options=[{"label": zone, "value": zone} for zone in market.CORE_ZONES],
-                        value="AT",
-                    ),
+                    html.Span(id="cnec-reference-zone"),
                     dbc.Button("Retry", id="cnec-retry", n_clicks=0, color="secondary"),
                 ],
                 style={
                     "display": "grid",
-                    "gridTemplateColumns": "12em minmax(24em, 1fr) 7em auto",
+                    "gridTemplateColumns": "12em minmax(20em, 1fr) auto auto",
                     "gap": "0.6em",
                     "padding": "0.4em 1em",
                 },
@@ -98,6 +96,7 @@ def layout(day: str | None = None, mapbox_token: str | None = None) -> html.Div:
             dcc.Loading(
                 [
                     dcc.Store(id="cnec-active-ready"),
+                    dcc.Store(id="cnec-view-day"),
                     dcc.Store(id="cnec-prices-ready"),
                     dcc.Graph(
                         id="cnec-map",
@@ -114,11 +113,13 @@ def layout(day: str | None = None, mapbox_token: str | None = None) -> html.Div:
                     style={"display": "flex", "gap": "0.6em", "alignItems": "center"},
                 ),
                 delay_show=300,
-                parent_style={"height": "82vh"},
+                parent_style={"height": "calc(100vh - 210px)", "minHeight": "400px"},
                 overlay_style={"visibility": "visible", "opacity": 0.4},
             ),
             html.Div(
-                dcc.Slider(id="cnec-interval", min=0, max=1, step=1, value=0),
+                [dbc.Button("Previous", id="cnec-previous", disabled=True, n_clicks=0),
+                 dbc.Button("Next", id="cnec-next", disabled=True, n_clicks=0),
+                 dcc.Slider(id="cnec-interval", min=0, max=1, step=1, value=0, allow_direct_input=False)],
                 style={"padding": "0 1em 1.5em"},
             ),
         ]
@@ -131,11 +132,10 @@ def interval_marks(day: MarketDay) -> dict[int, dict]:
     stride = 2 if len(intervals) <= 25 else 8
     return {
         index: {
-            "label": interval.tz_convert(MARKET_TZ).strftime("%H:%M"),
+            "label": interval.tz_convert(MARKET_TZ).strftime("%H:%M %Z") if index % stride == 0 else " ",
             "style": {"color": "white"},
         }
         for index, interval in enumerate(intervals)
-        if index % stride == 0
     }
 
 
@@ -145,7 +145,8 @@ NO_SELECTION = {"label": "No constraint selected", "value": ""}
 def _constraint_options(constraints: pd.DataFrame) -> list[dict]:
     options = [NO_SELECTION]
     for row in constraints.sort_values("shadow_price", ascending=False).itertuples():
-        contingency = row.cont_name if pd.notna(row.cont_name) else "base case"
+        contingency = getattr(row, "cont_name", None)
+        contingency = contingency if pd.notna(contingency) else "base case"
         options.append(
             {
                 "label": (
@@ -163,7 +164,6 @@ def render(
     mapped_elements: DataFrame[MappedCnecElements],
     interval_index: int,
     selected_source_id: int | None,
-    reference_zone: str,
     mapbox_token: str | None = None,
     basemap: str | dict = map_style.MAP_STYLE,
 ) -> Rendered:
@@ -172,22 +172,39 @@ def render(
     index = min(max(int(interval_index), 0), len(intervals) - 1)
     interval = intervals[index]
     active = day.constraints[day.constraints.interval.eq(interval)]
-    options = _constraint_options(active)
+    caps = cnec_attribution.country_caps(day.context, day.prices, interval)
+    external = day.external_constraints[day.external_constraints.interval.eq(interval)]
+    interfaces = external[external.hub.isin(cnec_attribution.INTERFACES)
+                          & external.coefficient.isin([-1, 1])
+                          & external.name.str.startswith("External Constraint")]
+    options = _constraint_options(pd.concat([active, caps, interfaces], ignore_index=True))
     option_values = {option["value"] for option in options} - {NO_SELECTION["value"]}
     chosen = "" if selected_source_id is None else str(selected_source_id)
     selected_value = chosen if chosen in option_values else None
     selected = (
         cnec_market.ConstraintKey(int(selected_value)) if selected_value is not None else None
     )
-    snapshot = cnec_market.snapshot(
-        day.constraints,
-        day.ptdfs,
-        day.external_constraints,
-        day.prices,
-        interval,
-        selected,
-        reference_zone if selected is not None else None,
-    )
+    reference_zone = None
+    note = ""
+    alpha = None
+    if day.context is not None:
+        scaling = day.context[day.context.interval.eq(interval)]
+        if len(scaling) == 1:
+            alpha = float(scaling.alpha.iloc[0])
+    if selected is not None and selected.source_id in active.source_id.values:
+        row = active[active.source_id.eq(selected.source_id)].iloc[0]
+        reference_zone = cnec_attribution.physical_reference(row, mapped_elements, day.zones)
+        if reference_zone is None:
+            note = "Contribution unavailable: sending endpoint has no unambiguous Core bidding zone."
+    if note:
+        snapshot = cnec_market.snapshot(day.constraints, day.ptdfs, day.external_constraints,
+                                       day.prices, interval, context=day.context)
+        snapshot = snapshot._replace(selected_id=selected.source_id, note=note)
+    else:
+        snapshot = cnec_market.snapshot(
+            day.constraints, day.ptdfs, day.external_constraints, day.prices, interval,
+            selected, reference_zone, context=day.context, alpha=alpha,
+        )
     return Rendered(
         figure=cnec_price_map.figure(
             day.zones, mapped_elements, snapshot, mapbox_token, basemap
@@ -197,4 +214,24 @@ def render(
         interval_value=index,
         constraint_options=options,
         constraint_value=selected_value,
+        reference=snapshot.reference,
     )
+
+
+def clicked_selection(click: dict | None, options: list[dict], current: str | None) -> str | None:
+    """Resolve map hits against this interval only; keep a selected contingency in a group."""
+    if not click or not click.get("points"):
+        return current
+    values = click["points"][0].get("customdata")
+    if not isinstance(values, (list, tuple)) or not values:
+        return current
+    candidates = set(str(values[0]).split(","))
+    allowed = [str(option["value"]) for option in options if option["value"]]
+    if current in candidates and current in allowed:
+        return current
+    return next((value for value in allowed if value in candidates), current)
+
+
+def advance_interval(day: MarketDay, index: int, step: int) -> int:
+    """Move one market time unit, clamped to the delivery day's actual UTC extent."""
+    return min(max(index + step, 0), len(day.market_time_units()) - 1)

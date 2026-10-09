@@ -143,6 +143,7 @@ def selected_inputs(inputs, reference="AT"):
         base.interval,
         selected,
         reference,
+        alpha=1.0,
     )
     return zones, geometries, view
 

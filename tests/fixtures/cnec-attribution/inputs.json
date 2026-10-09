@@ -1,0 +1,241 @@
+{
+  "active": [
+    {
+      "id": 10,
+      "dateTimeUtc": "2026-09-11T22:00:00Z",
+      "tso": "Synthetic",
+      "cnecName": "Synthetic BE\u2013DE line",
+      "cnecEic": "99T-AA-BB-00003P",
+      "direction": "DIRECT",
+      "contName": "Grayspire - Highgarden 101",
+      "branchEic": "99T-GR-HI-00001A",
+      "hubFrom": "AT",
+      "hubTo": "SI",
+      "shadowPrice": 100.0,
+      "ram": 172.0,
+      "ramMcp": 0.0,
+      "hub_AT": 0,
+      "hub_BE": 0.08,
+      "hub_CZ": 0,
+      "hub_DE": 0.03,
+      "hub_FR": 0,
+      "hub_HR": 0,
+      "hub_HU": 0,
+      "hub_NL": 0,
+      "hub_PL": 0,
+      "hub_RO": 0,
+      "hub_SI": 0,
+      "hub_SK": 0,
+      "hub_ALBE": 0.08,
+      "hub_ALDE": 0.04
+    },
+    {
+      "id": 12,
+      "dateTimeUtc": "2026-09-11T22:00:00Z",
+      "tso": "Synthetic",
+      "cnecName": "External Constraint Synthetic_ALDE",
+      "cnecEic": "NA",
+      "direction": "DIRECT",
+      "contName": "Grayspire - Highgarden 101",
+      "branchEic": "99T-GR-HI-00001A",
+      "hubFrom": "AT",
+      "hubTo": "SI",
+      "shadowPrice": 2.5,
+      "ram": 172.0,
+      "ramMcp": 0.0,
+      "hub_AT": 0.0,
+      "hub_BE": 0.0,
+      "hub_CZ": 0.0,
+      "hub_DE": 0.0,
+      "hub_FR": 0.0,
+      "hub_HR": 0.0,
+      "hub_HU": 0.0,
+      "hub_NL": 0.0,
+      "hub_PL": 0.0,
+      "hub_RO": 0.0,
+      "hub_SI": 0.0,
+      "hub_SK": 0.0,
+      "hub_ALBE": 0.0,
+      "hub_ALDE": 1,
+      "fmax": 1000
+    },
+    {
+      "id": 13,
+      "dateTimeUtc": "2026-09-11T22:00:00Z",
+      "tso": "Synthetic",
+      "cnecName": "External Constraint Synthetic_ALBE",
+      "cnecEic": "NA",
+      "direction": "DIRECT",
+      "contName": "Grayspire - Highgarden 101",
+      "branchEic": "99T-GR-HI-00001A",
+      "hubFrom": "AT",
+      "hubTo": "SI",
+      "shadowPrice": 1.5,
+      "ram": 172.0,
+      "ramMcp": 0.0,
+      "hub_AT": 0.0,
+      "hub_BE": 0.0,
+      "hub_CZ": 0.0,
+      "hub_DE": 0.0,
+      "hub_FR": 0.0,
+      "hub_HR": 0.0,
+      "hub_HU": 0.0,
+      "hub_NL": 0.0,
+      "hub_PL": 0.0,
+      "hub_RO": 0.0,
+      "hub_SI": 0.0,
+      "hub_SK": 0.0,
+      "hub_ALBE": -1,
+      "hub_ALDE": 0.0,
+      "fmax": 1000
+    }
+  ],
+  "feeds": {
+    "alpha": [
+      {
+        "dateTimeUtc": "2026-09-11T22:00:00Z",
+        "alphaFactor": 0.5
+      },
+      {
+        "dateTimeUtc": "2026-09-11T22:15:00Z",
+        "alphaFactor": 0.5
+      },
+      {
+        "dateTimeUtc": "2026-09-11T22:30:00Z",
+        "alphaFactor": 0.5
+      },
+      {
+        "dateTimeUtc": "2026-09-11T22:45:00Z",
+        "alphaFactor": 0.5
+      }
+    ],
+    "caps": [
+      {
+        "dateTimeUtc": "2026-09-11T22:00:00Z",
+        "limitDown_PL": 200,
+        "limitUp_PL": 0
+      },
+      {
+        "dateTimeUtc": "2026-09-11T22:15:00Z",
+        "limitDown_PL": 200,
+        "limitUp_PL": 0
+      },
+      {
+        "dateTimeUtc": "2026-09-11T22:30:00Z",
+        "limitDown_PL": 200,
+        "limitUp_PL": 0
+      },
+      {
+        "dateTimeUtc": "2026-09-11T22:45:00Z",
+        "limitDown_PL": 200,
+        "limitUp_PL": 0
+      }
+    ],
+    "positions": [
+      {
+        "dateTimeUtc": "2026-09-11T22:00:00Z",
+        "hub_PL": 0
+      },
+      {
+        "dateTimeUtc": "2026-09-11T22:15:00Z",
+        "hub_PL": 0
+      },
+      {
+        "dateTimeUtc": "2026-09-11T22:30:00Z",
+        "hub_PL": 0
+      },
+      {
+        "dateTimeUtc": "2026-09-11T22:45:00Z",
+        "hub_PL": 0
+      }
+    ],
+    "polish": [
+      {
+        "id": 100,
+        "dateTimeUtc": "2026-09-11T22:00:00Z",
+        "border_PL_SDAC_NP": 0,
+        "border_PL_ALT": 120
+      },
+      {
+        "id": 101,
+        "dateTimeUtc": "2026-09-11T22:00:00Z",
+        "border_PL_SDAC_NP": 0,
+        "border_PL_ALT": 120
+      },
+      {
+        "id": 102,
+        "dateTimeUtc": "2026-09-11T22:00:00Z",
+        "border_PL_SDAC_NP": 0,
+        "border_PL_ALT": 120
+      },
+      {
+        "id": 103,
+        "dateTimeUtc": "2026-09-11T22:00:00Z",
+        "border_PL_SDAC_NP": 0,
+        "border_PL_ALT": 120
+      }
+    ]
+  },
+  "prices": [
+    {
+      "interval": "2026-09-11T22:00:00Z",
+      "zone": "AT",
+      "price": 100
+    },
+    {
+      "interval": "2026-09-11T22:00:00Z",
+      "zone": "BE",
+      "price": 100
+    },
+    {
+      "interval": "2026-09-11T22:00:00Z",
+      "zone": "CZ",
+      "price": 100
+    },
+    {
+      "interval": "2026-09-11T22:00:00Z",
+      "zone": "DE",
+      "price": 110
+    },
+    {
+      "interval": "2026-09-11T22:00:00Z",
+      "zone": "FR",
+      "price": 100
+    },
+    {
+      "interval": "2026-09-11T22:00:00Z",
+      "zone": "HR",
+      "price": 100
+    },
+    {
+      "interval": "2026-09-11T22:00:00Z",
+      "zone": "HU",
+      "price": 100
+    },
+    {
+      "interval": "2026-09-11T22:00:00Z",
+      "zone": "NL",
+      "price": 100
+    },
+    {
+      "interval": "2026-09-11T22:00:00Z",
+      "zone": "PL",
+      "price": 100
+    },
+    {
+      "interval": "2026-09-11T22:00:00Z",
+      "zone": "RO",
+      "price": 100
+    },
+    {
+      "interval": "2026-09-11T22:00:00Z",
+      "zone": "SI",
+      "price": 100
+    },
+    {
+      "interval": "2026-09-11T22:00:00Z",
+      "zone": "SK",
+      "price": 100
+    }
+  ]
+}

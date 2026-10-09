@@ -224,7 +224,7 @@ def test_active_fb_ptdfs_are_one_row_per_constraint_and_core_zone():
 
 def test_contribution_is_shadow_price_times_the_ptdf_difference_with_the_documented_sign():
     active = cnecs.active_constraints(active_fb()).iloc[0]
-    contribution = cnecs.price_contributions(active, cnecs.constraint_ptdfs(active_fb()), "AT")
+    contribution = cnecs.price_contributions(active, cnecs.constraint_ptdfs(active_fb()), "AT", 1.0)
     values = contribution.set_index("zone").contribution
     assert values["AT"] == pytest.approx(0.0)
     assert values["BE"] == pytest.approx(2.87)
@@ -234,7 +234,7 @@ def test_contribution_is_shadow_price_times_the_ptdf_difference_with_the_documen
 def test_contribution_requires_an_explicit_core_reference_zone():
     active = cnecs.active_constraints(active_fb()).iloc[0]
     with pytest.raises(ValueError, match="reference zone"):
-        cnecs.price_contributions(active, cnecs.constraint_ptdfs(active_fb()), "GB")
+        cnecs.price_contributions(active, cnecs.constraint_ptdfs(active_fb()), "GB", 1.0)
 
 
 def test_active_non_spatial_rows_are_retained_separately():
