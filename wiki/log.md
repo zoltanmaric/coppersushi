@@ -198,3 +198,19 @@ Established the `forecasts/` project: Germany–Luxembourg quarter-hour prices a
 ## [2026-10-09] decision | Forecast defaults and feature comparisons
 
 Recorded the agreed [evaluation defaults](price-forecasting/evaluation.md#defaults): local-clock price matching, missing weather, fixed calendar features, source-failure fallbacks and pooled training-error quantiles for the simple reference. Three fixed feature sets measure the added value of weather and demand. The implementation spec links these decisions; exact dates, remaining price features, model settings and minimum reference history remain to be frozen before fitting.
+
+## [2026-10-09] decision | Forecast inputs in S3, local training first
+
+The [forecast infrastructure design](price-forecasting/forecast-infrastructure.md) selects fixed Parquet input snapshots in S3, local Metaflow execution and local MLflow experiment tracking. Storage follows batch access and reproducibility needs. Cloud scheduling, shared tracking and a separate catalog remain later decisions. The first iteration can evaluate models without deploying cloud compute.
+
+## [2026-10-09] decision | Forecast reproducibility and deployment principles
+
+The [infrastructure design](price-forecasting/forecast-infrastructure.md) makes exact provenance and one-command reproduction the forecast promise. Storage selection follows required reads and writes, with complexity justified by demonstrated needs. The later deployment preference is Metaflow with Step Functions and AWS Batch on Fargate, using Terraform for infrastructure; an end-to-end deployment check precedes adoption. The first iteration remains local execution with inputs in S3.
+
+## [2026-10-09] decision | Separate forecasting product architecture
+
+The [forecast product overview](price-forecasting.md) owns its independent dataflow graph. The power-flow product page contains only its own pipeline. Architecture deltas belong to the affected product; the root rule now expresses that boundary.
+
+## [2026-10-09] decision | Point-in-time correctness as a forecast promise
+
+Elevated point-in-time correctness beside reproducibility in the forecast design. The input contract distinguishes valid time, source issue/update time and retrieval time, with explicit availability evidence. Acceptance now includes an adversarial leakage test against an enlarged candidate history, covering input selection, training labels and learned transformations. Historical timing assumptions remain visible in reports.
