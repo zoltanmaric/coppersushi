@@ -69,7 +69,7 @@ Preserve raw inputs or content hashes, request and retrieval metadata, row-level
 
 ### Limitations
 
-The proposed first fit uses October–December 2025 to predict January 2026; later monthly fits add the preceding months. This is a date choice, not a limit imposed by missing demand. More months can be used for initial training within the assembled year, leaving fewer months for evaluation. Earlier compatible data has not been established.
+The fixed first fit uses October 15–December 31, 2025 to predict January 2026; October 1–14 provides feature warmup. Later monthly fits add the preceding months. This is a date choice, not a limit imposed by missing demand. More months can be used for initial training within the assembled year, leaving fewer months for evaluation. Earlier compatible data has not been established.
 
 One annual cycle gives limited evidence about rare extreme prices. Many consecutive quarter-hours can describe a single storm or price event. A nominal 95% range is therefore not proof of reliable coverage during extremes. Recommended additional checks are separate counts below and above the predicted ranges, and coverage by delivery hour; these are review recommendations, not added first-build acceptance criteria.
 
@@ -77,6 +77,6 @@ Historical input timing remains subject to the [availability limits](data-source
 
 ## Freeze
 
-As of 2026-10-09, quantile output, scoring, [defaults](#defaults), [controls](#controls) and reference construction are settled. Exact train/test dates, remaining price-feature definitions, fixed model settings and minimum reference-history counts still need to be recorded before fitting. Changes after inspecting scores belong to a separate experiment.
+As of 2026-10-09, the [run configuration](../../forecasts/run-config.json) freezes dates, CatBoost settings, minimum reference history, resampling and numerical tolerance. [Implementation/setup](../../forecasts/README.md#local-model-evaluation) describes the fixed price features and explicit feature inventories saved before fitting. Changes after inspecting scores belong to a separate experiment.
 
-A practical candidate is initial training in the final quarter of 2025 followed by monthly expanding-window evaluation during January–September 2026, allowing the necessary price-lag warmup. Confirm the assembled data supports it before freezing. This is retrospective evaluation: August–September 2026 were already inspected in the point-model diagnostic. Do not call them an untouched final holdout. Prospective forecasts after freezing provide fresh evidence; the single historical year does not establish multi-year robustness.
+Monthly expanding evaluation covers January–September 2026. This is retrospective evaluation: August–September 2026 were already inspected in the point-model diagnostic. Do not call them an untouched final holdout. Prospective forecasts after freezing provide fresh evidence; the single historical year does not establish multi-year robustness.
