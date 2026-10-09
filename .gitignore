@@ -6,6 +6,11 @@ __pycache__/
 /worktrees/
 # Downloaded build inputs.
 /data/*
+/forecasts/infra/.terraform/
+/forecasts/infra/*.tfstate*
+/forecasts/infra/*.tfvars
+/forecasts/infra/*.tfvars.json
+/forecasts/infra/*.tfplan
 
 # JAO's terms reserve all reproduction rights and forbid redistributing Content; this repository
 # is public, so no JAO-derived bytes are committed — not the tables, not captured API responses.

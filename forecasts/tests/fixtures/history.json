@@ -1,0 +1,21 @@
+{
+  "url": "https://previous-runs-api.open-meteo.com/v1/forecast?models=icon_eu",
+  "retrieved_at_utc": "2026-04-01T12:00:00+00:00",
+  "data": [{
+    "latitude": 53.5625,
+    "longitude": 10.0,
+    "elevation": 13.0,
+    "utc_offset_seconds": 0,
+    "hourly_units": {
+      "temperature_2m_previous_day2": "°C",
+      "wind_speed_120m_previous_day2": "km/h",
+      "shortwave_radiation_previous_day2": "W/m²"
+    },
+    "hourly": {
+      "time": [1774742400, 1774746000, 1774749600],
+      "temperature_2m_previous_day2": [8, 9, 10],
+      "wind_speed_120m_previous_day2": [40, null, 42],
+      "shortwave_radiation_previous_day2": [0, 100, 200]
+    }
+  }]
+}

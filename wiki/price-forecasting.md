@@ -1,6 +1,6 @@
 # Price forecasting
 
-An independent forecasting product under `forecasts/`, with no dependency on the power-flow application. The first market is Germany–Luxembourg day-ahead electricity prices. As of 2026-10-09, the design and source diagnostics exist; the forecast pipeline is planned.
+An independent forecasting product under `forecasts/`, with no dependency on the power-flow application. The first market is Germany–Luxembourg day-ahead electricity prices. As of 2026-10-09, typed S3 inputs and feature replay exist; training and experiment tracking remain planned.
 
 ## Design
 
@@ -18,12 +18,12 @@ Solid nodes and edges represent implemented parts; dashed nodes and edges (`plan
 flowchart LR
     classDef planned stroke-dasharray: 5 5,stroke:#888,fill:none
 
-    forecast_raw_inputs["forecast_raw_inputs<br/>S3 source responses and retrieval metadata"]:::planned
-    forecast_input_snapshot["forecast_input_snapshot<br/>S3 validated Parquet tables and fixed manifest"]:::planned
+    forecast_raw_inputs["forecast_raw_inputs<br/>S3 source responses and retrieval metadata"]
+    forecast_input_snapshot["forecast_input_snapshot<br/>S3 validated Parquet tables and fixed manifest"]
     forecast_local_run["forecast_local_run<br/>local Metaflow training and evaluation"]:::planned
     forecast_experiment["forecast_experiment<br/>local MLflow scores, models and reports"]:::planned
 
-    forecast_raw_inputs -.-> forecast_input_snapshot
+    forecast_raw_inputs --> forecast_input_snapshot
     forecast_input_snapshot -.-> forecast_local_run
     forecast_local_run -.-> forecast_experiment
 

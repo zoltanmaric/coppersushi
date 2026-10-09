@@ -1,0 +1,7 @@
+{
+  "complete": {"Statement": [{"Effect": "Deny", "Principal": "*", "Action": "s3:*", "Resource": ["arn:aws:s3:::fixture-bucket", "arn:aws:s3:::fixture-bucket/*"], "Condition": {"Bool": {"aws:SecureTransport": "false"}}}]},
+  "delete_only": {"Statement": [{"Effect": "Deny", "Principal": "*", "Action": "s3:DeleteObject", "Resource": ["arn:aws:s3:::fixture-bucket", "arn:aws:s3:::fixture-bucket/*"], "Condition": {"Bool": {"aws:SecureTransport": "false"}}}]},
+  "bucket_only": {"Statement": [{"Effect": "Deny", "Principal": "*", "Action": "s3:*", "Resource": "arn:aws:s3:::fixture-bucket", "Condition": {"Bool": {"aws:SecureTransport": "false"}}}]},
+  "specific_principal": {"Statement": [{"Effect": "Deny", "Principal": {"Service": "s3.amazonaws.com"}, "Action": "s3:*", "Resource": ["arn:aws:s3:::fixture-bucket", "arn:aws:s3:::fixture-bucket/*"], "Condition": {"Bool": {"aws:SecureTransport": "false"}}}]},
+  "extra_condition": {"Statement": [{"Effect": "Deny", "Principal": "*", "Action": "s3:*", "Resource": ["arn:aws:s3:::fixture-bucket", "arn:aws:s3:::fixture-bucket/*"], "Condition": {"Bool": {"aws:SecureTransport": "false"}, "IpAddress": {"aws:SourceIp": "192.0.2.0/24"}}}]}
+}
