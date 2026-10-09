@@ -16,10 +16,10 @@
 ## Price forecasting
 
 - [price-forecasting.md](price-forecasting.md) — independent forecast product, architecture graph and links to design and implementation
-- [price-forecasting/forecast-infrastructure.md](price-forecasting/forecast-infrastructure.md) — S3 input snapshots, local Metaflow/MLflow training, experiment records and later AWS execution
+- [price-forecasting/forecast-infrastructure.md](price-forecasting/forecast-infrastructure.md) — implemented S3 inputs and local Metaflow/MLflow evaluation; agent-maintained experiment records and planned AWS execution
 - [price-forecasting/germany-luxembourg.md](price-forecasting/germany-luxembourg.md) — independent Germany–Luxembourg quarter-hour forecast: agreed CatBoost quantiles, public fundamentals and implementation handover
 - [price-forecasting/data-sources.md](price-forecasting/data-sources.md) — verified price, weather and demand contracts, twelve locations, timing gaps and diagnostic evidence
-- [price-forecasting/evaluation.md](price-forecasting/evaluation.md) — five quantiles, weighted interval score, chronological all-date replay and comparison controls
+- [price-forecasting/evaluation.md](price-forecasting/evaluation.md) — five quantiles, chronological comparisons and first baseline results with calibration limits
 - [price-forecasting/energy-arena-benchmarks.md](price-forecasting/energy-arena-benchmarks.md) — verified 11:00 benchmark histories: Eiser's fundamentals, BerriJ's longer coverage and the naive reference
 
 ## Entities
@@ -33,7 +33,7 @@
 
 ## Specs (working memory — burn-down state, not settled knowledge)
 - [specs/cnec-constraint-selection.md](specs/cnec-constraint-selection.md) — direct map selection, signed constraint contributions and interval navigation
-- [specs/day-ahead-price-forecast.md](specs/day-ahead-price-forecast.md) — first forecast build: validated S3 snapshots, then local model/evaluation and reproducible experiment records
+- [specs/day-ahead-price-forecast.md](specs/day-ahead-price-forecast.md) — verified first baseline and conditional research-history follow-up
 - [specs/sushi-2.md](specs/sushi-2.md) — the Sep 11 cut: next steps and acceptance criteria
 - [specs/jao-grid.md](specs/jao-grid.md) — JAO's Core elements matched to our OSM grid: a map of what limited trade on a day, and true line and transformer limits from JAO's own numbers
 - [specs/architecture-review-graph.md](specs/architecture-review-graph.md) — lightweight architecture-review experiment: manual DAG, PR deltas, and an I/O-boundary test
