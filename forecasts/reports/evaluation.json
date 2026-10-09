@@ -397,5 +397,50 @@
     "restored_committed_code": true,
     "frozen_environment": true,
     "fresh_s3_load": true
+  },
+  "research_history": {
+    "research_record_id": "852ac19ec9f942f6931c3673a74750f7",
+    "rationale_status": "retrospective",
+    "proposal_saved_before_execution": false,
+    "comparison_baseline_run_id": "39b10b460cdd4e05a64b159b84ac4925",
+    "motivating_experiment_ids": [],
+    "execution_records": [
+      {
+        "forecast_run": "e22fb1d75b8fdf5d1d0553b9",
+        "mlflow_run_id": "dba3c0f32c9f4fe38e552b8592de8d20",
+        "metaflow_run_id": "ForecastEvaluation/1791570284738749",
+        "role": "exploratory",
+        "status": "KILLED",
+        "manifest_artifact": "runs:/dba3c0f32c9f4fe38e552b8592de8d20/execution/manifest.json"
+      },
+      {
+        "forecast_run": "fc4440d4bb05d4d84c684b70",
+        "mlflow_run_id": "79cfbd0937c24755931e12f3c9f2eeb9",
+        "role": "integration_smoke",
+        "status": "FINISHED",
+        "metaflow_run_id": "ForecastEvaluation/1791570497370789",
+        "manifest_artifact": "runs:/79cfbd0937c24755931e12f3c9f2eeb9/run/manifest.json"
+      },
+      {
+        "forecast_run": "cf8977f4bfff3e4823ae2891",
+        "mlflow_run_id": "71e7d7162c0d4947af5d2a48e3b39ed6",
+        "role": "initial_complete_baseline",
+        "status": "FINISHED",
+        "metaflow_run_id": "ForecastEvaluation/1791570597553314",
+        "manifest_artifact": "runs:/71e7d7162c0d4947af5d2a48e3b39ed6/run/manifest.json"
+      },
+      {
+        "forecast_run": "d24461d3be8c819d9310ea55",
+        "mlflow_run_id": "8a4c692855fb42eba39d5a3bfc7d6762",
+        "role": "accepted_metadata_correction",
+        "status": "FINISHED",
+        "metaflow_run_id": "ForecastEvaluation/1791571137838024",
+        "manifest_artifact": "runs:/8a4c692855fb42eba39d5a3bfc7d6762/run/manifest.json"
+      }
+    ],
+    "decision": "investigate_further",
+    "continuation_approved": false,
+    "rationale_artifact": "runs:/852ac19ec9f942f6931c3673a74750f7/research/retrospective-rationale.json",
+    "conclusion_artifact": "runs:/852ac19ec9f942f6931c3673a74750f7/research/conclusion.json"
   }
 }
