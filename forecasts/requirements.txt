@@ -1,1 +1,5 @@
 pyarrow==25.0.1
+catboost==1.2.10
+metaflow==2.19.39
+mlflow==3.17.0
+scoringrules==0.11.0
