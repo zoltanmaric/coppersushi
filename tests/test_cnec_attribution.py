@@ -153,7 +153,8 @@ def test_country_outline_hits_and_selected_contribution_are_separate_from_the_ob
     assert any('DE · +20.00' in v for v in dots.text)
     ray = next(t for t in rendered.figure.data if t.name == 'DE ray')
     assert ray.hoverinfo == 'text'
-    assert [text for text in ray.text if text] == ['+€20.00']
+    labels = next(t for t in rendered.figure.data if t.name == 'ray contributions')
+    assert all(text == '+€20.00' for text in labels.text)
     assert 'Spread: DE − PL' in ray.hovertext
     assert 'contribution: +20.00 €/MWh' in ray.hovertext
     assert 'Total observed spread: +10.00 €/MWh' in ray.hovertext

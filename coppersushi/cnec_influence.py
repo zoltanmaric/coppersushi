@@ -79,28 +79,33 @@ def _rays(origin: tuple[float, float], zonal: pd.DataFrame) -> list[go.Scatterma
     influenced = zonal[zonal.contribution.abs() > NEGLIGIBLE]
     widths = _sized(influenced.contribution, *RAY_WIDTH)
     haloed = []
+    label_lon, label_lat, labels = [], [], []
     for row, width in zip(influenced.itertuples(), widths):
         lon, lat = arc(origin, (row.x, row.y))
-        labels = [""] * len(lon)
+        midpoint = len(lon) // 2
+        label_lon.append(lon[midpoint])
+        label_lat.append(lat[midpoint])
         sign = "+" if row.contribution > 0 else "−"
-        labels[len(lon) // 2] = f"{sign}€{abs(row.contribution):,.2f}"
+        labels.append(f"{sign}€{abs(row.contribution):,.2f}")
         core = go.Scattermapbox(
             name=f"{row.zone} ray",
             lon=lon,
             lat=lat,
-            mode="lines+text",
-            text=labels,
-            textposition="top center",
-            textfont=dict(color="white", size=12),
+            mode="lines",
             hoverinfo="text",
             hovertext=row.hover,
             showlegend=False,
             line=dict(color=_colour(row.contribution), width=width),
         )
         glow, core = map_style.haloed(core)
-        glow.update(mode="lines", text=None)
         haloed.append((glow, core))
-    return [glow for glow, _ in haloed] + [core for _, core in haloed]
+    label_trace = go.Scattermapbox(
+        name="ray contributions", lon=label_lon, lat=label_lat,
+        mode="text", text=labels, textposition="middle center",
+        textfont=dict(color="white", size=12),
+        hoverinfo="text", hovertext=influenced.hover, showlegend=False,
+    )
+    return [glow for glow, _ in haloed] + [core for _, core in haloed] + [label_trace]
 
 
 def _dots(zonal: pd.DataFrame, reference: str) -> list[go.Scattermapbox]:

@@ -119,9 +119,11 @@ def test_an_unmapped_row_keeps_its_dots_but_anchors_no_rays_and_says_so():
 
 def test_visible_ray_labels_show_each_signed_contribution():
     overlay = cnec_influence.overlay(*frames())
+    labels = trace(overlay, "ray contributions")
+    assert labels.mode == "text"
     for zone, value in [('BE', '+€2.87'), ('SI', '+€12.65'), ('DE', '−€5.00')]:
         ray = trace(overlay, f'{zone} ray')
-        assert [text for text in ray.text if text] == [value]
-        assert 'text' in ray.mode
+        assert any(label == value and f'Spread: {zone} −' in hover
+                   for label, hover in zip(labels.text, labels.hovertext))
         assert 'contribution:' in ray.hovertext
     assert '€/MWh' in overlay.note

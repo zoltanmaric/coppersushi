@@ -136,7 +136,7 @@ def _price_traces(
         lat=labels_at.y,
         mode="text",
         hoverinfo="text",
-        text=names + "<br>" + labels_at.price.map(lambda value: f"€{value:,.0f}"),
+        text=names + "<br>" + labels_at.price.map(lambda value: f"€{value:,.2f}"),
         hovertext=names + " · " + labels_at.price.map(lambda value: f"{value:,.2f} €/MWh"),
         textfont=dict(color="white", size=14),
         showlegend=False,
