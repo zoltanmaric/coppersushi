@@ -7,10 +7,11 @@ import unittest
 
 import numpy as np
 import pyarrow as pa
+import pyarrow.parquet as pq
 import scoringrules
 
 from forecasts.dataset import BERLIN, COUNTRY, cutoff, quarters, stamp
-from forecasts.evaluation import FEATURES, fit_models, fit_reference, matrix, predict_day, training_rows
+from forecasts.evaluation import FEATURES, evaluate, fit_models, fit_reference, matrix, predict_day, training_rows
 from forecasts.schemas import SCHEMAS, validate
 from forecasts.scoring import metrics, paired_blocks, wis
 from forecasts.snapshot import InputReader, LOCATIONS, select_records
@@ -26,9 +27,9 @@ def config():
     return c
 
 
-def history():
+def history(start=date(2026, 3, 1), end=date(2026, 3, 29)):
     records = {n: [] for n in SCHEMAS}
-    for i, t in enumerate(quarters(date(2026, 3, 1), date(2026, 3, 29))):
+    for i, t in enumerate(quarters(start, end)):
         records['prices'].append(dict(valid_utc=t, source_update_utc=None, retrieved_at_utc=None, timing_evidence='assumed',
                                       version_id=f'price-{i}', raw_key='invented', price_eur_mwh=float(i % 96 - 30 + i // 96)))
     t = stamp('2026-03-29T00:00:00Z')
@@ -106,6 +107,24 @@ class EvaluationTests(unittest.TestCase):
         for name in outcomes[0][3][1]:
             np.testing.assert_allclose(outcomes[0][3][1][name], outcomes[1][3][1][name],
                                        atol=c['tolerance']['absolute'], rtol=c['tolerance']['relative'])
+
+    def test_saved_models_reproduce_monthly_predictions_and_scoring_truth_flags(self):
+        c = config()
+        c.update(history_start='2026-01-01', train_start='2026-01-15',
+                 evaluation_start='2026-03-01', end_exclusive='2026-04-01')
+        c['bootstrap']['samples'] = 10
+        r = reader(history(date(2026, 1, 1), date(2026, 4, 1)))
+        with tempfile.TemporaryDirectory() as temporary:
+            original, restored = Path(temporary) / 'original', Path(temporary) / 'restored'
+            report = evaluate(r, c, original)
+            replay = evaluate(r, c, restored, restore_models=original / 'models')
+            self.assertEqual(report, replay)
+            before = pq.read_table(original / 'predictions.parquet').to_pydict()
+            self.assertEqual(before, pq.read_table(restored / 'predictions.parquet').to_pydict())
+            self.assertEqual(len(before['target']), 2972)
+            self.assertTrue(all(v is not None for v in before['target']))
+            self.assertEqual(set(before['target_missing']), {0})
+            self.assertEqual(report['missing_truth'], 0)
 
     def test_missing_sources_and_prediction_failure_choose_explicit_fallback(self):
         c = config()
