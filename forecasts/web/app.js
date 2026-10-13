@@ -41,6 +41,7 @@
     let index = 0,
       quarterIndex = 0,
       node = "features";
+    let sortKey = null, sortDirection = 1;
     let minimum = Infinity, maximum = -Infinity;
     for (const day of D.days) {
       for (const point of day.points) {
@@ -167,8 +168,24 @@
         $("verdict-text").textContent =
           "Forecasts remain visible, but scores and observed coverage cannot be calculated without outcomes.";
       }
+      renderComparison(group);
+    }
+    function renderComparison(group) {
       $("comparison").replaceChildren();
-      for (const [n, s] of Object.entries(group.metrics)) {
+      const rows = Object.entries(group.metrics);
+      if (sortKey) rows.sort(([a, x], [b, y]) => {
+        const left = sortKey === "name" ? names[a] : x[sortKey];
+        const right = sortKey === "name" ? names[b] : y[sortKey];
+        if (left == null) return right == null ? 0 : 1;
+        if (right == null) return -1;
+        return sortDirection * (sortKey === "name" ? left.localeCompare(right) : left - right);
+      });
+      for (const button of document.querySelectorAll("[data-sort]")) {
+        const active = button.dataset.sort === sortKey;
+        button.closest("th").setAttribute("aria-sort", active ? (sortDirection === 1 ? "ascending" : "descending") : "none");
+        button.querySelector(".sort-indicator").textContent = active ? (sortDirection === 1 ? " ▲" : " ▼") : " ↕";
+      }
+      for (const [n, s] of rows) {
         const tr = el("tr");
         for (const value of [
           names[n],
@@ -723,6 +740,14 @@
         ),
       );
       $("sources").append(li);
+    }
+    for (const button of document.querySelectorAll("[data-sort]")) {
+      button.onclick = () => {
+        sortDirection = sortKey === button.dataset.sort ? -sortDirection : 1;
+        sortKey = button.dataset.sort;
+        const period = $("period").value;
+        renderComparison(period === "all" ? D.report : D.report.breakdowns.month[period]);
+      };
     }
     $("period").onchange = () => {
       if (!visibleIndices().includes(index)) index = visibleIndices()[0];

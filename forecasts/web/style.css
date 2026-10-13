@@ -769,3 +769,14 @@ footer li {
     padding-left: 0;
   }
 }
+
+button.sort-column {
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+}
+.sort-indicator {
+  color: var(--green);
+}
