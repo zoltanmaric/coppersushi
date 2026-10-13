@@ -90,15 +90,32 @@
             ><button id="next" aria-label="Next delivery day">→</button>
           </div>
         </div>
+        <details class="method-guide">
+          <summary>What do these forecast methods mean?</summary>
+          <p>Three trained models use the same CatBoost approach, which learns relationships from past examples. They differ in their inputs. The reference is a simple comparison method; automatic selection chooses a method rather than fitting another model.</p>
+          <dl>
+            <dt>Automatic selection (with fallbacks)</dt>
+            <dd>Uses the price-history + weather + demand model when inputs and execution permit. Otherwise falls back to weather, price history, then the reference. The method actually used on this day is shown below the chart.</dd>
+            <dt>Price-history model</dt>
+            <dd>Uses previous prices at the same time of day, recent daily price summaries, and calendar information such as weekday and holidays.</dd>
+            <dt>Price-history + weather model</dt>
+            <dd>Adds forecast temperature, wind and solar radiation from twelve locations to the price-history model’s inputs.</dd>
+            <dt>Price-history + weather + demand model</dt>
+            <dd>Also adds forecast electricity demand for Germany, with indicators for missing inputs.</dd>
+            <dt>Yesterday / last-week reference</dt>
+            <dd>Averages yesterday’s and last week’s same-clock prices. Uses either when only one is available, or an earlier same-quarter median when neither is available. Its bands come from past forecast errors in the training data.</dd>
+          </dl>
+          <p class="muted">All five are saved historical predictions. Training expands monthly using earlier eligible data. If an individual trained model fails, its displayed prediction uses the reference.</p>
+        </details>
         <div class="chart-card">
           <div class="chart-toolbar">
             <label
-              >Forecast<select id="method">
-                <option value="system">System with fallbacks</option>
-                <option value="weather">Prices + weather</option>
-                <option value="demand">Prices + weather + demand</option>
-                <option value="prices">Prices + calendar</option>
-                <option value="reference">Historical-price reference</option>
+              >Forecast method<select id="method">
+                <option value="system">Automatic selection (with fallbacks)</option>
+                <option value="weather">Price-history + weather model</option>
+                <option value="demand">Price-history + weather + demand model</option>
+                <option value="prices">Price-history model</option>
+                <option value="reference">Yesterday / last-week reference</option>
               </select></label
             ><label class="checkbox"
               ><input type="checkbox" id="reference" /> Show reference median
@@ -123,15 +140,7 @@
             <title id="chart-title">Daily prices and quantile bands</title>
             <desc id="chart-desc"></desc>
           </svg>
-          <label class="quarter-control"
-            >Inspect a quarter-hour
-            <input
-              type="range"
-              id="quarter"
-              min="0"
-              value="0"
-              aria-describedby="point-detail"
-          /></label>
+          <p class="muted">Fixed price scale across all saved days and methods. Hover to inspect a quarter-hour; exact values are also in the table below.</p>
           <div id="point-detail" class="point-detail" aria-live="polite"></div>
           <div id="day-metrics" class="day-metrics"></div>
         </div>

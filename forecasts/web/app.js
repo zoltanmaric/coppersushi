@@ -5,11 +5,11 @@
   const fmt = (n) => (n == null ? "unavailable" : Number(n).toFixed(2));
   const pct = (n) => (n == null ? "unavailable" : `${(n * 100).toFixed(1)}%`);
   const names = {
-    system: "System with fallbacks",
-    reference: "Historical-price reference",
-    prices: "Prices + calendar",
-    weather: "Prices + weather",
-    demand: "Prices + weather + demand",
+    system: "Automatic selection (with fallbacks)",
+    reference: "Yesterday / last-week reference",
+    prices: "Price-history model",
+    weather: "Price-history + weather model",
+    demand: "Price-history + weather + demand model",
   };
   const ns = "http://www.w3.org/2000/svg";
   function svg(tag, attrs, parent, text) {
@@ -39,7 +39,21 @@
         "No supported export loaded. Generate this website with python -m forecasts.explain.",
       );
     let index = 0,
+      quarterIndex = 0,
       node = "features";
+    let minimum = Infinity, maximum = -Infinity;
+    for (const day of D.days) {
+      for (const point of day.points) {
+        const values = Object.values(point.q).flat();
+        if (point.actual != null) values.push(point.actual);
+        for (const value of values) {
+          minimum = Math.min(minimum, value);
+          maximum = Math.max(maximum, value);
+        }
+      }
+    }
+    const padding = Math.max((maximum - minimum) * 0.08, 1);
+    const priceScale = { low: minimum - padding, high: maximum + padding };
     const params = new URLSearchParams(location.hash.split("?")[1] || "");
     if (params.has("day")) {
       const i = D.days.findIndex((d) => d.date === params.get("day"));
@@ -183,7 +197,7 @@
         "desc",
         { id: "chart-desc" },
         root,
-        "Median with central 50% and 95% bands. Use the quarter-hour slider or the daily values table to read exact prices.",
+        "Median with central 50% and 95% bands. Hover over the chart or use the daily values table to read exact prices. The price scale is fixed across all saved days and methods.",
       );
       const points = day.points,
         reference = $("reference").checked,
@@ -193,16 +207,9 @@
         R = 22,
         T = 30,
         B = 42;
-      const values = points.flatMap((p) => [
-        ...p.q[method],
-        ...(p.actual == null ? [] : [p.actual]),
-        ...(reference ? p.q.reference : []),
-      ]);
-      const lo = Math.min(...values),
-        hi = Math.max(...values),
-        pad = Math.max((hi - lo) * 0.08, 1),
-        low = lo - pad,
-        high = hi + pad;
+      const { low, high } = priceScale;
+      root.dataset.priceMin = low;
+      root.dataset.priceMax = high;
       const x = (i) => L + ((W - L - R) * i) / Math.max(points.length - 1, 1),
         y = (v) => T + ((H - T - B) * (high - v)) / (high - low);
       for (let j = 0; j <= 5; j++) {
@@ -319,7 +326,7 @@
           root,
           points[i].clock.slice(0, 5),
         );
-      const selected = Number($("quarter").value);
+      const selected = quarterIndex;
       svg(
         "line",
         {
@@ -345,14 +352,14 @@
             Math.round(((local.x - L) / (W - L - R)) * (points.length - 1)),
           ),
         );
-        $("quarter").value = i;
+        quarterIndex = i;
         pointDetail();
       };
       $("reference-legend").hidden = !reference;
     }
     function pointDetail() {
       const day = D.days[index],
-        i = Number($("quarter").value),
+        i = quarterIndex,
         p = day.points[i],
         q = p.q[$("method").value];
       $("point-detail").textContent =
@@ -375,11 +382,7 @@
       $("day").value = d.date;
       $("previous").disabled = index === visible[0];
       $("next").disabled = index === visible.at(-1);
-      $("quarter").max = d.points.length - 1;
-      $("quarter").value = Math.min(
-        Number($("quarter").value),
-        d.points.length - 1,
-      );
+      quarterIndex = Math.min(quarterIndex, d.points.length - 1);
       $("day-title").textContent = new Intl.DateTimeFormat("en-GB", {
         dateStyle: "long",
         timeZone: "UTC",
@@ -750,7 +753,6 @@
       refreshAddress();
     };
     $("reference").onchange = () => renderDay();
-    $("quarter").oninput = pointDetail;
     window.addEventListener("hashchange", route);
     renderPipeline();
     overview();
