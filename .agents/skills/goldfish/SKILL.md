@@ -28,8 +28,10 @@ readiness: optimizing a thing that shouldn't exist is the classic mistake.
 Sandbox (non-negotiable): reviewers never mutate a checkout they don't own. Read-only
 subagents by default; a reviewer that must build or run gets its own disposable worktree.
 
-Exit: findings filtered by you — a finding survives if acting on it would change what
-gets built or what risk is visible. Weigh findings toward the *next action* and the
+Report only substantial findings: corrections that change what gets built, scientific
+meaning, a consequential decision, or visible risk. Skip cosmetic nits, stylistic
+preferences, speculative concerns and routine implementation details. Do not invent
+findings to fill a quota; a clean review is valid. Filter findings by this same bar. Weigh findings toward the *next action* and the
 direction's validity; defects in far-future steps are usually premature — the user
 works iteratively, and those steps will be re-planned before they're reached. Done when a fresh reader can act on the artifact
 without rediscovering intent. If substantive findings persist after a couple of rounds,
