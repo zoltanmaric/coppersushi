@@ -1,0 +1,446 @@
+{
+  "verified_at": "2026-10-09",
+  "run_id": "d24461d3be8c819d9310ea55",
+  "code_revision": "b97817e60302f844ddbb63db6212a15d77a50edf",
+  "snapshot_id": "8bf5b5de2dc94d9d5db62fe9178dee50ac7e08005c2c6790e351e95081910a6d",
+  "metaflow_run_id": "ForecastEvaluation/1791571137838024",
+  "mlflow_run_id": "8a4c692855fb42eba39d5a3bfc7d6762",
+  "environment": {
+    "python": "3.12.13",
+    "system": "Darwin",
+    "machine": "arm64"
+  },
+  "lock_sha256": "46632a0f2a66c1738f48720056fa9670d45634e6adaf15a1b0fe8ed169bf71bb",
+  "config": "forecasts/run-config.json",
+  "delivery_rows": 26204,
+  "scored_rows": 26204,
+  "missing_truth": 0,
+  "forecast_coverage": 1.0,
+  "metrics": {
+    "demand": {
+      "rows": 26204,
+      "days": 273,
+      "wis": 16.423551045048054,
+      "median_mae": 22.78067530913405,
+      "median_rmse": 37.461242392319946,
+      "coverage_50": 0.2400778507098153,
+      "coverage_95": 0.6321935582353839,
+      "width_50": 15.699001545088965,
+      "width_95": 64.0402072582115,
+      "daily_coverage_50": 0.2400594574507618,
+      "daily_coverage_95": 0.6321518155757286
+    },
+    "prices": {
+      "rows": 26204,
+      "days": 273,
+      "wis": 21.06167409243769,
+      "median_mae": 28.82860651962234,
+      "median_rmse": 44.61980148576269,
+      "coverage_50": 0.233475805220577,
+      "coverage_95": 0.6010914364219203,
+      "width_50": 20.018458292386438,
+      "width_95": 71.0860584633687,
+      "daily_coverage_50": 0.23344514784732173,
+      "daily_coverage_95": 0.6010262382544991
+    },
+    "weather": {
+      "rows": 26204,
+      "days": 273,
+      "wis": 16.350146925866305,
+      "median_mae": 22.85193176408041,
+      "median_rmse": 37.61101562136919,
+      "coverage_50": 0.2491985956342543,
+      "coverage_95": 0.6442527858342237,
+      "width_50": 16.72254530071848,
+      "width_95": 64.95170523207283,
+      "daily_coverage_50": 0.24919042310346656,
+      "daily_coverage_95": 0.6442009077878643
+    },
+    "reference": {
+      "rows": 26204,
+      "days": 273,
+      "wis": 19.426162005800645,
+      "median_mae": 30.20082563730728,
+      "median_rmse": 47.04615385879767,
+      "coverage_50": 0.4606548618531522,
+      "coverage_95": 0.9221111280720501,
+      "width_50": 33.26708823080446,
+      "width_95": 156.62770722027165,
+      "daily_coverage_50": 0.460631005467962,
+      "daily_coverage_95": 0.9220798826777088
+    },
+    "system": {
+      "rows": 26204,
+      "days": 273,
+      "wis": 16.339673818002204,
+      "median_mae": 22.650614946883337,
+      "median_rmse": 37.33250112828461,
+      "coverage_50": 0.24316898183483437,
+      "coverage_95": 0.6369256602045489,
+      "width_50": 15.742282424965762,
+      "width_95": 64.17721366746805,
+      "daily_coverage_50": 0.24316172957477306,
+      "daily_coverage_95": 0.6368749004618569
+    }
+  },
+  "comparison": {
+    "demand": {
+      "wis_difference": -3.002610960752588,
+      "ci_95": [
+        -4.39989323426651,
+        -1.3816801163053445
+      ]
+    },
+    "prices": {
+      "wis_difference": 1.6355120866370492,
+      "ci_95": [
+        0.25293193127310626,
+        3.25980719655282
+      ]
+    },
+    "weather": {
+      "wis_difference": -3.076015079934334,
+      "ci_95": [
+        -4.528385814204651,
+        -1.4162624787265015
+      ]
+    },
+    "system": {
+      "wis_difference": -3.08648818779844,
+      "ci_95": [
+        -4.490653372188013,
+        -1.4777780256714383
+      ]
+    }
+  },
+  "monthly_wis": {
+    "2026-01": {
+      "rows": 2976,
+      "wis": {
+        "demand": 13.506878163364192,
+        "prices": 16.884170004423616,
+        "weather": 13.274879914752235,
+        "reference": 14.853215873655914,
+        "system": 13.345759725453846
+      }
+    },
+    "2026-02": {
+      "rows": 2688,
+      "wis": {
+        "demand": 9.815298200643165,
+        "prices": 13.064404157894263,
+        "weather": 9.289023086510756,
+        "reference": 10.399498017113094,
+        "system": 9.815298200643165
+      }
+    },
+    "2026-03": {
+      "rows": 2972,
+      "wis": {
+        "demand": 19.240333443896017,
+        "prices": 27.08655191630084,
+        "weather": 18.400996699539288,
+        "reference": 23.327027725437414,
+        "system": 19.077692346732245
+      }
+    },
+    "2026-04": {
+      "rows": 2880,
+      "wis": {
+        "demand": 25.27969824186534,
+        "prices": 31.673659678671058,
+        "weather": 26.082111742194733,
+        "reference": 23.231463090277778,
+        "system": 25.363581613791645
+      }
+    },
+    "2026-05": {
+      "rows": 2976,
+      "wis": {
+        "demand": 14.307795018660915,
+        "prices": 17.7116408104426,
+        "weather": 14.514121576254027,
+        "reference": 18.42407296370968,
+        "system": 14.139422693985354
+      }
+    },
+    "2026-06": {
+      "rows": 2880,
+      "wis": {
+        "demand": 17.344030189388064,
+        "prices": 22.199810132275786,
+        "weather": 17.50085064489084,
+        "reference": 21.51123581597222,
+        "system": 17.344030189388064
+      }
+    },
+    "2026-07": {
+      "rows": 2976,
+      "wis": {
+        "demand": 11.263860318449856,
+        "prices": 14.80465981194868,
+        "weather": 11.268239333955027,
+        "reference": 17.192045409946235,
+        "system": 11.199240054851751
+      }
+    },
+    "2026-08": {
+      "rows": 2976,
+      "wis": {
+        "demand": 12.206371292438572,
+        "prices": 15.188369710589624,
+        "weather": 12.443407382579238,
+        "reference": 15.167029842069894,
+        "system": 12.348663702897513
+      }
+    },
+    "2026-09": {
+      "rows": 2880,
+      "wis": {
+        "demand": 24.797473777823242,
+        "prices": 30.871449773239107,
+        "weather": 24.30476842270209,
+        "reference": 30.40575685763889,
+        "system": 24.378473282167437
+      }
+    }
+  },
+  "demand_breakdown": {
+    "0": {
+      "delivery_rows": 2684,
+      "missing_truth": 0,
+      "forecast_coverage": 1.0,
+      "metrics": {
+        "demand": {
+          "rows": 2684,
+          "days": 28,
+          "wis": 18.594843061194616,
+          "median_mae": 24.99071681861049,
+          "median_rmse": 33.92062848319412,
+          "coverage_50": 0.1855439642324888,
+          "coverage_95": 0.5052160953800298,
+          "width_50": 14.0587669583539,
+          "width_95": 52.74096776361403,
+          "daily_coverage_50": 0.18544578157349895,
+          "daily_coverage_95": 0.5049980590062112
+        },
+        "prices": {
+          "rows": 2684,
+          "days": 28,
+          "wis": 24.51893246610987,
+          "median_mae": 32.71526449497347,
+          "median_rmse": 43.42133041714003,
+          "coverage_50": 0.18889716840536513,
+          "coverage_95": 0.5145305514157973,
+          "width_50": 20.875091516747982,
+          "width_95": 66.6792523847026,
+          "daily_coverage_50": 0.18866459627329188,
+          "daily_coverage_95": 0.5140236801242237
+        },
+        "weather": {
+          "rows": 2684,
+          "days": 28,
+          "wis": 17.775946318456352,
+          "median_mae": 23.720932268529378,
+          "median_rmse": 32.50538910928519,
+          "coverage_50": 0.21572280178837555,
+          "coverage_95": 0.5514157973174366,
+          "width_50": 14.481319930146592,
+          "width_95": 54.078566850111386,
+          "daily_coverage_50": 0.2156929347826087,
+          "daily_coverage_95": 0.5510481366459626
+        },
+        "reference": {
+          "rows": 2684,
+          "days": 28,
+          "wis": 18.485765964977645,
+          "median_mae": 29.671784649776455,
+          "median_rmse": 42.395630109754585,
+          "coverage_50": 0.43219076005961254,
+          "coverage_95": 0.9061102831594635,
+          "width_50": 32.483390461997026,
+          "width_95": 150.6567287630402,
+          "daily_coverage_50": 0.43200051759834374,
+          "daily_coverage_95": 0.9058294513457558
+        },
+        "system": {
+          "rows": 2684,
+          "days": 28,
+          "wis": 17.775946318456352,
+          "median_mae": 23.720932268529378,
+          "median_rmse": 32.50538910928519,
+          "coverage_50": 0.21572280178837555,
+          "coverage_95": 0.5514157973174366,
+          "width_50": 14.481319930146592,
+          "width_95": 54.078566850111386,
+          "daily_coverage_50": 0.2156929347826087,
+          "daily_coverage_95": 0.5510481366459626
+        }
+      }
+    },
+    "1": {
+      "delivery_rows": 23520,
+      "missing_truth": 0,
+      "forecast_coverage": 1.0,
+      "metrics": {
+        "demand": {
+          "rows": 23520,
+          "days": 245,
+          "wis": 16.17577265340956,
+          "median_mae": 22.528474994022027,
+          "median_rmse": 37.84423037960126,
+          "coverage_50": 0.24630102040816326,
+          "coverage_95": 0.6466836734693877,
+          "width_50": 15.886177974969787,
+          "width_95": 65.32962727536709,
+          "daily_coverage_50": 0.2463010204081633,
+          "daily_coverage_95": 0.6466836734693877
+        },
+        "prices": {
+          "rows": 23520,
+          "days": 245,
+          "wis": 20.66714681884347,
+          "median_mae": 28.385078032979383,
+          "median_rmse": 44.754525675627306,
+          "coverage_50": 0.23856292517006802,
+          "coverage_95": 0.610969387755102,
+          "width_50": 19.92070303838191,
+          "width_95": 71.5889439869716,
+          "daily_coverage_50": 0.23856292517006805,
+          "daily_coverage_95": 0.610969387755102
+        },
+        "weather": {
+          "rows": 23520,
+          "days": 245,
+          "wis": 16.187440906745913,
+          "median_mae": 22.752765209916255,
+          "median_rmse": 38.15023653931031,
+          "coverage_50": 0.2530187074829932,
+          "coverage_95": 0.6548469387755103,
+          "width_50": 16.978304182292245,
+          "width_95": 66.19250044538849,
+          "daily_coverage_50": 0.2530187074829932,
+          "daily_coverage_95": 0.6548469387755103
+        },
+        "reference": {
+          "rows": 23520,
+          "days": 245,
+          "wis": 19.533475907738094,
+          "median_mae": 30.2611974914966,
+          "median_rmse": 47.54794555094964,
+          "coverage_50": 0.4639030612244898,
+          "coverage_95": 0.9239370748299319,
+          "width_50": 33.35652040816328,
+          "width_95": 157.3090892857142,
+          "daily_coverage_50": 0.4639030612244898,
+          "daily_coverage_95": 0.923937074829932
+        },
+        "system": {
+          "rows": 23520,
+          "days": 245,
+          "wis": 16.17577265340956,
+          "median_mae": 22.528474994022027,
+          "median_rmse": 37.84423037960126,
+          "coverage_50": 0.24630102040816326,
+          "coverage_95": 0.6466836734693877,
+          "width_50": 15.886177974969787,
+          "width_95": 65.32962727536709,
+          "daily_coverage_50": 0.2463010204081633,
+          "daily_coverage_95": 0.6466836734693877
+        }
+      }
+    }
+  },
+  "fallback_rows": {
+    "weather": 2684,
+    "demand": 23520
+  },
+  "prediction_failures": [],
+  "raw_crossing_fraction": {
+    "demand": 0.16150206075408335,
+    "prices": 0.20206838650587697,
+    "weather": 0.1548618531521905
+  },
+  "fold_training_rows": {
+    "2026-01-01": 7492,
+    "2026-02-01": 10468,
+    "2026-03-01": 13156,
+    "2026-04-01": 16128,
+    "2026-05-01": 19008,
+    "2026-06-01": 21984,
+    "2026-07-01": 24864,
+    "2026-08-01": 27840,
+    "2026-09-01": 30816
+  },
+  "timing_limits": {
+    "prices": "Assume auction prices for earlier delivery dates are available at issue time; SMARD publication latency and revisions are unaudited.",
+    "weather": "Assume documented previous_day2 fixed 48-hour lead; original publication times are unknown. Retrospective retrieval is not witnessed availability.",
+    "demand": "Conditional on UpdateTime(UTC) describing availability; retain only archived versions updated by cutoff. Later revisions cannot recover overwritten earlier values."
+  },
+  "limitations": [
+    "Retrospective single-year evaluation; August\u2013September were inspected in earlier diagnostics.",
+    "Historical price/weather availability assumed; demand UpdateTime semantics conditional.",
+    "Intervals are marginal per quarter; no trading-profitability or daily-readiness claim."
+  ],
+  "verification": {
+    "run_id": "d24461d3be8c819d9310ea55",
+    "predictions_match": true,
+    "scores_match": true,
+    "tolerance": {
+      "absolute": 1e-06,
+      "relative": 1e-09
+    },
+    "forecast_tests": 24,
+    "fit_failures": 0,
+    "local_metaflow": true,
+    "local_mlflow": true,
+    "restored_committed_code": true,
+    "frozen_environment": true,
+    "fresh_s3_load": true
+  },
+  "research_history": {
+    "research_record_id": "852ac19ec9f942f6931c3673a74750f7",
+    "rationale_status": "retrospective",
+    "proposal_saved_before_execution": false,
+    "comparison_baseline_run_id": "39b10b460cdd4e05a64b159b84ac4925",
+    "motivating_experiment_ids": [],
+    "execution_records": [
+      {
+        "forecast_run": "e22fb1d75b8fdf5d1d0553b9",
+        "mlflow_run_id": "dba3c0f32c9f4fe38e552b8592de8d20",
+        "metaflow_run_id": "ForecastEvaluation/1791570284738749",
+        "role": "exploratory",
+        "status": "KILLED",
+        "manifest_artifact": "runs:/dba3c0f32c9f4fe38e552b8592de8d20/execution/manifest.json"
+      },
+      {
+        "forecast_run": "fc4440d4bb05d4d84c684b70",
+        "mlflow_run_id": "79cfbd0937c24755931e12f3c9f2eeb9",
+        "role": "integration_smoke",
+        "status": "FINISHED",
+        "metaflow_run_id": "ForecastEvaluation/1791570497370789",
+        "manifest_artifact": "runs:/79cfbd0937c24755931e12f3c9f2eeb9/run/manifest.json"
+      },
+      {
+        "forecast_run": "cf8977f4bfff3e4823ae2891",
+        "mlflow_run_id": "71e7d7162c0d4947af5d2a48e3b39ed6",
+        "role": "initial_complete_baseline",
+        "status": "FINISHED",
+        "metaflow_run_id": "ForecastEvaluation/1791570597553314",
+        "manifest_artifact": "runs:/71e7d7162c0d4947af5d2a48e3b39ed6/run/manifest.json"
+      },
+      {
+        "forecast_run": "d24461d3be8c819d9310ea55",
+        "mlflow_run_id": "8a4c692855fb42eba39d5a3bfc7d6762",
+        "role": "accepted_metadata_correction",
+        "status": "FINISHED",
+        "metaflow_run_id": "ForecastEvaluation/1791571137838024",
+        "manifest_artifact": "runs:/8a4c692855fb42eba39d5a3bfc7d6762/run/manifest.json"
+      }
+    ],
+    "decision": "investigate_further",
+    "continuation_approved": false,
+    "rationale_artifact": "runs:/852ac19ec9f942f6931c3673a74750f7/research/retrospective-rationale.json",
+    "conclusion_artifact": "runs:/852ac19ec9f942f6931c3673a74750f7/research/conclusion.json"
+  }
+}

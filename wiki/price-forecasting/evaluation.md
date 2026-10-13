@@ -69,7 +69,7 @@ Preserve raw inputs or content hashes, request and retrieval metadata, row-level
 
 ### Limitations
 
-The proposed first fit uses October–December 2025 to predict January 2026; later monthly fits add the preceding months. This is a date choice, not a limit imposed by missing demand. More months can be used for initial training within the assembled year, leaving fewer months for evaluation. Earlier compatible data has not been established.
+The fixed first fit uses October 15–December 31, 2025 to predict January 2026; October 1–14 provides feature warmup. Later monthly fits add the preceding months. This is a date choice, not a limit imposed by missing demand. More months can be used for initial training within the assembled year, leaving fewer months for evaluation. Earlier compatible data has not been established.
 
 One annual cycle gives limited evidence about rare extreme prices. Many consecutive quarter-hours can describe a single storm or price event. A nominal 95% range is therefore not proof of reliable coverage during extremes. Recommended additional checks are separate counts below and above the predicted ranges, and coverage by delivery hour; these are review recommendations, not added first-build acceptance criteria.
 
@@ -77,6 +77,16 @@ Historical input timing remains subject to the [availability limits](data-source
 
 ## Freeze
 
-As of 2026-10-09, quantile output, scoring, [defaults](#defaults), [controls](#controls) and reference construction are settled. Exact train/test dates, remaining price-feature definitions, fixed model settings and minimum reference-history counts still need to be recorded before fitting. Changes after inspecting scores belong to a separate experiment.
+As of 2026-10-09, the [run configuration](../../forecasts/run-config.json) freezes dates, CatBoost settings, minimum reference history, resampling and numerical tolerance. [Implementation/setup](../../forecasts/README.md#local-model-evaluation) describes the fixed price features and explicit feature inventories saved before fitting. Changes after inspecting scores belong to a separate experiment.
 
-A practical candidate is initial training in the final quarter of 2025 followed by monthly expanding-window evaluation during January–September 2026, allowing the necessary price-lag warmup. Confirm the assembled data supports it before freezing. This is retrospective evaluation: August–September 2026 were already inspected in the point-model diagnostic. Do not call them an untouched final holdout. Prospective forecasts after freezing provide fresh evidence; the single historical year does not establish multi-year robustness.
+Monthly expanding evaluation covers January–September 2026. This is retrospective evaluation: August–September 2026 were already inspected in the point-model diagnostic. Do not call them an untouched final holdout. Prospective forecasts after freezing provide fresh evidence; the single historical year does not establish multi-year robustness.
+
+## Result
+
+The [first fixed baseline report](../../forecasts/reports/evaluation.json) records accepted run `d24461d3be8c819d9310ea55`, nine monthly folds and 26,204 common target rows. The fallback system improves WIS against the distributional reference on this replay; its paired seven-day-block interval excludes no improvement. Weather accounts for the headline gain over prices/calendar; adding demand does not improve the headline weather-only score.
+
+Both nominal uncertainty bands substantially under-cover. This is a measured calibration limitation, not a reason to retune the fixed baseline after viewing its scores. Historical availability remains assumed/conditional and the year is retrospective development evidence. Further experiments need the [continuation decision](germany-luxembourg.md#continuation) and the manual [forecast-experiment procedure](../../.agents/skills/forecast-experiment/SKILL.md); neither calibrated daily use nor trading value is established.
+
+MLflow research record `852ac19ec9f942f6931c3673a74750f7` links the accepted execution, earlier complete run, integration smoke run and interrupted attempt. Its rationale is explicitly retrospective: no proposal was saved before these executions. The conclusion recommends further investigation only if the continuation decision approves it.
+
+Local Metaflow and MLflow retain predictions, selected features/audit flags, models, reference calibration and full monthly/demand reports. One-command reproduction restored the saved committed code and frozen environment, loaded the snapshot from S3 and matched predictions/scores at the declared tolerance. [Setup and preservation requirements](../../forecasts/README.md#local-model-evaluation).

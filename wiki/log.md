@@ -299,3 +299,7 @@ The 03:15 CEST September 12 example has a one-cent difference between JAO’s ad
 ## [2026-10-09] decision | Experiment procedure belongs in a skill
 
 The [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) owns the procedure for proposals, evidence and conclusions, with a pointer in forecast agent instructions. Agents follow it manually; only automation remains follow-up work. The [infrastructure page](price-forecasting/forecast-infrastructure.md#research-history) retains the storage decision without repeating the procedure.
+
+## [2026-10-09] ingest | First quantile forecast evaluation
+
+The fixed baseline improves weighted interval score against its distributional reference, while both nominal uncertainty bands under-cover. Weather accounts for the headline gain; adding demand does not improve the weather-only headline score. Further quality experiments and prospective evidence need a separate continuation decision. [Result and limits](price-forecasting/evaluation.md#result).
