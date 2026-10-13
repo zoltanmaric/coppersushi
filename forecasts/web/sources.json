@@ -1,0 +1,18 @@
+{
+  "contract": {
+    "path": "wiki/price-forecasting/germany-luxembourg.md",
+    "sha256": "499becbfee8366b81afd89809e6927701300bf5ecaf79e2fd433a2303ad862fa"
+  },
+  "evaluation": {
+    "path": "wiki/price-forecasting/evaluation.md",
+    "sha256": "89cf6f281e9d7f9b96ac56e5f72607b3a2988db30e74fc7390c481077fb855af"
+  },
+  "inputs": {
+    "path": "wiki/price-forecasting/data-sources.md",
+    "sha256": "d2c12fa557c3f5084968847029ad0fea05bb16733ab41231b332916a6a83e8be"
+  },
+  "infrastructure": {
+    "path": "wiki/price-forecasting/forecast-infrastructure.md",
+    "sha256": "efad8a361e68dd321f6b87a73f7c23321ab5be61c5e982f57859c201cb4727c6"
+  }
+}
