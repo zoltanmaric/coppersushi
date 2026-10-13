@@ -47,7 +47,6 @@
     }
     if (params.has("method") && Object.hasOwn(names, params.get("method")))
       $("method").value = params.get("method");
-    for (const d of D.days) option($("day"), d.date, d.date);
     for (const m of Object.keys(D.report.breakdowns.month))
       option($("period"), m, m);
     function visibleIndices() {
@@ -371,8 +370,8 @@
         method = $("method").value,
         m = d.metrics[method];
       const visible = visibleIndices();
-      $("day").replaceChildren();
-      for (const i of visible) option($("day"), D.days[i].date, D.days[i].date);
+      $("day").min = D.days[visible[0]].date;
+      $("day").max = D.days[visible.at(-1)].date;
       $("day").value = d.date;
       $("previous").disabled = index === visible[0];
       $("next").disabled = index === visible.at(-1);
@@ -729,7 +728,8 @@
       refreshAddress();
     };
     $("day").onchange = () => {
-      index = D.days.findIndex((d) => d.date === $("day").value);
+      const selected = D.days.findIndex((d) => d.date === $("day").value);
+      if (visibleIndices().includes(selected)) index = selected;
       renderDay();
       refreshAddress();
     };
