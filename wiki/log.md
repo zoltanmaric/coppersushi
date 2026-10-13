@@ -295,3 +295,7 @@ Independent stationarity and observed BE–DE spread checks passed on all 114 AL
 ## [2026-10-09] query | Polish cap publication precision
 
 The 03:15 CEST September 12 example has a one-cent difference between JAO’s adjusted Polish price and the displayed other-Core price. [Country caps](country-import-export-caps.md#poland-validation) records the selected term, observed spread and remainder separately.
+
+## [2026-10-09] decision | Experiment procedure belongs in a skill
+
+The [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) owns the procedure for proposals, evidence and conclusions, with a pointer in forecast agent instructions. Agents follow it manually; only automation remains follow-up work. The [infrastructure page](price-forecasting/forecast-infrastructure.md#research-history) retains the storage decision without repeating the procedure.

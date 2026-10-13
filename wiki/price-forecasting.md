@@ -21,7 +21,7 @@ flowchart LR
     forecast_raw_inputs["forecast_raw_inputs<br/>S3 source responses and retrieval metadata"]
     forecast_input_snapshot["forecast_input_snapshot<br/>S3 validated Parquet tables and fixed manifest"]
     forecast_local_run["forecast_local_run<br/>local Metaflow training and evaluation"]:::planned
-    forecast_experiment["forecast_experiment<br/>local MLflow scores, models and reports<br/>research history follows the first baseline"]:::planned
+    forecast_experiment["forecast_experiment<br/>local MLflow scores, models and reports<br/>research history maintained by agents"]:::planned
 
     forecast_raw_inputs --> forecast_input_snapshot
     forecast_input_snapshot -.-> forecast_local_run

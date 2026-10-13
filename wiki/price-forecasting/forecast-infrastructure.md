@@ -54,21 +54,9 @@ Keep source collection, input loading, feature construction and model evaluation
 
 ### Research-history
 
-Planned follow-up after the first local baseline: the research harness records why an experiment was proposed, which evidence informed it, and what was learned. This extends run reproducibility; it is not part of the first baseline's acceptance criteria.
+MLflow holds experiment proposals, conclusions and links to motivating experiments, comparison baselines and execution runs. Saved run manifests identify exact inputs, code and configuration. The wiki holds durable accepted design decisions linked to experiment IDs.
 
-Use an MLflow run as the experiment record, with searchable relationship tags and saved proposal/conclusion artifacts. One research experiment may contain several execution runs for folds or variants; link all of them. Parent/child runs group execution. Explicit links to motivating experiments and the comparison baseline record how research ideas connect; these are distinct relationships.
-
-| When | Record |
-|---|---|
-| Before execution | Hypothesis, motivating experiment IDs (empty for the initial baseline), prior results inspected, comparison baseline, intended change, fixed evaluation protocol and decision criterion |
-| Automatically | Exact run-manifest links: snapshot ID, committed code revision, frozen environment, configuration, seeds and Metaflow/MLflow execution IDs; retain failed attempts and their status |
-| After execution | Evidence links, results against the baseline on matching evaluation rows, limitations, conclusion and decision: keep, reject or investigate further |
-
-Save the proposal before execution and append the conclusion afterward. Preserve the original proposal; a changed hypothesis or evaluation protocol starts a linked experiment. Record corrections without replacing the earlier evidence. Searchable tags and notes help discovery; saved artifacts hold the proposal and conclusion. Do not duplicate input files or manifest contents in prose.
-
-The harness is a thin extension of the existing local workflow, not a separate service. It requires these records and the existing point-in-time and evaluation checks. Repeated use of evaluation results to choose experiments makes those dates development data, even when no future information enters individual forecasts. Record that use; fresh prospective evaluation provides new evidence. A failed experiment or a measured loss remains part of the history.
-
-MLflow is the home for experiment evidence and relationships. The wiki holds durable accepted design decisions, linked to the relevant experiment IDs. Preserve the local tracking store and artifacts together, as required for local runs above. No additional research database or platform is required. [MLflow tracking APIs](https://mlflow.org/docs/latest/tracking/tracking-api/) provide tags, notes, artifacts and nested runs; the harness supplies the research protocol.
+The [forecast-experiment skill](../../.agents/skills/forecast-experiment/SKILL.md) owns the agent procedure. Agents maintain the records manually; workflow automation is planned. No separate research database or service is required.
 
 ## Later
 
