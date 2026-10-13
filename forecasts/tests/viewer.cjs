@@ -40,11 +40,18 @@ const diagramBefore = $("pipeline").innerHTML;
 const teachingBefore = $("node-detail").innerHTML;
 const month = Object.keys(data.report.breakdowns.month)[1];
 change("period", month);
-assert([...$("day").options].every((o) => o.value.startsWith(month)));
+const monthDays = data.days.filter((d) => d.date.startsWith(month));
+assert.equal($("day").type, "date");
+assert.equal($("day").min, monthDays[0].date);
+assert.equal($("day").max, monthDays.at(-1).date);
 assert($("previous").disabled);
 $("next").click();
-assert.equal($("day").selectedIndex, 1);
-change("day", $("day").options[$("day").options.length - 1].value);
+assert.equal($("day").value, monthDays[1].date);
+change("day", "1900-01-01");
+assert.equal($("day").value, monthDays[1].date);
+change("day", "");
+assert.equal($("day").value, monthDays[1].date);
+change("day", monthDays.at(-1).date);
 assert($("next").disabled);
 assert(
   $("metrics").textContent.includes(
