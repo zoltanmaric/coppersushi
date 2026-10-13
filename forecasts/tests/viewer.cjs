@@ -38,10 +38,27 @@ assert.equal(
 assert($("wis-explanation").textContent.includes("0.4"));
 const initialScale = [$("chart").dataset.priceMin, $("chart").dataset.priceMax];
 assert.equal($("quarter"), null);
+const sortButtons = [...window.document.querySelectorAll("[data-sort]")];
+assert.equal(sortButtons.length, 8);
+const numericColumn = (column) => [...$("comparison").children].map((row) => Number(row.children[column].textContent.replace("%", "")));
+for (const [column, button] of sortButtons.entries()) {
+  button.click();
+  assert.equal(button.closest("th").getAttribute("aria-sort"), "ascending");
+  const ascending = [...$("comparison").children].map((row) => row.children[column].textContent);
+  if (column) {
+    const values = numericColumn(column);
+    assert.deepEqual(values, [...values].sort((a, b) => a - b));
+  } else assert.deepEqual(ascending, [...ascending].sort((a, b) => a.localeCompare(b)));
+  button.click();
+  assert.equal(button.closest("th").getAttribute("aria-sort"), "descending");
+  assert.deepEqual([...$("comparison").children].map((row) => row.children[column].textContent), [...ascending].reverse());
+}
 const diagramBefore = $("pipeline").innerHTML;
 const teachingBefore = $("node-detail").innerHTML;
 const month = Object.keys(data.report.breakdowns.month)[1];
 change("period", month);
+assert.equal(sortButtons.at(-1).closest("th").getAttribute("aria-sort"), "descending");
+assert.deepEqual(numericColumn(7), [...numericColumn(7)].sort((a, b) => b - a));
 const monthDays = data.days.filter((d) => d.date.startsWith(month));
 assert.equal($("day").type, "date");
 assert.equal($("day").min, monthDays[0].date);
