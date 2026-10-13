@@ -31,6 +31,8 @@
 
 - **file-urls** — Refer to files in chat by their full `file:///` URL, never by a bare or relative path.
 
+- **html-preview** — Present HTML in the browser viewer. In Codex, use `open_in_codex` with `target.type: "browser"` and the `file:///` URL; the `file` target opens raw source. A queued request does not confirm rendering.
+
 - **named-adds** — Stage named paths, never `git add -A` or `git add .`: untracked files you didn't mean to commit ride along silently.
 
 - **watch-long-runs** — Watch long runs from the first second. Anything that may run beyond a minute goes through the `job-supervision` skill before launch.
