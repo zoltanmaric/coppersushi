@@ -46,7 +46,7 @@ With positive net position meaning exports, write the bounds as `−import_limit
 P_adjusted = P_country − δ_country
 ```
 
-Thus a selected import cap contributes `+μ_import` to `P_country − P_other`; an export cap contributes `−μ_export`. Reverse the signs for rays showing `P_other − P_country`. A cap on neither compared zone has zero direct term. These signs follow Article 6 of the [all-TSOs congestion-income methodology amendment proposal, 30 June 2023](https://eepublicdownloads.entsoe.eu/clean-documents/nc-tasks/230630_CACM_CIDm%20Amendment.pdf); this citation establishes the algebra, not the proposal's subsequent legal status.
+Thus a selected import cap contributes `+μ_import` to `P_country − P_other`; an export cap contributes `−μ_export`. Reverse the signs for rays showing `P_other − P_country`. A cap on neither compared zone has zero direct term. For a selected Polish cap, its contribution to `P_other − P_PL` is therefore identical for every other country. Differences between those total spreads come from the remaining constraints. These signs follow Article 6 of the [all-TSOs congestion-income methodology amendment proposal, 30 June 2023](https://eepublicdownloads.entsoe.eu/clean-documents/nc-tasks/230630_CACM_CIDm%20Amendment.pdf); this citation establishes the algebra, not the proposal's subsequent legal status.
 
 Use price-normalized duals in €/MWh; distinguish these from an interval's welfare sensitivity in euros per MW. The result attributes the cleared price spread, not the price change after rerunning the auction without the cap. Other constraints can offset it, so an individual contribution may exceed the observed spread. A published limit does not prove it binds; saturation alone does not prove a positive shadow price.
 
@@ -79,6 +79,8 @@ Reproduce the first two through `https://publicationtool.jao.eu/core/api/data/{e
 | **Total** | **341** | **206** | **29** |
 
 No sign or slackness counterexamples. Position-to-limit tolerance was 0.11 MW to allow published rounding; price equality tolerance was €0.01/MWh. An older August 29 price cache was hourly and excluded rather than compared with quarter-hour data.
+
+**Publication precision:** `PL_ALT` and the displayed country prices can differ by one cent even without active physical rows. At 2026-09-12 03:15 CEST, JAO publishes `PL_ALT=189.83`, while the displayed other-Core price is 189.82 and Poland is 170.53 €/MWh. The inferred cap term in `P_other−P_PL` is therefore +19.30; the observed spread is +19.29, with a −0.01 remainder. Keep the source values and expose the remainder; do not replace the cap term with the observed spread to force agreement.
 
 An independent magnitude check also passes **all 576 intervals within €0.02/MWh**:
 

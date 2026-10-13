@@ -288,6 +288,14 @@ Downloaded contiguous 11:00-cutoff chart windows for five participants. [Benchma
 
 The [research-history design](price-forecasting/forecast-infrastructure.md#research-history) extends reproducible runs with proposals saved before execution, links to motivating experiments, and conclusions with evidence and decisions. MLflow holds this history; the wiki holds accepted design decisions. The harness is follow-up work after the first local baseline. Reused evaluation results are development evidence, not an untouched holdout.
 
+## [2026-10-09] query | ALEGrO bound attribution
+
+Independent stationarity and observed BE–DE spread checks passed on all 114 ALEGrO binding intervals on 2026-09-12 and 2026-10-08. [Virtual-hub interconnectors](virtual-hub-interconnectors.md#alegro-validation) defines the signed middle term and paired-end treatment: shared asset identity does not make distinct dual rows duplicates. Newer interfaces still need adjacent-region validation.
+
+## [2026-10-09] query | Polish cap publication precision
+
+The 03:15 CEST September 12 example has a one-cent difference between JAO’s adjusted Polish price and the displayed other-Core price. [Country caps](country-import-export-caps.md#poland-validation) records the selected term, observed spread and remainder separately.
+
 ## [2026-10-09] decision | Experiment procedure belongs in a skill
 
 The [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) owns the procedure for proposals, evidence and conclusions, with a pointer in forecast agent instructions. Agents follow it manually; only automation remains follow-up work. The [infrastructure page](price-forecasting/forecast-infrastructure.md#research-history) retains the storage decision without repeating the procedure.

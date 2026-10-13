@@ -41,7 +41,7 @@ def test_selecting_a_row_adds_its_relative_contribution():
     interval = pd.Timestamp("2024-08-28T22:00:00Z")
     base = cnec_market.snapshot(*inputs(), interval)
     selected = cnec_market.key_of(base.constraints.iloc[0])
-    view = cnec_market.snapshot(*inputs(), interval, selected, "AT")
+    view = cnec_market.snapshot(*inputs(), interval, selected, "AT", alpha=1.0)
     contribution = view.contribution.set_index("zone").contribution
     assert contribution["AT"] == pytest.approx(0.0)
     assert contribution["BE"] == pytest.approx(2.87)

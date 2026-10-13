@@ -22,18 +22,10 @@ Resolve physical endpoints from the selected TSO's element orientation: DIRECT s
 
 Virtual-hub references use the [published interface mapping](../virtual-hub-interconnectors.md#hub-mapping) and validated signed flow convention. Adjacent bidding zones such as DK1, NO2 and SE4 can be reference/target endpoints; retain their identity. A virtual-hub label alone does not establish which country is sending.
 
-## Acceptance criteria
+## Remaining acceptance criteria
 
-- [x] Validate a usable Polish cap-price source and interval mapping: six days, 576 intervals, independent FB-price reconstruction within €0.02/MWh.
-- [x] Establish country-cap coverage for every Core zone using the 2026 SDAC inventory, phase-out notice and cache/API checks.
-- [x] Agree automatic reference selection: in-zone location for transformers/lines, oriented sending end for interconnectors, PL for the country cap.
-- [ ] Implement the reference-zone rule and Polish adapter with data checks. Countries with no aggregate cap remain unhighlighted; any historical cap support must be explicit. Use the [audited taxonomy](../jao-constraint-types.md): distinguish physical assets, aggregate caps, virtual hubs, equalities and LTA facets; preserve unresolved metadata rather than guessing from names.
-- [ ] Define and validate physical-row attribution for α>0 against published spreads, including α<1; do not double-count or present raw FB terms as an exhaustive decomposition. At α=0, attribution is unavailable. LTA-facet reconstruction is not required for this layer.
-- [ ] Map all audited virtual hubs to explicit interfaces and make them selectable, with binding direction, MW capacity and published shadow price. Preserve row identity and group paired ALEGrO ends as one asset without counting a bound twice; combined/AC interfaces must not masquerade as one cable or whole-country caps.
-- [ ] Validate virtual-hub endpoint attribution on sampled intervals for ALEGrO and newer interfaces, covering signs, paired hubs and FB/LTA scaling. Compare the reconstructed endpoint spread with observed prices; show only the selected bound’s validated component, never the full spread. Missing data or unsupported attribution leaves selection available with an explicit unavailable contribution.
-- [ ] Previous/next moves one interval and disables at day boundaries. Minor ticks and exact selected time work for hourly/quarter-hourly data and daylight-saving transition days.
-- [ ] Country outlines, transformer points, line interiors and virtual-hub interfaces select the intended row and update the selector. Day/interval changes update or clear selection, tooltip and rays together.
-- [ ] Labels state the selected constraint, reference, signed €/MWh contribution and MW capacity separately. Cover offsetting contributions and unavailable data; reject raw-spread fallback.
-- [ ] Verify in Chrome with country caps, transformers, lines and virtual-hub interfaces where verified data exists. Retain loading/retry behaviour; rays must not imply physical power-flow paths.
+- [ ] Validate numerical endpoint attribution for the nine newer interfaces, including adjacent-region terms, signs and FB/LTA scaling. The selection layer already shows these interfaces with capacity, published dual and an explicit unavailable contribution; never substitute the observed spread. [ALEGrO is validated](../virtual-hub-interconnectors.md#alegro-validation).
 
-Burn down as changes land; move surviving knowledge into the app page and delete this spec when complete.
+Implemented: automatic references; guarded Polish cap adapter; normalized physical attribution with α=0 unavailable; schematic mapping of every audited virtual hub; shared ALEGrO geometry with distinct row IDs; synchronized map/dropdown selection; previous/next, minor ticks and exact timestamps. Unit tests cover cap signs, reference direction, scaling, paired hubs, unavailable data and DST intervals. Chrome checks cover Poland’s outline, a physical line, a Romanian PST and ALEGrO selection. App behaviour lives in [the app page](../copper-sushi-app.md#the-cnec-page).
+
+Burn down as changes land; delete this spec once the remaining coverage verifies.
