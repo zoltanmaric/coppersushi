@@ -36,6 +36,8 @@ assert.equal(
   "Weighted interval score (WIS) ↓",
 );
 assert($("wis-explanation").textContent.includes("0.4"));
+const initialScale = [$("chart").dataset.priceMin, $("chart").dataset.priceMax];
+assert.equal($("quarter"), null);
 const diagramBefore = $("pipeline").innerHTML;
 const teachingBefore = $("node-detail").innerHTML;
 const month = Object.keys(data.report.breakdowns.month)[1];
@@ -62,8 +64,7 @@ assert.equal($("pipeline").innerHTML, diagramBefore);
 assert.equal($("node-detail").innerHTML, teachingBefore);
 change("method", "reference");
 assert($("chart-title").textContent.includes("reference"));
-$("quarter").value = 5;
-$("quarter").dispatchEvent(new window.Event("input"));
+assert.deepEqual([$("chart").dataset.priceMin, $("chart").dataset.priceMax], initialScale);
 assert($("point-detail").textContent.includes("Actual"));
 $("reference").checked = true;
 $("reference").dispatchEvent(new window.Event("change"));
@@ -73,7 +74,7 @@ const dst = data.days.find((d) => d.points.length !== 96);
 if (dst) {
   change("day", dst.date);
   assert.equal($("quarters").children.length, dst.points.length);
-  assert.equal(Number($("quarter").max), dst.points.length - 1);
+  assert.deepEqual([$("chart").dataset.priceMin, $("chart").dataset.priceMax], initialScale);
 }
 for (const node of $("pipeline").querySelectorAll("[role=button]")) {
   node.dispatchEvent(
