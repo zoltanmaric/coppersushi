@@ -30,9 +30,9 @@ flowchart LR
     forecast_local_run --> forecast_experiment
 
     forecast_wiki["forecast_wiki<br/>versioned forecast contracts and explanations"]
-    forecast_viewer["forecast_viewer<br/>offline results, metrics and system explanation"]:::planned
-    forecast_experiment -.-> forecast_viewer
-    forecast_wiki -.-> forecast_viewer
+    forecast_viewer["forecast_viewer<br/>offline results, metrics and system explanation"]
+    forecast_experiment --> forecast_viewer
+    forecast_wiki --> forecast_viewer
 
     forecast_research_history["forecast_research_history<br/>workflow automation of agent experiment records, after continuation decision"]:::planned
     forecast_experiment -.-> forecast_research_history
