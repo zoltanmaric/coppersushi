@@ -1374,7 +1374,7 @@
             <p>
               These are proposed controls. Comparisons retain the same observed
               quarters, with dates, counts and missing outcomes visible.
-              Negative prices and clock-change days remain intact.
+              Negative prices and clock-change days remain intact. Daily charts use one fixed price scale across all saved days and methods, including the reference overlay. Hover reveals quarter-hour values; the table supplies exact values without a slider.
             </p>
           </div>
           <div>
@@ -1394,6 +1394,19 @@
                 >Method ↗</a
               >
             </p>
+          </div>
+        </div>
+        <div class="intent">
+          <div>
+            <h3>Know which forecast you are reading</h3>
+            <p>The picker says <strong>Forecast method</strong>. Its guide distinguishes three trained CatBoost models from a simple reference and automatic method selection. All are saved historical predictions.</p>
+            <p><strong>Automatic selection (with fallbacks)</strong> chooses the demand model when inputs and execution permit, then falls back through weather, price history and the reference. Show the actual method used beside the daily result.</p>
+          </div>
+          <div>
+            <h3>Names explain the inputs</h3>
+            <p><strong>Price-history model</strong> uses earlier same-clock prices, daily price summaries and calendar features.</p>
+            <p><strong>Price-history + weather model</strong> adds forecast temperature, wind and radiation at twelve locations. <strong>Price-history + weather + demand model</strong> also adds German electricity-demand forecasts.</p>
+            <p><strong>Yesterday / last-week reference</strong> averages those same-clock prices; when neither exists, it uses an earlier same-quarter median. Bands are calibrated from training-period errors. A failed trained model also uses reference predictions.</p>
           </div>
         </div>
         <div class="statement">
