@@ -110,3 +110,26 @@ The caller must use the recorded Python version and platform. This command never
 The [verified baseline summary](reports/evaluation.json) records the accepted run identifier and public aggregate results. It is retrospective evidence with substantial interval under-coverage; further experiments follow the separate [continuation decision](../wiki/price-forecasting/germany-luxembourg.md#continuation).
 
 The baseline's manual research history is linked in the aggregate summary and stored as MLflow rationale/conclusion artifacts. It explicitly records the absence of a pre-execution proposal and retains the interrupted attempt. New experiments must follow the [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) before execution; the workflow does not automate that procedure.
+
+## Forecast observatory
+
+Export a saved run as an offline website with daily forecasts, full-period/monthly comparisons, an illustrated WIS calculation, the forecast contract and a selectable system-level pipeline. No fitting, source-provider calls or new AWS resources are involved.
+
+```sh
+data/forecasts/venv/bin/python -m forecasts.explain --run data/forecasts/runs/RUN_ID --output data/forecasts/explainers/RUN_ID
+```
+
+Open the output's `index.html` in a browser. Keep the adjacent `data.js`, styles and scripts together. Use a new output directory for each export; existing exports are not overwritten. Generated files remain under ignored `data/forecasts/` and are not published by this command.
+
+The exporter checks consumed artifact hashes and reconciles overall/monthly scores against the predictions. It retains missing outcomes, source fallbacks and Berlin clock-change quarters. The pipeline explains the system independently of the selected day, with saved-run provenance available as supporting detail.
+
+The narrative's reviewed wiki hashes live in `forecasts/web/sources.json`. A changed source blocks export until the explanation is reviewed and its hash updated; referenced wiki bytes must be committed so source links identify the actual revision. The export records presentation hashes as well as run/code/snapshot identity. It validates consumed artifacts, not model files or source archives it does not load.
+
+The [design explainer](../explainers/forecast-product.html) owns the approved experience. This viewer presents historical evidence; it does not establish calibration or live readiness.
+
+For DOM integration checks (no rendering assertions), install the test-only dependency in ignored data and point the test at an export:
+
+```sh
+npm install --prefix data/forecasts/ui-test --no-save jsdom@26.1.0
+NODE_PATH="$PWD/data/forecasts/ui-test/node_modules" node forecasts/tests/viewer.cjs data/forecasts/explainers/RUN_ID
+```
