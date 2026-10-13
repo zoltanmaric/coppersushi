@@ -121,3 +121,26 @@ pixi run --locked python -m forecasts.run reproduce RUN_ID --profile YOUR_LOCAL_
 ```
 
 Reproduction uses the saved code and Pixi definitions on the recorded operating system and architecture, reloads the S3 snapshot, and compares saved-model predictions and scores. Each attempt lives under `data/forecasts/reproductions/RUN_ID/ATTEMPT_ID/`, with status in `attempt.json` and successful verification in `result/verification.json`. Retry with the same command; failed and successful attempts remain intact. The preserved lock must still be supported by the installed Pixi version. It does not claim binary-identical retraining. [Scientific limits](../wiki/price-forecasting/evaluation.md#result) remain unchanged.
+
+## Forecast observatory
+
+Export a saved run as an offline website with daily forecasts, full-period/monthly comparisons, an illustrated WIS calculation, the forecast contract and a selectable system-level pipeline. No fitting, source-provider calls or new AWS resources are involved.
+
+```sh
+data/forecasts/venv/bin/python -m forecasts.explain --run data/forecasts/runs/RUN_ID --output data/forecasts/explainers/RUN_ID
+```
+
+Open the output's `index.html` in a browser. Keep the adjacent `data.js`, styles and scripts together. Use a new output directory for each export; existing exports are not overwritten. Generated files remain under ignored `data/forecasts/` and are not published by this command.
+
+The exporter checks consumed artifact hashes and reconciles overall/monthly scores against the predictions. It retains missing outcomes, source fallbacks and Berlin clock-change quarters. The pipeline explains the system independently of the selected day, with saved-run provenance available as supporting detail.
+
+The narrative's reviewed wiki hashes live in `forecasts/web/sources.json`. A changed source blocks export until the explanation is reviewed and its hash updated; referenced wiki bytes must be committed so source links identify the actual revision. The export records presentation hashes as well as run/code/snapshot identity. It validates consumed artifacts, not model files or source archives it does not load.
+
+The [design explainer](../explainers/forecast-product.html) owns the approved experience. This viewer presents historical evidence; it does not establish calibration or live readiness.
+
+For DOM integration checks (no rendering assertions), install the test-only dependency in ignored data and point the test at an export:
+
+```sh
+npm install --prefix data/forecasts/ui-test --no-save jsdom@26.1.0
+NODE_PATH="$PWD/data/forecasts/ui-test/node_modules" node forecasts/tests/viewer.cjs data/forecasts/explainers/RUN_ID
+```
