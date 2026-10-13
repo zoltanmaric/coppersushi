@@ -332,15 +332,17 @@ input:focus-visible,
 svg text {
   font-family: system-ui, sans-serif;
 }
-.quarter-control {
-  display: flex;
-  align-items: center;
-  gap: 18px;
+.method-guide {
+  margin: 16px 0;
 }
-.quarter-control input {
-  flex: 1;
-  accent-color: var(--green);
-  min-width: 70px;
+.method-guide dt {
+  font-weight: 650;
+  margin-top: 16px;
+}
+.method-guide dd {
+  margin: 4px 0 0;
+  color: var(--muted);
+  max-width: 80ch;
 }
 .point-detail {
   font-size: 12px;
