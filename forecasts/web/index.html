@@ -55,26 +55,26 @@
           <a href="#understand">What these numbers mean ↗</a>
         </div>
         <details class="comparison">
-          <summary>Compare all three feature sets and the reference</summary>
+          <summary>Compare forecast methods</summary>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Forecast</th>
-                  <th>WIS ↓</th>
-                  <th>Median MAE ↓</th>
-                  <th>Median RMSE ↓</th>
-                  <th>50% coverage</th>
-                  <th>95% coverage</th>
-                  <th>50% width</th>
-                  <th>95% width</th>
+                  <th scope="col" aria-sort="none"><button class="sort-column" data-sort="name" type="button">Forecast method<span class="sort-indicator" aria-hidden="true"> ↕</span></button></th>
+                  <th scope="col" aria-sort="none"><button class="sort-column" data-sort="wis" type="button">WIS ↓<span class="sort-indicator" aria-hidden="true"> ↕</span></button></th>
+                  <th scope="col" aria-sort="none"><button class="sort-column" data-sort="median_mae" type="button">Median MAE ↓<span class="sort-indicator" aria-hidden="true"> ↕</span></button></th>
+                  <th scope="col" aria-sort="none"><button class="sort-column" data-sort="median_rmse" type="button">Median RMSE ↓<span class="sort-indicator" aria-hidden="true"> ↕</span></button></th>
+                  <th scope="col" aria-sort="none"><button class="sort-column" data-sort="coverage_50" type="button">50% coverage<span class="sort-indicator" aria-hidden="true"> ↕</span></button></th>
+                  <th scope="col" aria-sort="none"><button class="sort-column" data-sort="coverage_95" type="button">95% coverage<span class="sort-indicator" aria-hidden="true"> ↕</span></button></th>
+                  <th scope="col" aria-sort="none"><button class="sort-column" data-sort="width_50" type="button">50% width<span class="sort-indicator" aria-hidden="true"> ↕</span></button></th>
+                  <th scope="col" aria-sort="none"><button class="sort-column" data-sort="width_95" type="button">95% width<span class="sort-indicator" aria-hidden="true"> ↕</span></button></th>
                 </tr>
               </thead>
               <tbody id="comparison"></tbody>
             </table>
           </div>
           <p class="muted">
-            Price errors and band widths are in €/MWh. All methods use the same
+            Click a column heading to sort; click again to reverse. Price errors and band widths are in €/MWh. All methods use the same
             quarters with observed prices. Coverage is per quarter; these are
             not simultaneous bands for a whole day.
           </p>
