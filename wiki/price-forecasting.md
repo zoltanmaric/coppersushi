@@ -4,6 +4,8 @@ An independent forecasting product under `forecasts/`, with no dependency on the
 
 ## Design
 
+- [Product experience](../explainers/forecast-product.html): approved illustrated spec for results and system-level explanation.
+
 - [Forecast contract](price-forecasting/germany-luxembourg.md): market, deadline, inputs and outputs.
 - [Storage and execution](price-forecasting/forecast-infrastructure.md): reproducibility promise, selection principle, local first iteration and later AWS deployment.
 - [Data sources](price-forecasting/data-sources.md): verified contracts and availability limits.
@@ -26,6 +28,11 @@ flowchart LR
     forecast_raw_inputs --> forecast_input_snapshot
     forecast_input_snapshot --> forecast_local_run
     forecast_local_run --> forecast_experiment
+
+    forecast_wiki["forecast_wiki<br/>versioned forecast contracts and explanations"]
+    forecast_viewer["forecast_viewer<br/>offline results, metrics and system explanation"]:::planned
+    forecast_experiment -.-> forecast_viewer
+    forecast_wiki -.-> forecast_viewer
 
     forecast_research_history["forecast_research_history<br/>workflow automation of agent experiment records, after continuation decision"]:::planned
     forecast_experiment -.-> forecast_research_history
