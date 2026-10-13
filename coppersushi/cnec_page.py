@@ -32,6 +32,7 @@ class Day:
     external_constraints: DataFrame[ActiveExternalConstraints]
     prices: DataFrame[DayAheadPrices]
     context: pd.DataFrame | None = None
+    adjacent: pd.DataFrame | None = None
 
 
 class Rendered(NamedTuple):
@@ -203,7 +204,7 @@ def render(
     else:
         snapshot = cnec_market.snapshot(
             day.constraints, day.ptdfs, day.external_constraints, day.prices, interval,
-            selected, reference_zone, context=day.context, alpha=alpha,
+            selected, reference_zone, context=day.context, alpha=alpha, adjacent=day.adjacent,
         )
     return Rendered(
         figure=cnec_price_map.figure(

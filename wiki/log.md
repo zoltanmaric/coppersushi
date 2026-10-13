@@ -299,3 +299,7 @@ The 03:15 CEST September 12 example has a one-cent difference between JAO’s ad
 ## [2026-10-09] decision | Experiment procedure belongs in a skill
 
 The [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) owns the procedure for proposals, evidence and conclusions, with a pointer in forecast agent instructions. Agents follow it manually; only automation remains follow-up work. The [infrastructure page](price-forecasting/forecast-infrastructure.md#research-history) retains the storage decision without repeating the procedure.
+
+## [2026-10-13] query | Adjacent-region endpoint attribution
+
+A paced [nine-interface audit](virtual-hub-interconnectors.md#adjacent-validation) sampled 40 binding cases over two delivery days. Nineteen lossless candidate reconstructions agree within €0.02/MWh; the remainder cannot be treated as publication precision. Nordic opposite endpoints are now mapped explicitly. Nord Pool documents loss pricing and ramping constraints, but the audit does not identify each residual’s cause. Loss-aware scaling and independently published missing terms remain open.

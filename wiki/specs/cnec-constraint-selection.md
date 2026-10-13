@@ -1,6 +1,6 @@
 # Spec: CNEC constraint selection
 
-Working memory, 2026-10-09. [App semantics](../copper-sushi-app.md), [country-cap research](../country-import-export-caps.md), [price attribution](../flow-based-market-coupling.md#price-contribution).
+Working memory, 2026-10-13. [App semantics](../copper-sushi-app.md), [country-cap research](../country-import-export-caps.md), [price attribution](../flow-based-market-coupling.md#price-contribution).
 
 ## Problem
 
@@ -24,7 +24,10 @@ Virtual-hub references use the [published interface mapping](../virtual-hub-inte
 
 ## Remaining acceptance criteria
 
-- [ ] Validate numerical endpoint attribution for the nine newer interfaces, including adjacent-region terms, signs and FB/LTA scaling. The selection layer already shows these interfaces with capacity, published dual and an explicit unavailable contribution; never substitute the observed spread. [ALEGrO is validated](../virtual-hub-interconnectors.md#alegro-validation).
+- [ ] Validate loss-aware selected-dual scaling for NorNed, NordLink and Baltic Cable, using documented market loss factors and direction conventions. Lossless matches alone do not authorize these rays.
+- [ ] Account for remaining inter-temporal ramping or other coupling terms on the six other new interfaces. The [40-case audit](../virtual-hub-interconnectors.md#adjacent-validation) records which candidate reconstructions fail. Find independently published terms; do not derive them from the spread or widen the €0.02 tolerance.
+
+The next implementation supports per-interval checks for the six lossless candidates using Core terms, Nordic opposite endpoints where applicable, Poland's cap effect and observed adjacent-zone prices. Passing intervals show only the selected bound's normalized component. Failing or missing inputs retain selection and explicit unavailable attribution. Keep adjacent fetching optional and limited to the selected interval/interface.
 
 Implemented: automatic references; guarded Polish cap adapter; normalized physical attribution with α=0 unavailable; schematic mapping of every audited virtual hub; shared ALEGrO geometry with distinct row IDs; synchronized map/dropdown selection; previous/next, minor ticks and exact timestamps. Unit tests cover cap signs, reference direction, scaling, paired hubs, unavailable data and DST intervals. Chrome checks cover Poland’s outline, a physical line, a Romanian PST and ALEGrO selection. App behaviour lives in [the app page](../copper-sushi-app.md#the-cnec-page).
 

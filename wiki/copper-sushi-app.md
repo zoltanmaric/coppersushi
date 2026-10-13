@@ -32,6 +32,8 @@ Physical rows show the [normalized flow-based contribution](flow-based-market-co
 
 Rays carry signed euro labels for the selected constraint's contribution in €/MWh. Hover names the country pair and separates that contribution from the total observed spread. Poland's aggregate-cap contribution is identical across its rays; physical-row contributions depend on the zonal PTDF difference. Rays never represent a physical power-flow path. The published dual and MW capacity are separate from that contribution. Normalized FB terms are not an exhaustive decomposition of FB plus long-term allocation welfare.
 
+Newer virtual interfaces use [per-interval endpoint checks](virtual-hub-interconnectors.md#adjacent-validation), optional Nordic inputs and adjacent price labels. Unreconciled cases retain selection without contribution rays; NorNed, NordLink and Baltic Cable await loss-aware dual scaling.
+
 ![Illustrative CNEC price-influence map](assets/cnec-price-influence-map-preview.png)
 
 The mock-up's numbers are illustrative; its hierarchy is the design: price as the base layer, the selected constraint purple, its influence reaching the zones without pretending to trace the physical path. The colours follow [sushi-2](sushi-2.md)'s visual language.
