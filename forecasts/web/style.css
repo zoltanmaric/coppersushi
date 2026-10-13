@@ -231,7 +231,8 @@ label {
   color: var(--muted);
   display: block;
 }
-select {
+select,
+input[type="date"] {
   display: block;
   max-width: 100%;
   background: transparent;
