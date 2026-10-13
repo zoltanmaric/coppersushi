@@ -163,3 +163,93 @@ def alegro_validated(ptdfs: pd.DataFrame, physical: pd.DataFrame, external: pd.D
     observed = quotes.DE - quotes.BE
     reconstructed = (potentials.ALBE - potentials.BE) + middle + (potentials.DE - potentials.ALDE)
     return abs(stationarity) <= 0.02 and abs(observed - reconstructed) <= 0.02
+
+
+# Opposite Nordic endpoints in the published market topology.
+NORDIC_HUBS = {
+    "NL_DK1_COBRA": "DK1_CO", "NL_NO2_NorNed": "NO2_ND",
+    "DE_NO2_BigHub": "NO2_NK", "PL_SE4_SwePol": "SE4_SP",
+    "DE_SE4_Baltic": "SE4_BC", "DE_DK1_VH": "DK1_DE", "DE_DK2_BigHub": "DK2_KO",
+}
+
+
+def nordic_outer_term(rows: list[dict], hub: str, interval: pd.Timestamp) -> float | None:
+    """Published Nordic virtual-minus-country potential, with no Core α scaling.
+
+    Compare endpoints within the same synchronous group; Nordic groups do not share
+    one balance-price constant. An entirely missing shadow-price column is unavailable.
+    """
+    virtual = NORDIC_HUBS.get(hub)
+    if virtual is None or not rows:
+        return None
+    other = INTERFACES[hub][1]
+    frame = pd.DataFrame(rows)
+    required = {"id", "dateTimeUtc", "shadowPrice", f"ptdf_{virtual}", f"ptdf_{other}"}
+    if not required.issubset(frame) or frame.id.duplicated().any():
+        return None
+    if not pd.to_datetime(frame.dateTimeUtc, utc=True, errors="coerce").eq(interval).all():
+        return None
+    duals = pd.to_numeric(frame.shadowPrice, errors="coerce")
+    if not duals.notna().any() or (duals.dropna() < 0).any():
+        return None
+    active = frame[duals.gt(0)]
+    coefficients = active[[f"ptdf_{virtual}", f"ptdf_{other}"]].apply(pd.to_numeric, errors="coerce")
+    if not np.isfinite(coefficients.to_numpy()).all() or not np.isfinite(duals.dropna()).all():
+        return None
+    difference = coefficients[f"ptdf_{virtual}"] - coefficients[f"ptdf_{other}"]
+    return float(-(duals.loc[active.index] * difference).sum())
+
+
+def interface_spread(core_outer: float, bound_term: float, adjacent_outer: float,
+                     country_cap: float = 0.0) -> float:
+    """Owner-minus-adjacent spread; every argument is an independent signed €/MWh term."""
+    return core_outer + bound_term + adjacent_outer + country_cap
+
+
+# Nord Pool documents implicit-loss pricing on these links. A lossless match alone
+# cannot validate how a selected dual scales between sending and receiving MWh.
+LOSS_HUBS = {'NL_NO2_NorNed', 'DE_NO2_BigHub', 'DE_SE4_Baltic'}
+
+
+def virtual_validated(hub: str, ptdfs: pd.DataFrame, physical: pd.DataFrame,
+                      external: pd.DataFrame, prices: pd.DataFrame, inputs: pd.DataFrame | None,
+                      alpha: float, adjacent: pd.Series) -> bool:
+    """Require the complete candidate endpoint decomposition to match published prices.
+
+    Loss/ramping terms are not inferred from the residual. An unexplained residual rejects
+    attribution for this interval while retaining selection and the published bound dual.
+    """
+    if hub not in INTERFACES or hub in {"ALBE", "ALDE"} or hub in LOSS_HUBS or not 0 < alpha <= 1:
+        return False
+    owner, _, _ = INTERFACES[hub]
+    quoted = prices[prices.zone.eq(owner)]
+    if len(quoted) != 1:
+        return False
+    values = [quoted.price.iloc[0], adjacent.adjacent_price, adjacent.adjacent_term]
+    if not np.isfinite(values).all():
+        return False
+    required = ptdfs[ptdfs.source_id.isin(physical.source_id) & ptdfs.zone.isin([owner, hub])]
+    if required.duplicated(['source_id', 'zone']).any() or len(required) != 2 * len(physical):
+        return False
+    terms = required.merge(physical[['source_id', 'shadow_price']], on='source_id', validate='many_to_one')
+    if not np.isfinite(terms[['ptdf', 'shadow_price']].to_numpy()).all():
+        return False
+    signed = terms.ptdf * np.where(terms.zone.eq(owner), -1, 1)
+    core = float((signed * terms.shadow_price / alpha).sum())
+    bounds = external[external.hub.eq(hub)]
+    if bounds.empty or not bounds.coefficient.isin([-1, 1]).all() or not np.isfinite(bounds.shadow_price).all():
+        return False
+    middle = float((bounds.coefficient * bounds.shadow_price / alpha).sum())
+    cap = 0.0
+    if owner == 'PL':
+        if inputs is None or len(inputs) != 1 or not np.isfinite(inputs.polish_alt.iloc[0]):
+            return False
+        cap = country_cap_effect(float(quoted.price.iloc[0]), float(inputs.polish_alt.iloc[0]))
+        if abs(cap) > 1e-9:
+            if not {'interval', 'polish_position', 'import_limit', 'export_limit'}.issubset(inputs):
+                return False
+            if country_caps(inputs, prices, inputs.interval.iloc[0]).empty:
+                return False
+    predicted = interface_spread(core, middle, float(adjacent.adjacent_term), cap)
+    observed = float(quoted.price.iloc[0] - adjacent.adjacent_price)
+    return abs(predicted - observed) <= 0.02

@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "dateTimeUtc": "2026-09-11T22:00:00Z",
+    "shadowPrice": 10.0,
+    "ptdf_DK1_CO": 0.3,
+    "ptdf_DK1": 0.1,
+    "ptdf_NO2_ND": 0.3,
+    "ptdf_NO2": 0.1,
+    "ptdf_NO2_NK": 0.3,
+    "ptdf_SE4_SP": 0.3,
+    "ptdf_SE4": 0.1,
+    "ptdf_SE4_BC": 0.3,
+    "ptdf_DK1_DE": 0.3,
+    "ptdf_DK2_KO": 0.3,
+    "ptdf_DK2": 0.1
+  }
+]

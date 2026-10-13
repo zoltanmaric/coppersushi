@@ -327,7 +327,7 @@ def _interface_traces(interfaces: pd.DataFrame, selected_id: int | None) -> list
     return traces
 
 
-def _view(priced_zones: pd.DataFrame) -> dict:
+def _view(priced_zones: pd.DataFrame, adjacent: pd.DataFrame | None = None) -> dict:
     """Centre and zoom that frame the zones being drawn.
 
     A mapbox subplot does not fit itself to its traces, so without this the map opens on
@@ -335,12 +335,14 @@ def _view(priced_zones: pd.DataFrame) -> dict:
     constant that fills a wide viewport with Core rather than with the Atlantic.
     """
     bounds = [zone.bounds for zone in priced_zones.geometry]
+    if adjacent is not None and not adjacent.empty:
+        bounds += [(r.x, r.y, r.x, r.y) for r in adjacent.itertuples()]
     west, south = min(b[0] for b in bounds), min(b[1] for b in bounds)
     east, north = max(b[2] for b in bounds), max(b[3] for b in bounds)
     span = max(east - west, north - south)
     return dict(
         center=go.layout.mapbox.Center(lat=(south + north) / 2, lon=(west + east) / 2),
-        zoom=math.log2(360 / span) + FRAME_ZOOM,
+        zoom=min(math.log2(360 / span) + FRAME_ZOOM, 3.5) if adjacent is not None and not adjacent.empty else math.log2(360 / span) + FRAME_ZOOM,
     )
 
 
@@ -365,6 +367,11 @@ def figure(
     fill, labels = _price_traces(priced_zones, _fill_anchor(basemap))
     selected = _selected(placed, view.selected_id)
     centres = _zone_centres(priced_zones)
+    adjacent = view.prices[view.prices.zone.isin(cnec_attribution.ADJACENT_ANCHORS)].copy()
+    if not adjacent.empty:
+        adjacent['x'] = adjacent.zone.map(lambda z: cnec_attribution.ADJACENT_ANCHORS[z][0])
+        adjacent['y'] = adjacent.zone.map(lambda z: cnec_attribution.ADJACENT_ANCHORS[z][1])
+        centres = pd.concat([centres, adjacent[['zone', 'x', 'y', 'price']]], ignore_index=True)
     interfaces = _interfaces(view.external_constraints, centres)
     virtual = _selected(interfaces, view.selected_id)
     if virtual is not None:
@@ -390,9 +397,15 @@ def figure(
             annotation += f"<br><b>{effect.zone}: {effect.contribution:+,.2f} €/MWh relative to {view.reference}</b>"
         elif view.selected_id in view.caps.source_id.values:
             annotation += f"<br><b>Other Core zones: {effects.contribution.iloc[0]:+,.2f} €/MWh relative to PL</b>"
-        influence = cnec_influence.overlay(selected, _zone_centres(priced_zones), view.contribution)
+        influence = cnec_influence.overlay(selected, centres, view.contribution)
         traces += influence.traces
         annotation += "<br>" + influence.note
+    if not adjacent.empty:
+        traces.append(go.Scattermapbox(name='adjacent zone price', lon=adjacent.x, lat=adjacent.y,
+            mode='text', text=adjacent.zone + '<br>' + adjacent.price.map(lambda p: f'€{p:,.2f}'),
+            textfont=dict(color='white', size=14), hoverinfo='text',
+            hovertext=adjacent.zone + ' · ' + adjacent.price.map(lambda p: f'{p:,.2f} €/MWh'),
+            showlegend=False))
     traces.append(labels)  # Last, so no dot or ray lands on a price
     fig = go.Figure(traces)
     fig.update_layout(
@@ -400,8 +413,8 @@ def figure(
         margin=dict(r=0, t=0, l=0, b=0),
         mapbox_style=basemap,
         mapbox_accesstoken=mapbox_token,
-        mapbox=_view(priced_zones),
-        uirevision=True,
+        mapbox=_view(priced_zones, adjacent),
+        uirevision=str(adjacent.zone.iloc[0]) if not adjacent.empty else "Core",
         showlegend=False,
         annotations=[
             go.layout.Annotation(

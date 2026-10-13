@@ -1,3 +1,4 @@
+from dataclasses import replace
 import logging
 import os
 from pathlib import Path
@@ -11,7 +12,7 @@ from dash.exceptions import PreventUpdate
 
 from coppersushi import bidding_zones, cnec_geometry, cnec_page, map_style, power_flow
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
-from coppersushi.data_sources import cnec_attribution as attribution_source, electricity_maps, jao, mapbox_styles, networks, osm_locator
+from coppersushi.data_sources import virtual_attribution, cnec_attribution as attribution_source, electricity_maps, jao, mapbox_styles, networks, osm_locator
 from coppersushi.market_day import MarketDay
 
 # Every page's controls live in one tree that the router swaps, so a callback whose
@@ -194,6 +195,13 @@ def render_cnec(day: str, interval_index: int, selected: str | None) -> tuple:
     """The CNEC page's map and controls for one day; a failed load becomes the banner."""
     try:
         inputs = cnec_day(day)
+        intervals = inputs.market_day.market_time_units()
+        interval = intervals[min(max(interval_index or 0, 0), len(intervals) - 1)]
+        chosen = inputs.external_constraints[
+            inputs.external_constraints.source_id.astype(str).eq(str(selected))
+            & inputs.external_constraints.interval.eq(interval)]
+        if len(chosen) == 1:
+            inputs = replace(inputs, adjacent=virtual_attribution.load_interval(day, interval, chosen.hub.iloc[0]))
         rendered = cnec_page.render(
             inputs, cnec_geometries(inputs, interval_index or 0),
             interval_index or 0, selected, mapbox_token=mapbox_token(), basemap=basemap()
