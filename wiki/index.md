@@ -31,7 +31,11 @@
 - [copper-sushi-app.md](copper-sushi-app.md) — the 2024 OPF, staged article embed, CNEC price-influence map, model caveats and hosting direction
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026
 
-## Specs (working memory — burn-down state, not settled knowledge)
+## Specs
+
+- [Forecast product explainer](../explainers/forecast-product.html) — approved visual design for results, metrics and the forecasting method
+
+### Earlier implementation working memory
 - [specs/cnec-constraint-selection.md](specs/cnec-constraint-selection.md) — direct map selection, signed constraint contributions and interval navigation
 - [specs/day-ahead-price-forecast.md](specs/day-ahead-price-forecast.md) — verified first baseline and conditional research-history follow-up
 
