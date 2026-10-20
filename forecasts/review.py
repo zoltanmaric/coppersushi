@@ -13,11 +13,11 @@ def publish(run_id, conclusion, artifact_path):
     # Validate the synopsis before publishing either representation.
     sections = [f"**{label}:** {conclusion[key]}" for label, key in
                 [('Result', 'result'), ('Limitation', 'limitations'), ('Decision', 'decision')]]
-    base = f"#/experiments/{run.info.experiment_id}/runs/{run_id}/artifacts"
-    sections.append(f"[Full conclusion]({base}?path={quote(artifact_path, safe='')})")
+    base = f"/get-artifact?run_id={run_id}&path="
+    sections.append(f"[Full conclusion]({base}{quote(artifact_path, safe='')})")
     for evidence in conclusion.get('evidence_artifacts', []):
         prefix = f'runs:/{run_id}/'
-        target = f"{base}?path={quote(evidence[len(prefix):], safe='')}" if evidence.startswith(prefix) else evidence
+        target = f"{base}{quote(evidence[len(prefix):], safe='')}" if evidence.startswith(prefix) else evidence
         sections.append(f"[Evidence: {evidence}]({target})")
     if run.data.tags.get('timing_semantics') == 'logging_only':
         sections.append('Historical duration is logging-only; compute time was not recorded.')
