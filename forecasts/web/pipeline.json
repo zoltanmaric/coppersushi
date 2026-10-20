@@ -1,74 +1,263 @@
 {
   "price": {
-    "title": "Start with the market price",
-    "input": "Weekly quarter-hour JSON series from Bundesnetzagentur | SMARD.de, for the Germany\u2013Luxembourg bidding zone. Values are in \u20ac/MWh.",
+    "title": "Load SMARD auction prices",
+    "input": "Weekly quarter-hour JSON series from Bundesnetzagentur | SMARD.de, for the Germany–Luxembourg bidding zone. Values are in €/MWh.",
     "operation": "Parse delivery timestamps into UTC, check duplicates and retain negative prices. A price below zero is a market outcome, not a missing value.",
     "output": "Earlier eligible prices supply lag features and training labels. Delivery-day outcomes are joined separately for evaluation."
   },
   "weather": {
-    "title": "Describe the weather the market could anticipate",
+    "title": "Load ICON-EU weather forecasts",
     "input": "Open-Meteo Previous Runs, explicit German Weather Service ICON-EU model: hourly temperature at 2 m, wind at 120 m and shortwave radiation at twelve locations.",
-    "operation": "Use the fixed previous_day2 forecast lead, documented as 48 hours. Keep temperature in \u00b0C, wind in km/h and radiation in W/m\u00b2. These are forecast conditions, not realised weather.",
+    "operation": "Use the fixed previous_day2 forecast lead, documented as 48 hours. Keep temperature in °C, wind in km/h and radiation in W/m². These are forecast conditions, not realised weather.",
     "output": "Geographical weather features provide information about weather-sensitive demand and renewable supply. They do not directly calculate generation."
   },
   "demand": {
-    "title": "Add the forecast level of electricity demand",
+    "title": "Load ENTSO-E demand forecasts",
     "input": "ENTSO-E monthly file extracts of Germany country day-ahead total load, in MW at quarter-hour resolution.",
-    "operation": "Keep the Germany country series and its version timestamps. The input area is Germany; the target price area is Germany\u2013Luxembourg. Preserve that distinction.",
+    "operation": "Keep the Germany country series and its version timestamps. The input area is Germany; the target price area is Germany–Luxembourg. Preserve that distinction.",
     "output": "A demand value for each eligible delivery quarter, or a missing value with an availability indicator."
   },
   "load": {
-    "title": "Make inputs stable enough to reproduce",
+    "title": "Validate and freeze three input tables",
     "input": "Archived source responses and retrieval metadata.",
     "operation": "Validate units, resolution, keys and conflicting rows. Store three typed Parquet tables with a fixed checksum manifest. Publish the manifest last, so an incomplete S3 snapshot cannot load.",
     "output": "A versioned input snapshot. Local evaluation reads it without calling source providers again. Reproducibility alone does not establish historical availability."
   },
   "select": {
-    "title": "Separate future delivery from future knowledge",
+    "title": "Select inputs available by 11:00 Berlin",
     "input": "Versioned prices, weather and demand, with delivery, source update and retrieval times kept distinct.",
-    "operation": "For each forecast day, use the preceding day\u2019s 11:00 Berlin deadline. Demand selects the latest nonmissing archived revision updated by that cutoff. Price and weather eligibility retain their stated timing assumptions. A forecast valid tomorrow can be eligible today.",
+    "operation": "For each forecast day, use the preceding day’s 11:00 Berlin deadline. Demand selects the latest nonmissing archived revision updated by that cutoff. Price and weather eligibility retain their stated timing assumptions. A forecast valid tomorrow can be eligible today.",
     "output": "Only inputs eligible under the declared policy, with gaps and timing limitations visible. A later archived revision cannot reconstruct an earlier missing value."
   },
   "features": {
-    "title": "Turn different clocks and meanings into model inputs",
+    "title": "Build one feature row per delivery quarter",
     "input": "Eligible price history, hourly forecast weather, quarter-hour demand and the local calendar.",
     "operation": "Price lags match the same local quarter 1, 2, 7 and 14 days earlier; daily summaries capture recent levels. Hourly weather is repeated across quarters. Radiation is shifted back an hour because its timestamp describes the preceding hour. Add calendar features and explicit missing-value flags.",
-    "output": "One feature row per delivery quarter. The three feature sets add weather and demand to the shared prices/calendar inputs. Future realised observations never fill gaps."
+    "output": "One feature row per delivery quarter, in three comparisons: prices/calendar; prices/calendar plus weather; prices/calendar plus weather and demand. Future realised observations never fill gaps."
   },
   "labels": {
-    "title": "Give training the right answers without leaking the future",
+    "title": "Select prices known before the monthly fit",
     "input": "Realised prices for delivery dates before the monthly fit.",
-    "operation": "Select label versions eligible at the fold\u2019s first issue cutoff. Historical feature rows keep their original daily cutoffs; fitting later does not replace them with revised information.",
+    "operation": "Select label versions eligible at the fold’s first issue cutoff. Historical feature rows keep their original daily cutoffs; fitting later does not replace them with revised information.",
     "output": "Past feature/price pairs for learning. These labels are distinct from the later outcomes used to score this fold."
   },
   "train": {
-    "title": "Learn relationships; keep the comparison controlled",
+    "title": "Fit three models once each month",
     "input": "The same eligible historical examples for three fixed CatBoost feature sets.",
-    "operation": "Boosting combines decision trees to reduce quantile loss. Each percentile penalises errors asymmetrically. Expand training history at each month boundary, then reuse that month\u2019s fitted models. Separately, estimate the reference\u2019s error quantiles using training data only.",
-    "output": "Three fitted quantile models and a calibrated historical-price reference. The method and settings are fixed before the evaluation."
+    "operation": "Boosting combines decision trees to reduce quantile loss. Each percentile penalises errors asymmetrically. Expand the eligible training history at each month boundary. Training features retain the information cutoff of 11:00 Berlin on the day preceding each historical delivery day.",
+    "output": "Three fitted CatBoost models: prices/calendar, plus weather, plus weather and demand. Save them and reuse them for every forecast day in that month. Settings are fixed before evaluation."
   },
   "predict": {
-    "title": "Convert a feature row into five prices",
+    "title": "Predict five prices per quarter-hour",
     "input": "Delivery-day features and the saved monthly models.",
     "operation": "Evaluate the fitted trees to obtain five quantile outputs. Sort their values into increasing order when raw outputs cross. The reference averages yesterday/last-week same-clock prices, with documented missing-history fallbacks, then adds training-error offsets.",
     "output": "The 2.5th, 25th, 50th, 75th and 97.5th percentiles for each quarter. These describe marginal uncertainty, not a joint daily price path."
   },
   "fallback": {
-    "title": "Keep the forecasting system defined when inputs fail",
+    "title": "Choose a usable system forecast",
     "input": "Candidate model predictions, whole-source availability and execution status.",
-    "operation": "Choose demand \u2192 weather \u2192 prices/calendar \u2192 reference as permitted by source availability and execution success. Partial gaps remain missing values. Never choose a model using the realised price or its score.",
+    "operation": "Choose demand → weather → prices/calendar → reference as permitted by source availability and execution success. Partial gaps remain missing values. Never choose a model using the realised price or its score.",
     "output": "A selected system forecast and an explicit fallback reason, both retained in the evaluation."
   },
   "truth": {
-    "title": "Bring in outcomes only after forecasting",
+    "title": "Join realised prices after prediction",
     "input": "Realised SMARD auction prices for evaluated delivery quarters.",
     "operation": "Join by UTC delivery timestamp after generating predictions. This preserves both repeated autumn clock quarters. Leave absent truth missing and exclude those rows from every comparison together.",
     "output": "Matched forecast/outcome rows for evaluation, without feeding outcomes back into historical prediction."
   },
   "score": {
-    "title": "Measure accuracy and uncertainty on the same evidence",
-    "input": "System, model and reference forecasts paired with the same available outcomes.",
+    "title": "Score every method on matching outcomes",
+    "input": "All three feature-set forecasts (prices/calendar, plus weather, plus demand), the simple reference and the selected system forecast, paired with identical available realised prices.",
     "operation": "Measure median errors, band width and observed coverage. Weighted interval score balances narrow bands against penalties outside them. Aggregate by day, month and full period; use seven-day blocks for uncertainty in the full-period score difference.",
     "output": "Comparable results with sample counts and limitations. A lower score does not by itself establish reliable bands, live readiness or trading value."
-  }
+  },
+  "reference": {
+    "title": "Calibrate the yesterday / last-week reference",
+    "input": "Earlier same-clock prices and training-period forecast errors, available before the monthly fit cutoff.",
+    "operation": "Average yesterday’s and last week’s price for the same local quarter. Use one if the other is absent; use an earlier same-quarter median if both are absent. Estimate five error offsets using training data only. Reuse that calibration during the month.",
+    "output": "A separate simple reference forecast with five quantiles per quarter. It is compared with all three trained models and is the final system fallback."
+  },
+  "models": {
+    "title": "Reuse the saved monthly models",
+    "input": "The three monthly fitted models and the separately calibrated reference.",
+    "operation": "Load the same fitted models and reference calibration for each delivery day in the month. Daily features change; fitting and calibration do not use that month’s evaluation outcomes.",
+    "output": "Fixed predictors ready to consume each day’s eligible feature rows."
+  },
+  "output": {
+    "title": "Five price estimates for every quarter-hour tomorrow",
+    "input": "Candidate forecasts and the automatic system selection.",
+    "operation": "Retain the 2.5th, 25th, 50th, 75th and 97.5th percentiles in €/MWh. The 50th is the median estimate; the 25th–75th form the central 50% band and the 2.5th–97.5th form the central 95% band. These nominal bands need measured coverage.",
+    "output": "A next-day price curve and uncertainty bands: normally 96 quarters, or 92/100 on clock-change days. This viewer shows saved historical forecasts, not a live service. Each quarter’s uncertainty is separate; the bands are not joint daily scenarios."
+  },
+  "diagram": [
+    {
+      "title": "01 · Prepare inputs",
+      "rows": [
+        {
+          "nodes": [
+            {
+              "id": "prices",
+              "label": "SMARD prices",
+              "sub": "DE–LU · quarter-hour · €/MWh",
+              "kind": "data"
+            },
+            {
+              "id": "weather",
+              "label": "ICON-EU weather",
+              "sub": "Open-Meteo · 12 locations",
+              "kind": "data"
+            },
+            {
+              "id": "demand",
+              "label": "ENTSO-E demand",
+              "sub": "Germany · quarter-hour · MW",
+              "kind": "data"
+            }
+          ]
+        },
+        {
+          "connection": "↓ Downloaded source archives and retrieval metadata",
+          "nodes": [
+            {
+              "id": "snapshot",
+              "label": "Validate & freeze",
+              "sub": "Three typed Parquet tables",
+              "kind": "operation"
+            }
+          ]
+        },
+        {
+          "connection": "↓ Versioned input snapshot",
+          "nodes": [
+            {
+              "id": "select",
+              "label": "Select eligible inputs",
+              "sub": "11:00 Berlin on the preceding day",
+              "kind": "operation"
+            }
+          ]
+        },
+        {
+          "connection": "↓ Eligible prices, weather, demand and calendar",
+          "nodes": [
+            {
+              "id": "features",
+              "label": "Build one feature row per delivery quarter",
+              "sub": "Price lags · weather alignment · missing-value flags",
+              "kind": "operation"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "02 · Train monthly",
+      "rows": [
+        {
+          "connection": "↓ Historical feature rows from Prepare inputs + earlier SMARD prices",
+          "nodes": [
+            {
+              "id": "labels",
+              "label": "Select training prices",
+              "sub": "Known by the monthly fit’s first issue cutoff",
+              "kind": "operation"
+            }
+          ]
+        },
+        {
+          "connection": "↓ Historical features paired with eligible training prices",
+          "nodes": [
+            {
+              "id": "fit",
+              "label": "Fit three CatBoost models",
+              "sub": "Prices/calendar → plus weather → plus demand",
+              "kind": "operation"
+            },
+            {
+              "id": "reference",
+              "label": "Calibrate the simple reference",
+              "sub": "Yesterday / last week + training-error offsets",
+              "kind": "operation"
+            }
+          ]
+        },
+        {
+          "connection": "↓ Fitted models and reference calibration",
+          "nodes": [
+            {
+              "id": "models",
+              "label": "Saved monthly predictors",
+              "sub": "Reuse for every forecast day in the month",
+              "kind": "data"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "03 · Forecast daily",
+      "rows": [
+        {
+          "connection": "↓ Delivery-day features from Prepare inputs + saved monthly predictors",
+          "nodes": [
+            {
+              "id": "predict",
+              "label": "Predict five quantiles",
+              "sub": "Three trained candidates + the separate reference",
+              "kind": "operation"
+            }
+          ]
+        },
+        {
+          "connection": "↓ Candidate forecasts + source availability + execution status",
+          "nodes": [
+            {
+              "id": "fallback",
+              "label": "Select the system forecast",
+              "sub": "Demand → weather → prices/calendar → reference",
+              "kind": "operation"
+            }
+          ]
+        },
+        {
+          "connection": "↓ Keep every candidate, the reference and the system selection",
+          "nodes": [
+            {
+              "id": "output",
+              "label": "Tomorrow’s prices and uncertainty",
+              "sub": "Five estimates for each 15-minute interval",
+              "kind": "data"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "04 · Evaluate",
+      "rows": [
+        {
+          "connection": "↓ Saved forecasts + realised SMARD prices (scoring only, after prediction)",
+          "nodes": [
+            {
+              "id": "truth",
+              "label": "Match forecasts to outcomes",
+              "sub": "Join by delivery timestamp; retain missing-outcome counts",
+              "kind": "operation"
+            }
+          ]
+        },
+        {
+          "connection": "↓ All candidates, reference and system paired with the same outcomes",
+          "nodes": [
+            {
+              "id": "score",
+              "label": "Compare accuracy and uncertainty",
+              "sub": "WIS · median errors · coverage · band width",
+              "kind": "operation"
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }
