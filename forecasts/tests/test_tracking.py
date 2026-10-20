@@ -62,3 +62,36 @@ class TrackingTests(unittest.TestCase):
                 self.assertEqual(failed.data.tags['failure_type'], type(error).__name__)
                 self.assertEqual(client.search_runs([failed.info.experiment_id],
                     filter_string=f"tags.`mlflow.parentRunId` = '{ids[-1]}'"), [])
+
+    def test_unchanged_retry_preserves_failed_attempt(self):
+        from mlflow import MlflowClient
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            client = MlflowClient(tracking_uri=f"sqlite:///{root / 'tracking.db'}")
+            client.create_experiment('germany-luxembourg-local',
+                                     artifact_location=(root / 'artifacts').as_uri())
+            config_path = run.ROOT / 'forecasts/run-config.json'
+            with patch.object(run, 'RUNS', root / 'runs'), patch.object(run, 'tracking_client', return_value=client):
+                first, _ = run.prepare(config_path, exploratory=True)
+                original = (first / 'manifest.json').read_bytes()
+                with patch.object(run.subprocess, 'run', side_effect=subprocess.CalledProcessError(1, 'fixture')):
+                    with self.assertRaises(subprocess.CalledProcessError):
+                        run.run_flow(first, root / 'snapshot')
+                second, config = run.prepare(config_path, exploratory=True)
+                def succeed(args, **kwargs):
+                    attempt = args[args.index('--mlflow-run') + 1]
+                    (second / 'result.json').write_text('{"ok": true}')
+                    run.finish(second, attempt, 'retry/1')
+                with patch.object(run.subprocess, 'run', side_effect=succeed):
+                    run.run_flow(second, root / 'snapshot')
+                self.assertNotEqual(first, second)
+                self.assertEqual((first / 'manifest.json').read_bytes(), original)
+                before = json.loads(original)
+                after = json.loads((second / 'manifest.json').read_text())
+                self.assertEqual(before['experiment_fingerprint'], after['experiment_fingerprint'])
+                self.assertEqual(before['config'], after['config'])
+                attempts = client.search_runs(['1'])
+                self.assertEqual({r.info.status for r in attempts}, {'FAILED', 'FINISHED'})
+                self.assertEqual({r.data.tags['experiment_fingerprint'] for r in attempts},
+                                 {before['experiment_fingerprint']})
+                self.assertEqual({r.data.tags['forecast_run'] for r in attempts}, {first.name, second.name})

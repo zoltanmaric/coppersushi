@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import uuid
 
 from forecasts.dataset import ROOT, digest
 from forecasts.snapshot import canonical, load
@@ -36,7 +37,8 @@ def prepare(config_path, exploratory=False):
         raise ValueError("Accepted runs require committed code; use --exploratory for development")
     manifest = {"code_revision": code, "exploratory": dirty or exploratory, "config": config,
                 "environment": environment(), "lock_sha256": digest(ROOT / "forecasts/requirements-lock.txt")}
-    run_id = hashlib.sha256(canonical(manifest)).hexdigest()[:24]
+    manifest["experiment_fingerprint"] = hashlib.sha256(canonical(manifest)).hexdigest()
+    run_id = uuid.uuid4().hex[:24]
     directory = RUNS / run_id
     directory.mkdir(parents=True, exist_ok=False)
     manifest["run_id"] = run_id
@@ -79,6 +81,7 @@ def start_tracking(directory, config):
         "timing_semantics": "orchestration_and_computation",
         "snapshot_id": config["snapshot_id"], "code_revision": manifest["code_revision"],
         "forecast_run": manifest["run_id"], "exploratory": str(manifest["exploratory"]),
+        "experiment_fingerprint": manifest.get("experiment_fingerprint", manifest["run_id"]),
     })
     try:
         for key in ("train_start", "evaluation_start", "end_exclusive"):
