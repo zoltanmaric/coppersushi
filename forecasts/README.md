@@ -20,7 +20,7 @@ replacement for a historical environment.
 
 ## S3 inputs
 
-The input path stores three typed tables: `prices`, `weather` and `demand`. [Price contracts](prices.py) define price columns and checks and derive their Parquet schema; [other input schemas](schemas.py) define weather and demand contracts; validation runs before publication and after loading. Delivery/valid time, source update time and original retrieval time remain distinct. Unknown original timestamps remain null. Source versions and raw archive links are retained.
+Collect or load immutable input snapshots. [Input and storage contracts](../wiki/price-forecasting/forecast-infrastructure.md#inputs). Price table contracts: [prices.py](prices.py).
 
 To collect the recorded year, place the three exact archives at their [baseline input inventory](data/baseline-inputs.json), under `data/forecasts/`. The [source contracts](../wiki/price-forecasting/data-sources.md) describe their sources. `--data-root` can reuse another checkout's downloads. Recollection from mutable feeds may produce different bytes; the recorded experiment requires matching archives or access to the private S3 snapshot.
 
@@ -37,26 +37,15 @@ pixi run --locked python -m forecasts.dataset --snapshot data/forecasts/loaded-s
 
 `--region` defaults to `eu-west-1`. Collection/publication accept `--directory`; loading also accepts it. A fresh checkout can load the selected snapshot directly, without raw downloads or source-provider requests.
 
-S3 keys follow the agreed layout:
-
-```text
-raw/<source>/<archive-sha256>/<archive-name>
-raw/<source>/<archive-sha256>/retrieval.json
-snapshots/<snapshot-id>/prices.parquet
-snapshots/<snapshot-id>/weather.parquet
-snapshots/<snapshot-id>/demand.parquet
-snapshots/<snapshot-id>/manifest.json
-```
-
-The manifest records schemas, checksums, row counts, time coverage, exact file keys and raw retrieval metadata links. Its content determines the snapshot ID. Publication verifies local and remote bytes and writes the manifest last. Conditional object creation prevents retrying from replacing a published object; a conflicting existing object is rejected. Loading requires the manifest and verifies every selected file. `load-report.json` records input bytes and cold-load duration; no cache or partition service is required.
-
 ## Features
 
-The shared `InputReader.features()` path applies historical or live eligibility before calling ordinary feature functions. Replay joins retrospective price truth afterwards. It retains all delivery quarters, negative prices, missing inputs and 92/100-quarter clock-change days. Same-clock lags average duplicate quarters and leave nonexistent quarters missing; weather hours repeat across quarters, with radiation aligned back one hour. Country demand uses the latest nonmissing eligible update by the preceding day's 11:00 Berlin deadline.
+Build diagnostic feature outputs from a loaded snapshot:
 
-`forecasts.dataset --snapshot ...` writes a diagnostic `quarters.csv` and `report.json` under ignored `data/forecasts/dataset/`. These are feature/report outputs; the S3 input contract is the three Parquet tables. The raw-archive CLI remains available for evidence reconciliation. Targets, archive timestamps and audit metadata are not model features; explicit feature lists must be frozen before fitting.
+```sh
+data/forecasts/venv/bin/python -m forecasts.dataset --snapshot data/forecasts/loaded-snapshot
+```
 
-Historical price publication/revision timing and original weather publication times remain unverified. Demand timing depends on the meaning of its update timestamp. The manifest/report state these assumptions. Live selection requires an explicit actual issue timestamp, no later than the deadline, and rejects inputs retrieved or updated after it. Selector tests append late source revisions, realised weather and new labels, and retain a future-valid forecast retrieved before cutoff. The fitting leakage test also checks learned transformations, reference calibration and predictions.
+Outputs: `quarters.csv` and `report.json` under ignored `data/forecasts/dataset/`. The [input timing contract](../wiki/price-forecasting/data-sources.md#point-in-time) and [feature/evaluation contract](../wiki/price-forecasting/evaluation.md#defaults) define selection and transformations. See the viewer’s **How it works** for the pipeline.
 
 ## Infrastructure
 
@@ -136,7 +125,7 @@ The exporter checks consumed artifact hashes and reconciles overall/monthly scor
 
 The narrative's reviewed wiki hashes live in `forecasts/web/sources.json`. A changed source blocks export until the explanation is reviewed and its hash updated; referenced wiki bytes must be committed so source links identify the actual revision. The export records presentation hashes as well as run/code/snapshot identity. It validates consumed artifacts, not model files or source archives it does not load.
 
-The [design explainer](../explainers/forecast-product.html) owns the approved experience. This viewer presents historical evidence; it does not establish calibration or live readiness.
+The viewer’s **How it works** is the canonical architecture explanation; edit its stages, connections and copy in [pipeline.json](web/pipeline.json). Scientific contracts remain in the linked wiki pages. The [design explainer](../explainers/forecast-product.html) records the approved experience. This viewer presents historical evidence; it does not establish calibration or live readiness.
 
 For DOM integration checks (no rendering assertions), install the test-only dependency in ignored data and point the test at an export:
 
