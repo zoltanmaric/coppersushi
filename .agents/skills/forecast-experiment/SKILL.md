@@ -9,13 +9,13 @@ Read the [evaluation contract](../../../wiki/price-forecasting/evaluation.md) an
 
 ## Propose
 
-Save each candidate as a brief proposal with its own MLflow research record, even when no execution is planned. Record:
+Save each candidate as a brief page under `wiki/price-forecasting/research/`. Maintain `index.md` there with linked proposals, their status, relationships and the recommended next choice with its reason. Record in each proposal:
 
 - The hypothesis and intended change.
-- Motivating experiment IDs and prior results inspected; use none for the first baseline.
+- Motivating proposal links, MLflow run IDs and prior results inspected; use none for the first baseline.
 - Rough cost.
 
-Use saved artifacts for the proposal and conclusion, and tags for related experiment/run IDs. Link execution runs for folds, variants and retries to the research record; distinguish these from experiments that motivated the idea. If proposing only, save the proposal without launching work.
+Keep proposals and selection decisions in the wiki. Create MLflow runs for computational executions, not for proposals or written reviews. If proposing only, save the proposal without launching work.
 
 ## Select before execution
 
@@ -23,18 +23,20 @@ Read existing proposals and conclusions before recommending the next experiment.
 
 Recommend a candidate for the user to choose before execution, unless the user has explicitly delegated selection within an agreed research budget. Honor an existing choice or delegation without asking again.
 
-Save the selection decision as an artifact on the selected MLflow research record before execution. Link the candidate IDs considered, record why this candidate comes first and why alternatives are deferred, and record the user's choice or delegated budget. Keep deferred proposals available for later selection.
+Save the selection decision on the chosen proposal before execution. Link the candidates considered, explain the choice and deferrals, and record the user's choice or delegated budget. Update the research index; keep deferred proposals available.
 
-Before execution, complete and freeze the selected proposal's evaluation plan: comparison baseline, fixed evaluation dates and metrics, and what result would support the hypothesis.
+Before execution, complete and freeze the selected proposal's evaluation plan in Git: comparison baseline, fixed evaluation dates and metrics, and what result would support the hypothesis.
 
 ## During execution
 
-Link the exact run manifests for inputs, code, environment, configuration and seeds; do not copy their contents into prose. Retain failed and interrupted attempts with their status. Preserve the frozen proposal; start a linked experiment when the hypothesis or evaluation protocol changes.
+At execution start, attach the frozen proposal, including its selection decision, to the MLflow run with its wiki path and Git revision. Copy it; keep the wiki original. Link folds, variants and retries to that proposal version; distinguish these executions from motivating runs.
+
+Give runs descriptive human-readable names; retain stable IDs for links and storage. Link the exact run manifests for inputs, code, environment, configuration and seeds; do not copy their contents into prose. Retain failed and interrupted attempts with their status. Preserve each run's frozen proposal; use a revised proposal and new linked execution when the hypothesis or evaluation protocol changes.
 
 ## After execution
 
-Append the results, evidence links, limitations, conclusion and next decision: keep, reject or investigate further. Compare against the baseline on matching evaluation rows. Record losses and failures as well as gains. If reviewing an existing run without a prior proposal, mark the rationale as retrospective; do not invent a pre-run hypothesis.
+Attach a conclusion to the execution run with results, evidence links, limitations and the next decision: keep, reject or investigate further. Compare against the baseline on matching evaluation rows. Record losses and failures as well as gains. If reviewing an existing run without a prior proposal, mark the rationale as retrospective; do not invent a pre-run hypothesis.
 
-Revisit deferred proposals in light of the results; link any new proposals to the evidence that motivated them.
+Update the wiki proposal with a short outcome and links to its executions and conclusions; refresh the research index. Revisit deferred proposals in light of the results; link new proposals to their motivating evidence.
 
-Identify evaluation periods whose results informed experiment choices as development data, not untouched holdouts. Keep experiment history in MLflow; put durable accepted design decisions in the wiki with experiment IDs. Follow this procedure manually when automation is absent.
+Identify evaluation periods whose results informed experiment choices as development data, not untouched holdouts. Keep execution evidence in MLflow and research synthesis in the wiki, linked by run IDs. Follow this procedure manually when automation is absent.

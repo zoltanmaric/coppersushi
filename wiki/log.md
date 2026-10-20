@@ -303,3 +303,7 @@ The [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) 
 ## [2026-10-20] decision | Choosing the next forecast experiment
 
 The [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) now covers selection among competing proposals. Selection history belongs with the proposals in MLflow; the wiki does not hold a second research backlog. [Rule provenance](rule-provenance.md) records why the procedure was extended.
+
+## [2026-10-20] decision | Separate forecast proposals from executions
+
+Proposal-only MLflow records appeared as finished runs in the forecast UI. The [research-record contract](price-forecasting/forecast-infrastructure.md#research-history) now places proposals, selection decisions and a decision index in the wiki. Actual MLflow executions retain frozen proposal copies, results and conclusions; wiki outcomes link back to that evidence. The [skill](../.agents/skills/forecast-experiment/SKILL.md) replaces the earlier storage convention and requests readable run names. Migration of the open forecast stack's existing records remains separate from this harness change.

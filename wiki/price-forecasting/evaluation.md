@@ -67,6 +67,8 @@ Report the score difference against the reference with paired resampling of cont
 
 Preserve raw inputs or content hashes, request and retrieval metadata, row-level availability flags, configuration, library versions, raw/ordered quantiles, reference forecasts, per-quarter outcomes and the report. A change after looking at scores starts a new development experiment. Forecast-quality improvement does not establish trading profitability.
 
+Proposal provenance and execution evidence follow the [research-record contract](forecast-infrastructure.md#research-history).
+
 ### Limitations
 
 The proposed first fit uses October–December 2025 to predict January 2026; later monthly fits add the preceding months. This is a date choice, not a limit imposed by missing demand. More months can be used for initial training within the assembled year, leaving fewer months for evaluation. Earlier compatible data has not been established.
