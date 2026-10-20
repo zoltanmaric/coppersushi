@@ -5,7 +5,7 @@
   },
   "evaluation": {
     "path": "wiki/price-forecasting/evaluation.md",
-    "sha256": "89cf6f281e9d7f9b96ac56e5f72607b3a2988db30e74fc7390c481077fb855af"
+    "sha256": "5d8d4b325ce2f89219f02c5f51ce5569e0190d601ce5fc5196a100ba5dd0bb8f"
   },
   "inputs": {
     "path": "wiki/price-forecasting/data-sources.md",
@@ -13,6 +13,6 @@
   },
   "infrastructure": {
     "path": "wiki/price-forecasting/forecast-infrastructure.md",
-    "sha256": "efad8a361e68dd321f6b87a73f7c23321ab5be61c5e982f57859c201cb4727c6"
+    "sha256": "3ace5a544d98a5857da837dc1e3712d094c294e576efcf7d5ceb0fd45d5d5bf9"
   }
 }
