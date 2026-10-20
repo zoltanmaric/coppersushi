@@ -407,6 +407,7 @@
     }
   },
   "research_history": {
+    "research_record_id": "852ac19ec9f942f6931c3673a74750f7",
     "rationale_status": "retrospective",
     "proposal_saved_before_execution": false,
     "comparison_baseline_run_id": "bd42df7d499a436b8167a8fa8b78c722",
@@ -447,8 +448,7 @@
     ],
     "decision": "investigate_further",
     "continuation_approved": false,
-    "rationale_artifact": "runs:/8a4c692855fb42eba39d5a3bfc7d6762/research/baseline/retrospective-rationale.json",
-    "conclusion_artifact": "runs:/8a4c692855fb42eba39d5a3bfc7d6762/research/baseline/conclusion.json",
-    "wiki_record": "wiki/price-forecasting/research/baseline-review.md"
+    "rationale_artifact": "runs:/852ac19ec9f942f6931c3673a74750f7/research/retrospective-rationale.json",
+    "conclusion_artifact": "runs:/852ac19ec9f942f6931c3673a74750f7/research/conclusion.json"
   }
 }
