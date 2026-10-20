@@ -1,10 +1,10 @@
 {
-  "verified_at": "2026-10-09",
-  "run_id": "d24461d3be8c819d9310ea55",
-  "code_revision": "b97817e60302f844ddbb63db6212a15d77a50edf",
+  "verified_at": "2026-10-20",
+  "run_id": "3db10bdf199fdbaa012525ce",
+  "code_revision": "fbcc2355ae4c0f481c970c906109ee61573524ce",
   "snapshot_id": "8bf5b5de2dc94d9d5db62fe9178dee50ac7e08005c2c6790e351e95081910a6d",
-  "metaflow_run_id": "ForecastEvaluation/1791571137838024",
-  "mlflow_run_id": "8a4c692855fb42eba39d5a3bfc7d6762",
+  "metaflow_run_id": "ForecastEvaluation/1792503888723540",
+  "mlflow_run_id": "a3149d4e7c624c46a4320fa95d2132db",
   "environment": {
     "python": "3.12.13",
     "system": "Darwin",
@@ -383,26 +383,34 @@
     "Intervals are marginal per quarter; no trading-profitability or daily-readiness claim."
   ],
   "verification": {
-    "run_id": "d24461d3be8c819d9310ea55",
+    "run_id": "3db10bdf199fdbaa012525ce",
     "predictions_match": true,
     "scores_match": true,
     "tolerance": {
       "absolute": 1e-06,
       "relative": 1e-09
     },
-    "forecast_tests": 24,
+    "forecast_tests": 25,
     "fit_failures": 0,
     "local_metaflow": true,
     "local_mlflow": true,
     "restored_committed_code": true,
     "frozen_environment": true,
-    "fresh_s3_load": true
+    "fresh_s3_load": true,
+    "workflow_duration_seconds": 445.963,
+    "previous_baseline_comparison": {
+      "previous_run": "d24461d3be8c819d9310ea55",
+      "run_id": "3db10bdf199fdbaa012525ce",
+      "predictions_match": true,
+      "scores_match": true,
+      "duration_seconds": 445.963
+    }
   },
   "research_history": {
     "research_record_id": "852ac19ec9f942f6931c3673a74750f7",
     "rationale_status": "retrospective",
     "proposal_saved_before_execution": false,
-    "comparison_baseline_run_id": "39b10b460cdd4e05a64b159b84ac4925",
+    "comparison_baseline_run_id": "bd42df7d499a436b8167a8fa8b78c722",
     "motivating_experiment_ids": [],
     "execution_records": [
       {
@@ -430,12 +438,12 @@
         "manifest_artifact": "runs:/71e7d7162c0d4947af5d2a48e3b39ed6/run/manifest.json"
       },
       {
-        "forecast_run": "d24461d3be8c819d9310ea55",
-        "mlflow_run_id": "8a4c692855fb42eba39d5a3bfc7d6762",
-        "role": "accepted_metadata_correction",
+        "forecast_run": "3db10bdf199fdbaa012525ce",
+        "mlflow_run_id": "a3149d4e7c624c46a4320fa95d2132db",
+        "role": "accepted_timed_baseline",
         "status": "FINISHED",
-        "metaflow_run_id": "ForecastEvaluation/1791571137838024",
-        "manifest_artifact": "runs:/8a4c692855fb42eba39d5a3bfc7d6762/run/manifest.json"
+        "metaflow_run_id": "ForecastEvaluation/1792503888723540",
+        "manifest_artifact": "runs:/a3149d4e7c624c46a4320fa95d2132db/run/manifest.json"
       }
     ],
     "decision": "investigate_further",
