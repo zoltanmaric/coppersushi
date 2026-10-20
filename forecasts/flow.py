@@ -12,6 +12,7 @@ class ForecastEvaluation(FlowSpec):
     config = IncludeFile("config", required=True)
     snapshot = Parameter("snapshot", required=True)
     output = Parameter("output", required=True)
+    mlflow_run = Parameter("mlflow-run", required=True)
 
     @step
     def start(self):
@@ -30,7 +31,7 @@ class ForecastEvaluation(FlowSpec):
     @step
     def track(self):
         from forecasts.run import track, finish
-        self.mlflow_run_id = track(Path(self.output), self.settings, self.report, current.pathspec.rsplit('/', 2)[0])
+        self.mlflow_run_id = track(Path(self.output), self.settings, self.report, current.pathspec.rsplit('/', 2)[0], self.mlflow_run)
         self.run_manifest = finish(Path(self.output), self.mlflow_run_id, current.pathspec.rsplit('/', 2)[0])
         self.next(self.end)
 

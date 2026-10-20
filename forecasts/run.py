@@ -48,30 +48,78 @@ def prepare(config_path, exploratory=False):
     return directory, config
 
 
-def track(directory, config, report, metaflow_run):
-    import mlflow
+APPROACHES = {
+    "prices": ("CatBoost · prices + calendar", "Uses earlier prices and calendar information."),
+    "weather": ("CatBoost · prices + calendar + weather", "Adds forecast weather to earlier prices and calendar information."),
+    "demand": ("CatBoost · prices + calendar + weather + demand", "Adds forecast demand to the price, calendar and weather inputs."),
+    "reference": ("Benchmark · historical prices + past-error intervals", "Averages yesterday and last week's same-clock prices, with missing-history fallbacks and training-only error intervals."),
+    "system": ("System · input-based fallback selection", "Selects demand, then weather, then prices/calendar, then benchmark according to source availability and prediction success."),
+}
+
+
+def tracking_client():
+    from mlflow import MlflowClient
     tracking = ROOT / "data/forecasts/tracking"
     tracking.mkdir(parents=True, exist_ok=True)
-    mlflow.set_tracking_uri(f"sqlite:///{tracking / 'mlflow.db'}")
+    return MlflowClient(tracking_uri=f"sqlite:///{tracking / 'mlflow.db'}")
+
+
+def start_tracking(directory, config):
+    client = tracking_client()
     name = "germany-luxembourg-local"
-    experiment = mlflow.get_experiment_by_name(name)
-    experiment_id = experiment.experiment_id if experiment else mlflow.create_experiment(name, artifact_location=(tracking / "artifacts").as_uri())
+    experiment = client.get_experiment_by_name(name)
+    experiment_id = experiment.experiment_id if experiment else client.create_experiment(
+        name, artifact_location=(ROOT / "data/forecasts/tracking/artifacts").as_uri())
     manifest = json.loads((directory / "manifest.json").read_text())
     label = "Exploratory quantile evaluation" if manifest["exploratory"] else "Quantile evaluation"
-    run_name = f"{label} · {config['evaluation_start']} to {config['end_exclusive']} (exclusive)"
-    with mlflow.start_run(experiment_id=experiment_id, run_name=run_name) as parent:
-        mlflow.set_tags({"snapshot_id": config["snapshot_id"], "code_revision": manifest["code_revision"],
-                         "metaflow_run": metaflow_run, "forecast_run": manifest["run_id"],
-                         "exploratory": str(manifest["exploratory"])})
-        mlflow.log_params({"train_start": config["train_start"], "evaluation_start": config["evaluation_start"],
-                           "end_exclusive": config["end_exclusive"], **config["catboost"]})
-        for feature_set, scores in report["metrics"].items():
-            with mlflow.start_run(experiment_id=experiment_id, run_name=feature_set, nested=True):
-                mlflow.set_tags({"feature_set": feature_set, "snapshot_id": config["snapshot_id"], "metaflow_run": metaflow_run})
-                mlflow.log_metrics({k: v for k, v in scores.items() if isinstance(v, (float, int))})
-                mlflow.log_dict(config["features"].get(feature_set, []), "features.json")
-        mlflow.log_artifacts(str(directory), artifact_path="run")
-        return parent.info.run_id
+    run = client.create_run(experiment_id, tags={
+        "mlflow.runName": f"{label} · {config['evaluation_start']} to {config['end_exclusive']} (exclusive)",
+        "mlflow.note.content": "Local monthly expanding evaluation. Acceptance is a separate review decision. Duration spans orchestration, input loading, evaluation and result recording.",
+        "record_type": "execution", "execution_role": "evaluation",
+        "timing_semantics": "orchestration_and_computation",
+        "snapshot_id": config["snapshot_id"], "code_revision": manifest["code_revision"],
+        "forecast_run": manifest["run_id"], "exploratory": str(manifest["exploratory"]),
+    })
+    try:
+        for key in ("train_start", "evaluation_start", "end_exclusive"):
+            client.log_param(run.info.run_id, key, config[key])
+        for key, value in config["catboost"].items():
+            client.log_param(run.info.run_id, key, value)
+        client.log_artifact(run.info.run_id, str(directory / "manifest.json"), artifact_path="start")
+    except BaseException:
+        client.set_terminated(run.info.run_id, status="FAILED")
+        raise
+    return run.info.run_id
+
+
+def track(directory, config, report, metaflow_run, mlflow_run):
+    client = tracking_client()
+    parent = client.get_run(mlflow_run)
+    client.set_tag(mlflow_run, "metaflow_run", metaflow_run)
+    for feature_set, scores in report["metrics"].items():
+        name, description = APPROACHES[feature_set]
+        child = client.create_run(parent.info.experiment_id, tags={
+            "mlflow.parentRunId": mlflow_run, "mlflow.runName": name,
+            "mlflow.note.content": description + " Aggregate comparison across monthly fits; Duration measures result logging, not separately timed training.",
+            "record_type": "comparison", "timing_semantics": "logging_only",
+            "feature_set": feature_set, "snapshot_id": config["snapshot_id"],
+            "code_revision": parent.data.tags["code_revision"], "metaflow_run": metaflow_run,
+        })
+        child_id = child.info.run_id
+        try:
+            for key in ("evaluation_start", "end_exclusive"):
+                client.log_param(child_id, key, config[key])
+            for key, value in scores.items():
+                if isinstance(value, (float, int)):
+                    client.log_metric(child_id, key, value)
+            client.log_dict(child_id, config["features"].get(feature_set, []), "features.json")
+        except BaseException:
+            client.set_terminated(child_id, status="FAILED")
+            raise
+        else:
+            client.set_terminated(child_id)
+    client.log_artifacts(mlflow_run, str(directory), artifact_path="run")
+    return mlflow_run
 
 
 def finish(directory, mlflow_run, metaflow_run):
@@ -81,9 +129,7 @@ def finish(directory, mlflow_run, metaflow_run):
                     artifacts={str(p.relative_to(directory)): digest(p) for p in sorted(directory.rglob('*')) if p.is_file() and p != path})
     path.write_bytes(canonical(manifest))
     # The final provenance record also belongs in tracking, after identifiers are known.
-    import mlflow
-    with mlflow.start_run(run_id=mlflow_run):
-        mlflow.log_artifact(str(path), artifact_path="run")
+    tracking_client().log_artifact(mlflow_run, str(path), artifact_path="run")
     return manifest
 
 
@@ -92,8 +138,21 @@ def run_flow(directory, snapshot):
     env.update(METAFLOW_DEFAULT_DATASTORE="local", METAFLOW_DEFAULT_METADATA="local",
                METAFLOW_DATASTORE_SYSROOT_LOCAL=str(ROOT / "data/forecasts/metaflow"),
                METAFLOW_USER="forecast-local", PYTHONPATH=str(ROOT))
-    subprocess.run([sys.executable, "-m", "forecasts.flow", "run", "--config", str(directory / "config.json"),
-                    "--snapshot", str(snapshot.resolve()), "--output", str(directory.resolve())], cwd=ROOT, env=env, check=True)
+    config = json.loads((directory / "config.json").read_text())
+    mlflow_run = start_tracking(directory, config)
+    client = tracking_client()
+    try:
+        subprocess.run([sys.executable, "-m", "forecasts.flow", "run", "--config", str(directory / "config.json"),
+                        "--snapshot", str(snapshot.resolve()), "--output", str(directory.resolve()),
+                        "--mlflow-run", mlflow_run], cwd=ROOT, env=env, check=True)
+    except BaseException as error:
+        interrupted = isinstance(error, (KeyboardInterrupt, SystemExit)) or (
+            isinstance(error, subprocess.CalledProcessError) and error.returncode in (-2, -15, 130, 143))
+        client.set_tag(mlflow_run, "failure_type", type(error).__name__)
+        client.set_terminated(mlflow_run, status="KILLED" if interrupted else "FAILED")
+        raise
+    else:
+        client.set_terminated(mlflow_run)
 
 
 def reproduce(run_id, profile, bucket, region):
