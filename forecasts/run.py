@@ -57,7 +57,9 @@ def track(directory, config, report, metaflow_run):
     experiment = mlflow.get_experiment_by_name(name)
     experiment_id = experiment.experiment_id if experiment else mlflow.create_experiment(name, artifact_location=(tracking / "artifacts").as_uri())
     manifest = json.loads((directory / "manifest.json").read_text())
-    with mlflow.start_run(experiment_id=experiment_id, run_name=manifest["run_id"]) as parent:
+    label = "Exploratory quantile evaluation" if manifest["exploratory"] else "Quantile evaluation"
+    run_name = f"{label} · {config['evaluation_start']} to {config['end_exclusive']} (exclusive)"
+    with mlflow.start_run(experiment_id=experiment_id, run_name=run_name) as parent:
         mlflow.set_tags({"snapshot_id": config["snapshot_id"], "code_revision": manifest["code_revision"],
                          "metaflow_run": metaflow_run, "forecast_run": manifest["run_id"],
                          "exploratory": str(manifest["exploratory"])})
