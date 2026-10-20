@@ -54,7 +54,9 @@ Keep source collection, input loading, feature construction and model evaluation
 
 ### Research-history
 
-MLflow holds experiment proposals, conclusions and links to motivating experiments, comparison baselines and execution runs. Saved run manifests identify exact inputs, code and configuration. The wiki holds durable accepted design decisions linked to experiment IDs.
+The research-record contract separates planning from execution. Proposal pages live under `wiki/price-forecasting/research/`; its `index.md` maps their status, relationships and recommended next choice. Proposals retain selection decisions and short outcomes linked to execution evidence.
+
+MLflow runs represent computational executions, including failed and interrupted attempts. Each run retains the exact motivating proposal and selection decision as artifacts, identified by wiki path and Git revision, alongside its results and conclusion. One proposal can motivate multiple runs; later wiki edits do not change a run's frozen copy. Written reviews and unexecuted proposals are wiki records, not standalone MLflow runs. Saved run manifests identify exact inputs, code and configuration.
 
 The [forecast-experiment skill](../../.agents/skills/forecast-experiment/SKILL.md) owns the agent procedure. Agents maintain the records manually; workflow automation is planned. No separate research database or service is required.
 
@@ -71,6 +73,7 @@ Decide shared metadata, MLflow hosting and artifact retention then. Verify the l
 - [Hello Interview: data modeling](https://www.hellointerview.com/learn/system-design/core-concepts/data-modeling): choose storage around access patterns.
 - [Metaflow: data access](https://docs.metaflow.org/scaling/data): separate loading from feature construction; prefer built-in artifacts between steps.
 - [MLflow: local tracking](https://mlflow.org/docs/latest/ml/tracking/quickstart/): record experiments and inspect results locally.
+- [MLflow: tracking concepts](https://mlflow.org/docs/latest/tracking/): runs represent code executions; artifacts hold output files and supporting documents.
 - [Metaflow: AWS execution](https://docs.metaflow.org/production/scheduling-metaflow-flows/scheduling-with-aws-step-functions): deploy flows through an existing cloud integration.
 - [Metaflow: Batch settings](https://docs.metaflow.org/api/step-decorators/batch) and [AWS: Fargate suitability](https://docs.aws.amazon.com/batch/latest/userguide/when-to-use-fargate.html): supported execution and resource limits.
 - [Metaflow AWS Terraform modules](https://github.com/outerbounds/terraform-aws-metaflow): reusable infrastructure building blocks.
