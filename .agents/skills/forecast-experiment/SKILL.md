@@ -9,11 +9,11 @@ Read the [evaluation contract](../../../wiki/price-forecasting/evaluation.md) an
 
 ## Propose
 
-Save each candidate as a separate proposal with an MLflow research record, even when no execution is planned. Record:
+Save each candidate as a brief proposal with its own MLflow research record, even when no execution is planned. Record:
 
 - The hypothesis and intended change.
 - Motivating experiment IDs and prior results inspected; use none for the first baseline.
-- The comparison baseline, fixed evaluation dates and metrics, and what result would support the hypothesis.
+- Rough cost.
 
 Use saved artifacts for the proposal and conclusion, and tags for related experiment/run IDs. Link execution runs for folds, variants and retries to the research record; distinguish these from experiments that motivated the idea. If proposing only, save the proposal without launching work.
 
@@ -25,9 +25,11 @@ Recommend a candidate for the user to choose before execution, unless the user h
 
 Save the selection decision as an artifact on the selected MLflow research record before execution. Link the candidate IDs considered, record why this candidate comes first and why alternatives are deferred, and record the user's choice or delegated budget. Keep deferred proposals available for later selection.
 
+Before execution, complete and freeze the selected proposal's evaluation plan: comparison baseline, fixed evaluation dates and metrics, and what result would support the hypothesis.
+
 ## During execution
 
-Link the exact run manifests for inputs, code, environment, configuration and seeds; do not copy their contents into prose. Retain failed and interrupted attempts with their status. Preserve the original proposal; start a linked experiment when the hypothesis or evaluation protocol changes.
+Link the exact run manifests for inputs, code, environment, configuration and seeds; do not copy their contents into prose. Retain failed and interrupted attempts with their status. Preserve the frozen proposal; start a linked experiment when the hypothesis or evaluation protocol changes.
 
 ## After execution
 
