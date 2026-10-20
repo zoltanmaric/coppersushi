@@ -496,6 +496,11 @@
       ])
         definition(explanation, label, stage[key]);
       panel.append(explanation);
+      if (stage.technical) {
+        const technical = el("details");
+        technical.append(el("summary", "Technical details"), el("p", stage.technical));
+        panel.append(technical);
+      }
       const evidence = el("details");
       evidence.append(el("summary", "Evidence from this saved run"));
       const facts = el("dl");
