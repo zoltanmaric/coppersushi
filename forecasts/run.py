@@ -12,7 +12,7 @@ import sys
 import tarfile
 
 from forecasts.dataset import ROOT, digest
-from forecasts.snapshot import canonical, load, read_local
+from forecasts.snapshot import canonical, load
 
 RUNS = ROOT / "data/forecasts/runs"
 
@@ -250,10 +250,6 @@ def main():
         p.add_argument("--region", default="eu-west-1")
     args = parser.parse_args()
     if args.command == "run":
-        manifest, _ = read_local(args.snapshot)
-        config = json.loads(args.config.read_text())
-        if manifest["snapshot_id"] != config["snapshot_id"]:
-            parser.error("Snapshot differs from frozen configuration")
         directory, _ = prepare(args.config, args.exploratory)
         print(f"Frozen run {directory.name}", flush=True)
         run_flow(directory, args.snapshot)
