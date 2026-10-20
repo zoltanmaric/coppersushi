@@ -128,7 +128,7 @@ The exporter checks consumed artifact hashes and reconciles overall/monthly scor
 
 The narrative's reviewed wiki hashes live in `forecasts/web/sources.json`. A changed source blocks export until the explanation is reviewed and its hash updated; referenced wiki bytes must be committed so source links identify the actual revision. The export records presentation hashes as well as run/code/snapshot identity. It validates consumed artifacts, not model files or source archives it does not load.
 
-The viewer’s **How it works** is the canonical architecture explanation; edit its stages, connections and copy in [pipeline.json](web/pipeline.json). Scientific contracts remain in the linked wiki pages. The [design explainer](../explainers/forecast-product.html) records the approved experience. This viewer presents historical evidence; it does not establish calibration or live readiness.
+The viewer’s **How it works** is the canonical architecture explanation; edit its stages, connections and copy in [pipeline.json](web/pipeline.json). Scientific contracts remain in the linked wiki pages. This viewer presents historical evidence; it does not establish calibration or live readiness.
 
 For DOM integration checks (no rendering assertions), install the test-only dependency in ignored data and point the test at an export:
 

@@ -35,7 +35,6 @@
 
 ## Specs (working memory — burn-down state, not settled knowledge)
 - [Copper Sushi reorganization](specs/coppersushi-reorganization/index.html) — typed Power Flow data, shared controls and product folders; includes a [deferred data catalog idea board](specs/coppersushi-reorganization/data-catalog-draft.html).
-- [Forecast product explainer](../explainers/forecast-product.html) — visual design for results, metrics and the forecasting method
 - [specs/day-ahead-price-forecast.md](specs/day-ahead-price-forecast.md) — verified first baseline and conditional research-history follow-up
 
 ## Literature (one digest per authoritative document, link only)

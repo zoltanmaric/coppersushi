@@ -4,7 +4,6 @@ An independent forecasting product under `forecasts/`, with no dependency on the
 
 ## Design
 
-- [Product experience](../explainers/forecast-product.html): approved illustrated spec for results and system-level explanation.
 
 - [Forecast contract](price-forecasting/germany-luxembourg.md): market, deadline, inputs and outputs.
 - [Storage and execution](price-forecasting/forecast-infrastructure.md): reproducibility promise, selection principle, local first iteration and later AWS deployment.
