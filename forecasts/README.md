@@ -94,7 +94,7 @@ The caller must use the recorded Python version and platform. This command never
 
 The [verified baseline summary](reports/evaluation.json) records the accepted run identifier and public aggregate results. It is retrospective evidence with substantial interval under-coverage; further experiments follow the separate [continuation decision](../wiki/price-forecasting/germany-luxembourg.md#continuation).
 
-The baseline's manual research history is linked in the aggregate summary and stored as MLflow rationale/conclusion artifacts. It explicitly records the absence of a pre-execution proposal and retains the interrupted attempt. New experiments must follow the [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) before execution; the workflow does not automate that procedure.
+The [research index](../wiki/price-forecasting/research/index.md) holds proposals and selection decisions. Actual MLflow executions retain evidence and conclusions. The baseline’s retrospective rationale explicitly records the absence of a pre-execution proposal; the interrupted execution is retained. New experiments must follow the [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) before execution; the workflow does not automate that procedure.
 
 ## Forecast observatory
 
