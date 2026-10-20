@@ -1,5 +1,5 @@
 ## Architecture delta
 
-<!-- List added, removed, or rewired domain artifacts and dependencies. Update the implemented-dataflow DAG in wiki/sushi-2.md when topology changes. Write "None" when it does not. -->
+<!-- Describe changes to the affected product’s architecture and link to its updated canonical explanation. Distinguish implemented from planned behavior. Write "None" when architecture is unchanged. Follow AGENTS.md for the explanation’s location. -->
 
 None

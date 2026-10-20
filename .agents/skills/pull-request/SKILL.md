@@ -19,6 +19,7 @@ description: Guides pull request creation, review, stacking, and local cleanup w
 - **When scope grows inside an open PR** (a piggyback lands), record it immediately in a "Piggybacks" ledger in the PR body, one line per item **stating the verdict**: "rides — must be understood with the feature: <reason>" or "separable — chop offered". The fission decision at ready-time then reads off the ledger instead of anyone's memory.
 - When a test fires, **offer the chop** into a stack (mechanics below); the user decides. Layers split by "must be understood together", never by file type: a rule or doc whose evidence is the feature's code rides with the feature.
 - Every PR body carries an "Architecture delta" section (root `architecture-delta` rule).
+- On every review round, check the current PR title and body against its final diff: scope, validation claims and architecture delta. When changing a rule or contract, check dependent templates and instructions for contradictions.
 - Once a PR is ready for review, watch its review threads and checks while other work continues; stop watching when it becomes draft, merges or closes.
 - As soon as you learn a PR merged or closed, remove its local branch and unused worktree. Preserve uncommitted or local-only work and branches still needed by open PRs; report any cleanup blocked by those conditions. Use the worktree manager's archive operation for managed worktrees.
 - When a goldfish reviews a PR touching `.agents/` or any `AGENTS.md`, the critic reads `.agents/skills/AGENTS.md` and the vendor guidelines it links before the diff.
@@ -35,6 +36,7 @@ the review's authorization: report findings, implement cleanup in the current PR
 offer a separate stacked PR using the fission tests. Apply Reaper's execution and
 independent-review requirements when implementing cleanup; discovery alone does not
 start its standalone workflow.
+- When authorized to reply to review feedback, reply in each addressed thread with what changed and the relevant commit or verification. Explain disagreements, open questions and unaddressed items. Do not resolve review threads; leave resolution to the human reviewer.
 
 - Keep review findings in chat by default. Post them to a pull request only if the user explicitly asks; first show the proposed comment text and anchors and get approval.
 - Post each approved finding as a separate inline review thread on the narrowest relevant changed line, so it can be replied to and resolved independently. If no exact line exists, use the closest relevant changed line. Post a top-level summary only if the user asks.
