@@ -35,7 +35,7 @@ Give runs descriptive human-readable names; retain stable IDs for links and stor
 
 ## After execution
 
-Attach a conclusion to the execution run with results, evidence links, limitations and the next decision: keep, reject or investigate further. Surface its result, limitation and decision at the human review entry point, linked to the complete conclusion. Compare against the baseline on matching evaluation rows. Record losses and failures as well as gains. If reviewing an existing run without a prior proposal, mark the rationale as retrospective; do not invent a pre-run hypothesis.
+Attach a conclusion to the execution run with results, evidence links, limitations and the next decision: keep, reject or investigate further. Compare against the baseline on matching evaluation rows. Record losses and failures as well as gains. If reviewing an existing run without a prior proposal, mark the rationale as retrospective; do not invent a pre-run hypothesis.
 
 Update the wiki proposal with a short outcome and links to its executions and conclusions; refresh the research index. Revisit deferred proposals in light of the results; link new proposals to their motivating evidence.
 
