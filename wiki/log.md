@@ -299,3 +299,7 @@ The 03:15 CEST September 12 example has a one-cent difference between JAO’s ad
 ## [2026-10-09] decision | Experiment procedure belongs in a skill
 
 The [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) owns the procedure for proposals, evidence and conclusions, with a pointer in forecast agent instructions. Agents follow it manually; only automation remains follow-up work. The [infrastructure page](price-forecasting/forecast-infrastructure.md#research-history) retains the storage decision without repeating the procedure.
+
+## [2026-10-20] decision | Choosing the next forecast experiment
+
+The [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) now covers selection among competing proposals. Selection history belongs with the proposals in MLflow; the wiki does not hold a second research backlog. [Rule provenance](rule-provenance.md) records why the procedure was extended.
