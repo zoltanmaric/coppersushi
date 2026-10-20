@@ -1,0 +1,75 @@
+{
+  "mlflow_version": "3.17.0",
+  "experiment_name": "germany-luxembourg-local",
+  "default_view": "baseline-review",
+  "views": {
+    "baseline-review": {
+      "name": "Baseline review",
+      "state": {
+        "searchFilter": "tags.`mlflow.parentRunId` = 'a3149d4e7c624c46a4320fa95d2132db'",
+        "orderByKey": "metrics.`wis`",
+        "orderByAsc": true,
+        "startTime": "ALL",
+        "lifecycleFilter": "Active",
+        "datasetsFilter": [],
+        "modelVersionFilter": "All Runs",
+        "selectedColumns": [
+          "attributes.`Description`",
+          "metrics.`coverage_95`",
+          "metrics.`median_mae`",
+          "metrics.`wis`"
+        ],
+        "columnOrder": [],
+        "columnWidths": {},
+        "runsHiddenMode": "FIRST_10_RUNS",
+        "viewMaximized": false,
+        "runListHidden": false,
+        "isAccordionReordered": false,
+        "useGroupedValuesInCharts": true,
+        "hideEmptyCharts": true,
+        "groupBy": null,
+        "groupsExpanded": {},
+        "globalLineChartConfig": {
+          "xAxisKey": "step",
+          "lineSmoothness": 0,
+          "selectedXAxisMetricKey": ""
+        }
+      }
+    },
+    "run-history": {
+      "name": "Run history",
+      "state": {
+        "searchFilter": "tags.record_type = 'execution'",
+        "orderByKey": "attributes.start_time",
+        "orderByAsc": false,
+        "startTime": "ALL",
+        "lifecycleFilter": "Active",
+        "datasetsFilter": [],
+        "modelVersionFilter": "All Runs",
+        "selectedColumns": [
+          "attributes.`Description`",
+          "params.`evaluation_start`",
+          "params.`end_exclusive`",
+          "tags.`snapshot_id`",
+          "tags.`code_revision`",
+          "attributes.start_time"
+        ],
+        "columnOrder": [],
+        "columnWidths": {},
+        "runsHiddenMode": "FIRST_10_RUNS",
+        "viewMaximized": false,
+        "runListHidden": false,
+        "isAccordionReordered": false,
+        "useGroupedValuesInCharts": true,
+        "hideEmptyCharts": true,
+        "groupBy": null,
+        "groupsExpanded": {},
+        "globalLineChartConfig": {
+          "xAxisKey": "step",
+          "lineSmoothness": 0,
+          "selectedXAxisMetricKey": ""
+        }
+      }
+    }
+  }
+}

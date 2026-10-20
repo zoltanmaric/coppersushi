@@ -21,6 +21,8 @@
 
 **Start here:** [Forecasting system design principles](forecasting-system-design.md#principles) for prices, weather, generation and demand.
 
+- [Research index](price-forecasting/research/index.md) — proposal status, relationships, recommendation and links to retrospective evidence
+
 - [price-forecasting.md](price-forecasting.md) — independent forecast product, canonical frontend explanation and scientific contracts
 - [price-forecasting/forecast-infrastructure.md](price-forecasting/forecast-infrastructure.md) — S3 snapshots, local execution, wiki research planning and MLflow evidence
 - [price-forecasting/germany-luxembourg.md](price-forecasting/germany-luxembourg.md) — independent Germany–Luxembourg quarter-hour forecast: agreed CatBoost quantiles, public fundamentals and implementation handover
