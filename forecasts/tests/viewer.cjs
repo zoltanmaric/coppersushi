@@ -94,9 +94,8 @@ if (dst) {
   assert.deepEqual([$("chart").dataset.priceMin, $("chart").dataset.priceMax], initialScale);
 }
 for (const node of $("pipeline").querySelectorAll("[role=button]")) {
-  node.dispatchEvent(
-    new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
-  );
+  assert.equal(node.tagName, "BUTTON"); // Native keyboard activation, no custom SVG key handler.
+  node.click();
   assert.equal(node.getAttribute("aria-pressed"), "true");
   assert($("node-detail").textContent.includes("What happens, and why"));
 }

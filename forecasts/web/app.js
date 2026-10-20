@@ -446,200 +446,36 @@
       }
       links();
     }
-    const stages = [
-      {
-        id: "prices",
-        x: 20,
-        y: 25,
-        w: 215,
-        title: "SMARD prices",
-        sub: "DE–LU · quarter-hour · €/MWh",
-      },
-      {
-        id: "weather",
-        x: 285,
-        y: 25,
-        w: 205,
-        title: "Open-Meteo / ICON-EU",
-        sub: "12 locations · hourly forecasts",
-      },
-      {
-        id: "demand",
-        x: 540,
-        y: 25,
-        w: 200,
-        title: "ENTSO-E demand",
-        sub: "Germany · quarter-hour · MW",
-      },
-      {
-        id: "snapshot",
-        x: 285,
-        y: 125,
-        w: 205,
-        title: "Validate & freeze inputs",
-        sub: "Three typed Parquet tables",
-      },
-      {
-        id: "select",
-        x: 285,
-        y: 225,
-        w: 205,
-        title: "Select eligible versions",
-        sub: "Before the historical deadline",
-      },
-      {
-        id: "features",
-        x: 285,
-        y: 325,
-        w: 205,
-        title: "Transform into features",
-        sub: "Clock lags · alignment · flags",
-      },
-      {
-        id: "labels",
-        x: 20,
-        y: 425,
-        w: 215,
-        title: "Select training labels",
-        sub: "Earlier prices at fit cutoff",
-      },
-      {
-        id: "fit",
-        x: 285,
-        y: 425,
-        w: 205,
-        title: "Learn from past examples",
-        sub: "Monthly models + reference",
-      },
-      {
-        id: "predict",
-        x: 540,
-        y: 425,
-        w: 200,
-        title: "Predict five quantiles",
-        sub: "Evaluate trees · sort outputs",
-      },
-      {
-        id: "fallback",
-        x: 540,
-        y: 525,
-        w: 200,
-        title: "Select usable forecast",
-        sub: "Source / execution fallback",
-      },
-      {
-        id: "truth",
-        x: 20,
-        y: 605,
-        w: 215,
-        title: "Join realised prices",
-        sub: "After prediction · scoring only",
-      },
-      {
-        id: "score",
-        x: 285,
-        y: 605,
-        w: 205,
-        title: "Measure the result",
-        sub: "Errors · coverage · width",
-      },
-    ];
     function renderPipeline() {
       const root = $("pipeline");
       root.replaceChildren();
-      const defs = svg("defs", {}, root);
-      const marker = svg(
-        "marker",
-        {
-          id: "arrow",
-          viewBox: "0 0 10 10",
-          refX: 9,
-          refY: 5,
-          markerWidth: 6,
-          markerHeight: 6,
-          orient: "auto-start-reverse",
-        },
-        defs,
-      );
-      svg("path", { d: "M 0 0 L 10 5 L 0 10 z", fill: "#73897c" }, marker);
-      const edges = [
-        ["M128 89 V105 H388 V125", false],
-        ["M388 89 V125", false],
-        ["M640 89 V105 H388 V125", false],
-        ["M388 189 V225", false],
-        ["M285 157 H255 V457 H235", true],
-        ["M388 289 V325", false],
-        ["M388 389 V425", false],
-        ["M490 357 H640 V425", false],
-        ["M235 457 H285", true],
-        ["M490 457 H540", false],
-        ["M640 489 V525", false],
-        ["M640 589 V637 H490", false],
-        ["M235 637 H285", true],
-      ];
-      for (const [d, dashed] of edges)
-        svg(
-          "path",
-          {
-            d,
-            fill: "none",
-            stroke: "#73897c",
-            "stroke-width": 1.8,
-            "stroke-dasharray": dashed ? "5 5" : "none",
-            "marker-end": "url(#arrow)",
-          },
-          root,
-        );
-      for (const s of stages) {
-        const g = svg(
-          "g",
-          {
-            role: "button",
-            tabindex: 0,
-            "aria-label": s.title,
-            "aria-pressed": s.id === node ? "true" : "false",
-          },
-          root,
-        );
-        svg(
-          "rect",
-          { x: s.x, y: s.y, width: s.w, height: 64, rx: 6, class: "node-box" },
-          g,
-        );
-        svg(
-          "text",
-          {
-            x: s.x + 14,
-            y: s.y + 26,
-            "font-size": 13,
-            fill: "#233b3a",
-            "font-weight": 600,
-          },
-          g,
-          s.title,
-        );
-        svg(
-          "text",
-          { x: s.x + 14, y: s.y + 46, "font-size": 11, fill: "#596966" },
-          g,
-          s.sub,
-        );
-        const activate = () => {
-          node = s.id;
-          for (const sibling of root.querySelectorAll("[role=button]"))
-            sibling.setAttribute(
-              "aria-pressed",
-              sibling === g ? "true" : "false",
-            );
-          nodeDetail();
-        };
-        g.onclick = activate;
-        g.onkeydown = (e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            activate();
+      for (const phase of D.pipeline.diagram) {
+        const section = el("section", null, "pipeline-phase");
+        section.append(el("h3", phase.title));
+        for (const row of phase.rows) {
+          if (row.connection)
+            section.append(el("p", row.connection, "pipeline-connection"));
+          const nodes = el("div", null, "pipeline-row");
+          for (const stage of row.nodes) {
+            const button = el("button", null, `pipeline-node ${stage.kind}`);
+            button.type = "button";
+            button.setAttribute("role", "button");
+            button.setAttribute("aria-pressed", String(stage.id === node));
+            button.setAttribute("aria-controls", "node-detail");
+            button.append(el("span", stage.kind === "data" ? "DATA" : "OPERATION", "eyebrow"),
+              el("strong", stage.label), el("span", stage.sub));
+            const activate = () => {
+              node = stage.id;
+              for (const sibling of root.querySelectorAll("button"))
+                sibling.setAttribute("aria-pressed", String(sibling === button));
+              nodeDetail();
+            };
+            button.onclick = activate;
+            nodes.append(button);
           }
-        };
+          section.append(nodes);
+        }
+        root.append(section);
       }
       nodeDetail();
     }

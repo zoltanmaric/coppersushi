@@ -432,23 +432,21 @@ svg text {
   width: 100%;
   height: auto;
 }
-#pipeline [role="button"] {
-  cursor: pointer;
-}
-#pipeline .node-box {
-  fill: #f6f3ec;
-  stroke: #a3b2a8;
-  stroke-width: 1;
-}
-#pipeline [aria-pressed="true"] .node-box {
-  fill: #e0eee5;
-  stroke: var(--green);
-  stroke-width: 2;
-}
-#pipeline [role="button"]:hover .node-box {
-  stroke: var(--accent);
-  stroke-width: 2;
-}
+#pipeline { padding: 18px; }
+.pipeline-phase + .pipeline-phase { margin-top: 28px; }
+.pipeline-phase h3 { font: 700 15px system-ui; color: var(--green); margin: 0 0 16px; }
+.pipeline-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.pipeline-connection { font: 13px/1.5 system-ui; color: var(--muted); margin: 12px 0; }
+button.pipeline-node { display: flex; flex-direction: column; gap: 7px; width: 100%; text-align: left;
+  white-space: normal; padding: 14px; border: 1px solid #a3b2a8; border-left: 4px solid var(--green);
+  border-radius: 2px; background: #fffdf8; color: var(--ink); }
+button.pipeline-node.data { border: 1px solid #a3b2a8; border-radius: 22px; background: #edf2e9; }
+button.pipeline-node strong { font: 600 15px/1.4 system-ui; }
+button.pipeline-node span { font: 12px/1.5 system-ui; }
+button.pipeline-node .eyebrow { margin: 0; font-size: 10px; }
+button.pipeline-node[aria-pressed="true"] { outline: 2px solid var(--green); outline-offset: 2px; }
+button.pipeline-node:hover { border-color: var(--accent); }
+@media (min-width: 901px) { #node-detail { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow: auto; } }
 #node-detail {
   padding: 26px;
   background: #e8ede4;
