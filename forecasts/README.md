@@ -111,6 +111,31 @@ pixi run --locked python -m forecasts.run reproduce RUN_ID --profile YOUR_LOCAL_
 
 Reproduction uses the saved code and Pixi definitions on the recorded operating system and architecture, reloads the S3 snapshot, and compares saved-model predictions and scores. Each attempt lives under `data/forecasts/reproductions/RUN_ID/ATTEMPT_ID/`, with status in `attempt.json` and successful verification in `result/verification.json`. Retry with the same command; failed and successful attempts remain intact. The preserved lock must still be supported by the installed Pixi version. It does not claim binary-identical retraining. [Scientific limits](../wiki/price-forecasting/evaluation.md#result) remain unchanged.
 
+## MLflow review
+
+Start the local UI on port 5001, then install the checked-in [view definitions](review-views.json):
+
+```sh
+data/forecasts/venv/bin/mlflow ui --backend-store-uri "sqlite:///$PWD/data/forecasts/tracking/mlflow.db" --host 127.0.0.1 --port 5001
+# In another terminal:
+data/forecasts/venv/bin/python -m forecasts.review_views
+```
+
+The command prints **Forecast review**, our default entry link to the accepted baseline comparisons, and **Run history**. The views live with the experiment in the local tracking store, not only in browser preferences. Re-running setup updates the same two named views. Other saved views are untouched. This uses MLflow 3.17.0’s UI saved-view format; setup checks the installed version because that format is not a public configuration API. It does not replace MLflow’s global default Runs page.
+
+- **Baseline review:** accepted parent’s five comparison children; Description, WIS, median MAE and 95% coverage; WIS ascending. The accepted run ID is explicit in the definition, so later baseline promotion requires a deliberate update.
+- **Run history:** execution records, newest first; Description, creation date, evaluation start/end, snapshot ID and code revision. Empty Dataset/Models columns are hidden in both views. Historical Duration values measure logging only; compute time is unknown.
+
+Open each printed link after setup to restore its filter, columns and sort. In the UI, **Views → Save as new view** keeps personal variations; overriding a shared view changes that saved layout until setup is rerun. The baseline and history links require this local tracking store; they are not hosted public results.
+
+To publish a conclusion and derive the parent’s visible Notes from the same JSON:
+
+```sh
+data/forecasts/venv/bin/python -m forecasts.review --run MLFLOW_RUN_ID --conclusion PATH_TO_CONCLUSION_JSON --artifact-path research/conclusion.json
+```
+
+The conclusion contains `result`, `limitations`, `decision` and optional `evidence_artifacts` links. Keep full reasoning and retrospective status in that artifact; the command surfaces its summary and evidence links without altering frozen predictions, models or manifests. Re-run after editing the conclusion to keep Notes synchronized.
+
 ## Forecast observatory
 
 Export a saved run as an offline website with daily forecasts, full-period/monthly comparisons, an illustrated WIS calculation, the forecast contract and a selectable system-level pipeline. No fitting, source-provider calls or new AWS resources are involved.
