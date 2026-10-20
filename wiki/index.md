@@ -33,7 +33,6 @@
 
 ## Specs
 
-- [Forecast product explainer](../explainers/forecast-product.html) — approved visual design for results, metrics and the forecasting method
 
 ### Earlier implementation working memory
 - [specs/cnec-constraint-selection.md](specs/cnec-constraint-selection.md) — direct map selection, signed constraint contributions and interval navigation

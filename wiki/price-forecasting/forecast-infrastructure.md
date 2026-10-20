@@ -1,6 +1,6 @@
 # Forecast storage and execution
 
-Agreed direction, 2026-10-09. Typed S3 snapshots, the shared input/feature reader and local workflow/tracking are implemented; cloud execution remains planned. This supports the [forecast design](germany-luxembourg.md); the [product overview](../price-forecasting.md) owns the architecture graph. Remaining work lives in the [implementation spec](../specs/day-ahead-price-forecast.md).
+Agreed direction, 2026-10-09. Typed S3 snapshots, the shared input/feature reader and local workflow/tracking are implemented; cloud execution remains planned. This supports the [forecast design](germany-luxembourg.md); the viewer’s [How it works](../../forecasts/web/index.html#trace) owns the architecture explanation ([export a saved run](../../forecasts/README.md#forecast-observatory)). Remaining work lives in the [implementation spec](../specs/day-ahead-price-forecast.md).
 
 ## Promise
 
