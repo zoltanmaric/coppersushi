@@ -25,10 +25,9 @@ description: Guides pull request creation and review, including posting findings
 
 ## Review findings
 
-- When authorized to reply to review feedback, reply in each addressed thread with what changed and the relevant commit or verification. Explain disagreements, open questions and unaddressed items. Do not resolve review threads; leave resolution to the human reviewer.
+- When addressing review feedback, reply in each addressed thread with what changed and the relevant commit or verification. Explain disagreements, open questions and unaddressed items. Do not resolve review threads; leave resolution to the human reviewer.
 
-- Keep review findings in chat by default. Post them to a pull request only if the user explicitly asks; first show the proposed comment text and anchors and get approval.
-- Post each approved finding as a separate inline review thread on the narrowest relevant changed line, so it can be replied to and resolved independently. If no exact line exists, use the closest relevant changed line. Post a top-level summary only if the user asks.
+- Post each finding as a separate inline review thread on the narrowest relevant changed line, so it can be replied to and resolved independently. If no exact line exists, use the closest relevant changed line.
 - Attribute each posted thread with the agent, model version and reasoning effort. If the runtime does not expose a field, say so instead of guessing.
 
 ## Stacks
