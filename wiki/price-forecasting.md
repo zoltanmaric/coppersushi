@@ -4,7 +4,6 @@ An independent forecasting product under `forecasts/`, with no dependency on the
 
 ## Design
 
-- [Product experience](../explainers/forecast-product.html): approved illustrated spec for results and system-level explanation.
 
 - [Forecast contract](price-forecasting/germany-luxembourg.md): market, deadline, inputs and outputs.
 - [Storage and execution](price-forecasting/forecast-infrastructure.md): reproducibility promise, selection principle, local first iteration and later AWS deployment.
@@ -12,31 +11,8 @@ An independent forecasting product under `forecasts/`, with no dependency on the
 - [Evaluation](price-forecasting/evaluation.md): chronological comparisons and scoring.
 - [Implementation spec](specs/day-ahead-price-forecast.md): remaining work and acceptance checks.
 
-## Dataflow
+## Architecture
 
-This diagram retains the pre-evaluation architecture. Local evaluation is implemented as described above; its architecture presentation is consolidated in the frontend by [PR #112](https://github.com/zoltanmaric/coppersushi/pull/112). The intermediate stack layers leave this diagram unchanged.
+The forecast viewer’s **[How it works](../forecasts/web/index.html#trace)** is the canonical architecture explanation. [Export and open a saved run](../forecasts/README.md#forecast-observatory) to use it. Its readable source, [pipeline.json](../forecasts/web/pipeline.json), owns the stages, connections and explanations; the frontend renders that source.
 
-Solid nodes and edges represent implemented parts; dashed nodes and edges (`planned`) represent planned parts. Each arrow means "required to produce." Cloud execution is a later stage, subject to deployment validation.
-
-```mermaid
-flowchart LR
-    classDef planned stroke-dasharray: 5 5,stroke:#888,fill:none
-
-    forecast_raw_inputs["forecast_raw_inputs<br/>S3 source responses and retrieval metadata"]
-    forecast_input_snapshot["forecast_input_snapshot<br/>S3 validated Parquet tables and fixed manifest"]
-    forecast_local_run["forecast_local_run<br/>local Metaflow training and evaluation"]:::planned
-    forecast_experiment["forecast_experiment<br/>local MLflow scores, models and reports<br/>research history maintained by agents"]:::planned
-
-    forecast_raw_inputs --> forecast_input_snapshot
-    forecast_input_snapshot -.-> forecast_local_run
-    forecast_local_run -.-> forecast_experiment
-
-    forecast_aws_infra["forecast_aws_infra<br/>Terraform-managed AWS resources, later stage"]:::planned
-    forecast_cloud_run["forecast_cloud_run<br/>Metaflow / Step Functions / AWS Batch on Fargate, deployment validation pending"]:::planned
-    forecast_daily_output["forecast_daily_output<br/>daily quantiles with input, code and model provenance"]:::planned
-
-    forecast_aws_infra -.-> forecast_cloud_run
-    forecast_input_snapshot -.-> forecast_cloud_run
-    forecast_experiment -.-> forecast_cloud_run
-    forecast_cloud_run -.-> forecast_daily_output
-```
+Scientific contracts and decisions remain in the design pages linked above. The viewer links to their recorded revisions. Planned cloud execution is described in the [infrastructure decision](price-forecasting/forecast-infrastructure.md#later), separately from the implemented historical pipeline.

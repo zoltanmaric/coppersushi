@@ -1,0 +1,265 @@
+{
+  "price": {
+    "title": "Load SMARD auction prices",
+    "input": "Weekly quarter-hour JSON series from Bundesnetzagentur | SMARD.de, for the Germany–Luxembourg bidding zone. Values are in €/MWh.",
+    "operation": "Parse delivery timestamps into UTC, check duplicates and retain negative prices. A price below zero is a market outcome, not a missing value.",
+    "output": "Earlier eligible prices supply lag features and training labels. Delivery-day outcomes are joined separately for evaluation."
+  },
+  "weather": {
+    "title": "Load ICON-EU weather forecasts",
+    "input": "Open-Meteo Previous Runs, explicit German Weather Service ICON-EU model: hourly temperature at 2 m, wind at 120 m and shortwave radiation at twelve locations.",
+    "operation": "Use the fixed previous_day2 forecast lead, documented as 48 hours. Keep temperature in °C, wind in km/h and radiation in W/m². These are forecast conditions, not realised weather.",
+    "output": "Geographical weather features provide information about weather-sensitive demand and renewable supply. They do not directly calculate generation."
+  },
+  "demand": {
+    "title": "Load ENTSO-E demand forecasts",
+    "input": "ENTSO-E monthly file extracts of Germany country day-ahead total load, in MW at quarter-hour resolution.",
+    "operation": "Keep the Germany country series and its version timestamps. The input area is Germany; the target price area is Germany–Luxembourg. Preserve that distinction.",
+    "output": "A demand value for each eligible delivery quarter, or a missing value with an availability indicator."
+  },
+  "load": {
+    "title": "Check and save prices, weather and demand",
+    "input": "Saved data from each provider, together with when it was collected.",
+    "operation": "Check units, time intervals, duplicate records and conflicting values. Save a fixed copy of the checked data so later runs can use exactly the same inputs.",
+    "output": "Validated prices, weather and demand that can be loaded again without contacting the providers. Saving an exact copy does not prove when the information was originally available.",
+    "technical": "Storage uses three typed Parquet tables: files with defined column types. A checksum manifest lists the files and their content fingerprints. In S3, that list is published last so an incomplete dataset cannot be loaded."
+  },
+  "select": {
+    "title": "Select inputs available by 11:00 Berlin",
+    "input": "Versioned prices, weather and demand, with delivery, source update and retrieval times kept distinct.",
+    "operation": "For each forecast day, use the preceding day’s 11:00 Berlin deadline. Demand selects the latest nonmissing archived revision updated by that cutoff. Price and weather eligibility retain their stated timing assumptions. A forecast valid tomorrow can be eligible today.",
+    "output": "Only inputs eligible under the declared policy, with gaps and timing limitations visible. A later archived revision cannot reconstruct an earlier missing value."
+  },
+  "features": {
+    "title": "Prepare one set of model inputs per quarter-hour",
+    "input": "Eligible price history, hourly forecast weather, quarter-hour demand and the local calendar.",
+    "operation": "Use prices for the same local quarter-hour 1, 2, 7 and 14 days earlier, plus recent daily summaries. Repeat each hourly weather forecast across its quarter-hours. Move forecast sunlight values back one hour to match the hour they describe. Add time-of-day, weekday and holiday information, and record which values are missing.",
+    "output": "One row of inputs, called features, per delivery quarter-hour. Compare price history and calendar alone, then add weather, then add both weather and demand. Never fill gaps with future observations."
+  },
+  "labels": {
+    "title": "Choose past prices to learn from",
+    "input": "Realised prices for delivery dates before the monthly fit.",
+    "operation": "Use only price versions known by 11:00 Berlin on the day before the first delivery day being evaluated that month. Each past day’s model inputs still use that day’s original information deadline; later revisions cannot replace them.",
+    "output": "Past inputs paired with prices the model can learn from. Prices for the month being evaluated are reserved for scoring predictions afterwards."
+  },
+  "train": {
+    "title": "Train three forecasting models once a month",
+    "input": "The same past examples, compared using price history and calendar, then adding weather, then adding weather and demand.",
+    "operation": "Learn how the inputs relate to prices and uncertainty. At each month boundary, add the newly available history to training, then reuse the trained models throughout the next month. Each past day’s inputs keep the deadline of 11:00 Berlin on the preceding day.",
+    "output": "Three fitted CatBoost models: prices/calendar, plus weather, plus weather and demand. Save them and reuse them for every forecast day in that month. Settings are fixed before evaluation.",
+    "technical": "All three models use the same CatBoost settings. CatBoost combines decision trees and learns five percentiles by penalising over- and under-prediction differently for each percentile."
+  },
+  "predict": {
+    "title": "Estimate prices and uncertainty for each quarter-hour",
+    "input": "The delivery day’s prepared inputs and the models trained for that month.",
+    "operation": "Apply each trained model to produce five price estimates, from a low to a high percentile. Put them in increasing order if the raw estimates cross. The simple comparison uses yesterday’s and last week’s same-clock prices, with uncertainty bands based on earlier errors.",
+    "output": "Five percentiles: 2.5%, 25%, 50%, 75% and 97.5%. The middle estimate is the median; the outer pairs form the 50% and 95% uncertainty bands. These describe each quarter-hour separately, not how prices move together across the day."
+  },
+  "fallback": {
+    "title": "Choose a usable system forecast",
+    "input": "Each method’s forecast, whether its data sources are available, and whether prediction succeeded.",
+    "operation": "Prefer the model using prices, weather and demand. If a whole source is unavailable or prediction fails, try prices and weather, then prices alone, then the simple comparison forecast. Individual missing values stay marked as missing. Never choose using the actual price or a method’s score.",
+    "output": "The system’s chosen forecast, with the reason recorded whenever it uses a simpler method."
+  },
+  "truth": {
+    "title": "Join realised prices after prediction",
+    "input": "Realised SMARD auction prices for evaluated delivery quarters.",
+    "operation": "Match each prediction to the actual price for the same delivery time, using UTC so the two repeated clock times in autumn remain distinct. If an actual price is missing, leave that quarter-hour out of every method’s score and report the count.",
+    "output": "Matched forecast/outcome rows for evaluation, without feeding outcomes back into historical prediction."
+  },
+  "score": {
+    "title": "Score every method on matching outcomes",
+    "input": "All three feature-set forecasts (prices/calendar, plus weather, plus demand), the simple reference and the selected system forecast, paired with identical available realised prices.",
+    "operation": "Measure errors in the middle price estimate, band width, and how often actual prices fall inside the bands. Weighted interval score balances narrow bands against penalties for missed prices. Summarise by day, month and full period. Use seven-day groups to estimate uncertainty in the full-period score difference.",
+    "output": "Comparable results with sample counts and limitations. A lower score does not by itself establish reliable bands, live readiness or trading value."
+  },
+  "reference": {
+    "title": "Set up the simple comparison forecast",
+    "input": "Earlier same-clock prices and training-period forecast errors, available before the monthly fit cutoff.",
+    "operation": "Average yesterday’s and last week’s price for the same local quarter-hour. Use one if the other is absent; if both are missing, use the middle value from earlier prices at that time of day. Set the uncertainty bands using only errors from the training period. Keep those band adjustments fixed during the month.",
+    "output": "A separate simple reference forecast with five quantiles per quarter. It is compared with all three trained models and is the final system fallback."
+  },
+  "models": {
+    "title": "Reuse the models throughout the month",
+    "input": "Three trained models and the simple comparison method with its uncertainty bands.",
+    "operation": "Use the same trained models and band adjustments each day of the month. Update the daily inputs, but do not learn from that month’s evaluation outcomes.",
+    "output": "Methods ready to forecast each day from the information available by its deadline."
+  },
+  "output": {
+    "title": "Five price estimates for every quarter-hour tomorrow",
+    "input": "Candidate forecasts and the automatic system selection.",
+    "operation": "Retain the 2.5th, 25th, 50th, 75th and 97.5th percentiles in €/MWh. The 50th is the median estimate; the 25th–75th form the central 50% band and the 2.5th–97.5th form the central 95% band. These nominal bands need measured coverage.",
+    "output": "A next-day price curve and uncertainty bands: normally 96 quarters, or 92/100 on clock-change days. This viewer shows saved historical forecasts, not a live service. Each quarter’s uncertainty is separate; the bands are not joint daily scenarios."
+  },
+  "diagram": [
+    {
+      "title": "01 · Prepare inputs",
+      "rows": [
+        {
+          "nodes": [
+            {
+              "id": "prices",
+              "label": "Past electricity prices",
+              "sub": "SMARD · Germany–Luxembourg · €/MWh",
+              "kind": "data"
+            },
+            {
+              "id": "weather",
+              "label": "Forecast weather",
+              "sub": "Open-Meteo / ICON-EU · 12 locations",
+              "kind": "data"
+            },
+            {
+              "id": "demand",
+              "label": "Forecast electricity demand",
+              "sub": "ENTSO-E · Germany · MW",
+              "kind": "data"
+            }
+          ]
+        },
+        {
+          "connection": "↓ Saved source data and when it was collected",
+          "nodes": [
+            {
+              "id": "snapshot",
+              "label": "Check and save the inputs",
+              "sub": "Validated prices, weather and demand",
+              "kind": "operation"
+            }
+          ]
+        },
+        {
+          "connection": "↓ Checked inputs, saved so the run can be repeated",
+          "nodes": [
+            {
+              "id": "select",
+              "label": "Keep only information available in time",
+              "sub": "11:00 Berlin on the day before delivery",
+              "kind": "operation"
+            }
+          ]
+        },
+        {
+          "connection": "↓ Prices, weather, demand and calendar information available by the deadline",
+          "nodes": [
+            {
+              "id": "features",
+              "label": "Prepare the inputs for each quarter-hour",
+              "sub": "Earlier prices · weather · demand · calendar",
+              "kind": "operation"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "02 · Train monthly",
+      "rows": [
+        {
+          "connection": "↓ Inputs prepared for past days + earlier actual prices",
+          "nodes": [
+            {
+              "id": "labels",
+              "label": "Choose past prices to learn from",
+              "sub": "Only prices known before that month’s training",
+              "kind": "operation"
+            }
+          ]
+        },
+        {
+          "connection": "↓ Past inputs paired with prices known before training",
+          "nodes": [
+            {
+              "id": "fit",
+              "label": "Train three forecasting models",
+              "sub": "Price history; add weather; add weather and demand",
+              "kind": "operation"
+            },
+            {
+              "id": "reference",
+              "label": "Set up the simple comparison forecast",
+              "sub": "Yesterday / last week, with bands based on past errors",
+              "kind": "operation"
+            }
+          ]
+        },
+        {
+          "connection": "↓ Trained models + the simple comparison forecast and its uncertainty bands",
+          "nodes": [
+            {
+              "id": "models",
+              "label": "Trained models and comparison method",
+              "sub": "Reuse throughout the month; update inputs each day",
+              "kind": "data"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "03 · Forecast daily",
+      "rows": [
+        {
+          "connection": "↓ Inputs for the delivery day + models trained for this month",
+          "nodes": [
+            {
+              "id": "predict",
+              "label": "Estimate prices and uncertainty",
+              "sub": "Each model and the simple comparison make a forecast",
+              "kind": "operation"
+            }
+          ]
+        },
+        {
+          "connection": "↓ Forecasts from each method + whether its inputs and prediction succeeded",
+          "nodes": [
+            {
+              "id": "fallback",
+              "label": "Choose the most complete usable forecast",
+              "sub": "Use a simpler method if data or prediction fails",
+              "kind": "operation"
+            }
+          ]
+        },
+        {
+          "connection": "↓ Keep each method’s forecast and record which one the system chose",
+          "nodes": [
+            {
+              "id": "output",
+              "label": "Tomorrow’s prices and uncertainty",
+              "sub": "Five estimates for each 15-minute interval",
+              "kind": "data"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "04 · Evaluate",
+      "rows": [
+        {
+          "connection": "↓ Saved forecasts + actual prices, added only after prediction",
+          "nodes": [
+            {
+              "id": "truth",
+              "label": "Match forecasts with actual prices",
+              "sub": "Match the same quarter-hour; count missing prices",
+              "kind": "operation"
+            }
+          ]
+        },
+        {
+          "connection": "↓ Each method and the system’s choice compared with the same actual prices",
+          "nodes": [
+            {
+              "id": "score",
+              "label": "Compare accuracy and uncertainty",
+              "sub": "Price errors · how often bands contain prices · band width",
+              "kind": "operation"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

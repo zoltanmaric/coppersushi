@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Copper Sushi · Forecast observatory</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="data.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="#explore"
+        >COPPER SUSHI <span>/ FORECAST OBSERVATORY</span></a
+      ><span class="status">HISTORICAL EVALUATION</span>
+    </header>
+    <main>
+      <div class="intro">
+        <p class="eyebrow">GERMANY–LUXEMBOURG · DAY-AHEAD ELECTRICITY</p>
+        <h1>A forecast you can<br /><em>look inside.</em></h1>
+        <p class="dek">
+          See the price, the uncertainty, and the evidence behind every
+          quarter-hour.
+        </p>
+      </div>
+      <nav aria-label="Views">
+        <a href="#explore" data-view="explore"
+          >01 <strong>Explore forecasts</strong></a
+        ><a href="#understand" data-view="understand"
+          >02 <strong>Understand the model</strong></a
+        ><a href="#trace" data-view="trace">03 <strong>How it works</strong></a>
+      </nav>
+      <noscript
+        >This viewer needs JavaScript for its charts. The forecast contract is
+        available in the repository wiki.</noscript
+      >
+      <p id="error" role="alert" hidden></p>
+      <section id="explore" class="view" aria-labelledby="explore-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">THE EVIDENCE</p>
+            <h2 id="explore-title">Accuracy has more than one dimension.</h2>
+          </div>
+          <label
+            >Evaluation period<select id="period">
+              <option value="all">Full evaluation</option>
+            </select></label
+          >
+        </div>
+        <p id="population" class="muted"></p>
+        <div id="metrics" class="metrics"></div>
+        <div class="verdict">
+          <strong id="verdict-title"></strong>
+          <p id="verdict-text"></p>
+          <a href="#understand">What these numbers mean ↗</a>
+        </div>
+        <details class="comparison">
+          <summary>Compare forecast methods</summary>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col" aria-sort="none"><button class="sort-column" data-sort="name" type="button">Forecast method<span class="sort-indicator" aria-hidden="true"> ↕</span></button></th>
+                  <th scope="col" aria-sort="none"><button class="sort-column" data-sort="wis" type="button">WIS ↓<span class="sort-indicator" aria-hidden="true"> ↕</span></button></th>
+                  <th scope="col" aria-sort="none"><button class="sort-column" data-sort="median_mae" type="button">Median MAE ↓<span class="sort-indicator" aria-hidden="true"> ↕</span></button></th>
+                  <th scope="col" aria-sort="none"><button class="sort-column" data-sort="median_rmse" type="button">Median RMSE ↓<span class="sort-indicator" aria-hidden="true"> ↕</span></button></th>
+                  <th scope="col" aria-sort="none"><button class="sort-column" data-sort="coverage_50" type="button">50% coverage<span class="sort-indicator" aria-hidden="true"> ↕</span></button></th>
+                  <th scope="col" aria-sort="none"><button class="sort-column" data-sort="coverage_95" type="button">95% coverage<span class="sort-indicator" aria-hidden="true"> ↕</span></button></th>
+                  <th scope="col" aria-sort="none"><button class="sort-column" data-sort="width_50" type="button">50% width<span class="sort-indicator" aria-hidden="true"> ↕</span></button></th>
+                  <th scope="col" aria-sort="none"><button class="sort-column" data-sort="width_95" type="button">95% width<span class="sort-indicator" aria-hidden="true"> ↕</span></button></th>
+                </tr>
+              </thead>
+              <tbody id="comparison"></tbody>
+            </table>
+          </div>
+          <p class="muted">
+            Click a column heading to sort; click again to reverse. Price errors and band widths are in €/MWh. All methods use the same
+            quarters with observed prices. Coverage is per quarter; these are
+            not simultaneous bands for a whole day.
+          </p>
+        </details>
+        <div class="section-heading daily-heading">
+          <div>
+            <p class="eyebrow">THE DAILY VIEW</p>
+            <h2 id="day-title"></h2>
+          </div>
+          <div class="controls">
+            <button id="previous" aria-label="Previous delivery day">←</button
+            ><label>Delivery day<input id="day" type="date" required /></label
+            ><button id="next" aria-label="Next delivery day">→</button>
+          </div>
+        </div>
+        <details class="method-guide">
+          <summary>What do these forecast methods mean?</summary>
+          <p>Three trained models use the same CatBoost approach, which learns relationships from past examples. They differ in their inputs. The reference is a simple comparison method; automatic selection chooses a method rather than fitting another model.</p>
+          <dl>
+            <dt>Automatic selection (with fallbacks)</dt>
+            <dd>Uses the price-history + weather + demand model when inputs and execution permit. Otherwise falls back to weather, price history, then the reference. The method actually used on this day is shown below the chart.</dd>
+            <dt>Price-history model</dt>
+            <dd>Uses previous prices at the same time of day, recent daily price summaries, and calendar information such as weekday and holidays.</dd>
+            <dt>Price-history + weather model</dt>
+            <dd>Adds forecast temperature, wind and solar radiation from twelve locations to the price-history model’s inputs.</dd>
+            <dt>Price-history + weather + demand model</dt>
+            <dd>Also adds forecast electricity demand for Germany, with indicators for missing inputs.</dd>
+            <dt>Yesterday / last-week reference</dt>
+            <dd>Averages yesterday’s and last week’s same-clock prices. Uses either when only one is available, or an earlier same-quarter median when neither is available. Its bands come from past forecast errors in the training data.</dd>
+          </dl>
+          <p class="muted">All five are saved historical predictions. Training expands monthly using earlier eligible data. If an individual trained model fails, its displayed prediction uses the reference.</p>
+        </details>
+        <div class="chart-card">
+          <div class="chart-toolbar">
+            <label
+              >Forecast method<select id="method">
+                <option value="system">Automatic selection (with fallbacks)</option>
+                <option value="weather">Price-history + weather model</option>
+                <option value="demand">Price-history + weather + demand model</option>
+                <option value="prices">Price-history model</option>
+                <option value="reference">Yesterday / last-week reference</option>
+              </select></label
+            ><label class="checkbox"
+              ><input type="checkbox" id="reference" /> Show reference median
+              and 95% band</label
+            >
+          </div>
+          <div class="legend">
+            <span class="actual">Realised price</span
+            ><span class="median">Predicted median</span
+            ><span class="band50">Central 50%</span
+            ><span class="band95">Central 95%</span
+            ><span id="reference-legend" class="reference" hidden
+              >Reference median / 95%</span
+            >
+          </div>
+          <svg
+            id="chart"
+            viewBox="0 0 1100 380"
+            role="img"
+            aria-labelledby="chart-title chart-desc"
+          >
+            <title id="chart-title">Daily prices and quantile bands</title>
+            <desc id="chart-desc"></desc>
+          </svg>
+          <p class="muted">Fixed price scale across all saved days and methods. Hover to inspect a quarter-hour; exact values are also in the table below.</p>
+          <div id="point-detail" class="point-detail" aria-live="polite"></div>
+          <div id="day-metrics" class="day-metrics"></div>
+        </div>
+        <div class="below-chart">
+          <p id="day-context"></p>
+          <a class="button-link" href="#trace"
+            >How the forecasting system works →</a
+          >
+        </div>
+        <details>
+          <summary>Read the daily values as a table</summary>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Berlin time</th>
+                  <th>Actual</th>
+                  <th>2.5%</th>
+                  <th>25%</th>
+                  <th>Median</th>
+                  <th>75%</th>
+                  <th>97.5%</th>
+                </tr>
+              </thead>
+              <tbody id="quarters"></tbody>
+            </table>
+          </div>
+        </details>
+        <p class="footnote">
+          All days are available, including poor forecasts and missing inputs.
+          Historical replay is subject to input-timing assumptions; it does not
+          show forecasts issued live.
+        </p>
+      </section>
+      <section
+        id="understand"
+        class="view"
+        aria-labelledby="understand-title"
+        hidden
+      >
+        <p class="eyebrow">THE CONTRACT</p>
+        <h2 id="understand-title" class="large-heading">
+          Tomorrow's prices.<br />Today's information.
+        </h2>
+        <div class="editorial">
+          <article>
+            <h3>What is being predicted?</h3>
+            <p>
+              One electricity price for each quarter-hour of the next German
+              local day, in euros per megawatt-hour. The information deadline is
+              <strong>11:00 Europe/Berlin on the preceding day</strong>.
+            </p>
+            <p>
+              The implemented result is a historical evaluation with monthly
+              refits. Scheduled daily issuance remains planned.
+              <a data-source="contract">Forecast contract ↗</a>
+            </p>
+          </article>
+          <article>
+            <h3>Why five lines?</h3>
+            <p>
+              The median is the central prediction. The 25th and 75th
+              percentiles enclose a nominal 50% range; the 2.5th and 97.5th
+              enclose a nominal 95% range.
+            </p>
+            <p>
+              Those percentages are targets, not proof of calibration. The
+              observed coverage alongside the chart tells you how often prices
+              actually fell inside. These ranges apply to individual quarters,
+              not the joint path of a whole day.
+              <a data-source="evaluation" data-anchor="quantiles"
+                >Quantile contract ↗</a
+              >
+            </p>
+          </article>
+        </div>
+        <div class="statement">
+          <span class="eyebrow">THE CENTRAL CAVEAT</span>
+          <p>
+            A narrow band can look confident.<br /><em
+              >Coverage tells us whether it earned that confidence.</em
+            >
+          </p>
+          <p id="coverage-explanation" class="small"></p>
+        </div>
+        <div class="editorial">
+          <article>
+            <h3>What counts as a good forecast?</h3>
+            <p>
+              <strong>Weighted interval score (WIS)</strong> balances band width
+              against penalties for prices outside the bands, together with
+              median error. Lower is better. A good aggregate score can coexist
+              with poor coverage.
+            </p>
+            <p>
+              <strong>MAE</strong> is the median prediction's average absolute
+              error. <strong>RMSE</strong> penalises large errors more heavily.
+              Both use that same median prediction. Compare coverage with
+              nominal 50% and 95%, and inspect band widths alongside it.
+              <a data-source="evaluation" data-anchor="wis"
+                >Scoring contract ↗</a
+              >
+            </p>
+          </article>
+          <article>
+            <h3>What is “the reference”?</h3>
+            <p>
+              A historical-price forecast: average yesterday's and last week's
+              prices at the same German local quarter. Use the available one if
+              the other is missing; if both are absent, use a training-history
+              quarter median.
+            </p>
+            <p>
+              Add quantiles of training-only historical errors to form its
+              bands, recalculated at each monthly fit. It is a local reference,
+              not an external provider's forecast.
+              <a data-source="evaluation" data-anchor="reference"
+                >Reference definition ↗</a
+              >
+            </p>
+          </article>
+          <article>
+            <h3>What does the model see?</h3>
+            <p>
+              Past prices and calendar features, forecast weather across twelve
+              locations, and eligible demand forecasts. Three fixed feature sets
+              expose the effect of adding weather and demand.
+            </p>
+            <p>
+              The system chooses demand → weather → prices/calendar → reference
+              when entire sources or model executions fail. Partial gaps remain
+              missing values. The choice never uses realised prices or test
+              scores.
+              <a data-source="evaluation" data-anchor="defaults"
+                >Fallback contract ↗</a
+              >
+            </p>
+          </article>
+          <article>
+            <h3>What can this evidence establish?</h3>
+            <p>
+              It measures a retrospective evaluation on a fixed snapshot.
+              Historical price and weather availability rely on assumptions;
+              demand timing is conditional on its update timestamp.
+              Reproducibility does not establish historical availability.
+            </p>
+            <p>
+              Some evaluation dates were inspected in earlier development. Daily
+              readiness, calibrated extreme-price risk and trading profitability
+              are not established.
+              <a data-source="inputs" data-anchor="availability"
+                >Source limitations ↗</a
+              >
+            </p>
+          </article>
+        </div>
+        <a class="button-link" href="#explore">Examine the evidence →</a>
+      </section>
+      <section id="trace" class="view" aria-labelledby="trace-title" hidden>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">THE COMPUTATION</p>
+            <h2 id="trace-title">How the forecast comes together.</h2>
+          </div>
+          <a href="#explore" class="button-link">Explore results ↗</a>
+        </div>
+        <p>
+          The system-level method: where inputs come from, what each
+          transformation means, and how the pieces produce a forecast. Select a
+          stage to explore it. This view is independent of the day selected in
+          Results.
+        </p>
+        <p class="muted">
+          Four phases, two clocks: train monthly, forecast daily. Rounded cards are
+          data; square cards are operations. Connections name what passes between
+          them. Select any card for its inputs, transformation and output. This is
+          the implemented historical evaluation; daily cloud operation remains planned.
+        </p>
+        <div class="pipeline-layout">
+          <div class="pipeline-canvas">
+            <div id="pipeline" role="group" aria-label="Forecast computational pipeline"></div>
+          </div>
+          <aside id="node-detail" aria-live="polite"></aside>
+        </div>
+        <details>
+          <summary>Recorded input-timing assumptions</summary>
+          <dl id="timing"></dl>
+        </details>
+      </section>
+      <footer>
+        <div>
+          <p class="eyebrow">IDENTITY & SOURCES</p>
+          <p>
+            Read-only export · checked artifact hashes · scores reconciled
+            against saved predictions
+          </p>
+          <p id="identity"></p>
+        </div>
+        <details>
+          <summary>Source revisions and run provenance</summary>
+          <dl id="provenance"></dl>
+          <ul id="sources"></ul>
+          <p>
+            The source revision identifies the wiki used for this export.
+            Regenerate after a source or presentation change. This page does not
+            train a model or retrieve new source data.
+          </p>
+        </details>
+      </footer>
+      <template id="wis-template"
+        ><details class="wis-explanation" id="wis-explanation">
+          <summary>How weighted interval score (WIS) works</summary>
+          <div class="wis-body">
+            <p class="eyebrow">READING WEIGHTED INTERVAL SCORE</p>
+            <h3>Be precise. But pay for being wrong.</h3>
+            <p>
+              A very wide band is easy to land inside, but gives little useful
+              precision. A very narrow band looks precise, but can miss badly.
+              <strong>Weighted interval score (WIS)</strong> balances those
+              costs and includes the median prediction’s error.
+            </p>
+            <p>
+              <strong>Illustrative numbers, not another experiment.</strong>
+              In all three examples below, the predicted median is 100 and the
+              observed price is 110 €/MWh. Only the bands change. Pale green is
+              the 95% band, darker green the 50% band; the copper dot is the
+              observed price. All diagrams use the same scale.
+            </p>
+            <div class="wis-recipe">
+              <h4>The calculation, in three costs</h4>
+              <p>
+                For the five quantiles used here, this is an exact rewrite of
+                WIS, with the weights and normalization already combined:
+              </p>
+              <dl>
+                <dt>1 · Median-error cost</dt>
+                <dd>0.2 × distance between the actual price and the median.</dd>
+                <dt>2 · Band-width cost</dt>
+                <dd>
+                  0.1 × width of the 50% band<br />+ 0.01 × width of the 95%
+                  band.
+                </dd>
+                <dt>3 · Outside-band cost</dt>
+                <dd>
+                  0.4 × distance outside the 50% band<br />+ 0.4 × distance
+                  outside the 95% band.
+                </dd>
+              </dl>
+              <p>
+                <strong>Add the three costs to get WIS.</strong> Width means
+                upper edge minus lower edge. Outside distance is zero when the
+                actual price is inside a band; otherwise it is the distance to
+                the nearest edge. A price outside both bands contributes to both
+                miss terms.
+              </p>
+              <p class="small">
+                These fixed weights come from the scoring definition for our
+                five quantiles; they are not fitted to these results. All
+                distances and score contributions are in €/MWh.
+              </p>
+            </div>
+            <div class="wis-cases">
+              <article class="wis-case">
+                <h4>Too wide</h4>
+                <svg
+                  viewBox="0 0 300 100"
+                  role="img"
+                  aria-label="Too wide: quantiles 60, 80, 100, 120, 140, median 100, observed price 110 euros per megawatt-hour"
+                >
+                  <path d="M20 65 H280" stroke="#bcc9b9" />
+                  <rect
+                    x="46.0"
+                    y="30"
+                    width="208.0"
+                    height="24"
+                    fill="#dbe8dd"
+                  />
+                  <rect
+                    x="98.0"
+                    y="30"
+                    width="104.0"
+                    height="24"
+                    fill="#abcbb9"
+                  />
+                  <path d="M150.0 26 V59" stroke="#287967" stroke-width="2" />
+                  <circle cx="176.0" cy="42" r="5" fill="#aa502d" />
+                  <text x="176.0" y="18" text-anchor="middle" class="axis">
+                    actual 110
+                  </text>
+                  <text x="20" y="87" class="axis">50</text>
+                  <text x="150" y="87" text-anchor="middle" class="axis">
+                    100
+                  </text>
+                  <text x="280" y="87" text-anchor="end" class="axis">
+                    150 €/MWh
+                  </text>
+                </svg>
+                <dl class="wis-arithmetic">
+                  <dt>Median error</dt>
+                  <dd>0.2 × |110 − 100| = <strong>2.00</strong></dd>
+                  <dt>Band widths</dt>
+                  <dd>
+                    0.1 × (120 − 80) + 0.01 × (140 − 60) =
+                    <strong>4.80</strong>
+                  </dd>
+                  <dt>Outside misses</dt>
+                  <dd>
+                    Inside both bands: 0.4 × 0 + 0.4 × 0 =
+                    <strong>0.00</strong>
+                  </dd>
+                </dl>
+                <p class="wis-sum">
+                  2.00 + 4.80 + 0.00 = <strong>6.80 WIS</strong>
+                </p>
+                <p>
+                  The observed price is inside both bands, but their width costs
+                  points.
+                </p>
+                <p class="small">50% band: 80–120 · 95% band: 60–140 €/MWh</p>
+              </article>
+              <article class="wis-case">
+                <h4>A better balance</h4>
+                <svg
+                  viewBox="0 0 300 100"
+                  role="img"
+                  aria-label="A better balance: quantiles 85, 95, 100, 105, 115, median 100, observed price 110 euros per megawatt-hour"
+                >
+                  <path d="M20 65 H280" stroke="#bcc9b9" />
+                  <rect
+                    x="111.0"
+                    y="30"
+                    width="78.0"
+                    height="24"
+                    fill="#dbe8dd"
+                  />
+                  <rect
+                    x="137.0"
+                    y="30"
+                    width="26.0"
+                    height="24"
+                    fill="#abcbb9"
+                  />
+                  <path d="M150.0 26 V59" stroke="#287967" stroke-width="2" />
+                  <circle cx="176.0" cy="42" r="5" fill="#aa502d" />
+                  <text x="176.0" y="18" text-anchor="middle" class="axis">
+                    actual 110
+                  </text>
+                  <text x="20" y="87" class="axis">50</text>
+                  <text x="150" y="87" text-anchor="middle" class="axis">
+                    100
+                  </text>
+                  <text x="280" y="87" text-anchor="end" class="axis">
+                    150 €/MWh
+                  </text>
+                </svg>
+                <dl class="wis-arithmetic">
+                  <dt>Median error</dt>
+                  <dd>0.2 × |110 − 100| = <strong>2.00</strong></dd>
+                  <dt>Band widths</dt>
+                  <dd>
+                    0.1 × (105 − 95) + 0.01 × (115 − 85) =
+                    <strong>1.30</strong>
+                  </dd>
+                  <dt>Outside misses</dt>
+                  <dd>
+                    5 above the 50% band, inside the 95% band:<br />0.4 × (110 −
+                    105) + 0.4 × 0 = <strong>2.00</strong>
+                  </dd>
+                </dl>
+                <p class="wis-sum">
+                  2.00 + 1.30 + 2.00 = <strong>5.30 WIS</strong>
+                </p>
+                <p>
+                  Narrower bands save more width cost than the 50% band’s miss
+                  adds in this example.
+                </p>
+                <p class="small">50% band: 95–105 · 95% band: 85–115 €/MWh</p>
+              </article>
+              <article class="wis-case">
+                <h4>Too narrow</h4>
+                <svg
+                  viewBox="0 0 300 100"
+                  role="img"
+                  aria-label="Too narrow: quantiles 98, 99, 100, 101, 102, median 100, observed price 110 euros per megawatt-hour"
+                >
+                  <path d="M20 65 H280" stroke="#bcc9b9" />
+                  <rect
+                    x="144.8"
+                    y="30"
+                    width="10.4"
+                    height="24"
+                    fill="#dbe8dd"
+                  />
+                  <rect
+                    x="147.4"
+                    y="30"
+                    width="5.2"
+                    height="24"
+                    fill="#abcbb9"
+                  />
+                  <path d="M150.0 26 V59" stroke="#287967" stroke-width="2" />
+                  <circle cx="176.0" cy="42" r="5" fill="#aa502d" />
+                  <text x="176.0" y="18" text-anchor="middle" class="axis">
+                    actual 110
+                  </text>
+                  <text x="20" y="87" class="axis">50</text>
+                  <text x="150" y="87" text-anchor="middle" class="axis">
+                    100
+                  </text>
+                  <text x="280" y="87" text-anchor="end" class="axis">
+                    150 €/MWh
+                  </text>
+                </svg>
+                <dl class="wis-arithmetic">
+                  <dt>Median error</dt>
+                  <dd>0.2 × |110 − 100| = <strong>2.00</strong></dd>
+                  <dt>Band widths</dt>
+                  <dd>
+                    0.1 × (101 − 99) + 0.01 × (102 − 98) =
+                    <strong>0.24</strong>
+                  </dd>
+                  <dt>Outside misses</dt>
+                  <dd>
+                    9 above the 50% band, 8 above the 95% band:<br />0.4 × (110
+                    − 101) + 0.4 × (110 − 102) =
+                    <strong>6.80</strong>
+                  </dd>
+                </dl>
+                <p class="wis-sum">
+                  2.00 + 0.24 + 6.80 = <strong>9.04 WIS</strong>
+                </p>
+                <p>
+                  The observed price falls outside both bands. Larger miss
+                  penalties outweigh the small widths.
+                </p>
+                <p class="small">50% band: 99–101 · 95% band: 98–102 €/MWh</p>
+              </article>
+            </div>
+            <p>
+              The median error is identical in all three cases. Wider bands add
+              cost; when a price falls outside a band, the score adds a penalty
+              that grows with the distance beyond its edge. WIS weights the two
+              band scores and the median error together.
+            </p>
+            <p>
+              These are scores for <strong>one quarter-hour</strong>. The
+              headline averages quarter-hour scores over all available outcomes
+              in the selected period. Its units are €/MWh, but
+              <strong>WIS is not the typical price error</strong>; the median’s
+              MAE answers that question.
+              <a
+                href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/evaluation.md#wis"
+                >Exact formula and weights ↗</a
+              >
+            </p>
+            <div class="wis-caveat">
+              <h4>How can the score improve while coverage is poor?</h4>
+              <p>
+                The reference’s bands are much wider. WIS combines that width
+                cost with errors and misses; coverage asks only how often the
+                outcome lands inside. Our system wins that combined comparison
+                while its nominal 95% band contains only 63.7% of outcomes.
+                <strong
+                  >The better score does not make those bands well
+                  calibrated.</strong
+                >
+                Both results belong in the headline.
+              </p>
+            </div>
+          </div>
+        </details></template
+      >
+    </main>
+  </body>
+</html>
