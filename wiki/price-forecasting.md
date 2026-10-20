@@ -12,6 +12,8 @@ An independent forecasting product under `forecasts/`, with no dependency on the
 
 ## Dataflow
 
+This diagram retains the pre-evaluation architecture. Local evaluation is implemented as described above; its architecture presentation is consolidated in the frontend by [PR #112](https://github.com/zoltanmaric/coppersushi/pull/112). The intermediate stack layers leave this diagram unchanged.
+
 Solid nodes and edges represent implemented parts; dashed nodes and edges (`planned`) represent planned parts. Each arrow means "required to produce." Cloud execution is a later stage, subject to deployment validation.
 
 ```mermaid
@@ -20,15 +22,12 @@ flowchart LR
 
     forecast_raw_inputs["forecast_raw_inputs<br/>S3 source responses and retrieval metadata"]
     forecast_input_snapshot["forecast_input_snapshot<br/>S3 validated Parquet tables and fixed manifest"]
-    forecast_local_run["forecast_local_run<br/>local Metaflow training and evaluation"]
-    forecast_experiment["forecast_experiment<br/>local MLflow scores, models and reports<br/>research history maintained by agents"]
+    forecast_local_run["forecast_local_run<br/>local Metaflow training and evaluation"]:::planned
+    forecast_experiment["forecast_experiment<br/>local MLflow scores, models and reports<br/>research history maintained by agents"]:::planned
 
     forecast_raw_inputs --> forecast_input_snapshot
-    forecast_input_snapshot --> forecast_local_run
-    forecast_local_run --> forecast_experiment
-
-    forecast_research_history["forecast_research_history<br/>workflow automation of agent experiment records, after continuation decision"]:::planned
-    forecast_experiment -.-> forecast_research_history
+    forecast_input_snapshot -.-> forecast_local_run
+    forecast_local_run -.-> forecast_experiment
 
     forecast_aws_infra["forecast_aws_infra<br/>Terraform-managed AWS resources, later stage"]:::planned
     forecast_cloud_run["forecast_cloud_run<br/>Metaflow / Step Functions / AWS Batch on Fargate, deployment validation pending"]:::planned
