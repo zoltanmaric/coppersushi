@@ -26,9 +26,11 @@ The baseline had no proposal saved before execution. Its rationale and conclusio
 
 | Execution | MLflow run ID | Role |
 |---|---|---|
-| Quantile baseline | `8a4c692855fb42eba39d5a3bfc7d6762` | Accepted metadata-corrected baseline |
+| Quantile baseline | `a3149d4e7c624c46a4320fa95d2132db` | Accepted timed rerun; 445.963 seconds |
 | Initial complete baseline | `71e7d7162c0d4947af5d2a48e3b39ed6` | Initial complete scores |
 | Integration smoke check | `79cfbd0937c24755931e12f3c9f2eeb9` | Integration check |
 | Interrupted exploratory baseline | `dba3c0f32c9f4fe38e552b8592de8d20` | Interrupted; retained as KILLED |
+
+The accepted execution reruns the unchanged baseline: predictions and scores match the motivating execution, and fresh-environment reproduction from S3 passes. Its forecast run is `3db10bdf199fdbaa012525ce`. The review findings above remain attributed to the original review, not independently recomputed diagnostics.
 
 The accepted run retains `research/baseline/retrospective-rationale.json`, `research/baseline/conclusion.json`, and `research/review-2026-10-20/retrospective-review.json` with the original review comments and links. Frozen configuration, environment and input identities remain in its original `run/manifest.json`. No retrospective document is presented as a pre-execution proposal. [Open local MLflow](../../../forecasts/README.md#local-model-evaluation).
