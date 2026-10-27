@@ -45,4 +45,35 @@ Here `c_k` is the published ±1 hub coefficient. The outer terms are `F_ALBE −
 
 Positive virtual injection enters Core. A +1 bound uses the other endpoint as reference; a −1 bound uses its owning Core zone. The selected bound's contribution to `P_owner − P_other` is `c_k μ_k / α`. ALBE and ALDE share one drawn asset but retain distinct published row IDs and dual terms; never discard a term merely because it names the same cable.
 
-The nine newer interfaces remain selectable with capacity and published dual, but numerical endpoint attribution is unavailable. Their adjacent-region terms are not yet validated against observed prices. N-SIDE's illustration omits LTA; the [FB/LTA audit](flow-based-market-coupling.md#attribution-validation) owns the scaling evidence. No interface uses its full observed spread as a substitute contribution.
+### Adjacent-validation
+
+As of 2026-10-13, the candidate owner-minus-adjacent reconstruction is:
+
+```
+P_owner − P_other = (F_owner − F_Core_hub) + Σ_hub c μ / α
+                   + (G_adjacent_hub − G_other) + δ_owner
+```
+
+`F` uses normalized Core physical duals; `G` uses Nordic duals without Core α. `δ_owner` is Poland's cap component, zero for other Core owners. For the two non-Nordic AC interfaces, the candidate adjacent outer term is zero. Each interval must independently match observed endpoint prices within €0.02/MWh. The selected row contributes only its own signed `c μ / α`; the check uses all active bounds on that hub.
+
+The [Nordic handbook](https://publicationtool.jao.eu/PublicationHandbook/Nordic_PublicationTool_Handbook_v1.5.pdf), §§3 and 6.3, maps opposite endpoints: `DK1_CO`, `NO2_ND`, `NO2_NK`, `SE4_SP`, `SE4_BC`, `DK1_DE`, `DK2_KO`. Its `fbDomainShadowPrice` feed publishes Nordic coefficients and duals. Compare each hub with its owning Nordic zone; Nordic synchronous groups do not share one balance-price constant.
+
+A paced audit checked first/last binding cases for each sign on September 12 and October 8, 2026, using complete one-interval Nordic responses and quarter-hour endpoint prices. All nine interfaces are represented; 19 of 40 lossless candidate reconstructions pass:
+
+| Interface | Samples passing €0.02 check / sampled | Largest residual, €/MWh |
+|---|---:|---:|
+| DE–DK1 AC | 2 / 2 | 0.008 |
+| LitPol AC | 6 / 6 | 0.007 |
+| RO–BG AC | 2 / 2 | <0.001 |
+| COBRA | 6 / 8 | 0.257 |
+| Kontek / Kriegers Flak | 3 / 4 | 0.100 |
+| NorNed | 0 / 6 | 21.297 |
+| NordLink | 0 / 6 | 44.907 |
+| SwePol | 0 / 5 | 143.066 |
+| Baltic Cable | 0 / 1 | 3.006 |
+
+These are empirical checks, not a universal decomposition. Both coefficient signs and α<1 occur in the sample. Missing coefficients, prices, Polish adjusted price, or zero α suppress contributions. Fetch adjacent prices and Nordic rows only for the selected interface/interval; an outage leaves selection available.
+
+[Nord Pool documents implicit losses](https://www.nordpoolgroup.com/en/trading/Day-ahead-trading/loss-functionality/) on NorNed, NordLink and Baltic Cable, so their selected-dual scaling stays unsupported even if a lossless equation happens to match. [Ramping restrictions](https://www.nordpoolgroup.com/en/trading/Day-ahead-trading/Ramping/) include joint NorNed/NordLink limits and hourly flow fixing on SwePol. These mechanisms can add price terms; the audit does not attribute each residual to a specific mechanism. Never widen tolerance to hide them, infer missing duals from the observed spread, or treat a full spread as the selected constraint's contribution.
+
+Loss-aware selected-dual scaling and unreconciled ramping cases remain in [the spec](specs/cnec-constraint-selection.md). The [FB/LTA audit](flow-based-market-coupling.md#attribution-validation) owns the existing Core scaling evidence.

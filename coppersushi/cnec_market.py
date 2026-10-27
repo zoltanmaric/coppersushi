@@ -46,6 +46,7 @@ def snapshot(
     reference_zone: str | None = None,
     context: pd.DataFrame | None = None,
     alpha: float | None = None,
+    adjacent: pd.DataFrame | None = None,
 ) -> Snapshot:
     """Compose one interval, optionally isolating a selected row's relative price effect."""
     if interval.tzinfo is None:
@@ -77,8 +78,21 @@ def snapshot(
         elif identity in external.source_id.values:
             row = external[external.source_id.eq(identity)].iloc[0]
             reference_zone = cnec_attribution.virtual_reference(row)
-            valid = row.hub in {"ALBE", "ALDE"} and alpha is not None and cnec_attribution.alegro_validated(
-                _at_interval(ptdfs, interval), current, external, _at_interval(prices, interval), alpha)
+            valid = False
+            if row.hub in {"ALBE", "ALDE"} and alpha is not None:
+                valid = cnec_attribution.alegro_validated(
+                    _at_interval(ptdfs, interval), current, external, _at_interval(prices, interval), alpha)
+            elif adjacent is not None and alpha is not None:
+                evidence = _at_interval(adjacent, interval)
+                evidence = evidence[evidence.hub.eq(row.hub)]
+                if len(evidence) == 1:
+                    valid = cnec_attribution.virtual_validated(
+                        row.hub, _at_interval(ptdfs, interval), current, external,
+                        _at_interval(prices, interval), cap_inputs, alpha, evidence.iloc[0])
+                    # Retain the adjacent quote even when attribution fails: it is an observed price.
+                    _, other, _ = cnec_attribution.INTERFACES[row.hub]
+                    prices = pd.concat([prices, pd.DataFrame({'interval': [interval], 'zone': [other],
+                        'price': [evidence.adjacent_price.iloc[0]]})], ignore_index=True)
             if valid and reference_zone is not None:
                 owner, other, _ = cnec_attribution.INTERFACES[row.hub]
                 # The selected bound contributes owner-minus-other; reverse for owner reference.
@@ -87,7 +101,9 @@ def snapshot(
                 contribution = pd.DataFrame({"zone": [reference_zone, target], "source_id": identity,
                     "reference_zone": reference_zone, "contribution": [0.0, value if target == owner else -value]})
             else:
-                note = "Endpoint contribution unavailable: interface attribution is not validated for these inputs."
+                note = ("Endpoint contribution unavailable: loss-aware dual scaling is not validated."
+                        if row.hub in cnec_attribution.LOSS_HUBS else
+                        "Endpoint contribution unavailable: missing inputs or unreconciled losses/ramping terms.")
         else:
             raise ValueError("selected constraint matched 0 active rows")
     return Snapshot(
