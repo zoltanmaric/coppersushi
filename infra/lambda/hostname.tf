@@ -29,12 +29,27 @@ resource "aws_acm_certificate_validation" "app" {
 data "aws_cloudfront_cache_policy" "disabled" { name = "Managed-CachingDisabled" }
 data "aws_cloudfront_origin_request_policy" "lambda" { name = "Managed-AllViewerExceptHostHeader" }
 
+resource "aws_cloudfront_cache_policy" "static" {
+  count       = var.custom_domain == null ? 0 : 1
+  name        = "coppersushi-static-assets"
+  min_ttl     = 300
+  default_ttl = 300
+  max_ttl     = 31536000
+  parameters_in_cache_key_and_forwarded_to_origin {
+    enable_accept_encoding_gzip   = true
+    enable_accept_encoding_brotli = true
+    cookies_config { cookie_behavior = "none" }
+    headers_config { header_behavior = "none" }
+    query_strings_config { query_string_behavior = "all" }
+  }
+}
+
 resource "aws_cloudfront_distribution" "app" {
   count           = var.custom_domain == null ? 0 : 1
   enabled         = true
   is_ipv6_enabled = true
   aliases         = [var.custom_domain]
-  comment         = "Copper Sushi Lambda trial"
+  comment         = "Copper Sushi production hosting"
   price_class     = "PriceClass_100"
 
   origin {
@@ -57,6 +72,19 @@ resource "aws_cloudfront_distribution" "app" {
     cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
     origin_request_policy_id = data.aws_cloudfront_origin_request_policy.lambda.id
     compress                 = true
+  }
+
+  dynamic "ordered_cache_behavior" {
+    for_each = ["/assets/*", "/_dash-component-suites/*"]
+    content {
+      path_pattern           = ordered_cache_behavior.value
+      target_origin_id       = "lambda"
+      viewer_protocol_policy = "redirect-to-https"
+      allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+      cached_methods         = ["GET", "HEAD"]
+      cache_policy_id        = aws_cloudfront_cache_policy.static[0].id
+      compress               = true
+    }
   }
 
   restrictions {

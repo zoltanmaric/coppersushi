@@ -324,3 +324,9 @@ cutover remains a separate decision after measured trial behavior.
 A slow trial slider invocation had no Lambda initialization. Fresh processes loaded the
 full solved network just for polygons; bundled outlines and deferred OPF imports remove
 that work from CNECs. [Startup contract](../infra/lambda/README.md#runtime).
+
+## [2026-10-27] decision | AWS production hosting approved
+
+AWS Lambda, S3 and CloudFront are the production hosting choice. The deployment is
+verified; the blog iframe update remains pending. Static OPF hosting is deferred.
+See [hosting](../infra/lambda/README.md).
