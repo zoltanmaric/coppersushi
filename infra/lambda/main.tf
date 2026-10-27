@@ -88,7 +88,7 @@ resource "aws_lambda_function" "app" {
   ephemeral_storage { size = 1024 }
   environment {
     variables = {
-      ROOT_VIEW                = "embed"
+      ROOT_VIEW                = "full"
       XDG_CACHE_HOME           = "/tmp/cache"
       HOME                     = "/tmp"
       COPPERSUSHI_CACHE_BUCKET = aws_s3_bucket.cache.id
