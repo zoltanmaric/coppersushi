@@ -94,3 +94,6 @@ The [production Lambda deployment](../infra/lambda/README.md) runs the same Dash
 server behind AWS Web Adapter (OPF responses carry only the selected hour’s four traces), with complete dynamic-cache bundles in private S3 and
 API keys read from a dedicated secret. Rendering, S3 reuse and cross-origin framing are verified; measured startup
 limits are recorded in the deployment README.
+
+The OPF page first displays its basemap and camera, then adds the network when the
+figure is ready. A small loading label leaves the map visible during that request.
