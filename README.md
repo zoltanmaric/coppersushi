@@ -9,11 +9,13 @@ The web app is deployed
 [**here**](https://121gigawatts.org/copper-sushi-power-flow-european-grid/),
 along with an explanation of the main features.
 
-v1's network `networks/opf-2013-07-17-v1.nc` is a solved PyPSA-Eur 0.5.0 optimal power flow (one day, 2013-07-17, 2-hour snapshots,
-lines expandable to 1.01× current volume). The exact configuration that
-produced it is tagged
-[`coppersushi-v1`](https://github.com/zoltanmaric/pypsa-eur/tree/coppersushi-v1)
-in my fork of `pypsa-eur`; see its `config.yaml` and README.
+The app has two views: `/opf-2024` (29 August 2024, hourly, on the 2025 grid)
+and `/cnec` (prices and binding constraints). `/embed/opf-2024` shows the OPF map
+and time controls without navigation. Both OPF layouts use the same solved network.
+
+For the first rollout, `/` also shows the embed, preserving the article's existing
+iframe. `ROOT_VIEW=embed` is the default; set `ROOT_VIEW=full` only after the article
+uses `/embed/opf-2024`. Model details: [power-flow architecture](wiki/sushi-2.md).
 
 Networks are versioned with [Git LFS](https://git-lfs.com). Install `git-lfs` system-wide (`brew install git-lfs`)
 so git works from any shell or IDE, run `git lfs install` once to register the filters that turn pointers into

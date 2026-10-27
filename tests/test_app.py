@@ -29,7 +29,7 @@ def test_a_cnec_path_opens_the_price_page_on_its_day():
 
 def test_the_cnec_link_names_no_day_so_the_page_opens_on_today(monkeypatch):
     monkeypatch.setattr(app, "mapbox_token", lambda: "token")
-    links = (c for c in _components(app.app.layout) if isinstance(c, dcc.Link))
+    links = (c for c in _components(app.show_page("/opf-2024")) if isinstance(c, dcc.Link))
     assert next(link for link in links if link.children == "Prices and binding CNECs").href == "/cnec"
     controls = {component.id: component for component in _ids(app.show_page("/cnec"))}
     assert controls["cnec-date"].value == cnec_page.local_today()
@@ -144,3 +144,38 @@ def test_a_previous_days_completion_cannot_load_or_draw_the_selected_day(monkeyp
         app.load_cnec_prices(stale, "2024-08-30")
     with pytest.raises(PreventUpdate):
         app.update_cnec(None, 0, 0, "2024-08-30", 0, None, stale, [], None)
+
+
+@pytest.mark.parametrize("mode", ['embed', 'full'])
+def test_root_rollout_keeps_permanent_urls_stable(mode):
+    assert app.is_embed_path('/', mode) is (mode == 'embed')
+    assert app.is_embed_path('/embed/opf-2024', mode)
+    assert not app.is_embed_path('/opf-2024', mode)
+    assert app.network_key_from_path('/') == app.network_key_from_path('/embed/opf-2024') == 'opf-2024'
+    for path in ['/', '/embed/opf-2024', '/opf-2024']:
+        page = app.show_page(path, root_view=mode)
+        links = [c.href for c in _components(page) if isinstance(c, dcc.Link)]
+        assert links == ([] if app.is_embed_path(path, mode) else ['/opf-2024', '/cnec'])
+        assert {'map', 'snapshot-slider', 'opf-time'} <= {c.id for c in _ids(page)}
+
+
+@pytest.mark.parametrize('path', ['/v1', '/opf-2013', '/missing'])
+def test_retired_or_unknown_views_do_not_fall_back_to_any_model(path):
+    assert app.network_key_from_path(path) is None
+    assert not {'map', 'snapshot-slider'} & {c.id for c in _ids(app.show_page(path))}
+    with pytest.raises(PreventUpdate):
+        app.render(path, 0, False)
+    assert 'v1' not in app.NETWORK_LOADERS and 'opf-2013' not in app.NETWORK_LOADERS
+
+
+def test_opf_clock_and_slider_share_the_local_day_and_noon_default():
+    table = pd.read_csv(REPO / 'tests/fixtures/opf-embed/snapshots.csv')
+    snapshots = pd.DatetimeIndex(pd.to_datetime(table.snapshot, utc=True))
+    maximum, marks, selected, label = app.opf_snapshot_state(snapshots, 0, False)
+    assert maximum == 3 and selected == 3
+    assert label == '29 Aug 2024 · 12:00 CEST'
+    assert [marks[i]['label'] for i in range(4)] == ['00:00', '01:00', '02:00', '12:00']
+    assert app.opf_snapshot_state(snapshots, 1, True)[-1] == '29 Aug 2024 · 01:00 CEST'
+
+    # NetCDF snapshots are naive UTC; they must give the same local clock.
+    assert app.opf_snapshot_state(snapshots.tz_localize(None), 1, True) == app.opf_snapshot_state(snapshots, 1, True)
