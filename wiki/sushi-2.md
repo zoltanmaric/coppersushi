@@ -97,3 +97,7 @@ limits are recorded in the deployment README.
 
 The OPF page first displays its basemap and camera, then adds the network when the
 figure is ready. A small loading label leaves the map visible during that request.
+
+Image preparation precomputes each OPF hour into a token-free compressed figure.
+Runtime reads the selected hour and supplies the Mapbox token; local checkouts
+without the bundle retain on-demand figure construction.

@@ -32,8 +32,10 @@ The function runs in eu-west-1 with 2 GB memory, 1 GB of `/tmp` space, a
 Related tables publish together, and per-hour endpoint discoveries merge with
 the seed without losing concurrent discoveries. Failed fetches remain retryable.
 
-The image includes solved network data and derived zone outlines. The page
-shell uses the outline bundle and defers PyPSA imports until an OPF request.
+The image includes derived zone outlines and all 24 hourly OPF figures. Each
+compressed figure contains one hour without credentials; runtime reads the
+selected hour and adds the Mapbox token. Neither page reconstructs the solved
+network at runtime. Local checkouts without bundles render on demand.
 Lambda initialization and first-use data loading are separate costs. Buffered
 synchronous responses must fit Lambda's 6 MB limit. Scale-to-zero removes idle
 compute charges; storage, logs and requests still incur charges.
