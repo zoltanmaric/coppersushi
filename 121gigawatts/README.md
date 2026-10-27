@@ -41,6 +41,10 @@ the existing bookmark and gallery styles. The migration was rehearsed locally
 through Ghost 4.48.9 and 5.130.6 to 6.72.0; the live Ghost installation has not
 been upgraded.
 
+[CI](.github/workflows/test.yml) runs `yarn test:ci` to build the theme and check
+Ghost 6 compatibility. The two known, non-blocking warnings concern optional
+custom font controls and the page title/feature-image toggle.
+
 ## Automatic deployment
 
 [The deployment workflow](.github/workflows/deploy-theme.yml) is configured to
