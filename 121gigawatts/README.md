@@ -45,6 +45,21 @@ it does not upgrade Ghost or restore content.
 and checks Ghost 6 compatibility. The two known, non-blocking warnings concern
 optional custom fonts and the page title/feature-image toggle.
 
+## Animated images
+
+Precompress animations before uploading. Ghost can recompress uploads; verify
+its saved original before using that URL to preserve the chosen quality.
+Our [image-quality discussion](https://forum.ghost.org/t/image-compression-configuration/13545)
+explains why controlling compression matters.
+
+Warm the responsive image URLs rendered by the theme one at a time. Successful
+resizes are saved and reused. Ghost 6.72 limits each resize operation to ten
+seconds; a timeout redirects to the original and later requests retry the work.
+For sizes that time out, generate animated variants offline and install them at
+`content/images/size/w<width>/<year>/<month>/<filename>`, matching existing cache
+ownership and permissions. Keep originals, avoid enlargement, and verify animation
+timing. Check that the rendered URLs return WebP directly without a slow redirect.
+
 ## Run or migrate Ghost
 
 Follow the [hosting runbook](hosting/README.md) for private inputs, server setup,

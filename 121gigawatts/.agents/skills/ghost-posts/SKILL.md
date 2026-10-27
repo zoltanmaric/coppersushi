@@ -23,6 +23,19 @@ or its [JavaScript client](https://docs.ghost.org/admin-api/javascript).
   is already correct, do not save. Preserve editor structure instead of
   round-tripping rendered HTML through `source=html`.
 
+## Images
+
+Upload replacements with `POST /ghost/api/admin/images/upload/` using multipart
+`file` and `purpose=image`. The returned `images[0].url` is a stored image URL;
+an upload does not attach itself to a post or replace an existing image.
+Update the intended Lexical image `src`, HTML-card image attributes, bookmark
+thumbnail metadata, or post `feature_image` (landing-page cards). Reuse uploads
+for repeated images and retain originals for recovery. Verify hosted size,
+dimensions and animation: Ghost can recompress uploads. If using its saved
+original copy instead, verify that URL exists and its bytes match the conversion.
+Also check the actual responsive URLs rendered by the theme for slow resize
+redirects; see the [animated-image workflow](../../../README.md#animated-images).
+
 ## Preview
 
 - Create a temporary draft with the proposed content using
@@ -33,8 +46,9 @@ or its [JavaScript client](https://docs.ghost.org/admin-api/javascript).
   Leave the original post untouched, including when it is already a draft.
 - Use the saved draft's UUID to provide `<site-url>/p/<uuid>/`. Open it to check
   the proposed change. A published post's `/p/` URL redirects to its live page.
-- Return that Ghost preview link and a short change summary. Wait for explicit
-  approval before applying the change to the original post.
+- Return paired **Before** (original published URL) and **After** (Ghost preview
+  URL) links with a short change summary. For an unpublished original, use its
+  Ghost preview URL as Before. Wait for explicit approval before applying changes.
 
 ## Apply
 
