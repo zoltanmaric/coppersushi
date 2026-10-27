@@ -25,7 +25,8 @@ import pandas as pd
 import pandera as pa
 from pandera.typing import DataFrame
 
-from coppersushi import REPO, cnecs
+from coppersushi import cnecs
+from coppersushi.data_sources import cache
 from coppersushi.data_model.jao import (
     ActiveConstraints,
     ActiveExternalConstraints,
@@ -42,7 +43,7 @@ from coppersushi.market_day import MarketDay
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://publicationtool.jao.eu/core/api/data"
-JAO_DIR = REPO / "data" / "jao"
+JAO_DIR = cache.DATA_DIR / "jao"
 TIMEOUT_SECONDS = 300
 
 
@@ -275,8 +276,8 @@ def seed_element_ends(days: list[str]) -> Path:
 def load_element_ends(interval: pd.Timestamp, required: pd.DataFrame) -> DataFrame[ElementEnds]:
     """Use the seed, fetching only the viewed hour when an active element is absent.
 
-    The image carries the seed through dyno restarts. Runtime additions are disposable:
-    losing one only costs another hourly fetch, so no background job or lock is needed.
+    The image carries the seed. Each durable hourly entry contains all the endpoints
+    returned by that hour, never just one instance's missing subset.
     """
     try:
         ends = read_element_ends()
@@ -288,8 +289,20 @@ def load_element_ends(interval: pd.Timestamp, required: pd.DataFrame) -> DataFra
     # Work in UTC: flooring a local DST-change hour can be ambiguous.
     hour = interval.tz_convert("UTC").floor("h")
     try:
-        rows = _get("finalComputation", hour, hour + pd.Timedelta(hours=1), timeout=25)
-        fetched = cnecs.element_ends(rows)
+        directory = JAO_DIR / "endpoints" / hour.strftime("%Y%m%dT%HZ")
+        key = f"jao/endpoints/{hour.strftime('%Y%m%dT%HZ')}"
+        name = "element-ends.csv"
+        if not (directory / name).exists():
+            cache.restore(key, directory, (name,))
+        try:
+            fetched = pd.read_csv(directory / name).pipe(lambda f: _restore_blanks(f, ElementEnds)).pipe(ElementEnds.validate)
+            _require_element_ends(required, pd.concat([ends, fetched], ignore_index=True))
+        except (OSError, ValueError, pa.errors.SchemaError, InvalidDomainCache):
+            rows = _get("finalComputation", hour, hour + pd.Timedelta(hours=1), timeout=25)
+            fetched = cnecs.element_ends(rows)
+            _require_element_ends(required, pd.concat([ends, fetched], ignore_index=True))
+            cache.atomic_text(directory / name, fetched.to_csv(index=False))
+            cache.publish(key, directory, (name,))
         combined = pd.concat([ends, fetched], ignore_index=True).drop_duplicates(
             ["eic", "tso", "name"], keep="last"
         )
@@ -308,16 +321,19 @@ def load_active_day(day: str, refresh: bool = False) -> ActiveDay:
     validation and is fetched again once. A failure after that is the feed's and propagates.
     """
     directory = day_dir(day)
-    first = _path(directory, f"active_{ActiveDay._fields[0]}")
-    if refresh or not first.is_file():
-        fetch_active_day(day)
-        return read_active_day(directory)
-    try:
-        return read_active_day(directory)
-    except pa.errors.SchemaError as stale:
-        logger.info("jao: cached %s predates the current tables, fetching again: %s", day, stale)
-        fetch_active_day(day)
-        return read_active_day(directory)
+    names = tuple(_path(directory, f"active_{name}").name for name in ActiveDay._fields)
+    key = f"jao/active/{day}"
+    if not refresh:
+        if not all((directory / name).is_file() for name in names):
+            cache.restore(key, directory, names)
+        try:
+            return read_active_day(directory)
+        except (OSError, ValueError, pa.errors.SchemaError) as stale:
+            logger.info("jao: refreshing unusable active cache for %s: %s", day, stale)
+    fetch_active_day(day)
+    result = read_active_day(directory)
+    cache.publish(key, directory, names)
+    return result
 
 
 def _path(directory: Path, name: str) -> Path:

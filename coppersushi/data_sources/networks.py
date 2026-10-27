@@ -1,11 +1,15 @@
 """The shelf of solved networks under ``networks/`` (Git LFS objects): where they are, and how to open them."""
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import hashlib
 import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-import pypsa
+if TYPE_CHECKING:
+    import pypsa
 
 from coppersushi import REPO
 
@@ -46,4 +50,5 @@ def load(path: Path) -> pypsa.Network:
     """Open a network file, failing readably when it is still a Git LFS pointer."""
     if path.stat().st_size < 1024 and path.read_bytes().startswith(b"version https://git-lfs"):
         raise RuntimeError(f"{path} is a Git LFS pointer; run `git lfs pull` (see README)")
+    import pypsa
     return pypsa.Network(path)

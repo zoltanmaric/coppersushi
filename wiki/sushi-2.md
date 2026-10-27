@@ -30,7 +30,7 @@ flowchart LR
     jao_endpoint_cache["jao_endpoint_cache<br/>validated seed bundled in the image; viewed-hour misses fetched and cached locally"]
     osm_locator["osm_locator<br/>core-tso-data's OSM-locator substation coordinates, unlicensed, fetched locally"]
     cnec_geometry["cnec_geometry<br/>each named element and publisher placed by its published substations; interim until jao_elements"]
-    zone_shapes["zone_shapes<br/>Core bidding-zone polygons read off solved_network's country shapes"]
+    zone_shapes["zone_shapes<br/>Core bidding-zone polygons derived from solved_network at image build; small bundled GeoJSON read at runtime"]
     mapbox_basemap["mapbox_basemap<br/>Mapbox's dark style fetched per process, label layers removed"]
 
     jao_static_grid["jao_static_grid<br/>JAO's Core Static Grid Model, fetched per release: real ratings and R/X/B/G per element EIC"]
@@ -91,3 +91,5 @@ switch to the full layout requires the article iframe to use `/embed/opf-2024` f
 that article edit and root switch remain pending. Both 2013 app models are removed.
 
 OPF responses carry only the selected hour’s four traces; the full figure stays cached on the server.
+
+Dynamic source caches optionally persist complete validated bundles in private S3. Local disk is the default; endpoint entries contain a complete published hour.
