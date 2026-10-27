@@ -43,6 +43,13 @@ thing over polishing its parts; do not optimize for deleted line counts.
 
 ## Improve from use
 
+- Validate discovery with fresh runs from the skill and the same scope, without
+  prior candidate lists or hoped-for deletions in the agent's context. Keep expected
+  targets with the evaluator; compare them with the result afterward. Improve the
+  general method and rerun from the same baseline rather than coaching the cleanup
+  agent toward individual targets. Keep correctness fixes from review distinct from
+  evidence that Reaper discovered something independently.
+
 - Record consequential outcomes in `wiki/rule-provenance.md`: the search method,
   evidence of useful yield or wasted effort, false positives, and later restorations
   when known. Link the cleanup PR; do not create a second deletion ledger.
