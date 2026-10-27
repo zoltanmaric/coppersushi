@@ -10,7 +10,7 @@ With `image_uri` omitted, the first apply creates the private repository, cache,
 metadata, role and logs. Set keys using `python infra/lambda/configure-keys.py --profile <profile>`
 from the repo root. Values come from the environment or ignored `.secrets/`, never argv or state.
 
-Build from the repo root with `docker build --platform linux/amd64 --target lambda -t <image> .`.
+Build from the repo root with `docker build --platform linux/amd64 --provenance=false --target lambda -t <image> .`.
 The [Heroku build inputs](../../README.md#installation-on-heroku) also supply the network,
 endpoint seed and locator. Authenticate to private ECR, tag and push the image to the
 `repository_url` output. Add its digest URI as `image_uri` in the ignored variables file;
@@ -22,8 +22,7 @@ enables S3 cache bundles; local use without it retains disk-only behavior. Lambd
 existing concurrency limit of ten; it does not request a quota increase.
 
 State, plans, account identifiers and credentials remain ignored. Do not destroy the cache
-bucket until its retained data is deliberately no longer needed. Production cutover and
-blog edits require a separate user decision.
+bucket until its retained data is deliberately no longer needed.
 
 ## Runtime
 
