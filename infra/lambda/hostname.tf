@@ -49,7 +49,7 @@ resource "aws_cloudfront_distribution" "app" {
   enabled         = true
   is_ipv6_enabled = true
   aliases         = [var.custom_domain]
-  comment         = "Copper Sushi Lambda trial"
+  comment         = "Copper Sushi production hosting"
   price_class     = "PriceClass_100"
 
   origin {
