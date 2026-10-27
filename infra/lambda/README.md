@@ -1,5 +1,7 @@
 # AWS Lambda deployment
 
+Production: [coppersushi.121gigawatts.org](https://coppersushi.121gigawatts.org).
+
 Terraform owns the Lambda function, private image repository, private S3 cache,
 secret metadata, runtime permissions and logs. The `lambda` Docker target serves
 the Dash app through AWS Web Adapter; the default target supports Heroku.
