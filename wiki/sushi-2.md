@@ -103,7 +103,7 @@ Runtime reads the selected hour and supplies the Mapbox token; local checkouts
 without the bundle retain on-demand figure construction.
 
 An optional CloudFront hostname fronts the Lambda deployment, with an ACM certificate
-and externally managed DNS; see [hosting](../infra/lambda/README.md#hostname).
+and externally managed DNS; see [hosting](../infra/lambda/README.md#delivery).
 
 CloudFront caches only static asset routes. Page selection, layouts and data callbacks
-continue to use the existing server-side flow; see [hosting](../infra/lambda/README.md#hostname).
+continue to use the existing server-side flow; see [hosting](../infra/lambda/README.md#delivery).
