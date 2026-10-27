@@ -45,16 +45,6 @@ been upgraded.
 Ghost 6 compatibility. The two known, non-blocking warnings concern optional
 custom font controls and the page title/feature-image toggle.
 
-## Automatic deployment
-
-[The deployment workflow](.github/workflows/deploy-theme.yml) is configured to
-upload the theme as `121gigawatts-master` on pushes to `master`. It requires the
-GitHub Actions secrets `GHOST_ADMIN_API_URL` and `GHOST_ADMIN_API_KEY`.
-
-**The workflow needs repair before use:** it targets the retired
-`ubuntu-18.04` runner. Credential validity has not been verified. The deployment
-job also has no build step, so compiled assets must be updated before upload.
-
 ## License
 
 Based on Casper. Copyright (c) 2013–2020 Ghost Foundation.
