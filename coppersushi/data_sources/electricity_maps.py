@@ -25,13 +25,14 @@ import pandera as pa
 from pandera.typing import DataFrame
 
 from coppersushi import REPO, market
+from coppersushi.data_sources import cache
 from coppersushi.data_model.market import DayAheadPrices
 from coppersushi.market_day import MarketDay
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://api.electricitymap.org/v4/price-day-ahead/actual"
-CACHE_DIR = REPO / "data" / "electricity-maps"
+CACHE_DIR = cache.DATA_DIR / "electricity-maps"
 TOKEN_FILE = REPO / ".secrets" / ".electricity_maps_api_key"
 TIMEOUT_SECONDS = 60
 # The route's names for the market time units `MarketDay.market_time_unit` can name.
@@ -116,7 +117,7 @@ def write_day(day: str, prices: DataFrame[DayAheadPrices]) -> Path:
     """Cache normalized prices locally; ``data/`` is gitignored."""
     path = day_path(day)
     path.parent.mkdir(parents=True, exist_ok=True)
-    prices.to_csv(path, index=False)
+    cache.atomic_text(path, prices.to_csv(index=False))
     logger.info("electricity maps: wrote %s", path)
     return path
 
@@ -138,6 +139,9 @@ def load_day(day: str, refresh: bool = False) -> DataFrame[DayAheadPrices]:
     is fetched once more. A failure after that is the service's and propagates.
     """
     path = day_path(day)
+    key = f"prices/core/{day}"
+    if not refresh and not path.is_file():
+        cache.restore(key, path.parent, (path.name,))
     if not refresh and path.is_file():
         try:
             prices = read_day(path)
@@ -146,6 +150,7 @@ def load_day(day: str, refresh: bool = False) -> DataFrame[DayAheadPrices]:
         except (pa.errors.SchemaError, ValueError) as stale:
             logger.info("electricity maps: cached %s is fetched again: %s", day, stale)
     write_day(day, fetch_day(day))
+    cache.publish(key, path.parent, (path.name,))
     return read_day(path)
 
 
