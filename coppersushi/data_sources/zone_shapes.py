@@ -34,5 +34,6 @@ def load() -> pd.DataFrame:
     return bidding_zones.core_zone_shapes(networks.load(networks.solved("2024-08-29")).shapes)
 
 
-if __name__ == "__main__":
+def build() -> None:
+    """Derive the outline bundle from the solved network, replacing any old bundle."""
     write(bidding_zones.core_zone_shapes(networks.load(networks.solved("2024-08-29")).shapes), BUNDLE)
