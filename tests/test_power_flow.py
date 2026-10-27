@@ -1,4 +1,5 @@
 import re
+import json
 
 import pypsa
 import pytest
@@ -87,3 +88,17 @@ class TestPlotPowerFlow:
         fig = ppf.colored_network_figure(n, 'net_power')
         with pytest.raises(IndexError, match='outside the solved day'):
             ppf.show_snapshot(fig, index)
+
+    def test_precomputed_hours_preserve_figures_without_baking_credentials(self, n, tmp_path):
+        from coppersushi.data_sources import opf_bundle
+        fig = ppf.colored_network_figure(n, 'net_power', mapbox_token='build-token')
+        opf_bundle.write(fig, n.snapshots, tmp_path)
+        assert opf_bundle.snapshots(tmp_path).equals(n.snapshots.tz_localize('UTC'))
+        for index in [0, 6, len(n.snapshots) - 1]:
+            loaded = opf_bundle.load(index, 'runtime-token', tmp_path)
+            expected = ppf.show_snapshot(fig, index)
+            expected.update_layout(mapbox_accesstoken='runtime-token')
+            assert json.loads(loaded.to_json()) == json.loads(expected.to_json())
+        import gzip
+        assert 'build-token' not in gzip.decompress((tmp_path / '0.json.gz').read_bytes()).decode()
+        assert fig.layout.mapbox.accesstoken == 'build-token'

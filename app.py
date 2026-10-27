@@ -12,7 +12,7 @@ from dash.exceptions import PreventUpdate
 
 from coppersushi import cnec_geometry, cnec_page, map_style, power_flow
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
-from coppersushi.data_sources import zone_shapes, credentials, virtual_attribution, cnec_attribution as attribution_source, electricity_maps, jao, mapbox_styles, networks, osm_locator
+from coppersushi.data_sources import opf_bundle, zone_shapes, credentials, virtual_attribution, cnec_attribution as attribution_source, electricity_maps, jao, mapbox_styles, networks, osm_locator
 from coppersushi.market_day import MARKET_TZ, MarketDay
 
 # Every page's controls live in one tree that the router swaps, so a callback whose
@@ -190,12 +190,19 @@ def render(pathname: str, snapshot_index: int, slider_moved: bool) -> tuple:
     if network_key is None:
         raise PreventUpdate
     try:
-        fig, snapshots = figure_for(network_key)
+        snapshots = opf_bundle.snapshots() if network_key == 'opf-2024' else None
+        if snapshots is None:
+            fig, snapshots = figure_for(network_key)
+            state = opf_snapshot_state(snapshots, snapshot_index, slider_moved)
+            selected = power_flow.show_snapshot(fig, state[2])
+        else:
+            state = opf_snapshot_state(snapshots, snapshot_index, slider_moved)
+            selected = opf_bundle.load(state[2], mapbox_token())
     except Exception as e:  # noqa: BLE001 — every loader failure must reach the page
         logging.exception('Loading %s failed', network_key)
         return no_update, no_update, no_update, no_update, no_update, f'Could not load {network_key}: {e}', True
-    maximum, marks, snapshot_index, label = opf_snapshot_state(snapshots, snapshot_index, slider_moved)
-    return power_flow.show_snapshot(fig, snapshot_index), maximum, marks, snapshot_index, label, '', False
+    maximum, marks, snapshot_index, label = state
+    return selected, maximum, marks, snapshot_index, label, '', False
 
 
 def opf_snapshot_state(snapshots: pd.Index, snapshot_index: int, slider_moved: bool) -> tuple:
