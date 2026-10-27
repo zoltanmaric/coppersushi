@@ -27,3 +27,9 @@ networks/candidates/
 # Implementation plans are working documents, not deliverables: they are amended as the work
 # teaches us things, so a checked-in copy differs per branch and goes stale on the lower ones.
 docs/superpowers/plans/
+
+/infra/lambda/.terraform/
+/infra/lambda/*.tfstate*
+/infra/lambda/*.tfvars
+/infra/lambda/*.tfvars.json
+/infra/lambda/*.tfplan

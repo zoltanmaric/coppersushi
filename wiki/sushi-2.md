@@ -90,6 +90,7 @@ in Europe/Brussels time. `/` uses the embed during the first rollout. The later 
 switch to the full layout requires the article iframe to use `/embed/opf-2024` first;
 that article edit and root switch remain pending. Both 2013 app models are removed.
 
-OPF responses carry only the selected hour’s four traces; the full figure stays cached on the server.
-
-Dynamic source caches optionally persist complete validated bundles in private S3. Local disk is the default; endpoint entries contain a complete published hour.
+The [production Lambda deployment](../infra/lambda/README.md) runs the same Dash
+server behind AWS Web Adapter (OPF responses carry only the selected hour’s four traces), with complete dynamic-cache bundles in private S3 and
+API keys read from a dedicated secret. Rendering, S3 reuse and cross-origin framing are verified; measured startup
+limits are recorded in the deployment README.

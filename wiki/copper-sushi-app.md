@@ -4,9 +4,11 @@ Interactive map of the European transmission grid showing an **optimal power flo
 
 ## Hosting
 
-Plan of record, agreed 2026-10-04: move the app to AWS Lambda, with a durable cache in S3. The deployment must be verified with the existing Dash app before switching traffic; migration is separate from the JAO endpoint-correctness fix in PR #95.
+The [Lambda deployment README](../infra/lambda/README.md) defines production hosting and cache behavior.
 
-Design for occasional visitors and low idle cost. An occasional load of roughly 30 seconds is acceptable; handling viral traffic is not a requirement. Cache misses should fetch the requested hour's missing endpoints and retain them for reuse; failed fetches should be retryable. Background fetching of whole days is not required. These are migration requirements, not implemented behaviour or measured Lambda performance.
+AWS Lambda with a durable S3 cache is the approved production host.
+
+Design for occasional visitors and low idle cost. An occasional load of roughly 30 seconds is acceptable; handling viral traffic is not a requirement. Cache misses should fetch the requested hour's missing endpoints and retain them for reuse; failed fetches should be retryable. Background fetching of whole days is not required. Resource settings and runtime limits are recorded in the deployment README.
 
 ## What the map shows
 
