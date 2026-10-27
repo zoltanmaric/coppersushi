@@ -219,7 +219,7 @@
       const points = day.points,
         reference = $("reference").checked,
         W = 1100,
-        H = 380,
+        H = 760,
         L = 64,
         R = 22,
         T = 30,
