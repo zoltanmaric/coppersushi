@@ -15,3 +15,9 @@ worktrees
 wiki
 tests
 networks/candidates
+
+infra/lambda/.terraform
+infra/lambda/*.tfstate*
+infra/lambda/*.tfvars
+infra/lambda/*.tfvars.json
+infra/lambda/*.tfplan

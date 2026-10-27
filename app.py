@@ -12,7 +12,7 @@ from dash.exceptions import PreventUpdate
 
 from coppersushi import cnec_geometry, cnec_page, map_style, power_flow
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
-from coppersushi.data_sources import zone_shapes, virtual_attribution, cnec_attribution as attribution_source, electricity_maps, jao, mapbox_styles, networks, osm_locator
+from coppersushi.data_sources import zone_shapes, credentials, virtual_attribution, cnec_attribution as attribution_source, electricity_maps, jao, mapbox_styles, networks, osm_locator
 from coppersushi.market_day import MARKET_TZ, MarketDay
 
 # Every page's controls live in one tree that the router swaps, so a callback whose
@@ -47,7 +47,7 @@ _basemap: dict[str, dict] = {}
 
 def mapbox_token() -> str:
     """From the environment (deploys) or the gitignored secrets file (README: Mapbox token)."""
-    return os.environ.get('MAPBOX_TOKEN') or Path('.secrets/.mapbox_token').read_text().strip()
+    return credentials.token('MAPBOX_TOKEN', Path('.secrets/.mapbox_token'))
 
 
 def basemap() -> dict:

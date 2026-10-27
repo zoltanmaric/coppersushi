@@ -1,4 +1,4 @@
-FROM --platform=linux/x86_64 mambaorg/micromamba
+FROM --platform=linux/x86_64 mambaorg/micromamba AS runtime
 
 # Add our code
 ADD . /opt/webapp/
@@ -26,3 +26,15 @@ RUN micromamba run -n base python -m coppersushi.data_sources.image_data
 
 # Let a slow fetch finish caching even if Heroku's router has already timed out.
 CMD gunicorn --timeout 90 --bind 0.0.0.0:$PORT app:server
+
+# Opt in with --target lambda; the default build retains the Heroku command.
+FROM runtime AS lambda
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:1.1.0 /lambda-adapter /opt/extensions/lambda-adapter
+ENV COPPERSUSHI_DATA_DIR=/tmp/coppersushi/data \
+    MPLCONFIGDIR=/tmp/matplotlib \
+    AWS_LWA_PORT=8080 \
+    AWS_LWA_ASYNC_INIT=true \
+    AWS_LWA_ENABLE_COMPRESSION=true
+CMD ["bash", "infra/lambda/start.sh"]
+
+FROM runtime AS heroku

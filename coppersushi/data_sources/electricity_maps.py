@@ -14,7 +14,6 @@ repository fixtures; cached CSVs live under ignored ``data/electricity-maps/``.
 from concurrent.futures import ThreadPoolExecutor
 import json
 import logging
-import os
 import sys
 import urllib.parse
 import urllib.request
@@ -25,7 +24,7 @@ import pandera as pa
 from pandera.typing import DataFrame
 
 from coppersushi import REPO, market
-from coppersushi.data_sources import cache
+from coppersushi.data_sources import cache, credentials
 from coppersushi.data_model.market import DayAheadPrices
 from coppersushi.market_day import MarketDay
 
@@ -41,15 +40,7 @@ TEMPORAL_GRANULARITY = {"h": "hourly", "15min": "15_minutes"}
 
 def api_token() -> str:
     """The API credential, never included in a URL or log message."""
-    token = os.environ.get("ELECTRICITY_MAPS_API_KEY")
-    if token:
-        return token
-    try:
-        return TOKEN_FILE.read_text().strip()
-    except FileNotFoundError as error:
-        raise RuntimeError(
-            "set ELECTRICITY_MAPS_API_KEY or create .secrets/.electricity_maps_api_key"
-        ) from error
+    return credentials.token("ELECTRICITY_MAPS_API_KEY", TOKEN_FILE)
 
 
 def _stamp(moment) -> str:
