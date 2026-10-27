@@ -8,7 +8,7 @@ from pathlib import Path
 import pandas as pd
 
 from coppersushi import cnec_attribution
-from coppersushi.data_sources import jao
+from coppersushi.data_sources import cache, jao
 from coppersushi.market_day import MarketDay
 
 logger = logging.getLogger(__name__)
@@ -18,6 +18,9 @@ def load_day(day: str, refresh: bool = False) -> pd.DataFrame:
     """Cache only complete successful inputs; optional outages leave contributions unavailable."""
     path = jao.day_dir(day) / "attribution.csv"
     delivery = MarketDay.on(day)
+    key = f"jao/attribution/{day}"
+    if not refresh and not path.is_file():
+        cache.restore(key, path.parent, (path.name,))
     if path.is_file() and not refresh:
         try:
             frame = pd.read_csv(path)
@@ -54,4 +57,5 @@ def load_day(day: str, refresh: bool = False) -> pd.DataFrame:
             temporary.replace(path)
         finally:
             temporary.unlink(missing_ok=True)
+        cache.publish(key, path.parent, (path.name,))
     return frame

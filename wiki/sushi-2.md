@@ -91,3 +91,5 @@ switch to the full layout requires the article iframe to use `/embed/opf-2024` f
 that article edit and root switch remain pending. Both 2013 app models are removed.
 
 OPF responses carry only the selected hour’s four traces; the full figure stays cached on the server.
+
+Dynamic source caches optionally persist complete validated bundles in private S3. Local disk is the default; endpoint entries contain a complete published hour.

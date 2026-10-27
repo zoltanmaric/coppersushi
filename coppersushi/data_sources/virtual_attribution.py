@@ -2,32 +2,22 @@
 
 import json
 import logging
-import tempfile
-from pathlib import Path
 
 import pandas as pd
 
 from coppersushi import cnec_attribution, market
-from coppersushi.data_sources import electricity_maps, jao
+from coppersushi.data_sources import cache, electricity_maps, jao
 from coppersushi.market_day import MarketDay
 
 logger = logging.getLogger(__name__)
 EM_ZONES = {'DK1': 'DK-DK1', 'DK2': 'DK-DK2', 'NO2': 'NO-NO2', 'SE4': 'SE-SE4', 'LT': 'LT', 'BG': 'BG'}
 
 
-def _save(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(dir=path.parent, mode='w', delete=False) as file:
-        temporary = Path(file.name)
-        file.write(text)
-    try:
-        temporary.replace(path)
-    finally:
-        temporary.unlink(missing_ok=True)
-
-
 def _prices(day: str, zone: str) -> pd.DataFrame:
     path = electricity_maps.CACHE_DIR / f'adjacent-{zone}-{day}.csv'
+    key = f"prices/adjacent/{zone}/{day}"
+    if not path.exists():
+        cache.restore(key, path.parent, (path.name,))
     if path.exists():
         try:
             prices = electricity_maps.read_day(path)
@@ -36,7 +26,8 @@ def _prices(day: str, zone: str) -> pd.DataFrame:
         except Exception:
             logger.exception('Ignoring unusable adjacent price cache for %s %s', zone, day)
     fetched = electricity_maps.fetch_day(day, zones=(EM_ZONES[zone],)).assign(zone=zone)
-    _save(path, fetched.to_csv(index=False))
+    cache.atomic_text(path, fetched.to_csv(index=False))
+    cache.publish(key, path.parent, (path.name,))
     return fetched
 
 
@@ -49,6 +40,9 @@ def load_interval(day: str, interval: pd.Timestamp, hub: str) -> pd.DataFrame | 
         outer = 0.0
         if hub in cnec_attribution.NORDIC_HUBS:
             path = jao.JAO_DIR / 'nordic' / f'{interval.strftime("%Y%m%dT%H%MZ")}.json'
+            key = f"jao/nordic/{path.stem}"
+            if not path.exists():
+                cache.restore(key, path.parent, (path.name,))
             try:
                 rows = json.loads(path.read_text()) if path.exists() else None
             except (OSError, ValueError):
@@ -61,7 +55,8 @@ def load_interval(day: str, interval: pd.Timestamp, hub: str) -> pd.DataFrame | 
                 outer = cnec_attribution.nordic_outer_term(rows, hub, interval)
                 if outer is None:
                     return None
-                _save(path, json.dumps(rows))
+                cache.atomic_text(path, json.dumps(rows))
+                cache.publish(key, path.parent, (path.name,))
         quotes = _prices(day, other)
         quote = quotes[quotes.interval.eq(interval)]
         if len(quote) != 1:
