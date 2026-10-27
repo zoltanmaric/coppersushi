@@ -12,11 +12,20 @@ Design for occasional visitors and low idle cost. An occasional load of roughly 
 
 - **Dots** = connection points (buses): nearby consumption + generation aggregated. Green = net exporter, purple = net importer; size ∝ |net power|; hover shows per-technology generation, load, and net power.
 - **Triangles** = power flow direction on each line; hover shows flow vs. line capacity.
-- **Violet lines** = loaded near capacity (>99%); a time slider steps through the day in 2-hour snapshots.
+- **Violet lines** = loaded near capacity (>99%); a time slider steps through hourly snapshots, labelled in Europe/Brussels time.
 
 ## The data
 
-One solved day of [PyPSA-Eur](https://github.com/PyPSA/pypsa-eur) (3534 buses, 12 two-hour snapshots, weather year 2013), solved as linear OPF: minimize total generation cost subject to demand coverage, renewable availability (weather), plant capacities, and line limits. Config in the [zoltanmaric/pypsa-eur fork](https://github.com/zoltanmaric/pypsa-eur).
+The checked-in model covers 29 August 2024 on the 2025 OSM-based grid: 4,390 buses
+and 24 hourly snapshots. It is solved as linear OPF: minimize generation cost subject
+to demand, renewable availability, plant capacities and line limits. The pinned workflow
+and configuration are described in [the power-flow architecture](sushi-2.md).
+
+`/opf-2024` includes the two app navigation links. `/embed/opf-2024` uses the same
+figure and callbacks without navigation. During the first rollout `/` also shows the
+embed (`ROOT_VIEW=embed`, the default). Switching to `ROOT_VIEW=full` is deferred until
+the article's iframe points to the permanent embed route. Article edits are outside
+this app change. [Approved rollout design](../explainers/opf-2024-embed.html).
 
 **Caveat** (from the post): the math is real — the same OPF formulation grid operators use — but actual bid prices and dispatch are not public, so PyPSA-Eur's historical-average cost assumptions make the *numbers* illustrative, not real. See ch. 4 of the [PyPSA-Eur paper](https://arxiv.org/abs/1806.01613).
 

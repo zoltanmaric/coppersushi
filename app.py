@@ -13,7 +13,7 @@ from dash.exceptions import PreventUpdate
 from coppersushi import bidding_zones, cnec_geometry, cnec_page, map_style, power_flow
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
 from coppersushi.data_sources import virtual_attribution, cnec_attribution as attribution_source, electricity_maps, jao, mapbox_styles, networks, osm_locator
-from coppersushi.market_day import MarketDay
+from coppersushi.market_day import MARKET_TZ, MarketDay
 
 # Every page's controls live in one tree that the router swaps, so a callback whose
 # components belong to the other page is simply not fired.
@@ -27,8 +27,6 @@ app = Dash(
 server = app.server
 
 NETWORK_LOADERS = {
-    'v1': lambda: networks.load(networks.NETWORKS_DIR / 'opf-2013-07-17-v1.nc'),
-    'opf-2013': lambda: networks.load(networks.solved('2013-07-17')),
     'opf-2024': lambda: networks.load(networks.solved('2024-08-29')),
 }
 # Unsanctioned solves are viewable at /candidates/<file stem>
@@ -36,6 +34,10 @@ NETWORK_LOADERS.update({
     f'candidates/{path.stem}': (lambda path=path: networks.load(path))
     for path in sorted(networks.CANDIDATES_DIR.glob('*.nc'))
 })
+ROOT_VIEW = os.environ.get('ROOT_VIEW', 'embed')
+if ROOT_VIEW not in {'embed', 'full'}:
+    raise ValueError('ROOT_VIEW must be embed or full')
+
 CNEC_ROUTE = 'cnec'  # /cnec, or /cnec/<delivery day> to open on one day
 ZONE_SHAPES_FROM = '2024-08-29'  # Any solved network carries the same country polygons
 _cache: dict[str, tuple[go.Figure, pd.Index]] = {}
@@ -102,9 +104,23 @@ def cnec_day(day: str) -> cnec_page.Day:
     return _cnec_days[day]
 
 
-def network_key_from_path(pathname: str) -> str:
+def network_key_from_path(pathname: str) -> str | None:
     key = (pathname or '').strip('/')
-    return key if key in NETWORK_LOADERS else 'v1'
+    if key in {'', 'embed/opf-2024'}:
+        return 'opf-2024'
+    return key if key in NETWORK_LOADERS else None
+
+
+def is_embed_path(pathname: str, root_view: str = ROOT_VIEW) -> bool:
+    key = (pathname or '').strip('/')
+    return key == 'embed/opf-2024' or (not key and root_view == 'embed')
+
+
+def navigation() -> html.Nav:
+    return html.Nav([
+        dcc.Link('2024 OPF on the 2025 grid', href='/opf-2024'),
+        dcc.Link('Prices and binding CNECs', href=f'/{CNEC_ROUTE}'),
+    ], className='app-navigation')
 
 
 def cnec_day_from_path(pathname: str) -> str | None:
@@ -119,6 +135,7 @@ def is_cnec_path(pathname: str) -> bool:
 
 def network_layout() -> html.Div:
     return html.Div([
+        html.Div(id='opf-time', className='opf-time'),
         dbc.Alert(id='status', color='danger', is_open=False, style={'margin': '0 1em'}),
         dcc.Loading(
             dcc.Graph(
@@ -127,55 +144,70 @@ def network_layout() -> html.Div:
                 figure=dict(layout=dict(autosize=True)),
                 config=dict(responsive=True, displayModeBar=False, scrollZoom=True)
             ),
-            type='circle', delay_show=300, parent_style={'height': '90vh'},
+            type='circle', delay_show=300,
+            parent_style={'flex': '1', 'minHeight': '0', 'position': 'relative',
+                          'display': 'flex', 'flexDirection': 'column'},
             overlay_style={'visibility': 'visible', 'opacity': 0.4},
         ),
         html.Div(
             dcc.Slider(
                 0, 1, step=1, value=0,
-                id='snapshot-slider'
-            )
+                id='snapshot-slider', allow_direct_input=False
+            ),
+            className='opf-slider',
         )
-    ])
+    ], className='opf-view')
 
 
 app.layout = html.Div([
     dcc.Location(id='url'),
-    html.Div(
-        [
-            dcc.Link('2013 model (v1)', href='/', style={'marginRight': '1em'}),
-            dcc.Link('2013 OPF on the 2025 grid', href='/opf-2013', style={'marginRight': '1em'}),
-            dcc.Link('2024 OPF on the 2025 grid', href='/opf-2024', style={'marginRight': '1em'}),
-            dcc.Link('Prices and binding CNECs', href=f'/{CNEC_ROUTE}'),  # No day: today's
-        ],
-        style={'padding': '0.4em 1em'}
-    ),
     html.Div(id='page'),
 ])
 
 
 @app.callback(Output('page', 'children'), Input('url', 'pathname'))
-def show_page(pathname: str):
+def show_page(pathname: str, root_view: str = ROOT_VIEW):
     if is_cnec_path(pathname):
-        return cnec_page.layout(cnec_day_from_path(pathname), mapbox_token())
-    return network_layout()
+        return html.Div([navigation(), cnec_page.layout(cnec_day_from_path(pathname), mapbox_token())])
+    if network_key_from_path(pathname) is None:
+        return html.Div([html.H1('Page not found'), dcc.Link('2024 OPF', href='/opf-2024')])
+    return html.Div([
+        *([] if is_embed_path(pathname, root_view) else [navigation()]),
+        network_layout(),
+    ], className='app-page')
+
 
 
 def render(pathname: str, snapshot_index: int, slider_moved: bool) -> tuple:
     """Figure, slider state and status banner for one view; a failed load becomes the banner."""
     network_key = network_key_from_path(pathname)
+    if network_key is None:
+        raise PreventUpdate
     try:
         fig, snapshots = figure_for(network_key)
     except Exception as e:  # noqa: BLE001 — every loader failure must reach the page
         logging.exception('Loading %s failed', network_key)
-        return no_update, no_update, no_update, no_update, f'Could not load {network_key}: {e}', True
-    if not slider_moved or snapshot_index >= len(snapshots):
-        snapshot_index = min(6, len(snapshots) - 1)  # Midday by default
+        return no_update, no_update, no_update, no_update, no_update, f'Could not load {network_key}: {e}', True
+    maximum, marks, snapshot_index, label = opf_snapshot_state(snapshots, snapshot_index, slider_moved)
+    return power_flow.show_snapshot(fig, snapshot_index), maximum, marks, snapshot_index, label, '', False
+
+
+def opf_snapshot_state(snapshots: pd.Index, snapshot_index: int, slider_moved: bool) -> tuple:
+    """Pure local-time labels and selection, shared by normal and embedded OPF views."""
+    # PyPSA stores naive snapshots as UTC; display the operating day's named zone.
+    local = pd.DatetimeIndex(snapshots)
+    local = local.tz_localize('UTC') if local.tz is None else local
+    local = local.tz_convert(MARKET_TZ)
+    if not slider_moved or not 0 <= snapshot_index < len(snapshots):
+        snapshot_index = min(range(len(local)), key=lambda i: abs(local[i].hour - 12))
     marks = {
-        idx: dict(label=str(snapshot.time()), style=dict(writingMode='vertical-rl'))
-        for idx, snapshot in enumerate(snapshots)
+        idx: dict(label=snapshot.strftime('%H:%M')
+                  if snapshot.hour % 4 == 0 or idx == len(local) - 1 else ' ')
+        for idx, snapshot in enumerate(local)
     }
-    return power_flow.show_snapshot(fig, snapshot_index), len(snapshots) - 1, marks, snapshot_index, '', False
+    label = local[snapshot_index].strftime('%d %b %Y · %H:%M %Z')
+    return len(snapshots) - 1, marks, snapshot_index, label
+
 
 
 @app.callback(
@@ -183,6 +215,7 @@ def render(pathname: str, snapshot_index: int, slider_moved: bool) -> tuple:
     Output('snapshot-slider', 'max'),
     Output('snapshot-slider', 'marks'),
     Output('snapshot-slider', 'value'),
+    Output('opf-time', 'children'),
     Output('status', 'children'),
     Output('status', 'is_open'),
     Input('url', 'pathname'),

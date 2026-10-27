@@ -28,7 +28,7 @@
 - [electricity-maps-api.md](electricity-maps-api.md) — Electricity Maps' v4 grid and market signals, this project's Core-wide price-forecast access, and why the data is not a bid curve
 - [backtest-2024-08-29.md](backtest-2024-08-29.md) — one solved day scored against JAO's binding CNECs and settled prices: what each config change bought, and what to fix next
 - [pypsa-eur-sibling.md](pypsa-eur-sibling.md) — PyPSA-Eur as a pinned sibling checkout: why not a submodule, fork refs and rules, the 2026-09-02 refresh record
-- [copper-sushi-app.md](copper-sushi-app.md) — the OPF and CNEC price-influence maps, data provenance, caveats, and the Lambda hosting direction
+- [copper-sushi-app.md](copper-sushi-app.md) — the 2024 OPF, staged article embed, CNEC price-influence map, model caveats and hosting direction
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026
 
 ## Specs (working memory — burn-down state, not settled knowledge)
