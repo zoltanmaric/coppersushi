@@ -254,15 +254,14 @@ def get_interquartile_range(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def show_snapshot(fig: go.Figure, snapshot_index: int) -> go.Figure:
-    active_trace_id_start = snapshot_index * NUM_TRACES_PER_SNAPSHOT
-    active_trace_id_end = active_trace_id_start + NUM_TRACES_PER_SNAPSHOT
-    for trace_id in range(len(fig.data)):
-        if trace_id in range(active_trace_id_start, active_trace_id_end):
-            fig.update_traces(dict(visible=True), selector=trace_id)
-        else:
-            fig.update_traces(dict(visible=False), selector=trace_id)
-
-    return fig
+    """Send only the viewed hour; keep the full server-side figure unchanged."""
+    start = snapshot_index * NUM_TRACES_PER_SNAPSHOT
+    end = start + NUM_TRACES_PER_SNAPSHOT
+    if snapshot_index < 0 or end > len(fig.data):
+        raise IndexError("snapshot index outside the solved day")
+    selected = go.Figure(data=fig.data[start:end], layout=fig.layout)
+    selected.update_traces(visible=True)
+    return selected
 
 
 def colored_network_figure(n: pypsa.Network, what: str, mapbox_token: str | None = None, technology: str = None) -> go.Figure:
@@ -311,7 +310,9 @@ def colored_network_figure(n: pypsa.Network, what: str, mapbox_token: str | None
         fig.add_traces(data=[loaded_branches_trace, easy_branches_trace, branch_direction_trace, node_trace])
 
     # Make first set of traces (nodes & edges) visible
-    fig = show_snapshot(fig, snapshot_index=0)
+    fig.update_traces(visible=False)
+    for trace in fig.data[:NUM_TRACES_PER_SNAPSHOT]:
+        trace.visible = True
 
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0},
                       # Available maps: https://plotly.com/python/mapbox-layers#base-maps-in-layoutmapboxstyle
