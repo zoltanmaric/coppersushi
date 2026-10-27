@@ -1,0 +1,20 @@
+[Unit]
+Description=Ghost - {{ domain }}
+After=network.target mysql.service
+Requires=mysql.service
+
+[Service]
+Type=simple
+User=ghost
+Group=ghost
+WorkingDirectory=/var/www/121gigawatts
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node /var/www/121gigawatts/current/index.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -28,3 +28,22 @@ changelog.md
 changelog.md.bk
 
 .idea/
+
+.secrets/
+
+__pycache__/
+
+# Private deployment inputs and Terraform state (including saved plans)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+hosting/private/
+*.pem
+*.key
+crash.log
+
+.venv/

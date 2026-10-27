@@ -1,0 +1,287 @@
+---
+- name: Configure the Ghost server (never restore data implicitly)
+  hosts: all
+  become: true
+  vars_files:
+    - defaults.yml
+  pre_tasks:
+    - name: Require supported OS and explicit deployment inputs
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.distribution == 'Ubuntu'
+          - ansible_facts.distribution_version == '24.04'
+          - domain is match('^[a-z0-9][a-z0-9.-]+[a-z0-9]$')
+    - name: Validate private inputs
+      ansible.builtin.import_tasks: config.yml
+    - name: Check existing origin certificate when not supplying one
+      ansible.builtin.stat:
+        path: "/etc/ssl/121gigawatts/origin.crt"
+      register: existing_certificate
+      when: origin_certificate_file is not defined
+    - name: Check existing private key when not supplying one
+      ansible.builtin.stat:
+        path: "/etc/ssl/121gigawatts/origin.key"
+      register: existing_key
+      when: origin_key_file is not defined
+    - name: Require supplied or existing TLS files
+      ansible.builtin.assert:
+        that:
+          - origin_certificate_file is defined or existing_certificate.stat.exists
+          - origin_key_file is defined or existing_key.stat.exists
+  tasks:
+    - name: Install distribution packages
+      ansible.builtin.apt:
+        name: [nginx, mysql-server, ca-certificates, curl, gnupg, unzip, ufw, python3-pymysql]
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+    - name: Allocate swap if absent
+      ansible.builtin.command: fallocate -l 2G /swapfile
+      args:
+        creates: /swapfile
+      register: swap_created
+    - name: Restrict swap permissions
+      ansible.builtin.file:
+        path: /swapfile
+        mode: '0600'
+    - name: Format new swap
+      ansible.builtin.command: mkswap /swapfile
+      when: swap_created.changed
+    - name: Persist swap
+      ansible.posix.mount:
+        path: none
+        src: /swapfile
+        fstype: swap
+        opts: sw
+        state: present
+    - name: Inspect active swap
+      ansible.builtin.command: swapon --show=NAME --noheadings
+      register: active_swap
+      changed_when: false
+      check_mode: false
+    - name: Enable swap
+      ansible.builtin.command: swapon /swapfile
+      when: "'/swapfile' not in active_swap.stdout"
+    - name: Reduce swap preference
+      ansible.posix.sysctl:
+        name: vm.swappiness
+        value: '10'
+        sysctl_file: /etc/sysctl.d/90-ghost.conf
+        reload: true
+    - name: Remove the obsolete low-memory MySQL overrides
+      ansible.builtin.file:
+        path: /etc/mysql/mysql.conf.d/99-ghost-small.cnf
+        state: absent
+      notify: Restart mysql
+    - name: Create package key directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+    - name: Fetch NodeSource signing key
+      ansible.builtin.get_url:
+        url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+        dest: /etc/apt/keyrings/nodesource.asc
+        mode: '0644'
+    - name: Configure Node.js 22 repository
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/nodesource.list
+        content: "deb [signed-by=/etc/apt/keyrings/nodesource.asc] https://deb.nodesource.com/node_22.x nodistro main\n"
+        mode: '0644'
+      register: node_repository
+    - name: Install Node.js 22 security updates
+      ansible.builtin.apt:
+        name: nodejs
+        state: latest
+        update_cache: "{{ node_repository.changed }}"
+    - name: Install the pinned Ghost CLI
+      community.general.npm:
+        name: ghost-cli
+        version: "{{ ghost_cli_version }}"
+        global: true
+    - name: Create the code owner without sudo privileges
+      ansible.builtin.user:
+        name: ghostuser
+        shell: /bin/bash
+        password_lock: true
+    - name: Create the unprivileged runtime account
+      ansible.builtin.user:
+        name: ghost
+        system: true
+        home: /var/lib/ghost
+        shell: /usr/sbin/nologin
+    - name: Create the installation directory
+      ansible.builtin.file:
+        path: "/var/www/121gigawatts"
+        state: directory
+        owner: ghostuser
+        group: ghostuser
+        mode: '0775'
+    - name: Inspect installed Ghost version
+      ansible.builtin.stat:
+        path: "/var/www/121gigawatts/current/package.json"
+      register: installed_ghost
+    - name: Read installed Ghost version
+      ansible.builtin.slurp:
+        src: "/var/www/121gigawatts/current/package.json"
+      register: installed_package
+      when: installed_ghost.stat.exists
+    - name: Refuse an implicit Ghost version upgrade
+      ansible.builtin.assert:
+        that: (installed_package.content | b64decode | from_json).version == ghost_version
+        fail_msg: Rehearse and perform version upgrades separately; this playbook only installs or reconciles.
+      when: installed_ghost.stat.exists
+    - name: Install Ghost on an empty server
+      ansible.builtin.command:
+        argv: [runuser, -u, ghostuser, --, ghost, install, "{{ ghost_version }}", --no-setup, --no-start, --no-prompt, --no-check-mem]
+        chdir: "/var/www/121gigawatts"
+        creates: "/var/www/121gigawatts/current/package.json"
+      environment:
+        HOME: /home/ghostuser
+    - name: Start MySQL
+      ansible.builtin.systemd_service:
+        name: mysql
+        enabled: true
+        state: started
+    - name: Create Ghost database
+      community.mysql.mysql_db:
+        name: ghost_prod
+        encoding: utf8mb4
+        collation: utf8mb4_0900_ai_ci
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        config_file: ''
+    - name: Configure Ghost database credentials
+      community.mysql.mysql_user:
+        name: ghostapp
+        host: localhost
+        plugin: caching_sha2_password
+        plugin_auth_string: "{{ ghost_config.database.connection.password }}"
+        update_password: on_create
+        priv: 'ghost_prod.*:ALL'
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        config_file: ''
+      no_log: true
+      notify: Restart ghost
+    - name: Verify existing database credentials before replacing configuration
+      community.mysql.mysql_query:
+        login_host: 127.0.0.1
+        login_user: ghostapp
+        login_password: "{{ ghost_config.database.connection.password }}"
+        login_db: ghost_prod
+        config_file: ''
+        query: SELECT 1
+      no_log: true
+      changed_when: false
+      when: not ansible_check_mode
+    - name: Install private Ghost configuration
+      ansible.builtin.copy:
+        src: "{{ ghost_config_file }}"
+        dest: "/var/www/121gigawatts/config.production.json"
+        owner: ghostuser
+        group: ghost
+        mode: '0640'
+      no_log: true
+      diff: false
+      notify: Restart ghost
+    - name: Give the runtime ownership of content only
+      ansible.builtin.file:
+        path: "/var/www/121gigawatts/content"
+        state: directory
+        owner: ghost
+        group: ghost
+        recurse: true
+    - name: Install Ghost service
+      ansible.builtin.template:
+        src: templates/ghost.service.j2
+        dest: "/etc/systemd/system/ghost_121gigawatts-org.service"
+        mode: '0644'
+      notify: Restart ghost
+    - name: Create certificate directory
+      ansible.builtin.file:
+        path: "/etc/ssl/121gigawatts"
+        state: directory
+        mode: '0700'
+    - name: Install origin certificate
+      ansible.builtin.copy:
+        src: "{{ origin_certificate_file }}"
+        dest: "/etc/ssl/121gigawatts/origin.crt"
+        mode: '0644'
+      when: origin_certificate_file is defined
+      notify: Reload nginx
+    - name: Install origin private key
+      ansible.builtin.copy:
+        src: "{{ origin_key_file }}"
+        dest: "/etc/ssl/121gigawatts/origin.key"
+        mode: '0600'
+      no_log: true
+      diff: false
+      when: origin_key_file is defined
+      notify: Reload nginx
+    - name: Reject unknown HTTP hosts
+      ansible.builtin.copy:
+        dest: /etc/nginx/sites-available/default
+        content: 'server { listen 80 default_server; listen [::]:80 default_server; server_name _; add_header X-Robots-Tag "noindex, nofollow" always; return 503; }'
+        mode: '0644'
+      notify: Reload nginx
+    - name: Configure HTTPS proxy
+      ansible.builtin.template:
+        src: templates/nginx.conf.j2
+        dest: /etc/nginx/sites-available/121gigawatts
+        mode: '0644'
+      notify: Reload nginx
+    - name: Enable proxy
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/121gigawatts
+        dest: /etc/nginx/sites-enabled/121gigawatts
+        state: link
+      notify: Reload nginx
+    - name: Allow SSH before enabling the firewall
+      community.general.ufw:
+        rule: allow
+        name: OpenSSH
+    - name: Allow web traffic
+      community.general.ufw:
+        rule: allow
+        name: Nginx Full
+    - name: Enable firewall with incoming traffic denied by default
+      community.general.ufw:
+        state: enabled
+        direction: incoming
+        policy: deny
+    - name: Activate pending configuration
+      ansible.builtin.meta: flush_handlers
+    - name: Start Ghost
+      ansible.builtin.systemd_service:
+        name: "ghost_121gigawatts-org"
+        enabled: true
+        state: started
+        daemon_reload: true
+      when: ghost_start | default(true) | bool
+    - name: Check Ghost responds locally
+      ansible.builtin.uri:
+        url: http://127.0.0.1:2368/
+        status_code: [200, 301, 302]
+        follow_redirects: none
+      register: response
+      retries: 30
+      delay: 2
+      until: response is succeeded
+      when: not ansible_check_mode and ghost_start | default(true) | bool
+  handlers:
+    - name: Restart mysql
+      ansible.builtin.systemd_service:
+        name: mysql
+        state: restarted
+    - name: Restart ghost
+      ansible.builtin.systemd_service:
+        name: "ghost_121gigawatts-org"
+        state: restarted
+        daemon_reload: true
+      when: ghost_start | default(true) | bool
+    - name: Reload nginx
+      ansible.builtin.command: nginx -t
+      notify: Apply nginx configuration
+    - name: Apply nginx configuration
+      ansible.builtin.systemd_service:
+        name: nginx
+        state: reloaded

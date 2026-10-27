@@ -1,49 +1,57 @@
 # 1.21 Gigawatts
 
-Custom Ghost theme for [121gigawatts.org](https://121gigawatts.org/), based on
-[Casper](https://github.com/TryGhost/Casper). It controls the site’s layouts,
-styles, scripts, and theme images. Posts, site settings, and uploaded media live
-in Ghost. This repository cannot upgrade Ghost or restore the full site.
+The custom Ghost theme and hosting code for [121gigawatts.org](https://121gigawatts.org/).
+The theme is based on [Casper](https://github.com/TryGhost/Casper) and targets
+Ghost 6, preserving the site's existing appearance.
 
-## Development
+## Repository guide
 
-Use the latest Node.js 22.x and Yarn Classic (1.x). Run from the theme directory:
+| Part | Responsibility |
+| --- | --- |
+| Root `.hbs` files and `partials/` | Page layouts and shared Handlebars templates |
+| `assets/css/` and `assets/js/` | Theme styles and scripts; compiled output is in `assets/built/` |
+| [hosting/](hosting/README.md) | Terraform infrastructure, Ansible server setup, and the deployment runbook |
+| [.github/workflows/](.github/workflows/) | Theme and hosting configuration checks; no automatic deployment |
+
+Posts, drafts, site settings, and uploaded media live in Ghost, not in this
+repository. Restoring a site requires separate database and content backups.
+Credentials, private keys, real inventories, backups, and Terraform state stay
+outside this public repository.
+
+## Work on the theme
+
+Use Node.js 22.x and Yarn Classic (1.x). Run from the repository root:
 
 ```sh
-yarn install
+yarn install --frozen-lockfile
 yarn dev
 ```
 
-`yarn dev` builds assets and watches CSS and template changes; it does not run
-Ghost. Preview the theme in a separate Ghost installation. CSS sources are in
-`assets/css/`, scripts in `assets/js/`, and compiled assets in `assets/built/`.
+`yarn dev` builds assets and watches for changes; it does not run Ghost. Preview
+changes in a separate Ghost 6 installation with this theme active.
 
-Templates use Handlebars: `default.hbs` is the shared shell; `index.hbs`,
-`post.hbs`, and `page.hbs` render the home page, posts, and pages. Shared pieces
-live in `partials/`.
-
-## Build and upload
+To build, validate, and package the theme:
 
 ```sh
 yarn test
 yarn zip
 ```
 
-These commands build and validate the theme, then create
-`dist/121gigawatts.zip`. Upload the ZIP through Ghost Admin’s theme settings.
-Download the active theme as a backup before replacing it. See
-[Ghost’s theme installation guide](https://ghost.org/help/installing-a-theme/).
+Upload `dist/121gigawatts.zip` through Ghost Admin's theme settings. Download the
+active theme as a backup first. Uploading a theme changes its presentation;
+it does not upgrade Ghost or restore content.
 
-## Ghost 6 compatibility
+[Theme CI](.github/workflows/test.yml) runs `yarn test:ci`, which builds assets
+and checks Ghost 6 compatibility. The two known, non-blocking warnings concern
+optional custom fonts and the page title/feature-image toggle.
 
-Theme version 3.0.14 targets Ghost 6. It replaces removed theme helpers and keeps
-the existing bookmark and gallery styles. The migration was rehearsed locally
-through Ghost 4.48.9 and 5.130.6 to 6.72.0; the live Ghost installation has not
-been upgraded.
+## Run Ghost
 
-[CI](.github/workflows/test.yml) runs `yarn test:ci` to build the theme and check
-Ghost 6 compatibility. The two known, non-blocking warnings concern optional
-custom font controls and the page title/feature-image toggle.
+Follow the [hosting runbook](hosting/README.md) for private inputs, infrastructure,
+server configuration, and preview access. Deployment is manual and separate from
+theme development. Installing Ghost alone does not restore an existing blog.
+
+[Hosting CI](.github/workflows/hosting.yml) validates Terraform and Ansible configuration. It has no deployment credentials and does not change servers.
 
 ## License
 
