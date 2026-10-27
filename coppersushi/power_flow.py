@@ -1,9 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
 import pyproj
-import pypsa
+if TYPE_CHECKING:
+    import pypsa
 from pandera.typing import DataFrame
 
 from coppersushi import map_style
