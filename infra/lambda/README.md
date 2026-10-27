@@ -39,3 +39,7 @@ network at runtime. Local checkouts without bundles render on demand.
 Lambda initialization and first-use data loading are separate costs. Buffered
 synchronous responses must fit Lambda's 6 MB limit. Scale-to-zero removes idle
 compute charges; storage, logs and requests still incur charges.
+
+Cached-day measurements on 2026-10-27 put new-environment OPF callbacks at
+4.3–6.0 seconds and warm callbacks at 0.65–0.78 seconds. These samples are not
+a latency guarantee and do not cover uncached provider requests.
