@@ -174,7 +174,7 @@ def test_opf_clock_and_slider_share_the_local_day_and_noon_default():
     maximum, marks, selected, label = app.opf_snapshot_state(snapshots, 0, False)
     assert maximum == 3 and selected == 3
     assert label == '29 Aug 2024 · 12:00 CEST'
-    assert [marks[i]['label'] for i in range(4)] == ['00:00', '01:00', '02:00', '12:00']
+    assert [marks[i]['label'] for i in range(4)] == ['00:00', ' ', ' ', '12:00']
     assert app.opf_snapshot_state(snapshots, 1, True)[-1] == '29 Aug 2024 · 01:00 CEST'
 
     # NetCDF snapshots are naive UTC; they must give the same local clock.

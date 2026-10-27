@@ -2,6 +2,9 @@
 .app-page { display:flex; flex-direction:column; height:100vh; height:100dvh; }
 .opf-view { display:flex; flex:1; flex-direction:column; min-height:0; }
 .opf-time { padding:0.35rem 1rem; font-weight:600; flex:none; }
-.opf-slider { padding:0.5rem 1.5rem 1rem; flex:none; }
-.opf-slider .dash-slider-mark { color:#ddd; }
-@media (max-width:600px) { .opf-slider .dash-slider-mark { font-size:10px; } }
+.opf-slider { padding:0.75rem 1.75rem 1.25rem; flex:none; min-height:76px; }
+.opf-slider .dash-slider-mark { color:#ddd; white-space:nowrap; font-size:12px; line-height:1.2; }
+.opf-slider .dash-slider-mark::before {
+    content:""; position:absolute; left:50%; bottom:calc(100% + 8px);
+    width:1px; height:5px; background:#9ca3af;
+}

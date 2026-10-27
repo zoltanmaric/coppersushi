@@ -201,7 +201,8 @@ def opf_snapshot_state(snapshots: pd.Index, snapshot_index: int, slider_moved: b
     if not slider_moved or not 0 <= snapshot_index < len(snapshots):
         snapshot_index = min(range(len(local)), key=lambda i: abs(local[i].hour - 12))
     marks = {
-        idx: dict(label=snapshot.strftime('%H:%M'), style=dict(writingMode='vertical-rl'))
+        idx: dict(label=snapshot.strftime('%H:%M')
+                  if snapshot.hour % 4 == 0 or idx == len(local) - 1 else ' ')
         for idx, snapshot in enumerate(local)
     }
     label = local[snapshot_index].strftime('%d %b %Y · %H:%M %Z')
