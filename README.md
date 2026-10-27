@@ -104,6 +104,9 @@ pytest
 The tests run against small checked-in fixtures under `tests/fixtures/`, never against the
 networks. Tests require no Mapbox token; they build figures without fetching map tiles.
 
+GitHub Actions runs this suite on non-draft pull requests, including when a draft is
+marked ready. Draft updates skip it. The suite includes the existing architecture checks.
+
 ## Solving a day with PyPSA-Eur
 The networks in `networks/` are produced by [PyPSA-Eur](https://github.com/PyPSA/pypsa-eur),
 run from a **sibling checkout** at `../pypsa-eur` pinned by `pypsa-eur.pin` (repository URL and
