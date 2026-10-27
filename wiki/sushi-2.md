@@ -89,3 +89,5 @@ The OPF model has 4,390 buses and 24 hourly snapshots for 29 August 2024, displa
 in Europe/Brussels time. `/` uses the embed during the first rollout. The later root
 switch to the full layout requires the article iframe to use `/embed/opf-2024` first;
 that article edit and root switch remain pending. Both 2013 app models are removed.
+
+OPF responses carry only the selected hour’s four traces; the full figure stays cached on the server.

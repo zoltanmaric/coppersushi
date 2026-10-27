@@ -70,3 +70,20 @@ class TestPlotPowerFlow:
         assert node_powers[first_negative_load_index] == approx(-249.45, abs=0.01)
         assert node_absolute_powers[first_negative_load_index] == approx(249.45, abs=0.01)
         assert 'Net power: -249.45 MW' in first_negative_load_tooltip
+
+    def test_show_snapshot_sends_only_the_viewed_hour_without_mutating_the_cache(self, n):
+        fig = ppf.colored_network_figure(n, 'net_power')
+        before = fig.to_json()
+        selected = ppf.show_snapshot(fig, 6)
+        assert len(selected.data) == ppf.NUM_TRACES_PER_SNAPSHOT
+        assert all(trace.visible for trace in selected.data)
+        assert list(selected.data[3].text) == list(fig.data[6 * ppf.NUM_TRACES_PER_SNAPSHOT + 3].text)
+        assert selected.layout.to_plotly_json() == fig.layout.to_plotly_json()
+        assert len(ppf.show_snapshot(fig, 0).data) == ppf.NUM_TRACES_PER_SNAPSHOT
+        assert fig.to_json() == before
+
+    @pytest.mark.parametrize('index', [-1, 12])
+    def test_snapshot_selection_rejects_an_hour_outside_the_solved_day(self, n, index):
+        fig = ppf.colored_network_figure(n, 'net_power')
+        with pytest.raises(IndexError, match='outside the solved day'):
+            ppf.show_snapshot(fig, index)
