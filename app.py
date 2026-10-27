@@ -62,7 +62,7 @@ def figure_for(network_key: str) -> tuple[go.Figure, pd.Index]:
         n = NETWORK_LOADERS[network_key]()
         fig = power_flow.colored_network_figure(n, 'net_power', mapbox_token())
         fig.update_layout(
-            mapbox=dict(center=go.layout.mapbox.Center(lat=53, lon=9), zoom=3.9, pitch=60)
+            mapbox=map_style.OPF_CAMERA
         )
         _cache[network_key] = (fig, n.snapshots)
     return _cache[network_key]
@@ -131,7 +131,7 @@ def is_cnec_path(pathname: str) -> bool:
     return (pathname or '').strip('/').split('/')[0] == CNEC_ROUTE
 
 
-def network_layout() -> html.Div:
+def network_layout(token: str | None = None) -> html.Div:
     return html.Div([
         html.Div(id='opf-time', className='opf-time'),
         dbc.Alert(id='status', color='danger', is_open=False, style={'margin': '0 1em'}),
@@ -139,13 +139,21 @@ def network_layout() -> html.Div:
             dcc.Graph(
                 id='map',
                 style={'height': '100%'},
-                figure=dict(layout=dict(autosize=True)),
+                figure=dict(
+                    data=[dict(type='scattermapbox', lon=[None], lat=[None], hoverinfo='skip')],
+                    layout=dict(
+                        autosize=True, uirevision=True,
+                        mapbox=dict(style=map_style.MAP_STYLE, accesstoken=token, **map_style.OPF_CAMERA),
+                        margin=dict(l=0, r=0, t=0, b=0), paper_bgcolor='#111',
+                    ),
+                ),
                 config=dict(responsive=True, displayModeBar=False, scrollZoom=True)
             ),
-            type='circle', delay_show=300,
+            custom_spinner=html.Div('Loading network…', className='opf-loading', role='status'),
+            delay_show=300,
             parent_style={'flex': '1', 'minHeight': '0', 'position': 'relative',
                           'display': 'flex', 'flexDirection': 'column'},
-            overlay_style={'visibility': 'visible', 'opacity': 0.4},
+            overlay_style={'visibility': 'visible'},
         ),
         html.Div(
             dcc.Slider(
@@ -171,7 +179,7 @@ def show_page(pathname: str, root_view: str = ROOT_VIEW):
         return html.Div([html.H1('Page not found'), dcc.Link('2024 OPF', href='/opf-2024')])
     return html.Div([
         *([] if is_embed_path(pathname, root_view) else [navigation()]),
-        network_layout(),
+        network_layout(mapbox_token()),
     ], className='app-page')
 
 

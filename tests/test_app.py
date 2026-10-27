@@ -147,7 +147,8 @@ def test_a_previous_days_completion_cannot_load_or_draw_the_selected_day(monkeyp
 
 
 @pytest.mark.parametrize("mode", ['embed', 'full'])
-def test_root_rollout_keeps_permanent_urls_stable(mode):
+def test_root_rollout_keeps_permanent_urls_stable(mode, monkeypatch):
+    monkeypatch.setattr(app, "mapbox_token", lambda: "token")
     assert app.is_embed_path('/', mode) is (mode == 'embed')
     assert app.is_embed_path('/embed/opf-2024', mode)
     assert not app.is_embed_path('/opf-2024', mode)

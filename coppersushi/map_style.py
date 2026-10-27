@@ -7,6 +7,7 @@ BINDING = "#a72af5"
 BACKGROUND_BRANCH = "#4a4a4a"
 MUTED_BRANCH = "gray"
 MAP_STYLE = "dark"
+OPF_CAMERA = dict(center=dict(lat=53, lon=9), zoom=3.9, pitch=60)
 # One scale for every mapped value; purple is reserved for binding (wiki/sushi-2.md, Architecture 5)
 VALUE_COLORSCALE = "tropic"
 # A selected CNEC's signed influence on a zone's price: pink raises it, cyan lowers it

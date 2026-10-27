@@ -8,3 +8,9 @@
     content:""; position:absolute; left:50%; bottom:calc(100% + 8px);
     width:1px; height:5px; background:#9ca3af;
 }
+
+.opf-loading {
+    position:absolute; top:0.75rem; right:0.75rem; padding:0.4rem 0.7rem;
+    background:#222; color:#eee; border-radius:4px; font-size:0.9rem;
+    pointer-events:none;
+}
