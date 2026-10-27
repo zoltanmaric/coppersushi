@@ -10,9 +10,9 @@ from dash import Dash, dcc, html, Input, Output, State, ctx, no_update
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 
-from coppersushi import bidding_zones, cnec_geometry, cnec_page, map_style, power_flow
+from coppersushi import cnec_geometry, cnec_page, map_style, power_flow
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
-from coppersushi.data_sources import virtual_attribution, cnec_attribution as attribution_source, electricity_maps, jao, mapbox_styles, networks, osm_locator
+from coppersushi.data_sources import zone_shapes, virtual_attribution, cnec_attribution as attribution_source, electricity_maps, jao, mapbox_styles, networks, osm_locator
 from coppersushi.market_day import MARKET_TZ, MarketDay
 
 # Every page's controls live in one tree that the router swaps, so a callback whose
@@ -39,7 +39,6 @@ if ROOT_VIEW not in {'embed', 'full'}:
     raise ValueError('ROOT_VIEW must be embed or full')
 
 CNEC_ROUTE = 'cnec'  # /cnec, or /cnec/<delivery day> to open on one day
-ZONE_SHAPES_FROM = '2024-08-29'  # Any solved network carries the same country polygons
 _cache: dict[str, tuple[go.Figure, pd.Index]] = {}
 _zones: dict[str, pd.DataFrame] = {}
 _cnec_days: dict[str, cnec_page.Day] = {}
@@ -70,10 +69,9 @@ def figure_for(network_key: str) -> tuple[go.Figure, pd.Index]:
 
 
 def core_zones() -> pd.DataFrame:
-    """The Core bidding zones' polygons, read off a solved network's country shapes."""
+    """The Core bidding zones' polygons from the bundled outline shelf."""
     if 'core' not in _zones:
-        shapes = networks.load(networks.solved(ZONE_SHAPES_FROM)).shapes
-        _zones['core'] = bidding_zones.core_zone_shapes(shapes)
+        _zones['core'] = zone_shapes.load()
     return _zones['core']
 
 

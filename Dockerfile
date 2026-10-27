@@ -23,7 +23,8 @@ RUN chmod -R a+rX data && chmod a+rwx data data/jao
 USER $MAMBA_USER
 
 RUN micromamba run -n base python -m coppersushi.data_sources.jao check-seed && \
-    micromamba run -n base python -c "from coppersushi.data_sources.osm_locator import read_csvs; read_csvs()"
+    micromamba run -n base python -c "from coppersushi.data_sources.osm_locator import read_csvs; read_csvs()" && \
+    micromamba run -n base python -m coppersushi.data_sources.zone_shapes
 
 # Let a slow fetch finish caching even if Heroku's router has already timed out.
 CMD gunicorn --timeout 90 --bind 0.0.0.0:$PORT app:server

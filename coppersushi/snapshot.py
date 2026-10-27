@@ -1,5 +1,9 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 import pandas as pd
-import pypsa
+if TYPE_CHECKING:
+    import pypsa
 from pandera.typing import DataFrame
 
 from coppersushi.data_model.network_views import Buses, Generators, Loads

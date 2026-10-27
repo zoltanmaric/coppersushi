@@ -179,3 +179,13 @@ def test_opf_clock_and_slider_share_the_local_day_and_noon_default():
 
     # NetCDF snapshots are naive UTC; they must give the same local clock.
     assert app.opf_snapshot_state(snapshots.tz_localize(None), 1, True) == app.opf_snapshot_state(snapshots, 1, True)
+
+
+def test_page_shell_does_not_load_the_opf_runtime():
+    import subprocess
+    import sys
+    result = subprocess.run(
+        [sys.executable, '-c', "import sys, app; assert 'pypsa' not in sys.modules; assert app.server.test_client().get('/').status_code == 200"],
+        cwd=REPO, capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
