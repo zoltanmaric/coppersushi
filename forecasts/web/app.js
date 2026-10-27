@@ -233,7 +233,7 @@
         const v = low + ((high - low) * j) / 5;
         svg(
           "line",
-          { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: "#e1e5dd" },
+          { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: "var(--line)" },
           root,
         );
         svg(
@@ -242,7 +242,7 @@
             x: L - 12,
             y: y(v) + 4,
             "text-anchor": "end",
-            fill: "#596966",
+            fill: "var(--muted)",
             "font-size": 12,
           },
           root,
@@ -251,7 +251,7 @@
       }
       svg(
         "text",
-        { x: L, y: 15, fill: "#596966", "font-size": 12 },
+        { x: L, y: 15, fill: "var(--muted)", "font-size": 12 },
         root,
         "€/MWh",
       );
@@ -263,7 +263,7 @@
             x2: W - R,
             y1: y(0),
             y2: y(0),
-            stroke: "#8d9a90",
+            stroke: "var(--muted)",
             "stroke-dasharray": "4 4",
           },
           root,
@@ -286,15 +286,15 @@
         svg("path", { d: path, fill, opacity }, root);
       }
       if (reference && method !== "reference")
-        band("reference", 0, 4, "#c1a774", 0.22);
-      band(method, 0, 4, "#d8e5dc");
-      band(method, 1, 3, "#9dbfb3");
+        band("reference", 0, 4, "var(--gold)", 0.22);
+      band(method, 0, 4, "var(--band-wide)");
+      band(method, 1, 3, "var(--band)");
       svg(
         "path",
         {
           d: pathFor(points.map((p) => p.q[method][2])),
           fill: "none",
-          stroke: "#19766b",
+          stroke: "var(--green)",
           "stroke-width": 2.5,
         },
         root,
@@ -305,7 +305,7 @@
           {
             d: pathFor(points.map((p) => p.q.reference[2])),
             fill: "none",
-            stroke: "#96722d",
+            stroke: "var(--gold)",
             "stroke-width": 2,
             "stroke-dasharray": "7 5",
           },
@@ -323,7 +323,7 @@
       });
       svg(
         "path",
-        { d: actual, fill: "none", stroke: "#233b3a", "stroke-width": 2.2 },
+        { d: actual, fill: "none", stroke: "var(--ink)", "stroke-width": 2.2 },
         root,
       );
       for (
@@ -337,7 +337,7 @@
             x: x(i),
             y: H - 14,
             "text-anchor": "middle",
-            fill: "#596966",
+            fill: "var(--muted)",
             "font-size": 12,
           },
           root,
@@ -352,7 +352,7 @@
           x2: x(selected),
           y1: T,
           y2: H - B,
-          stroke: "#a74c2b",
+          stroke: "var(--accent)",
           "stroke-dasharray": "3 4",
         },
         root,
