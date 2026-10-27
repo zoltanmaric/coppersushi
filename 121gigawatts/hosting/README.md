@@ -115,13 +115,77 @@ OS upgrades and Ghost upgrades are separate maintenance operations. MySQL uses
 Ubuntu defaults. Removing an existing `99-ghost-small.cnf` override restarts
 MySQL; inspect that change before applying to a running site.
 
-## Preview
+## Restore
+
+Prepare the restore pair from the **same validated Ghost 6 installation**:
+
+- SQL: a full `mysqldump` of the Ghost database, gzip compressed. Use a private
+  MySQL option file, not a password in command arguments. Do not import Ghost 4
+  SQL directly into Ghost 6. Rehearse supported upgrades/imports first.
+- Content: a gzip tar archive of directories *inside* `content/`, including
+  uploads, settings, and the active migrated theme. Not the installation root,
+  config, or `node_modules`. The restore helper rejects links and escaping paths.
+- Verify the snapshot has the real owner's credentials, expected post/draft
+  counts, active theme, and uploads. A dummy test owner is not a deployable backup.
+
+On an empty target database only:
+
+```sh
+make -C hosting restore CONFIRM="RESTORE blog.example.org"
+```
+
+Replace the confirmation domain with `domain` in the private variables. The
+restore validates the backups once and checks the database is empty before stopping Ghost.
+It then imports SQL, replaces content while retaining the old directory, clears
+browser sessions, and starts Ghost. A preflight refusal leaves the service alone;
+a failure after import starts leaves Ghost stopped. It never clears a nonempty
+database for you.
+Back up the target and explicitly prepare an empty database before retrying a
+partial import. Keep previous content and SQL backups until validation passes.
+
+## Preview and checks
 
 ```sh
 ssh -N -L 127.0.0.1:2371:127.0.0.1:2368 root@"$SERVER_IPV4"
+# In another terminal:
+python3 hosting/verify.py http://localhost:2371
 ```
 
-Open `http://localhost:2371/` and `/ghost/`. Validate content, owner access, SMTP,
-and production TLS before a separately approved DNS cutover. The CX23 is the
-permanent target; the old server is retained only for rollback until approved
-retirement. Syntax checks do not replace a fresh-server rehearsal.
+Open `http://localhost:2371/` and `/ghost/`. Verify owner login, email delivery,
+post/draft counts, theme, navigation, GIFs, Google Slides, and the Copper Sushi
+map. The script checks sitemap pages and same-origin HTML assets; browser
+review is still needed for external embeds, CSS images, and interactions.
+Keep preview analytics injection disabled and save its original values privately.
+
+Check HTTPS without DNS changes using the Cloudflare Origin CA trust bundle
+obtained from Cloudflare's official documentation:
+
+```sh
+curl --fail --cacert "$DEPLOY_PRIVATE/origin-ca.pem" \
+  --resolve "$DOMAIN:443:$SERVER_IPV4" "https://$DOMAIN/"
+```
+
+Do not disable certificate verification. While Ghost retains its localhost
+preview URL, canonical links and some redirects intentionally use localhost;
+check them again after setting the production URL, before the DNS switch.
+
+## Cutover and rollback
+
+1. **Before approval:** finish preview checks, verify SMTP and TLS, record DNS
+   values, and take fresh content/database backups. Freeze publishing and other
+   writes while taking the final snapshot. Reconcile anything changed on the
+   live site since the rehearsal and verify that snapshot again.
+2. **After cutover approval:** set Ghost's URL to the production HTTPS origin,
+   restore the saved production analytics injection, restart, and verify through
+   direct-IP HTTPS. Keep the working SMTP relay. Change only the intended
+   Cloudflare origin A record, preserving proxying, TLS mode, and mail records.
+   Validate the public site and admin. Keep the old server intact for rollback.
+3. **Rollback:** restore the recorded origin DNS value. If the new server has
+   received writes, back them up and reconcile them first; a DNS rollback alone
+   does not move content or memberships back. Continue the publishing freeze
+   until the cutover is accepted.
+
+After the cutover is accepted, retire the old server only with explicit approval.
+Keep the CX23 and its Terraform state as the permanent deployment.
+
+The [rehearsal record](rehearsal.md) summarizes deployment checks and remaining cutover work.

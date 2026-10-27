@@ -1,0 +1,65 @@
+---
+- name: Restore a validated Ghost 6 snapshot into a stopped preview
+  hosts: all
+  become: true
+  vars_files:
+    - defaults.yml
+  pre_tasks:
+    - name: Require an explicit restore confirmation
+      ansible.builtin.assert:
+        that:
+          - restore_confirmation | default('') == 'RESTORE ' + domain
+        fail_msg: Restore requires the documented confirmation.
+    - name: Validate private configuration
+      ansible.builtin.import_tasks: config.yml
+    - name: Inspect installed version
+      ansible.builtin.slurp:
+        src: "/var/www/121gigawatts/current/package.json"
+      register: installed_package
+    - name: Require the rehearsed Ghost version
+      ansible.builtin.assert:
+        that: (installed_package.content | b64decode | from_json).version == ghost_version
+  tasks:
+    - name: Create private staging directory
+      ansible.builtin.file:
+        path: /root/ghost-restore
+        state: directory
+        mode: '0700'
+    - name: Stage the database backup
+      ansible.builtin.copy:
+        src: "{{ restore_database_file }}"
+        dest: /root/ghost-restore/database.sql.gz
+        mode: '0600'
+      no_log: true
+      diff: false
+    - name: Stage the content archive
+      ansible.builtin.copy:
+        src: "{{ restore_content_file }}"
+        dest: /root/ghost-restore/content.tar.gz
+        mode: '0600'
+      no_log: true
+      diff: false
+    - name: Install restore helper
+      ansible.builtin.copy:
+        src: files/restore.py
+        dest: /root/ghost-restore/restore.py
+        mode: '0700'
+    - name: Validate backups and empty database before stopping Ghost
+      ansible.builtin.command:
+        argv: [python3, /root/ghost-restore/restore.py, validate-target]
+      changed_when: false
+    - name: Stop Ghost
+      ansible.builtin.systemd_service:
+        name: "ghost_121gigawatts-org"
+        state: stopped
+        daemon_reload: true
+    # On failure, deliberately leave Ghost stopped and retain backups for recovery.
+    - name: Restore into an empty database and preserve the previous content directory
+      ansible.builtin.command:
+        argv: [python3, /root/ghost-restore/restore.py, restore]
+      no_log: true
+    - name: Start Ghost after successful restore
+      ansible.builtin.systemd_service:
+        name: "ghost_121gigawatts-org"
+        state: started
+        enabled: true

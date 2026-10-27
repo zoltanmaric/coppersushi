@@ -10,7 +10,7 @@ Ghost 6, preserving the site's existing appearance.
 | --- | --- |
 | Root `.hbs` files and `partials/` | Page layouts and shared Handlebars templates |
 | `assets/css/` and `assets/js/` | Theme styles and scripts; compiled output is in `assets/built/` |
-| [hosting/](hosting/README.md) | Terraform infrastructure, Ansible server setup, and the deployment runbook |
+| [hosting/](hosting/README.md) | Terraform infrastructure, Ansible setup and restore, and the deployment runbook |
 | [.github/workflows/](.github/workflows/) | Theme and hosting configuration checks; no automatic deployment |
 
 Posts, drafts, site settings, and uploaded media live in Ghost, not in this
@@ -45,13 +45,15 @@ it does not upgrade Ghost or restore content.
 and checks Ghost 6 compatibility. The two known, non-blocking warnings concern
 optional custom fonts and the page title/feature-image toggle.
 
-## Run Ghost
+## Run or migrate Ghost
 
-Follow the [hosting runbook](hosting/README.md) for private inputs, infrastructure,
-server configuration, and preview access. Deployment is manual and separate from
-theme development. Installing Ghost alone does not restore an existing blog.
+Follow the [hosting runbook](hosting/README.md) for private inputs, server setup,
+restoration, preview checks, cutover, and rollback. Deployment is manual and
+separate from theme development. See the [rehearsal results](hosting/rehearsal.md)
+for what has been tested and what remains before production cutover.
 
-[Hosting CI](.github/workflows/hosting.yml) validates Terraform and Ansible configuration. It has no deployment credentials and does not change servers.
+[Hosting CI](.github/workflows/hosting.yml) validates Terraform, Ansible, and
+restore safeguards. It has no deployment credentials and does not change servers.
 
 ## License
 

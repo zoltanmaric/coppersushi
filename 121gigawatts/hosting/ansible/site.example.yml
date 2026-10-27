@@ -7,3 +7,7 @@ site_url: http://localhost:2371
 ghost_config_file: /absolute/private/path/config.production.json
 origin_certificate_file: /absolute/private/path/origin.crt
 origin_key_file: /absolute/private/path/origin.key
+# A full MySQL dump and content archive from the SAME validated Ghost 6 snapshot.
+# Only restore.yml reads these. Do not feed it a Ghost Admin JSON export.
+restore_database_file: /absolute/private/path/ghost6.sql.gz
+restore_content_file: /absolute/private/path/content.tar.gz
