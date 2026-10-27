@@ -103,5 +103,5 @@ without the bundle retain on-demand figure construction.
 An optional CloudFront hostname fronts the Lambda deployment, with an ACM certificate
 and externally managed DNS; see [hosting](../infra/lambda/README.md#delivery).
 
-CloudFront caches only static asset routes. Page selection, layouts and data callbacks
-continue to use the existing server-side flow; see [hosting](../infra/lambda/README.md#delivery).
+CloudFront serves static asset routes from a private S3 bucket populated from the
+deployed image. Page selection, layouts and data callbacks use Lambda; see [hosting](../infra/lambda/README.md#delivery).

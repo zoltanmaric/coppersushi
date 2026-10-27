@@ -17,7 +17,25 @@ Keep the previous `image_uri` digest for rollback.
 3. Authenticate Docker to ECR using the configured AWS profile. Tag and push the
    image to the `repository_url` Terraform output. ECR tags are immutable: use a
    fresh tag for each build.
-4. Set `image_uri` in the ignored variables file to the pushed image's **digest
+4. Publish static files from that same image before changing the Lambda image.
+   Create an empty `/tmp/coppersushi-static` directory, then export:
+
+   ```sh
+   docker run --rm --platform linux/amd64 --entrypoint micromamba \
+     --mount type=bind,src=/tmp/coppersushi-static,dst=/export \
+     <image> run -n base python infra/lambda/static_assets.py --output /export
+   aws --profile <profile> s3 cp /tmp/coppersushi-static/ s3://<static_bucket>/ \
+     --recursive --cache-control 'public,max-age=300'
+   aws --profile <profile> s3 cp /tmp/coppersushi-static/ s3://<static_bucket>/ \
+     --recursive --exclude '*' --include '*.v*m*.*' \
+     --cache-control 'public,max-age=31536000,immutable'
+   ```
+
+   Use the `static_bucket` Terraform output. Retain older objects for pages still
+   using earlier fingerprinted URLs. After changing assets or dependencies,
+   invalidate `/assets/*` and `/_dash-component-suites/*` on CloudFront; quote
+   both paths in the CLI. The image digest and exported files must match.
+5. Set `image_uri` in the ignored variables file to the pushed image's **digest
    URI**, then review and apply a saved plan:
 
    ```sh
@@ -26,9 +44,6 @@ Keep the previous `image_uri` digest for rollback.
    terraform -chdir=infra/lambda apply deploy.tfplan
    ```
 
-5. If static assets or Dash dependencies changed, invalidate `/assets/*` and
-   `/_dash-component-suites/*` on the CloudFront distribution. Quote both paths
-   when passing them to the AWS CLI.
 6. Verify `/opf-2024`, `/embed/opf-2024` and a dated `/cnec/<day>` page through the
    public hostname. Exercise the hourly controls and constraint selection; a
    successful HTML response alone does not verify Dash callbacks.
@@ -41,7 +56,8 @@ and invalidate the static paths again.
 Configure `profile` and `region` in the ignored variables file. Leave `image_uri`
 and `custom_domain` unset for the first apply; this creates the repository, private
 cache bucket, secret metadata, IAM role and logs. Set the API keys below, then
-deploy an image using the steps above before adding the hostname.
+build and push an image, set `image_uri`, and apply a plan. Add the hostname
+after the function exists; publish static files once its asset bucket exists.
 
 Set API keys separately:
 
@@ -58,6 +74,11 @@ For the hostname, set `custom_domain`, plan/apply only `aws_acm_certificate.app`
 and publish the `certificate_dns` CNAME at the DNS provider. Then review and apply
 an untargeted plan. Point the hostname's DNS-only CNAME at `hostname_target`.
 The certificate is created in us-east-1 for CloudFront.
+On the first deployment, leave `static_assets_enabled=false` until the bucket
+and access policy exist and all image assets are uploaded. Then set it to `true`
+and apply another plan to switch the two static paths to S3. Keep it enabled for
+subsequent deployments. Setting it to `false` restores Lambda asset delivery.
+
 
 ## State
 
@@ -83,10 +104,13 @@ Scale-to-zero avoids idle compute charges; storage, logs and requests still cost
 ## Delivery
 
 CloudFront forwards cookies, query strings and headers except Host, which names
-the Lambda origin. Only `/assets/*` and `/_dash-component-suites/*` are cached,
+the Lambda origin for dynamic requests. `/assets/*` and
+`/_dash-component-suites/*` use a separate private S3 origin and are cached,
 with query strings in cache keys. Fingerprinted bundles retain Dash's cache
 lifetime; other static files have a five-minute minimum edge lifetime. Browser
-headers are unchanged. Page layouts and callback POSTs remain uncached.
+headers retain the published cache lifetimes. CloudFront alone can read the
+asset bucket through signed origin requests. Page layouts and callback POSTs
+remain uncached on Lambda.
 
 HTTPS is enforced for viewers and origin connections. CloudFront's 60-second
 origin read timeout can end a slow callback before Lambda's 120-second timeout.

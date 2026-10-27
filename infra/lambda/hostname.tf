@@ -64,6 +64,12 @@ resource "aws_cloudfront_distribution" "app" {
     }
   }
 
+  origin {
+    domain_name              = aws_s3_bucket.static[0].bucket_regional_domain_name
+    origin_id                = "static"
+    origin_access_control_id = aws_cloudfront_origin_access_control.static[0].id
+  }
+
   default_cache_behavior {
     target_origin_id         = "lambda"
     viewer_protocol_policy   = "redirect-to-https"
@@ -78,7 +84,7 @@ resource "aws_cloudfront_distribution" "app" {
     for_each = ["/assets/*", "/_dash-component-suites/*"]
     content {
       path_pattern           = ordered_cache_behavior.value
-      target_origin_id       = "lambda"
+      target_origin_id       = var.static_assets_enabled ? "static" : "lambda"
       viewer_protocol_policy = "redirect-to-https"
       allowed_methods        = ["GET", "HEAD", "OPTIONS"]
       cached_methods         = ["GET", "HEAD"]
