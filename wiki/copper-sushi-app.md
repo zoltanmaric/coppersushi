@@ -4,7 +4,7 @@ Interactive map of the European transmission grid showing an **optimal power flo
 
 ## Hosting
 
-The [Lambda trial contract](aws-lambda-hosting.md) defines the proposed isolated deployment and cache requirements.
+The [Lambda trial contract](../infra/lambda/README.md) defines the proposed isolated deployment and cache requirements.
 
 Plan of record, agreed 2026-10-04: move the app to AWS Lambda, with a durable cache in S3. The deployment must be verified with the existing Dash app before switching traffic; migration is separate from the JAO endpoint-correctness fix in PR #95.
 

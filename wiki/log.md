@@ -316,11 +316,11 @@ Proposal-only MLflow records appeared as finished runs in the forecast UI. The [
 
 The hosting trial retains Dash behind AWS Web Adapter and uses private S3 for validated
 cache entries. Read-only image filesystems and concurrent endpoint discovery require
-explicit cache changes. See [AWS Lambda hosting](aws-lambda-hosting.md); production
+explicit cache changes. See [AWS Lambda hosting](../infra/lambda/README.md); production
 cutover remains a separate decision after measured trial behavior.
 
 ## [2026-10-27] query | CNEC slider cold application work
 
 A slow trial slider invocation had no Lambda initialization. Fresh processes loaded the
 full solved network just for polygons; bundled outlines and deferred OPF imports remove
-that work from CNECs. [Startup contract](aws-lambda-hosting.md#startup).
+that work from CNECs. [Startup contract](../infra/lambda/README.md#runtime).

@@ -1,7 +1,6 @@
 # Wiki Index
 
 ## Concepts
-- [aws-lambda-hosting.md](aws-lambda-hosting.md) — proposed isolated Dash trial, S3 cache correctness and verification before production cutover
 - [virtual-hub-interconnectors.md](virtual-hub-interconnectors.md) — explicit interface mapping, endpoint-price decomposition, validated ALEGrO contributions, adjacent-region arithmetic checks, losses and ramping gaps
 - [jao-constraint-types.md](jao-constraint-types.md) — row classification across physical assets, country caps, virtual hubs, equality and LTA constraints, with verified metadata gaps
 - [country-import-export-caps.md](country-import-export-caps.md) — all-Core country-cap coverage, price effects and the validated Polish alternative-price source
