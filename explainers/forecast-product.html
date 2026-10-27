@@ -6,13 +6,18 @@
     <title>A forecast you can understand · Copper Sushi design spec</title>
     <style>
       :root {
-        --paper: #f5f2e9;
-        --ink: #233c3b;
-        --muted: #5c6e67;
-        --line: #ccd6c9;
-        --green: #287967;
-        --copper: #aa502d;
-        --soft: #e6ecdf;
+        color-scheme: dark;
+        --paper: #191b1f;
+        --surface: #222128;
+        --ink: #e9e5ef;
+        --muted: #b4acbf;
+        --line: #484052;
+        --green: #65dfdc;
+        --copper: #c49bff;
+        --soft: #2d2439;
+        --band: #72519a;
+        --band-wide: #342b43;
+        --warning: #ffd180;
       }
       * {
         box-sizing: border-box;
@@ -57,7 +62,7 @@
       }
       .tag {
         font-size: 11px;
-        border: 1px solid #adbba9;
+        border: 1px solid var(--line);
         border-radius: 20px;
         padding: 5px 12px;
       }
@@ -83,8 +88,7 @@
       }
       h1 {
         font:
-          normal clamp(48px, 6.7vw, 82px) / 1.04 Georgia,
-          serif;
+          normal clamp(48px, 6.7vw, 82px) / 1.04 system-ui, sans-serif;
         letter-spacing: -2.5px;
         margin-bottom: 25px;
       }
@@ -95,14 +99,12 @@
       }
       h2 {
         font:
-          normal clamp(30px, 4vw, 48px) / 1.15 Georgia,
-          serif;
+          normal clamp(30px, 4vw, 48px) / 1.15 system-ui, sans-serif;
         letter-spacing: -1px;
       }
       h3 {
         font:
-          normal 26px/1.2 Georgia,
-          serif;
+          normal 26px/1.2 system-ui, sans-serif;
       }
       p {
         margin-bottom: 18px;
@@ -145,8 +147,7 @@
       }
       .number {
         font:
-          italic 25px Georgia,
-          serif;
+          italic 25px system-ui, sans-serif;
         color: var(--copper);
       }
       .section-top p {
@@ -160,7 +161,7 @@
       }
       .card {
         padding: 26px;
-        background: #fcfaf4;
+        background: var(--surface);
         border: 1px solid var(--line);
         border-radius: 9px;
       }
@@ -171,8 +172,7 @@
       .card .question {
         color: var(--green);
         font:
-          italic 22px Georgia,
-          serif;
+          italic 22px system-ui, sans-serif;
       }
       .card .mini {
         height: 72px;
@@ -183,8 +183,9 @@
         height: 100%;
       }
       .statement {
-        background: var(--ink);
-        color: var(--paper);
+        background: linear-gradient(135deg, #30203f, #202832);
+        color: var(--ink);
+        border: 1px solid #674584;
         padding: 32px 38px;
         border-radius: 9px;
         margin: 30px 0;
@@ -194,14 +195,14 @@
       }
       .statement p {
         font-size: 15px;
-        color: #d2dfd0;
+        color: var(--muted);
         margin-bottom: 0;
       }
       .statement em {
-        color: #b5d6ae;
+        color: var(--green);
       }
       .preview {
-        background: #fffdf7;
+        background: var(--surface);
         border: 1px solid var(--line);
         border-radius: 12px;
         overflow: hidden;
@@ -211,7 +212,7 @@
         justify-content: space-between;
         align-items: center;
         gap: 20px;
-        background: #e8eddf;
+        background: var(--soft);
         padding: 15px 24px;
         font-size: 11px;
         letter-spacing: 1px;
@@ -229,8 +230,7 @@
       }
       .metric-value {
         font:
-          42px/1.4 Georgia,
-          serif;
+          42px/1.4 system-ui, sans-serif;
       }
       .metric-value small {
         font: 16px system-ui;
@@ -271,11 +271,11 @@
         background: var(--green);
       }
       .legend span:nth-child(3):before {
-        background: #abcbb9;
+        background: var(--band);
         height: 9px;
       }
       .legend span:nth-child(4):before {
-        background: #dbe8dd;
+        background: var(--band-wide);
         height: 9px;
       }
       .chart svg {
@@ -285,7 +285,7 @@
       }
       .axis {
         font: 12px system-ui;
-        fill: #5c6e67;
+        fill: var(--muted);
       }
       .small {
         font-size: 12px;
@@ -320,7 +320,7 @@
         align-items: start;
       }
       .graph {
-        background: #fffdf7;
+        background: var(--surface);
         border: 1px solid var(--line);
         border-radius: 10px;
         padding: 12px;
@@ -331,7 +331,7 @@
         height: auto;
       }
       .edge {
-        stroke: #7b9386;
+        stroke: var(--muted);
         stroke-width: 2;
         fill: none;
       }
@@ -342,13 +342,13 @@
         stroke-dasharray: 2 5;
       }
       svg a rect {
-        fill: #f5f2e9;
-        stroke: #b7c5b5;
+        fill: var(--paper);
+        stroke: var(--line);
         stroke-width: 1.5;
       }
       svg a:hover rect,
       svg a.active rect {
-        fill: #e1eddc;
+        fill: var(--soft);
         stroke: var(--green);
         stroke-width: 2.5;
       }
@@ -365,7 +365,7 @@
         fill: var(--muted);
       }
       .stage {
-        background: #e5ebdc;
+        background: var(--soft);
         border-radius: 10px;
         padding: 26px;
         margin-bottom: 20px;
@@ -418,7 +418,7 @@
       .sequence > div {
         flex: 1;
         padding: 20px;
-        background: #e8eddf;
+        background: var(--soft);
         border-radius: 7px;
       }
       .sequence b {
@@ -432,7 +432,7 @@
         margin: 0;
       }
       .review {
-        background: #e6ecdf;
+        background: var(--soft);
         border-radius: 10px;
         padding: 30px;
         margin: 28px 0;
@@ -591,7 +591,7 @@
         margin: 22px 0;
         border: 1px solid var(--line);
         border-radius: 10px;
-        background: #fcfaf4;
+        background: var(--surface);
       }
       .wis-explanation summary {
         cursor: pointer;
@@ -626,8 +626,7 @@
       .wis-case h4,
       .wis-caveat h4 {
         font:
-          normal 23px Georgia,
-          serif;
+          normal 23px system-ui, sans-serif;
         margin: 0 0 16px;
       }
       .wis-case svg {
@@ -639,8 +638,7 @@
       }
       .wis-case .wis-score {
         font:
-          32px Georgia,
-          serif;
+          32px system-ui, sans-serif;
         color: var(--ink);
         margin: 8px 0 12px;
       }
@@ -695,8 +693,7 @@
       }
       .wis-recipe h4 {
         font:
-          24px Georgia,
-          serif;
+          24px system-ui, sans-serif;
         margin: 0 0 15px;
       }
       .wis-recipe p,
@@ -735,7 +732,41 @@
         color: var(--green);
         font-variant-numeric: tabular-nums;
       }
-    </style>
+
+      body { background-image: radial-gradient(ellipse at 85% 0, #8d41d226, transparent 650px); }
+      h1, h2, h3 { color: #f3eef8; font-weight: 750; }
+      h1 em, h2 em { font-weight: 650; font-style: normal; }
+      a { color: var(--copper); }
+      a:hover { color: var(--green); }
+      .diagram-layout > * { min-width: 0; }
+      .hero { border-bottom: 2px solid #aa66ed; box-shadow: 0 12px 20px -20px #d75bd0; }
+      .tag { background: var(--soft); color: #d5b8ff; }
+      .number, .metric-value { color: #dec5ff; }
+      .warning { color: var(--warning); }
+      a:focus-visible, summary:focus-visible { outline: 3px solid var(--green); outline-offset: 4px; }
+      ::selection { background: #7643a2; color: #fff; }
+      svg [fill="#e9eddf"] { fill: var(--soft); }
+      svg [fill="#547768"] { fill: var(--green); }
+      svg [stroke="#b0bfaa"] { stroke: var(--line); }
+      svg [fill="#aa502d"] { fill: var(--warning); }
+      svg [stroke="#aa502d"] { stroke: var(--warning); }
+      svg [fill="#d4e4d5"] { fill: var(--band-wide); }
+      svg [stroke="#287967"] { stroke: var(--green); }
+      svg [stroke="#879b87"] { stroke: var(--muted); }
+      svg [fill="#e4e9da"] { fill: var(--soft); }
+      svg [stroke="#bcc9b9"] { stroke: var(--line); }
+      svg [fill="#dbe8dd"] { fill: var(--band-wide); }
+      svg [fill="#abcbb9"] { fill: var(--band); }
+      svg [stroke="#dce1d9"] { stroke: var(--line); }
+      svg [stroke="#27796b"] { stroke: var(--green); }
+      svg [stroke="#273b42"] { stroke: var(--ink); }
+      svg [fill="#7b9386"] { fill: var(--muted); }
+      @media print {
+        :root { color-scheme: light; --paper: #fff; --surface: #fff; --ink: #20182a; --muted: #51475b; --line: #cfc6d7; --green: #226d73; --copper: #64339a; --soft: #f4f0f7; --band: #b49acb; --band-wide: #e6ddec; --warning: #805116; }
+        body { background: #fff; } h1, h2, h3, .number, .metric-value { color: var(--ink); }
+        .hero { box-shadow: none; } .statement { background: var(--soft); } .tag { color: var(--copper); }
+      }
+</style>
   </head>
   <body>
     <div class="wrap">
