@@ -43,3 +43,15 @@ compute charges; storage, logs and requests still incur charges.
 Cached-day measurements on 2026-10-27 put new-environment OPF callbacks at
 4.3–6.0 seconds and warm callbacks at 0.65–0.78 seconds. These samples are not
 a latency guarantee and do not cover uncached provider requests.
+
+## Hostname
+
+For a custom hostname, set `custom_domain`. First plan/apply only
+`aws_acm_certificate.app`, publish the `certificate_dns` CNAME in the existing DNS
+provider, then plan/apply the full configuration. Point the hostname at
+`hostname_target` with a DNS-only CNAME. ACM certificates for CloudFront use us-east-1.
+
+CloudFront forwards cookies, query strings and request headers except Host, which
+names the Lambda origin. Responses are uncached. HTTPS is enforced on both
+connections. The 60-second origin read timeout can end a slow callback before
+Lambda’s 120-second timeout. The direct Function URL remains accessible.

@@ -101,3 +101,6 @@ figure is ready. A small loading label leaves the map visible during that reques
 Image preparation precomputes each OPF hour into a token-free compressed figure.
 Runtime reads the selected hour and supplies the Mapbox token; local checkouts
 without the bundle retain on-demand figure construction.
+
+An optional CloudFront hostname fronts the Lambda trial, with an ACM certificate
+and externally managed DNS; see [hosting](aws-lambda-hosting.md#hostname).
