@@ -47,12 +47,10 @@ flowchart LR
     pypsa_eur_pin -.-> unsimplified
     unsimplified -.-> solved_network
     pypsa_eur_run --> solved_network
-    opf_full["opf_full<br/>/opf-2024: OPF with app navigation"]
+    opf_full["opf_full<br/>/ and /opf-2024: OPF with app navigation"]
     opf_embed["opf_embed<br/>/embed/opf-2024: map and hourly controls"]
-    article_iframe["article_iframe<br/>existing article iframe at app root; ROOT_VIEW=embed"]
     net_power_map --> opf_full
     net_power_map --> opf_embed
-    opf_embed --> article_iframe
     solved_network --> net_power_map
     solved_network --> zone_shapes
     zone_shapes --> cnec_price_figure
@@ -86,9 +84,9 @@ Code is one package, `coppersushi/`, organised by domain noun; `io-boundary` in 
 True-up to actuals — renewable dispatch calibrated to zonal actuals, units ≥ 100 MW fixed to measured output, validation against measured cross-border flows ([nodal-disaggregation](nodal-disaggregation.md) for what is and is not measurable). Then flow-traced nodal carbon intensity, OPF counterfactuals, hosting. Working state: [specs/sushi-2.md](specs/sushi-2.md).
 
 The OPF model has 4,390 buses and 24 hourly snapshots for 29 August 2024, displayed
-in Europe/Brussels time. `/` uses the embed during the first rollout. The later root
-switch to the full layout requires the article iframe to use `/embed/opf-2024` first;
-that article edit and root switch remain pending. Both 2013 app models are removed.
+in Europe/Brussels time. The AWS deployment uses `ROOT_VIEW=full`: `/` and
+`/opf-2024` show both product links; `/embed/opf-2024` shows the map without
+navigation. Both 2013 app models are removed.
 
 The [production Lambda deployment](../infra/lambda/README.md) runs the same Dash
 server behind AWS Web Adapter (OPF responses carry only the selected hour’s four traces), with complete dynamic-cache bundles in private S3 and

@@ -23,11 +23,9 @@ and 24 hourly snapshots. It is solved as linear OPF: minimize generation cost su
 to demand, renewable availability, plant capacities and line limits. The pinned workflow
 and configuration are described in [the power-flow architecture](sushi-2.md).
 
-`/opf-2024` includes the two app navigation links. `/embed/opf-2024` uses the same
-figure and callbacks without navigation. During the first rollout `/` also shows the
-embed (`ROOT_VIEW=embed`, the default). Switching to `ROOT_VIEW=full` is deferred until
-the article's iframe points to the permanent embed route. Article edits are outside
-this app change. [Approved rollout design](../explainers/opf-2024-embed.html).
+The AWS deployment sets `ROOT_VIEW=full`: `/` and `/opf-2024` include the two app
+navigation links. `/embed/opf-2024` uses the same figure and callbacks without
+navigation. [Route design](../explainers/opf-2024-embed.html).
 
 **Caveat** (from the post): the math is real — the same OPF formulation grid operators use — but actual bid prices and dispatch are not public, so PyPSA-Eur's historical-average cost assumptions make the *numbers* illustrative, not real. See ch. 4 of the [PyPSA-Eur paper](https://arxiv.org/abs/1806.01613).
 
