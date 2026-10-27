@@ -303,3 +303,11 @@ The [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) 
 ## [2026-10-13] query | Adjacent-region endpoint attribution
 
 A paced [nine-interface audit](virtual-hub-interconnectors.md#adjacent-validation) sampled 40 binding cases over two delivery days. Nineteen lossless candidate reconstructions agree within €0.02/MWh; the remainder cannot be treated as publication precision. Nordic opposite endpoints are now mapped explicitly. Nord Pool documents loss pricing and ramping constraints, but the audit does not identify each residual’s cause. Loss-aware scaling and independently published missing terms remain open.
+
+## [2026-10-20] decision | Choosing the next forecast experiment
+
+The [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) now covers selection among competing proposals. Selection history belongs with the proposals in MLflow; the wiki does not hold a second research backlog. [Rule provenance](rule-provenance.md) records why the procedure was extended.
+
+## [2026-10-20] decision | Separate forecast proposals from executions
+
+Proposal-only MLflow records appeared as finished runs in the forecast UI. The [research-record contract](price-forecasting/forecast-infrastructure.md#research-history) now places proposals, selection decisions and a decision index in the wiki. Actual MLflow executions retain frozen proposal copies, results and conclusions; wiki outcomes link back to that evidence. The [skill](../.agents/skills/forecast-experiment/SKILL.md) replaces the earlier storage convention and requests readable run names. Migration of the open forecast stack's existing records remains separate from this harness change.
