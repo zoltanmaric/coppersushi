@@ -104,3 +104,6 @@ without the bundle retain on-demand figure construction.
 
 An optional CloudFront hostname fronts the Lambda trial, with an ACM certificate
 and externally managed DNS; see [hosting](aws-lambda-hosting.md#hostname).
+
+CloudFront caches only static asset routes. Page selection, layouts and data callbacks
+continue to use the existing server-side flow; see [hosting](aws-lambda-hosting.md#hostname).

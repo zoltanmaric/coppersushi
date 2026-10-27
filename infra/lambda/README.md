@@ -54,6 +54,12 @@ provider, then plan/apply the full configuration. Point the hostname at
 `hostname_target` with a DNS-only CNAME. ACM certificates for CloudFront use us-east-1.
 
 CloudFront forwards cookies, query strings and request headers except Host, which
-names the Lambda origin. Responses are uncached. HTTPS is enforced on both
+names the Lambda origin. Only `/assets/*` and `/_dash-component-suites/*` are cached, with query strings
+in cache keys. Fingerprinted bundles retain Dash’s cache lifetime; other static
+files have a five-minute minimum edge lifetime. Browser headers are unchanged.
+Page layouts and callback POSTs remain uncached. HTTPS is enforced on both
 connections. The 60-second origin read timeout can end a slow callback before
 Lambda’s 120-second timeout. The direct Function URL remains accessible.
+
+After asset or Dash dependency changes, invalidate `/assets/*` and
+`/_dash-component-suites/*` on the distribution, quoting both paths.
