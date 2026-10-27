@@ -2,10 +2,9 @@
     "name": "121gigawatts",
     "description": "A clean, minimal default theme for the Ghost publishing platform",
     "demo": "https://demo.ghost.io",
-    "version": "3.0.13",
+    "version": "3.0.14",
     "engines": {
-        "ghost": ">=3.0.0",
-        "ghost-api": "v3"
+        "ghost": ">=6.0.0"
     },
     "license": "MIT",
     "screenshots": {
@@ -15,8 +14,8 @@
     "scripts": {
         "dev": "gulp",
         "zip": "gulp zip",
-        "test": "gscan .",
-        "test:ci": "gscan --fatal --verbose .",
+        "test": "gscan --v6 .",
+        "test:ci": "gscan --v6 --fatal --verbose .",
         "pretest": "gulp build",
         "preship": "yarn test",
         "ship": "STATUS=$(git status --porcelain); echo $STATUS; if [ -z \"$STATUS\" ]; then yarn version && git push --follow-tags; else echo \"Uncomitted changes found.\" && exit 1; fi",
@@ -52,7 +51,7 @@
         "autoprefixer": "9.7.6",
         "beeper": "2.0.0",
         "cssnano": "4.1.10",
-        "gscan": "3.4.1",
+        "gscan": "6.6.1",
         "gulp": "4.0.2",
         "gulp-concat": "2.6.1",
         "gulp-livereload": "4.0.2",
@@ -89,6 +88,12 @@
             "xl": {
                 "width": 2000
             }
+        },
+        "card_assets": {
+            "exclude": [
+                "bookmark",
+                "gallery"
+            ]
         }
     },
     "dependencies": {}

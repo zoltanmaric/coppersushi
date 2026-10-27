@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{@site.lang}}">
+<html lang="{{@site.locale}}">
 <head>
 
     {{!-- Document Settings --}}
@@ -32,8 +32,8 @@
                 <section class="copyright"><a href="{{@site.url}}">{{@site.title}}</a> &copy; {{date format="YYYY"}}</section>
                 <nav class="site-footer-nav">
                     <a href="{{@site.url}}">Latest Posts</a>
-                    {{#if @site.facebook}}<a href="{{facebook_url @site.facebook}}" target="_blank" rel="noopener">Facebook</a>{{/if}}
-                    {{#if @site.twitter}}<a href="{{twitter_url @site.twitter}}" target="_blank" rel="noopener">Twitter</a>{{/if}}
+                    {{#if @site.facebook}}<a href="{{social_url type="facebook"}}" target="_blank" rel="noopener">Facebook</a>{{/if}}
+                    {{#if @site.twitter}}<a href="{{social_url type="twitter"}}" target="_blank" rel="noopener">Twitter</a>{{/if}}
                     <a href="https://linkedin.com/in/zoltanmaric" target="_blank" rel="noopener">LinkedIn</a>
                     <a href="https://ghost.org" target="_blank" rel="noopener">Ghost</a>
                 </nav>
@@ -43,7 +43,7 @@
     </div>
 
     {{!-- The big email subscribe modal content --}}
-    {{#if @labs.members}}
+    {{#if @site.members_enabled}}
     <div class="subscribe-success-message">
         <a class="subscribe-close" href="javascript:;"></a>
         You've successfully subscribed to {{@site.title}}!
