@@ -4,7 +4,9 @@ from collections.abc import Sequence
 
 import numpy as np
 
-from forecasts.contracts import FloatArray, Row
+from forecasts.contracts import FloatArray
+from pandera.typing.polars import DataFrame
+from forecasts.tables import Features, feature_table
 from forecasts.snapshot import InputReader, WEATHER_FIELDS
 
 CALENDAR = ["quarter_of_day", "day_of_week", "month", "public_holiday"]
@@ -16,7 +18,7 @@ FEATURES = {"prices": BASE, "weather": BASE + WEATHER,
 
 
 
-def build_features(reader: InputReader, start: date, end: date) -> list[Row]:
+def build_features(reader: InputReader, start: date, end: date) -> DataFrame[Features]:
     """Build quarter-hour rows in [start, end), with no realised target values.
 
     Each day uses only inputs eligible by 11:00 Berlin on the preceding day.
@@ -28,12 +30,12 @@ def build_features(reader: InputReader, start: date, end: date) -> list[Row]:
     while day < end:
         rows.extend(reader.features(day))
         day += timedelta(days=1)
-    return rows
+    return feature_table(rows)
 
 
-def feature_matrix(rows: list[Row], fields: Sequence[str]) -> FloatArray:
+def feature_matrix(rows: DataFrame[Features], fields: Sequence[str]) -> FloatArray:
     """Select the frozen feature columns, mapping missing values to NaN.
 
     Targets and audit metadata are excluded by the explicit column inventory.
     """
-    return np.array([[np.nan if row[f] is None else row[f] for f in fields] for row in rows], dtype=float)
+    return rows.select(fields).to_numpy().astype(np.float64, copy=False)
