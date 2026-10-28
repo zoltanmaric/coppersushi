@@ -5,8 +5,12 @@ from collections.abc import Sequence
 from numpy.typing import ArrayLike
 
 from forecasts.config import BootstrapSettings, RunConfig
-from forecasts.contracts import BacktestPredictions, EvaluationResult, FloatArray, Report, Row
-from forecasts.dataset import stamp, TIMING
+from forecasts.contracts import BacktestPredictions, EvaluationResult, FloatArray, Report
+from forecasts.tables import Predictions, ScoredPredictions
+from pandera.typing.polars import DataFrame
+import polars as pl
+from typing import cast
+from forecasts.dataset import TIMING
 
 import numpy as np
 
@@ -24,28 +28,27 @@ def score_forecasts(backtest: BacktestPredictions, truth: dict[datetime, float |
     Raise ValueError when no scoring truth exists.
     """
     predictions = _join_truth(backtest.rows, truth)
-    scored = [r for r in predictions if r["target"] is not None]
-    if not scored:
+    scored = cast(DataFrame[ScoredPredictions], predictions.filter(pl.col("target").is_not_null()))
+    if scored.is_empty():
         raise ValueError("No evaluation truth")
     names = [*config.features, "reference", "system"]
-    groups: dict[str, dict[str, list[Row]]] = {"month": defaultdict(list), "demand_available": defaultdict(list)}
-    for row in predictions:
-        groups["month"][row["delivery_date"][:7]].append(row)
-        groups["demand_available"][str(row["demand_available"])].append(row)
-    breakdowns = {}
-    for group_name, group in groups.items():
-        breakdowns[group_name] = {
-            key: {"delivery_rows": len(rows), "missing_truth": sum(r["target"] is None for r in rows),
-                  "forecast_coverage": 1.,
-                  "metrics": _method_scores([r for r in rows if r["target"] is not None], names, config)}
-            for key, rows in group.items()
-        }
+    breakdowns: dict[str, Report] = {}
+    for group_name, group in (("month", pl.col("delivery_date").dt.strftime("%Y-%m")),
+                              ("demand_available", pl.col("demand_available").cast(pl.String))):
+        grouped = predictions.with_columns(group.alias("_group"))
+        breakdowns[group_name] = {}
+        for (key,), subset in grouped.partition_by("_group", as_dict=True, maintain_order=True).items():
+            rows = cast(DataFrame[ScoredPredictions], subset.drop("_group"))
+            available = cast(DataFrame[ScoredPredictions], rows.filter(pl.col("target").is_not_null()))
+            breakdowns[group_name][key] = {
+                "delivery_rows": len(rows), "missing_truth": rows["target"].null_count(),
+                "forecast_coverage": 1., "metrics": _method_scores(available, names, config)}
     report = {
         "metrics": _method_scores(scored, names, config), "breakdowns": breakdowns,
         "comparison": paired_blocks(
-            np.array([r["target"] for r in scored]),
-            {name: np.array([[r[f"{name}_q{q}"] for q in config.quantiles] for r in scored]) for name in names},
-            [r["delivery_date"] for r in scored], config.bootstrap),
+            scored["target"].to_numpy(),
+            {name: scored.select([f"{name}_q{q}" for q in config.quantiles]).to_numpy() for name in names},
+            scored["delivery_date"].to_list(), config.bootstrap),
         "delivery_rows": len(predictions), "scored_rows": len(scored),
         "missing_truth": len(predictions) - len(scored), "forecast_coverage": 1.,
         "fallback_rows": backtest.fallback_rows, "prediction_failures": backtest.failures,
@@ -65,7 +68,7 @@ def wis(y: ArrayLike, q: ArrayLike) -> FloatArray:
     return 2 * np.mean(np.maximum(QUANTILES * error, (QUANTILES - 1) * error), axis=1)
 
 
-def metrics(y: ArrayLike, q: ArrayLike, days: Sequence[str]) -> dict[str, float | int]:
+def metrics(y: ArrayLike, q: ArrayLike, days: Sequence[date]) -> dict[str, float | int]:
     """Score five ordered quantiles against common available outcomes."""
     y, q = np.asarray(y), np.asarray(q)
     if not len(y):
@@ -85,19 +88,19 @@ def metrics(y: ArrayLike, q: ArrayLike, days: Sequence[str]) -> dict[str, float 
             "daily_coverage_95": float(np.mean([np.mean(v, axis=0)[1] for v in daily.values()]))}
 
 
-def paired_blocks(y: FloatArray, predictions: dict[str, FloatArray], days: Sequence[str],
+def paired_blocks(y: FloatArray, predictions: dict[str, FloatArray], days: Sequence[date],
                   settings: BootstrapSettings) -> Report:
     """Moving blocks cannot cross missing dates; quarter counts weight sampled scores."""
     unique = sorted(set(days))
     length = settings.block_days
     blocks = [unique[i:i + length] for i in range(len(unique) - length + 1)
-              if all(date.fromisoformat(unique[i + j]) == date.fromisoformat(unique[i]) + timedelta(days=j)
+              if all(unique[i + j] == unique[i] + timedelta(days=j)
                      for j in range(length))]
     if not blocks:
         raise ValueError("Insufficient contiguous days for block comparison")
     sums = {}
     for name, q in predictions.items():
-        daily: dict[str, list[float]] = defaultdict(lambda: [0., 0])
+        daily: dict[date, list[float]] = defaultdict(lambda: [0., 0])
         for day, score in zip(days, wis(y, q)):
             daily[day][0] += score
             daily[day][1] += 1
@@ -115,19 +118,17 @@ def paired_blocks(y: FloatArray, predictions: dict[str, FloatArray], days: Seque
             for n, values in draws.items()}
 
 
-def _join_truth(rows: list[Row], truth: dict[datetime, float | None]) -> list[Row]:
-    joined = []
-    for row in rows:
-        # Keep the established Parquet column order while adding truth here only.
-        record = {k: row[k] for k in ("delivery_utc", "delivery_date", "demand_available")}
-        record["target"] = truth.get(stamp(row["delivery_utc"]))
-        record.update(row)
-        record["target_missing"] = int(record["target"] is None)
-        joined.append(record)
-    return joined
+def _join_truth(rows: DataFrame[Predictions], truth: dict[datetime, float | None]) -> DataFrame[ScoredPredictions]:
+    outcomes = pl.DataFrame({"delivery_utc": list(truth), "target": list(truth.values())},
+                            schema={"delivery_utc": pl.Datetime("us", "UTC"), "target": pl.Float64})
+    joined = rows.join(outcomes, on="delivery_utc", how="left", maintain_order="left").with_columns(
+        pl.col("target").is_null().cast(pl.Int64).alias("target_missing"))
+    # Preserve the established artifact order while adding truth only here.
+    first = ["delivery_utc", "delivery_date", "demand_available", "target"]
+    return ScoredPredictions.validate(joined.select(*first, *[name for name in rows.columns if name not in first]))
 
 
-def _method_scores(rows: list[Row], names: list[str], config: RunConfig) -> Report:
-    return {name: metrics([r["target"] for r in rows],
-                          [[r[f"{name}_q{q}"] for q in config.quantiles] for r in rows],
-                          [r["delivery_date"] for r in rows]) for name in names}
+def _method_scores(rows: DataFrame[ScoredPredictions], names: Sequence[str], config: RunConfig) -> Report:
+    return {name: metrics(rows["target"].to_numpy(),
+                          rows.select([f"{name}_q{q}" for q in config.quantiles]).to_numpy(),
+                          rows["delivery_date"].to_list()) for name in names}

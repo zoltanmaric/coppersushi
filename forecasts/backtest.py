@@ -1,17 +1,21 @@
 """Expand the training window monthly; predict every day with that month's fit."""
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import date, timedelta
 from pathlib import Path
 
 from forecasts.config import RunConfig
-from forecasts.contracts import BacktestPredictions, DayForecast, Report, Row
+from forecasts.contracts import BacktestPredictions, DayForecast, Report
+from pandera.typing.polars import DataFrame
+import polars as pl
+from typing import cast
+from forecasts.tables import Features, Predictions
 from forecasts.dataset import cutoff
 from forecasts.prediction import predict_day
 from forecasts.snapshot import InputReader
 from forecasts.training import fit_month
 
 
-def forecast_months(reader: InputReader, features: list[Row], config: RunConfig,
+def forecast_months(reader: InputReader, features: DataFrame[Features], config: RunConfig,
                     output: Path, restore_models: Path | None = None) -> BacktestPredictions:
     """Fit each monthly window, then predict its days without joining scoring truth.
 
@@ -19,10 +23,9 @@ def forecast_months(reader: InputReader, features: list[Row], config: RunConfig,
     adds eligible past labels. Save models by the first delivery date of their
     window; return fixed predictions and diagnostics for later scoring.
     """
-    by_day: dict[str, list[Row]] = defaultdict(list)
-    for row in features:
-        by_day[row["delivery_date"]].append(row)
-    predictions: list[Row] = []
+    by_day = {key[0]: cast(DataFrame[Features], daily)
+              for key, daily in features.partition_by("delivery_date", as_dict=True, maintain_order=True).items()}
+    predictions: list[pl.DataFrame] = []
     folds: list[Report] = []
     failures: list[Report] = []
     fallback: Counter[str] = Counter()
@@ -39,35 +42,33 @@ def forecast_months(reader: InputReader, features: list[Row], config: RunConfig,
                       "reference": fitted.reference, "fit_failures": fitted.failures})
         day = fold
         while day < stop:
-            rows = by_day[day.isoformat()]
+            rows = by_day[day]
             forecast = predict_day(rows, fitted.models, fitted.reference, config)
-            predictions.extend(_prediction_records(rows, forecast, fold, config))
+            predictions.append(_prediction_table(rows, forecast, fold, config))
             if forecast.failures:
                 failures.append({"day": day.isoformat(), "models": forecast.failures})
             crossings.update(forecast.crossings)
             fallback[forecast.selected_model] += len(rows)
             day += timedelta(days=1)
         fold = stop
-    return BacktestPredictions(predictions, folds, failures, dict(fallback), dict(crossings))
+    return BacktestPredictions(Predictions.validate(pl.concat(predictions)), folds, failures, dict(fallback), dict(crossings))
 
 
-def _prediction_records(rows: list[Row], forecast: DayForecast, fold: date,
-                        config: RunConfig) -> list[Row]:
-    records = []
-    for i, row in enumerate(rows):
-        record = {k: row[k] for k in ("delivery_utc", "delivery_date", "demand_available")}
-        record.update(selected_model=forecast.selected_model, fallback_reason=forecast.fallback_reason,
-                      fold=fold.isoformat(),
-                      **{k: v for k, v in row.items() if k.endswith(("_missing", "_unavailable"))
-                         or k == "demand_selected_update_utc"})
-        for name, quantiles in forecast.ordered.items():
-            for j, quantile in enumerate(config.quantiles):
-                record[f"{name}_q{quantile}"] = float(quantiles[i, j])
-        for name, quantiles in forecast.raw.items():
-            for j, quantile in enumerate(config.quantiles):
-                record[f"{name}_raw_q{quantile}"] = float(quantiles[i, j])
-        records.append(record)
-    return records
+def _prediction_table(rows: DataFrame[Features], forecast: DayForecast, fold: date,
+                      config: RunConfig) -> pl.DataFrame:
+    metadata = [name for name in rows.columns if name.endswith(("_missing", "_unavailable"))
+                or name == "demand_selected_update_utc"]
+    result = rows.select("delivery_utc", "delivery_date", "demand_available").with_columns(
+        pl.lit(forecast.selected_model).alias("selected_model"),
+        pl.lit(forecast.fallback_reason).alias("fallback_reason"), pl.lit(fold).alias("fold"))
+    result = result.hstack(rows.select(metadata))
+    for name, quantiles in forecast.ordered.items():
+        result = result.with_columns([pl.Series(f"{name}_q{q}", quantiles[:, j])
+                                      for j, q in enumerate(config.quantiles)])
+    for name, quantiles in forecast.raw.items():
+        result = result.with_columns([pl.Series(f"{name}_raw_q{q}", quantiles[:, j])
+                                      for j, q in enumerate(config.quantiles)])
+    return result
 
 
 def _next_month(day: date) -> date:

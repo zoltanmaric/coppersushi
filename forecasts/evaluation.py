@@ -2,13 +2,14 @@
 import json
 from pathlib import Path
 
-import pyarrow as pa
 import pyarrow.parquet as pq
 
 from forecasts.backtest import forecast_months
 from forecasts.config import RunConfig
-from forecasts.contracts import EvaluationResult, Report, Row
+from forecasts.contracts import EvaluationResult, Report
 from forecasts.features import build_features
+from pandera.typing.polars import DataFrame
+from forecasts.tables import Features, artifact_table
 from forecasts.scoring import score_forecasts
 from forecasts.snapshot import InputReader
 
@@ -28,14 +29,14 @@ def evaluate(reader: InputReader, config: RunConfig, output: Path,
     return result.report
 
 
-def save_features(features: list[Row], output: Path) -> None:
+def save_features(features: DataFrame[Features], output: Path) -> None:
     """Save the selected features and audit fields as compressed Parquet."""
     output.mkdir(parents=True, exist_ok=True)
-    pq.write_table(pa.Table.from_pylist(features), output / "features.parquet", compression="zstd")
+    pq.write_table(artifact_table(features), output / "features.parquet", compression="zstd")
 
 
 def save_evaluation(result: EvaluationResult, output: Path) -> None:
     """Save scored prediction rows and the JSON report with their existing schemas."""
     output.mkdir(parents=True, exist_ok=True)
-    pq.write_table(pa.Table.from_pylist(result.rows), output / "predictions.parquet", compression="zstd")
+    pq.write_table(artifact_table(result.rows), output / "predictions.parquet", compression="zstd")
     (output / "report.json").write_text(json.dumps(result.report, indent=2, allow_nan=False) + "\n")
