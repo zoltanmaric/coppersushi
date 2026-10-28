@@ -2,7 +2,7 @@
 
 Start with the [forecasting system design principles](forecasting-system-design.md#principles). The [operational cases](price-forecasting/operational-forecasting.md) work through the evidence for the 11:00 DE–LU forecast.
 
-An independent forecasting product under `forecasts/`, with no dependency on the power-flow application. The first market is Germany–Luxembourg day-ahead electricity prices. As of 2026-10-09, typed S3 inputs, local training/evaluation and experiment tracking are implemented; cloud execution remains planned.
+An independent forecasting product under `forecasts/`, with no dependency on the power-flow application. The first market is Germany–Luxembourg day-ahead electricity prices. As of 2026-10-28, typed S3 inputs and local training/evaluation are implemented; execution tracking and cloud runs remain planned.
 
 ## Design
 
@@ -14,8 +14,6 @@ An independent forecasting product under `forecasts/`, with no dependency on the
 
 ## Dataflow
 
-This diagram retains the pre-evaluation architecture. Local evaluation is implemented as described above; its architecture presentation is consolidated in the frontend by [PR #112](https://github.com/zoltanmaric/coppersushi/pull/112). The intermediate stack layers leave this diagram unchanged.
-
 Solid nodes and edges represent implemented parts; dashed nodes and edges (`planned`) represent planned parts. Each arrow means "required to produce." Cloud execution is a later stage, subject to deployment validation.
 
 ```mermaid
@@ -24,11 +22,11 @@ flowchart LR
 
     forecast_raw_inputs["forecast_raw_inputs<br/>S3 source responses and retrieval metadata"]
     forecast_input_snapshot["forecast_input_snapshot<br/>S3 validated Parquet tables and fixed manifest"]
-    forecast_local_run["forecast_local_run<br/>local Metaflow training and evaluation"]:::planned
+    forecast_local_run["forecast_local_run<br/>local Python training and evaluation"]
     forecast_experiment["forecast_experiment<br/>local MLflow scores, models and reports<br/>research history maintained by agents"]:::planned
 
     forecast_raw_inputs --> forecast_input_snapshot
-    forecast_input_snapshot -.-> forecast_local_run
+    forecast_input_snapshot --> forecast_local_run
     forecast_local_run -.-> forecast_experiment
 
     forecast_aws_infra["forecast_aws_infra<br/>Terraform-managed AWS resources, later stage"]:::planned
