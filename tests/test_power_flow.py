@@ -123,15 +123,18 @@ class TestPlotPowerFlow:
             monkeypatch.setattr(opf_bundle, 'snapshots', lambda: None)
             monkeypatch.setattr(app, 'figure_for', lambda key: (fig, n.snapshots))
 
-        initial = app.render('/opf-2024', 0, slider_moved=False)[0]
-        assert initial.layout.mapbox.zoom == map_style.OPF_CAMERA['zoom']
-        for index in [0, 6, 1]:
-            update, *_, message, is_open = app.render('/opf-2024', index, slider_moved=True)
+        from tests.test_app import _ids
+        graph = next(c for c in _ids(app.network_layout()) if c.id == 'map')
+        assert graph.figure['layout']['mapbox']['zoom'] == map_style.OPF_CAMERA['zoom']
+        assert graph.figure['layout']['showlegend'] is False
+        for index, moved in [(0, False), (0, True), (6, True), (1, True)]:
+            result = app.render('/opf-2024', index, slider_moved=moved)
+            update, _, _, selected, _, message, is_open = result
             assert isinstance(update, Patch)
             assert not is_open and message == ''
             operation, = update.to_plotly_json()['operations']
             assert operation['operation'] == 'Assign'
             assert operation['location'] == ['data']
             actual = go.Figure(data=operation['params']['value'])
-            expected = go.Figure(data=ppf.show_snapshot(fig, index).data)
+            expected = go.Figure(data=ppf.show_snapshot(fig, selected).data)
             assert json.loads(actual.to_json()) == json.loads(expected.to_json())
