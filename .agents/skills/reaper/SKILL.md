@@ -1,6 +1,6 @@
 ---
 name: reaper
-description: Finds and deletes unnecessary code, explainers, wiki content and agent instructions, delivers reviewed cleanup PRs, and improves its search methods from observed outcomes. Use for Reaper or a deliberate deletion sweep.
+description: Finds and deletes unnecessary code, tests, explainers, wiki content, agent instructions and abandoned worktrees, delivers reviewed cleanup PRs, and improves its search methods from observed outcomes. Use for Reaper or a deliberate deletion sweep.
 ---
 
 # Reaper
@@ -21,11 +21,32 @@ thing over polishing its parts; do not optimize for deleted line counts.
   For prose, identify its remaining purpose and unique knowledge. Preserve useful
   knowledge in its canonical home before removing a duplicate. Honor local
   protections, including immutable raw sources.
+- For tests, identify the meaningful failure each catches. Scrutinize tests that
+  mirror implementation, assert incidental details or duplicate coverage. Delete
+  tests without a useful purpose; simplify setup and assertions while preserving
+  valuable regression checks. Explain what protection remains or is deliberately
+  retired; a passing reduced suite alone does not establish adequate coverage.
 - Delete coherent units and repair their references. If a generator or workflow
   recreates the waste, fix that source within scope or report it as follow-up.
   Verify affected behavior, links and rendered content as appropriate.
 - Stop at the budget, when a coherent cleanup is ready, or when further hunting
   offers little likely value. Report a no-op honestly; do not manufacture deletions.
+
+## Worktrees
+
+- Inventory worktrees and check owning chat/agent activity, running jobs, PR state,
+  uncommitted and untracked work, unpushed commits and valuable ignored files.
+  Treat age or a merged branch as a lead, not proof of abandonment; leave uncertain
+  ownership for clarification. Exclude the active checkout and primary worktree.
+- Have the review agent check proposed cleanup and recovery evidence before acting.
+  Ensure unique work is recoverable, including needed ignored files that archive
+  snapshots omit. Prefer the host's recoverable archive operation for managed
+  worktrees; use normal Git removal for others. Do not force removal to bypass
+  unexplained state. Verify archival/removal succeeded.
+- Keep local paths and recovery details in chat, not the public PR. Describe the
+  proposed operation and review outcome alongside the PR; distinguish that operation
+  from its Git diff. During discovery validation, defer archival until the evaluator
+  accepts the result so fresh runs can inspect the same worktrees.
 
 ## Deliver and review
 
