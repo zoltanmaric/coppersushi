@@ -9,6 +9,9 @@ class WeatherLocation(NamedTuple):
     longitude: float
 
 
+# The baseline adopts the October 7 diagnostic's twelve manually spread points.
+# Coordinate provenance: wiki/price-forecasting/data-sources.md#locations
+# Comparison with three points and its limits: wiki/price-forecasting/data-sources.md#diagnostics
 WEATHER_LOCATIONS: tuple[WeatherLocation, ...] = (
     WeatherLocation('Hamburg', 53.55, 9.99),
     WeatherLocation('Essen', 51.45, 7.01),
