@@ -55,7 +55,7 @@ for (const [column, button] of sortButtons.entries()) {
 }
 const diagramBefore = $("pipeline").innerHTML;
 const teachingBefore = $("node-detail").innerHTML;
-const month = Object.keys(data.report.breakdowns.month)[1];
+const month = Object.keys(data.report.breakdowns.month).at(-1);
 change("period", month);
 assert.equal(sortButtons.at(-1).closest("th").getAttribute("aria-sort"), "descending");
 assert.deepEqual(numericColumn(7), [...numericColumn(7)].sort((a, b) => b - a));
