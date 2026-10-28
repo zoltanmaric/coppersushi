@@ -656,3 +656,7 @@ The [forecast design walkthrough](forecasting-system-design.md) tests whether a 
 ## [2026-11-23] ingest | Attributing forecast gains
 
 The [matched day-ahead editions](price-forecasting/energy-arena-benchmarks.md#paired-week) show why comparing scores at two cutoffs cannot isolate the value of fresher inputs.
+
+## [2026-10-09] ingest | First quantile forecast evaluation
+
+The fixed baseline improves weighted interval score against its distributional reference, while both nominal uncertainty bands under-cover. Weather accounts for the headline gain; adding demand does not improve the weather-only headline score. Further quality experiments and prospective evidence need a separate continuation decision. [Result and limits](price-forecasting/evaluation.md#result).
