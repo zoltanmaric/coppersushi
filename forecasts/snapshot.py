@@ -1,4 +1,7 @@
 """Collect, publish and load fixed typed input snapshots; publish the manifest last."""
+from collections.abc import Mapping, Sequence
+from datetime import date
+from forecasts.input_types import DemandSeries, PriceSeries, Report, Row, WeatherSeries
 import argparse
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -24,15 +27,18 @@ LOCATIONS = {name.lower() for name, _, _ in json.loads((ROOT / "forecasts/eviden
 WEATHER_FIELDS = sorted(f"{variable}_{location}" for variable in FIELDS for location in LOCATIONS)
 
 
-def canonical(value):
+def canonical(value: object) -> bytes:
+    """Encode JSON deterministically for hashing and saved manifests."""
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
 
 
-def identity(value):
+def identity(value: object) -> str:
+    """Hash the canonical JSON representation."""
     return hashlib.sha256(canonical(value)).hexdigest()
 
 
-def collect(data_root, output):
+def collect(data_root: Path, output: Path) -> Report:
+    """Validate archived sources and save typed snapshot tables and a manifest."""
     inputs = verify_payloads(data_root)
     output.mkdir(parents=True, exist_ok=True)
     design = json.loads((ROOT / "forecasts/evidence/forecast-bounded-evidence-20261007/design.json").read_text())
@@ -58,7 +64,7 @@ def collect(data_root, output):
         common[source] = {"source_update_utc": None,
                           "retrieved_at_utc": stamp(metadata["retrieved_at_utc"]) if metadata["retrieved_at_utc"] else None,
                           "timing_evidence": "assumed", "raw_key": raw[source]["key"]}
-    records = {"prices": [], "weather": [], "demand": []}
+    records: dict[str, list[Row]] = {"prices": [], "weather": [], "demand": []}
     for valid, value in sorted(prices.items()):
         records["prices"].append({**common["prices"], "valid_utc": valid, "price_eur_mwh": value,
                                   "version_id": identity([inputs["prices"]["sha256"], valid.isoformat()])})
@@ -98,7 +104,8 @@ def collect(data_root, output):
     return manifest
 
 
-def read_local(directory):
+def read_local(directory: Path) -> tuple[Report, dict[str, pa.Table]]:
+    """Verify snapshot identity, hashes and schemas before returning Arrow tables."""
     manifest = json.loads((directory / "manifest.json").read_text())
     snapshot_id = manifest["snapshot_id"]
     if manifest["schema_version"] != VERSION or set(manifest["files"]) != set(SCHEMAS):
@@ -122,7 +129,8 @@ def read_local(directory):
     return manifest, tables
 
 
-def eligible(row, deadline, live=False):
+def eligible(row: Row, deadline: datetime, live: bool = False) -> bool:
+    """Check update/retrieval cutoffs and the permitted timing-evidence categories."""
     if row["source_update_utc"] is not None and row["source_update_utc"] > deadline:
         return False
     if live and (row["retrieved_at_utc"] is None or row["retrieved_at_utc"] > deadline):
@@ -130,7 +138,8 @@ def eligible(row, deadline, live=False):
     return row["timing_evidence"] in {"witnessed", "documented", "assumed"}
 
 
-def select_records(tables, day, live=False, issue_time=None):
+def select_records(tables: Mapping[str, pa.Table | list[Row]], day: date, live: bool = False, issue_time: datetime | None = None) -> dict[str, list[Row]]:
+    """Select source versions eligible for a delivery day and its issue time."""
     deadline = cutoff(day)
     if live:
         if issue_time is None or issue_time.tzinfo is None:
@@ -139,7 +148,7 @@ def select_records(tables, day, live=False, issue_time=None):
             raise ValueError("Actual issue time is after the delivery day's deadline")
         deadline = issue_time
     records = {name: table.to_pylist() if hasattr(table, "to_pylist") else table for name, table in tables.items()}
-    selected = {"prices": [], "weather": [], "demand": []}
+    selected: dict[str, list[Row]] = {"prices": [], "weather": [], "demand": []}
     for row in records["prices"]:
         if row["valid_utc"].astimezone(BERLIN).date() < day and eligible(row, deadline, live):
             selected["prices"].append(row)
@@ -160,8 +169,9 @@ def select_records(tables, day, live=False, issue_time=None):
     return selected
 
 
-def latest_rows(rows, keys, value):
-    selected = {}
+def latest_rows(rows: list[Row], keys: Sequence[str], value: str) -> list[Row]:
+    """Select the latest version per row key, rejecting conflicting ties."""
+    selected: dict[tuple[object, ...], Row] = {}
     earliest = datetime.min.replace(tzinfo=timezone.utc)
     for row in rows:
         key = tuple(row[k] for k in keys)
@@ -177,9 +187,12 @@ def latest_rows(rows, keys, value):
     return list(selected.values())
 
 
-def select_inputs(tables, day, live=False, issue_time=None):
+def select_inputs(tables: Mapping[str, pa.Table | list[Row]], day: date, live: bool = False, issue_time: datetime | None = None) -> tuple[PriceSeries, WeatherSeries, DemandSeries]:
+    """Convert eligible records into timestamp-indexed price, weather and demand inputs."""
     selected = select_records(tables, day, live, issue_time)
-    prices, weather, demand = {}, {}, {}
+    prices: PriceSeries = {}
+    weather: WeatherSeries = {}
+    demand: DemandSeries = {}
     for row in selected["prices"]:
         t = row["valid_utc"]
         if t in prices and prices[t] != row["price_eur_mwh"]:
@@ -198,9 +211,9 @@ def select_inputs(tables, day, live=False, issue_time=None):
 
 class InputReader:
     """One shared reader and feature path for replay and later prediction."""
-    def __init__(self, tables):
-        self.daily = {name: defaultdict(list) for name in SCHEMAS}
-        self.truth = {}
+    def __init__(self, tables: Mapping[str, pa.Table]) -> None:
+        self.daily: dict[str, defaultdict[date, list[Row]]] = {name: defaultdict(list) for name in SCHEMAS}
+        self.truth: PriceSeries = {}
         self.weather_fields = WEATHER_FIELDS
         for name, table in tables.items():
             for row in table.to_pylist():
@@ -209,7 +222,12 @@ class InputReader:
         for row in latest_rows(tables["prices"].to_pylist(), ["valid_utc"], "price_eur_mwh"):
             self.truth[row["valid_utc"]] = row["price_eur_mwh"]
 
-    def features(self, day, live=False, issue_time=None):
+    def features(self, day: date, live: bool = False, issue_time: datetime | None = None) -> list[Row]:
+        """Build one delivery day’s features from inputs eligible at its issue.
+
+        Live selection requires a timezone-aware issue_time no later than the
+        deadline. Return quarter-hour rows without realised target values.
+        """
         # Fourteen days cover every agreed price lag and daily summary.
         candidates = {"prices": [row for lag in range(1, 15) for row in self.daily["prices"][day - timedelta(days=lag)]],
                       "weather": self.daily["weather"][day], "demand": self.daily["demand"][day]}
@@ -218,7 +236,8 @@ class InputReader:
             weather.setdefault(field, {})
         return build_rows(prices, weather, demand, day, day + timedelta(days=1), targets={})
 
-    def replay(self, start, end):
+    def replay(self, start: date, end: date) -> list[Row]:
+        """Build features in [start, end), then join retrospective scoring truth."""
         rows, day = [], start
         while day < end:
             daily = self.features(day)
@@ -230,7 +249,8 @@ class InputReader:
         return rows
 
 
-def publish(profile, region, bucket, directory, data_root):
+def publish(profile: str, region: str, bucket: str, directory: Path, data_root: Path) -> None:
+    """Verify and upload snapshot objects, publishing the manifest last."""
     manifest, _ = read_local(directory)
     verify_bucket(profile, region, bucket)
     # Validate all provenance records before starting publication.
@@ -249,7 +269,8 @@ def publish(profile, region, bucket, directory, data_root):
     print(f"Published fixed snapshot {manifest['snapshot_id']}", flush=True)
 
 
-def load(profile, region, bucket, snapshot_id, directory):
+def load(profile: str, region: str, bucket: str, snapshot_id: str, directory: Path) -> tuple[Report, dict[str, pa.Table]]:
+    """Download a fixed S3 snapshot and verify it before returning its tables."""
     if len(snapshot_id) != 64 or any(c not in "0123456789abcdef" for c in snapshot_id):
         raise ValueError("Snapshot identifier must be a SHA-256 digest")
     started = time.monotonic()
@@ -272,7 +293,8 @@ def load(profile, region, bucket, snapshot_id, directory):
     return manifest, tables
 
 
-def main():
+def main() -> None:
+    """Dispatch collection, publication or loading of a fixed input snapshot."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile", help="User-local AWS profile required for publish/load")
     parser.add_argument("--region", default="eu-west-1")

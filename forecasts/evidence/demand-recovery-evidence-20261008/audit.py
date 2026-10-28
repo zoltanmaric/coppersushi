@@ -1,4 +1,6 @@
 """Audit public monthly demand extracts; no late values are treated as earlier versions."""
+from typing import IO
+
 import argparse, json, zipfile
 from pathlib import Path
 from datetime import timedelta
@@ -11,8 +13,8 @@ p.add_argument('--end', default='2026-10-01')
 p.add_argument('--output', default='/tmp/demand-check-20261008')
 a=p.parse_args()
 areas={'10Y1001A1001A83F':'Germany country','10Y1001A1001A82H':'Germany–Luxembourg zone','10YDE-VE-------2':'50Hertz','10YDE-RWENET---I':'Amprion','10YDE-EON------1':'TenneT Germany','10YDE-ENBW-----N':'TransnetBW'}
-frames=[]; sources=[]
-def read(f, name):
+frames: list[pd.DataFrame] = []; sources=[]
+def read(f: IO[bytes] | Path, name: str) -> None:
     d=pd.read_csv(f, sep='\t')
     d=d[d.AreaCode.isin(areas)]
     d['source_file']=name

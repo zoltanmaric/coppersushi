@@ -1,4 +1,5 @@
 """Adversarial selector and publication checks using small invented input histories."""
+from forecasts.input_types import Report
 import base64
 from datetime import date
 import hashlib
@@ -19,7 +20,7 @@ from forecasts.storage import put_verified
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
-def history():
+def history() -> Report:
     result = json.loads((FIXTURES / "candidate-history.json").read_text())
     for group in [result, result["append"]]:
         for source in SCHEMAS:
@@ -32,12 +33,12 @@ def history():
 
 class MemoryStore:
     """Only the object operations used by the real upload/download helpers."""
-    def __init__(self):
-        self.objects = {}
-        self.interrupt_key = None
+    def __init__(self) -> None:
+        self.objects: dict[str, bytes] = {}
+        self.interrupt_key: str | None = None
 
-    def aws(self, profile, region, service, operation, *args):
-        def option(name):
+    def aws(self, profile: str, region: str, service: str, operation: str, *args: str) -> Report:
+        def option(name: str) -> str:
             return args[args.index(name) + 1]
         if operation == "list-objects-v2":
             return {"Contents": [{"Key": k} for k in self.objects if k.startswith(option("--prefix"))]}
@@ -58,7 +59,7 @@ class MemoryStore:
         raise AssertionError(f"Unexpected object operation: {operation}")
 
 
-def write_snapshot(directory):
+def write_snapshot(directory: Path) -> Report:
     """Write a small valid snapshot from the same invented selector history."""
     records = history()
     files, raw = {}, {}
@@ -85,7 +86,7 @@ def write_snapshot(directory):
 
 
 class SnapshotTests(unittest.TestCase):
-    def test_post_cutoff_history_does_not_change_selected_versions_or_features(self):
+    def test_post_cutoff_history_does_not_change_selected_versions_or_features(self) -> None:
         records = history()
         original = {n: records[n] for n in SCHEMAS}
         enlarged = {n: records[n] + records["append"][n] for n in SCHEMAS}
@@ -98,7 +99,7 @@ class SnapshotTests(unittest.TestCase):
         enlarged_tables = {n: validate(n, pa.Table.from_pylist(enlarged[n], schema=SCHEMAS[n])) for n in SCHEMAS}
         self.assertEqual(InputReader(original_tables).features(day), InputReader(enlarged_tables).features(day))
 
-    def test_live_selection_requires_retrieval_by_issue_time(self):
+    def test_live_selection_requires_retrieval_by_issue_time(self) -> None:
         records = history()
         day = date(2026, 3, 29)
         before = select_records({n: records[n] for n in SCHEMAS}, day, live=True, issue_time=cutoff(day))
@@ -106,7 +107,7 @@ class SnapshotTests(unittest.TestCase):
         self.assertEqual(len(before["weather"]), 1)
         self.assertEqual(len(before["demand"]), 1)
 
-    def test_live_selection_uses_actual_issue_before_the_deadline(self):
+    def test_live_selection_uses_actual_issue_before_the_deadline(self) -> None:
         records = history()
         tables = {n: records[n] for n in SCHEMAS}
         day = date(2026, 3, 29)
@@ -118,7 +119,7 @@ class SnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "after.*deadline"):
             select_records(tables, day, live=True, issue_time=stamp("2026-03-28T10:00:01Z"))
 
-    def test_rejected_new_weather_location_does_not_expand_feature_inventory(self):
+    def test_rejected_new_weather_location_does_not_expand_feature_inventory(self) -> None:
         records = history()
         original = {n: records[n] for n in SCHEMAS}
         extra = dict(records["append"]["weather"][0], location="unconfigured-location")
@@ -127,7 +128,7 @@ class SnapshotTests(unittest.TestCase):
         after = InputReader({n: pa.Table.from_pylist(enlarged[n], schema=SCHEMAS[n]) for n in SCHEMAS})
         self.assertEqual(before.features(date(2026, 3, 29)), after.features(date(2026, 3, 29)))
 
-    def test_schema_rejects_null_keys_and_duplicates(self):
+    def test_schema_rejects_null_keys_and_duplicates(self) -> None:
         rows = history()["prices"]
         with self.assertRaisesRegex(ValueError, "Duplicate"):
             validate("prices", pa.Table.from_pylist(rows + rows, schema=SCHEMAS["prices"]))
@@ -135,13 +136,13 @@ class SnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Required"):
             validate("prices", pa.Table.from_pylist(rows, schema=SCHEMAS["prices"]))
 
-    def test_schema_rejects_incompatible_weather_units(self):
+    def test_schema_rejects_incompatible_weather_units(self) -> None:
         rows = history()["weather"]
         rows[0]["unit"] = "°F"
         with self.assertRaisesRegex(ValueError, "units"):
             validate("weather", pa.Table.from_pylist(rows, schema=SCHEMAS["weather"]))
 
-    def test_interrupted_publication_cannot_load(self):
+    def test_interrupted_publication_cannot_load(self) -> None:
         store = MemoryStore()
         with tempfile.TemporaryDirectory() as temporary, patch("forecasts.storage.aws", store.aws), patch("forecasts.snapshot.verify_bucket"):
             directory = Path(temporary)
@@ -154,7 +155,7 @@ class SnapshotTests(unittest.TestCase):
             with self.assertRaises(KeyError):
                 load("fixture", "eu-west-1", "fixture-bucket", manifest["snapshot_id"], directory / "partial-load")
 
-    def test_complete_publication_and_retry_load_identical_content(self):
+    def test_complete_publication_and_retry_load_identical_content(self) -> None:
         store = MemoryStore()
         with tempfile.TemporaryDirectory() as temporary, patch("forecasts.storage.aws", store.aws), patch("forecasts.snapshot.verify_bucket"):
             directory = Path(temporary)
@@ -170,7 +171,7 @@ class SnapshotTests(unittest.TestCase):
                 self.assertEqual(tables[name].num_rows, manifest["files"][name]["rows"])
                 self.assertEqual((destination / f"{name}.parquet").read_bytes(), (directory / f"{name}.parquet").read_bytes())
 
-    def test_conflicting_retry_preserves_published_content(self):
+    def test_conflicting_retry_preserves_published_content(self) -> None:
         store = MemoryStore()
         with tempfile.TemporaryDirectory() as temporary, patch("forecasts.storage.aws", store.aws), patch("forecasts.snapshot.verify_bucket"):
             directory = Path(temporary)

@@ -1,3 +1,4 @@
+from typing import Any
 import json,pathlib,datetime
 import numpy as np,pandas as pd
 from catboost import CatBoostRegressor
@@ -13,7 +14,7 @@ local=prices.index.tz_convert('Europe/Berlin');year=prices[(local>=pd.Timestamp(
 hour_average=year.groupby(year.index.floor('h')).transform('mean')
 hour_median=year.groupby(year.index.floor('h')).transform('median')
 resolution={'quarter_hours':len(year),'mean_absolute_deviation_from_hour_mean':float(abs(year-hour_average).mean()),'mae_floor_for_one_constant_per_hour':float(abs(year-hour_median).mean()),'p95_absolute_deviation_from_hour_mean':float(abs(year-hour_average).quantile(.95))}
-def weather_frame(payload,old=False):
+def weather_frame(payload: list[dict[str, Any]], old: bool = False) -> pd.DataFrame:
  frames=[]
  for n,loc in enumerate(payload):
   h=loc['hourly'];t=pd.to_datetime(h['time'],unit='s',utc=True);f=pd.DataFrame(index=t)
@@ -69,7 +70,7 @@ pred=pd.concat(pieces);assert pred.notna().all().all() and pred.index.is_unique
 errors=pred.drop(columns='actual').sub(pred.actual,axis=0).abs()
 daily=errors.groupby(errors.index.tz_convert('Europe/Berlin').strftime('%Y-%m-%d')).mean()
 monthly=errors.groupby(errors.index.tz_convert('Europe/Berlin').strftime('%Y-%m')).mean()
-def comparison(old,fresh):
+def comparison(old: str, fresh: str) -> dict[str, Any]:
  diff=(daily[old]-daily[fresh]).to_numpy();rng=np.random.default_rng(42);boot=[]
  for _ in range(5000):
   starts=rng.integers(0,len(diff),size=int(np.ceil(len(diff)/7)));ii=np.concatenate([(a+np.arange(7))%len(diff) for a in starts])[:len(diff)];boot.append(diff[ii].mean())

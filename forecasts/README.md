@@ -71,3 +71,14 @@ terraform -chdir=forecasts/infra output -state="$PWD/data/forecasts/terraform.tf
 For an existing bucket, import the bucket and its public-access, ownership, encryption, versioning, lifecycle and policy resources before applying, with `-var=bucket_name=YOUR_PRIVATE_BUCKET`. Inspect the plan; adoption must not replace the bucket. [Terraform S3 import documentation](https://registry.terraform.io/providers/hashicorp/aws/5.100.0/docs/resources/s3_bucket).
 
 Uploads and provider installation may exceed a minute; follow the repository's job-supervision workflow. As of 2026-10-09, input collection/storage and feature replay are implemented. Local Metaflow training, MLflow comparisons, quantile fitting and accepted-run reproduction remain in the next spec step.
+
+## Type checks
+
+Check the entire forecast tree, including tests and evidence scripts:
+
+```sh
+data/forecasts/venv/bin/python -m pip install -r forecasts/requirements-dev.txt
+data/forecasts/venv/bin/python -m mypy --config-file forecasts/mypy.ini
+```
+
+The normal test suite also rejects missing function annotations anywhere under `forecasts/`. Missing third-party stubs remain an explicit limitation of static checking.

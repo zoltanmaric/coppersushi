@@ -1,4 +1,6 @@
 """Build an all-date replay from immutable, hash-verified evidence snapshots."""
+from collections.abc import Collection, Iterator, Sequence
+from forecasts.input_types import DemandSeries, DemandVersion, PriceSeries, Report, Row, WeatherSeries
 import argparse
 from collections import Counter, defaultdict
 import csv
@@ -31,16 +33,19 @@ TIMING = {
 }
 
 
-def stamp(value):
+def stamp(value: str) -> datetime:
+    """Parse a source timestamp as an aware UTC datetime."""
     parsed = datetime.fromisoformat(value)
     return parsed.replace(tzinfo=UTC) if parsed.tzinfo is None else parsed.astimezone(UTC)
 
 
-def cutoff(day):
+def cutoff(day: date) -> datetime:
+    """Return the preceding-day 11:00 Berlin issue deadline in UTC."""
     return datetime.combine(day - timedelta(days=1), time(11), BERLIN).astimezone(UTC)
 
 
-def quarters(start, end):
+def quarters(start: date, end: date) -> Iterator[datetime]:
+    """Yield actual UTC delivery quarters in the local-date interval [start, end)."""
     current = datetime.combine(start, time(), BERLIN).astimezone(UTC)
     stop = datetime.combine(end, time(), BERLIN).astimezone(UTC)
     while current < stop:
@@ -48,7 +53,8 @@ def quarters(start, end):
         current += timedelta(minutes=15)
 
 
-def number(value):
+def number(value: str | int | float | None) -> float | None:
+    """Parse a finite source number; preserve missing values as None."""
     if value in (None, "", "n/e"):
         return None
     result = float(value)
@@ -57,12 +63,14 @@ def number(value):
     return result
 
 
-def digest(path):
+def digest(path: Path) -> str:
+    """Return the SHA-256 digest of a file."""
     with path.open("rb") as source:
         return hashlib.file_digest(source, "sha256").hexdigest()
 
 
-def verify_payloads(data_root):
+def verify_payloads(data_root: Path) -> dict[str, Report]:
+    """Verify archived source bytes against the recorded payload manifest."""
     manifest = json.loads((ROOT / "forecasts/evidence/payload-manifest.json").read_text())
     expected = {p["path"].removeprefix("data/forecasts/"): p for p in manifest["payloads"]}
     result = {}
@@ -75,8 +83,9 @@ def verify_payloads(data_root):
     return result
 
 
-def load_prices(path):
-    prices = {}
+def load_prices(path: Path) -> PriceSeries:
+    """Load validated quarter-hour prices from the source archive."""
+    prices: PriceSeries = {}
     with zipfile.ZipFile(path) as archive:
         for name in sorted(archive.namelist()):
             if not name.startswith("prices/") or not name.endswith(".json") or name == "prices/index.json":
@@ -93,7 +102,7 @@ def load_prices(path):
 
 
 class PriceHistory:
-    def __init__(self, prices):
+    def __init__(self, prices: PriceSeries) -> None:
         self.clock = defaultdict(list)
         self.daily = defaultdict(list)
         for timestamp, value in prices.items():
@@ -103,15 +112,18 @@ class PriceHistory:
                 self.daily[local.date()].append(value)
         self.daily_stats = {day: (statistics.mean(values), min(values), max(values)) for day, values in self.daily.items()}
 
-    def lag(self, day, quarter, days):
+    def lag(self, day: date, quarter: int, days: int) -> float | None:
+        """Return the earlier same-clock price, averaging duplicate clock quarters."""
         values = self.clock.get((day - timedelta(days=days), quarter), [])
         return statistics.mean(values) if values else None
 
-    def summary(self, day, days):
+    def summary(self, day: date, days: int) -> tuple[float | None, float | None, float | None]:
+        """Return earlier daily mean/min/max, or three missing values."""
         return self.daily_stats.get(day - timedelta(days=days), (None, None, None))
 
 
-def load_weather(path, locations):
+def load_weather(path: Path, locations: Sequence[tuple[str, float, float]]) -> tuple[WeatherSeries, Report]:
+    """Load hourly forecast fields and align radiation to the preceding hour."""
     with zipfile.ZipFile(path) as archive:
         snapshot = json.loads(archive.read("history.json"))
     payload = snapshot["data"]
@@ -140,8 +152,9 @@ def load_weather(path, locations):
     return frames, {"request_url": snapshot["url"], "retrieved_at_utc": snapshot["retrieved_at_utc"], "locations": metadata}
 
 
-def load_demand(path, start, end):
-    versions = defaultdict(list)
+def load_demand(path: Path, start: date, end: date) -> DemandSeries:
+    """Load archived country-demand versions for local dates in [start, end)."""
+    versions: DemandSeries = defaultdict(list)
     with zipfile.ZipFile(path) as archive:
         for name in sorted(archive.namelist()):
             if not name.endswith(".csv") or "DayAheadTotalLoadForecast_6.1.B_r3" not in name:
@@ -160,20 +173,22 @@ def load_demand(path, start, end):
     return versions
 
 
-def select_demand(versions, deadline):
+def select_demand(versions: list[DemandVersion], deadline: datetime) -> tuple[float | None, str | None, str]:
+    """Select the latest nonmissing version eligible by the issue deadline."""
     usable = [v for v in versions if v["updated"] is not None and v["updated"] <= deadline and v["value"] is not None]
     if usable:
-        latest = max(v["updated"] for v in usable)
+        latest = max(v["updated"] for v in usable if v["updated"] is not None)
         selected = [v for v in usable if v["updated"] == latest]
         if len({v["value"] for v in selected}) != 1:
             raise ValueError("Conflicting demand values at the same update time")
-        return selected[0]["value"], selected[0]["updated"].isoformat(), "usable"
+        return selected[0]["value"], latest.isoformat(), "usable"
     reason = "absent" if not versions else "late_or_missing_update_or_value"
     return None, None, reason
 
 
-def holidays(year):
+def holidays(year: int) -> set[date]:
     # Gregorian Easter (Meeus/Jones/Butcher); only nationwide German holidays.
+    """Return nationwide German holidays for the supplied year."""
     a, b, c = year % 19, year // 100, year % 100
     d, e = b // 4, b % 4
     f = (b + 8) // 25
@@ -188,7 +203,8 @@ def holidays(year):
     }
 
 
-def build_rows(prices, weather, demand, start=START, end=END, targets=None):
+def build_rows(prices: PriceSeries, weather: WeatherSeries, demand: DemandSeries, start: date = START, end: date = END, targets: PriceSeries | None = None) -> list[Row]:
+    """Build feature/audit rows for every delivery quarter, preserving missing inputs."""
     history = PriceHistory(prices)
     targets = prices if targets is None else targets
     rows = []
@@ -197,8 +213,10 @@ def build_rows(prices, weather, demand, start=START, end=END, targets=None):
         local = timestamp.astimezone(BERLIN)
         day, quarter = local.date(), local.hour * 4 + local.minute // 15
         deadline = cutoff(day)
-        row = {"delivery_utc": timestamp.isoformat(), "delivery_date": day.isoformat(), "issue_cutoff_utc": deadline.isoformat(),
-               "utc_offset_minutes": int(local.utcoffset().total_seconds() / 60), "clock_fold": local.fold,
+        offset = local.utcoffset()
+        assert offset is not None  # local is explicitly Europe/Berlin-aware.
+        row: Row = {"delivery_utc": timestamp.isoformat(), "delivery_date": day.isoformat(), "issue_cutoff_utc": deadline.isoformat(),
+               "utc_offset_minutes": int(offset.total_seconds() / 60), "clock_fold": local.fold,
                "price_eur_mwh": targets.get(timestamp), "target_missing": int(targets.get(timestamp) is None),
                "quarter_of_day": quarter, "day_of_week": local.weekday(), "month": local.month,
                "public_holiday": int(day in holiday_dates), "price_timing_assumed": 1,
@@ -222,10 +240,10 @@ def build_rows(prices, weather, demand, start=START, end=END, targets=None):
                    demand_archive_versions=len(demand.get(timestamp, [])),
                    demand_archived_latest_update_utc=max(archived_updates).isoformat() if archived_updates else None)
         rows.append(row)
-    days = defaultdict(list)
+    by_day: dict[str, list[Row]] = defaultdict(list)
     for row in rows:
-        days[row["delivery_date"]].append(row)
-    for daily in days.values():
+        by_day[row["delivery_date"]].append(row)
+    for daily in by_day.values():
         demand_absent = int(all(r["demand_missing"] for r in daily))
         weather_absent = int(all(r[f] is None for r in daily for f in weather))
         prices_absent = int(all(r[f"price_lag_{d}"] is None for r in daily for d in (1, 2, 7, 14)))
@@ -235,7 +253,8 @@ def build_rows(prices, weather, demand, start=START, end=END, targets=None):
     return rows
 
 
-def summarize(rows, weather_fields):
+def summarize(rows: list[Row], weather_fields: Collection[str]) -> Report:
+    """Count coverage and missing inputs without dropping delivery rows."""
     daily = Counter(r["delivery_date"] for r in rows)
     return {
         "rows": len(rows), "days": len(daily), "target_missing": sum(r["target_missing"] for r in rows),
@@ -249,7 +268,8 @@ def summarize(rows, weather_fields):
     }
 
 
-def reconcile(counts, rows):
+def reconcile(counts: Report, rows: list[Row]) -> Report:
+    """Check dataset counts against the preserved source evidence."""
     demand = json.loads((ROOT / "forecasts/evidence/demand-recovery-evidence-20261008/summary.json").read_text())
     country = next(s for s in demand["summary"] if s["area"] == "Germany country")
     expected = {"rows": 35040, "days": 365, "target_missing": 0, "demand_usable": country["pre_cutoff"],
@@ -257,7 +277,7 @@ def reconcile(counts, rows):
     for key, value in expected.items():
         if counts[key] != value:
             raise ValueError(f"Evidence contradiction for {key}: {counts[key]} != {value}")
-    daily = defaultdict(lambda: [0, 0])
+    daily: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     for row in rows:
         daily[row["delivery_date"]][0] += 1
         daily[row["delivery_date"]][1] += row["demand_available"]
@@ -273,7 +293,8 @@ def reconcile(counts, rows):
     return expected
 
 
-def main():
+def main() -> None:
+    """Build and save the diagnostic dataset from local inputs."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-root", type=Path, default=ROOT / "data/forecasts")
     parser.add_argument("--snapshot", type=Path, help="Validated local snapshot loaded from S3; no source-provider calls")
@@ -286,7 +307,7 @@ def main():
         metadata = {"snapshot_id": manifest["snapshot_id"]}
         reader = InputReader(tables)
         rows = reader.replay(START, END)
-        weather = reader.weather_fields
+        weather_fields = reader.weather_fields
     else:
         inputs = verify_payloads(args.data_root)
         print("Verified three input archives", flush=True)
@@ -295,7 +316,8 @@ def main():
         weather, metadata = load_weather(args.data_root / PAYLOADS["weather"], design["locations"])
         demand = load_demand(args.data_root / PAYLOADS["demand"], START, END)
         rows = build_rows(prices, weather, demand)
-    counts = summarize(rows, weather)
+        weather_fields = list(weather)
+    counts = summarize(rows, weather_fields)
     expected = reconcile(counts, rows)
     args.output.mkdir(parents=True, exist_ok=True)
     path = args.output / "quarters.csv"

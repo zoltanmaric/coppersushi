@@ -1,4 +1,5 @@
 """Versioned input schemas; UTC times remain distinct from availability evidence."""
+from forecasts.input_types import Report
 import math
 import pyarrow as pa
 from forecasts.dataset import FIELDS
@@ -7,7 +8,8 @@ VERSION = 1
 UTC_TIME = pa.timestamp("us", tz="UTC")
 
 
-def field(name, kind, nullable=False, unit=None):
+def field(name: str, kind: pa.DataType, nullable: bool = False, unit: str | None = None) -> pa.Field:
+    """Create an Arrow field with optional unit metadata."""
     return pa.field(name, kind, nullable=nullable, metadata={"unit": unit} if unit else None)
 
 
@@ -32,14 +34,16 @@ SCHEMAS = {
 KEYS = {"prices": ["valid_utc", "version_id"], "weather": ["valid_utc", "location", "variable", "version_id"], "demand": ["valid_utc", "area_code", "version_id"]}
 
 
-def describe(name):
+def describe(name: str) -> Report:
+    """Return the serialized column and key contract for an input table."""
     return {"version": VERSION, "row_key": KEYS[name], "columns": [
         {"name": f.name, "type": str(f.type), "nullable": f.nullable,
          "unit": f.metadata[b"unit"].decode() if f.metadata and b"unit" in f.metadata else None} for f in SCHEMAS[name]
     ]}
 
 
-def validate(name, table):
+def validate(name: str, table: pa.Table) -> pa.Table:
+    """Reject rows that violate the named schema, keys, units or value constraints."""
     if not table.schema.equals(SCHEMAS[name], check_metadata=True):
         raise ValueError(f"Schema mismatch: {name}")
     for f in SCHEMAS[name]:

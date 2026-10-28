@@ -25,3 +25,6 @@ jobs:
       - name: Run existing tests
         shell: micromamba-shell {0}
         run: python -m pytest -q
+      - name: Check forecast function annotations
+        shell: micromamba-shell {0}
+        run: python -m unittest discover -s forecasts/tests -p test_typing.py
