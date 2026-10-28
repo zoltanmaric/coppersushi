@@ -20,7 +20,7 @@ flowchart LR
 
     forecast_raw_inputs["forecast_raw_inputs<br/>S3 source responses and retrieval metadata"]
     forecast_input_snapshot["forecast_input_snapshot<br/>S3 validated Parquet tables and fixed manifest"]
-    forecast_local_run["forecast_local_run<br/>local Python calculation<br/>Metaflow execution"]
+    forecast_local_run["forecast_local_run<br/>frozen code + Pixi runtime<br/>Metaflow execution"]
     forecast_experiment["forecast_experiment<br/>local MLflow scores, models and reports<br/>research history maintained by agents"]
 
     forecast_raw_inputs --> forecast_input_snapshot
