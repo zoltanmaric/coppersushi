@@ -1,11 +1,15 @@
 ---
 name: forecast-experiment
-description: Records hypotheses, evidence and decisions when proposing, selecting, running or evaluating forecast experiments, including backtests and feature or model comparisons. Excludes routine tests and unchanged forecast operation.
+description: Records hypotheses, evidence and decisions when proposing, selecting, running, evaluating or reviewing forecast experiment records, including backtests and feature or model comparisons. Excludes routine tests and unchanged forecast operation.
 ---
 
 # Forecast experiments
 
 Read the [evaluation contract](../../../wiki/price-forecasting/evaluation.md) and [point-in-time contract](../../../wiki/price-forecasting/data-sources.md#point-in-time) before designing a comparison.
+
+## Record scope
+
+Keep durable experiment records for what lands on `main` and for scientific learning, including rejected models and informative failures. Use disposable MLflow stores for setup checks, smoke tests and PR debugging; keep ordinary verification evidence in the PR. During review, remove implementation churn from proposed research records and check that each retained record serves one of those purposes.
 
 ## Propose
 

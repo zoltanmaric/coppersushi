@@ -103,3 +103,21 @@ FORECAST_BASELINE_SNAPSHOT=data/forecasts/loaded-snapshot pixi run --locked pyth
 ```
 
 The test requires the snapshot ID recorded in its fixture. Ordinary dataset generation reports coverage without requiring it to match that historical year. Raw baseline archives belong at `data/forecasts/inputs/prices.zip`, `weather.zip` and `demand.zip`; existing saved S3 snapshots remain readable without relocating anything.
+
+## Tracked execution and reproduction
+
+Run accepted execution from the normal development environment:
+
+```sh
+pixi run --locked python -m forecasts.run run --snapshot data/forecasts/loaded-snapshot
+```
+
+The command requires committed code. It freezes the repository, `pyproject.toml`, `pixi.lock` and configuration, then restores a fresh Pixi `runtime` environment before running Metaflow. The manifest records the actual Python and installed packages, definition hashes, Pixi version, code and snapshot identity. Development-only packages are excluded. Runtime installation can use cached packages; it requires package-network access when the cache is incomplete.
+
+Execution directories live under `data/forecasts/runs/`; each retry gets a new identifier. Set `FORECAST_DATA_ROOT` to use another output/tracking root. `--exploratory` uses the mutable checkout and current interpreter; these runs cannot satisfy accepted reproduction. Inputs remain in S3, while execution artifacts must be retained locally. For smoke tests and PR verification, set `FORECAST_DATA_ROOT` to a temporary directory so validation does not enter research history.
+
+```sh
+pixi run --locked python -m forecasts.run reproduce RUN_ID --profile YOUR_LOCAL_PROFILE --bucket YOUR_PRIVATE_BUCKET
+```
+
+Reproduction uses the saved code and Pixi definitions on the recorded operating system and architecture, reloads the S3 snapshot, and compares saved-model predictions and scores. Each attempt lives under `data/forecasts/reproductions/RUN_ID/ATTEMPT_ID/`, with status in `attempt.json` and successful verification in `result/verification.json`. Retry with the same command; failed and successful attempts remain intact. The preserved lock must still be supported by the installed Pixi version. It does not claim binary-identical retraining. [Scientific limits](../wiki/price-forecasting/evaluation.md#result) remain unchanged.
