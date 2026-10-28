@@ -9,7 +9,7 @@ RUN pixi shell-hook -e runtime -s bash > /opt/activate.sh && \
     printf '#!/bin/bash\nsource /opt/activate.sh\nexec "$@"\n' > /opt/entrypoint.sh && \
     chmod +x /opt/entrypoint.sh
 
-FROM ubuntu:24.04 AS runtime
+FROM --platform=linux/amd64 ubuntu:24.04 AS runtime
 WORKDIR /opt/webapp
 COPY --from=environment /opt/webapp /opt/webapp
 COPY --from=environment /opt/activate.sh /opt/entrypoint.sh /opt/
