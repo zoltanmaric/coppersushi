@@ -20,7 +20,7 @@
 
 - **design-first** — Design-first for non-trivial work.
   - Interrogate before implementing (`grill` skill) on every non-trivial ask, clear or not: first whether it is the right question at all, then what exactly is asked; depth scales with ambiguity.
-  - For large or multi-session tasks, use a spec (`spec` skill) — create one when obviously needed, suggest it in the gray zone.
+  - For large or multi-session tasks, use a spec (`spec` skill) — create one when obviously needed, suggest it in the gray zone. Every spec must be a beautiful, wiki-backed HTML explainer presented for human review before implementation; wait for approval of the proposed direction.
   - When a spec or design has grown load-bearing, suggest a goldfish review (`goldfish` skill); the user pulls the trigger.
 
 - **ablation** — Keep agent rules and skills minimal — ablate, don't accumulate. Every line here and in `.agents/skills/` is read on every run and must earn its place through an observed, repeated stumble — never a predicted one — recorded in `wiki/rule-provenance.md`. The user may override the repetition bar after the agent names the missing evidence and gets the user's explicit confirmation. As models improve, old corrective lines go stale: re-ablate occasionally by deleting lines and seeing what actually breaks. If nothing ever needs adding back, the deleting wasn't aggressive enough.
@@ -30,6 +30,8 @@
 - **absolute-paths** — Never `cd` inside a command chain: the working directory persists across `&&` and `;`, so every later step silently runs elsewhere. Use absolute paths, `git -C`, and put any `cd` inside the subshell that needs it.
 
 - **file-urls** — Refer to files in chat by their full `file:///` URL, never by a bare or relative path.
+
+- **html-preview** — Present HTML in the browser viewer. In Codex, use `open_in_codex` with `target.type: "browser"` and the `file:///` URL; the `file` target opens raw source. A queued request does not confirm rendering.
 
 - **named-adds** — Stage named paths, never `git add -A` or `git add .`: untracked files you didn't mean to commit ride along silently.
 
