@@ -17,18 +17,19 @@ import subprocess
 import time
 
 import pyarrow as pa
+from forecasts.input_config import WEATHER_LOCATIONS
 from forecasts.prices import PriceHistory, PriceVersions, build_price_features, latest_versions, read_prices, select_history
 import pyarrow.parquet as pq
 
 from forecasts.dataset import (
     BERLIN, COUNTRY, END, FIELDS, PAYLOADS, ROOT, START, TIMING, assemble_rows, cutoff, quarters,
-    digest, load_demand, load_prices, load_weather, reconcile, stamp, summarize,
+    digest, load_demand, load_prices, load_weather, stamp,
     verify_payloads,
 )
 from forecasts.schemas import SCHEMAS, VERSION, describe, validate
 from forecasts.storage import get_verified, put_verified, verify_bucket
 
-LOCATIONS = {name.lower() for name, _, _ in json.loads((ROOT / "forecasts/evidence/forecast-bounded-evidence-20261007/design.json").read_text())["locations"]}
+LOCATIONS = {location.name.lower() for location in WEATHER_LOCATIONS}
 WEATHER_FIELDS = sorted(f"{variable}_{location}" for variable in FIELDS for location in LOCATIONS)
 
 
@@ -46,9 +47,8 @@ def collect(data_root: Path, output: Path) -> Report:
     """Validate archived sources and save typed snapshot tables and a manifest."""
     inputs = verify_payloads(data_root)
     output.mkdir(parents=True, exist_ok=True)
-    design = json.loads((ROOT / "forecasts/evidence/forecast-bounded-evidence-20261007/design.json").read_text())
     prices = load_prices(data_root / PAYLOADS["prices"])
-    weather, weather_metadata = load_weather(data_root / PAYLOADS["weather"], design["locations"])
+    weather, weather_metadata = load_weather(data_root / PAYLOADS["weather"], WEATHER_LOCATIONS)
     demand = load_demand(data_root / PAYLOADS["demand"], START, END)
     raw, common = {}, {}
     for source, entry in inputs.items():

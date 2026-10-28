@@ -40,3 +40,5 @@ Attach a conclusion to the execution run with results, evidence links, limitatio
 Update the wiki proposal with a short outcome and links to its executions and conclusions; refresh the research index. Revisit deferred proposals in light of the results; link new proposals to their motivating evidence.
 
 Identify evaluation periods whose results informed experiment choices as development data, not untouched holdouts. Keep execution evidence in MLflow and research synthesis in the wiki, linked by run IDs. Follow this procedure manually when automation is absent.
+
+Before closing an investigation, promote anything required by maintained code into explicitly owned configuration, data contracts or test fixtures; remove production dependencies on investigation folders. Retire scripts used only for the completed investigation after verifying that their contents exist in a commit reachable from `main`, and update reproduction links to that revision. If the scripts have not reached `main`, retain them through the first merge and delete them in a follow-up PR; adding and deleting within one squash-merged PR does not preserve them in `main`’s history.

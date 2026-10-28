@@ -1,5 +1,6 @@
 """Build an all-date replay from immutable, hash-verified evidence snapshots."""
 from collections.abc import Collection, Iterator, Sequence
+from forecasts.input_config import WEATHER_LOCATIONS
 import polars as pl
 from pandera.typing.polars import DataFrame
 from forecasts.prices import PriceFeatures, PriceHistory, build_price_features
@@ -23,11 +24,8 @@ ROOT = Path(__file__).resolve().parents[1]
 FIELDS = {"temperature_2m": "°C", "wind_speed_120m": "km/h", "shortwave_radiation": "W/m²"}
 COUNTRY = "10Y1001A1001A83F"
 START, END = date(2025, 10, 1), date(2026, 10, 1)
-PAYLOADS = {
-    "prices": "evidence/forecast-bounded-evidence-20261007/inputs.zip",
-    "weather": "evidence/weather-compatibility-evidence-20261008/responses.zip",
-    "demand": "entsoe-files.zip",
-}
+BASELINE_INPUTS = json.loads((ROOT / "forecasts/data/baseline-inputs.json").read_text())
+PAYLOADS = {source: entry["path"] for source, entry in BASELINE_INPUTS.items()}
 TIMING = {
     "prices": "Assume auction prices for earlier delivery dates are available at issue time; SMARD publication latency and revisions are unaudited.",
     "weather": "Assume documented previous_day2 fixed 48-hour lead; original publication times are unknown. Retrospective retrieval is not witnessed availability.",
@@ -73,12 +71,10 @@ def digest(path: Path) -> str:
 
 def verify_payloads(data_root: Path) -> dict[str, Report]:
     """Verify archived source bytes against the recorded payload manifest."""
-    manifest = json.loads((ROOT / "forecasts/evidence/payload-manifest.json").read_text())
-    expected = {p["path"].removeprefix("data/forecasts/"): p for p in manifest["payloads"]}
     result = {}
     for source, relative in PAYLOADS.items():
         path = data_root / relative
-        entry = expected[relative]
+        entry = BASELINE_INPUTS[source]
         if path.stat().st_size != entry["bytes"] or digest(path) != entry["sha256"]:
             raise ValueError(f"Snapshot checksum mismatch: {relative}")
         result[source] = {"path": relative, "bytes": entry["bytes"], "sha256": entry["sha256"]}
@@ -263,31 +259,6 @@ def summarize(rows: list[Row], weather_fields: Collection[str]) -> Report:
     }
 
 
-def reconcile(counts: Report, rows: list[Row]) -> Report:
-    """Check dataset counts against the preserved source evidence."""
-    demand = json.loads((ROOT / "forecasts/evidence/demand-recovery-evidence-20261008/summary.json").read_text())
-    country = next(s for s in demand["summary"] if s["area"] == "Germany country")
-    expected = {"rows": 35040, "days": 365, "target_missing": 0, "demand_usable": country["pre_cutoff"],
-                "demand_unavailable_days": 71, "clock_change_days": {"2025-10-26": 100, "2026-03-29": 92}}
-    for key, value in expected.items():
-        if counts[key] != value:
-            raise ValueError(f"Evidence contradiction for {key}: {counts[key]} != {value}")
-    daily: dict[str, list[int]] = defaultdict(lambda: [0, 0])
-    for row in rows:
-        daily[row["delivery_date"]][0] += 1
-        daily[row["delivery_date"]][1] += row["demand_available"]
-    with (ROOT / "forecasts/evidence/demand-recovery-evidence-20261008/daily-coverage.csv").open() as source:
-        evidence = {r["local_date"]: [int(r["rows"]), int(r["pre_cutoff"])] for r in csv.DictReader(source) if r["AreaCode"] == COUNTRY}
-    if dict(daily) != evidence:
-        raise ValueError("Daily country demand coverage contradicts the saved audit")
-    # Both missing fields span 95 aligned hours at each of the twelve locations.
-    for field, missing in counts["weather_missing_quarters"].items():
-        expected_missing = 0 if field.startswith("temperature") else 95 * 4
-        if missing != expected_missing:
-            raise ValueError(f"Weather evidence contradiction: {field}: {missing} != {expected_missing}")
-    return expected
-
-
 def main() -> None:
     """Build and save the diagnostic dataset from local inputs."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -307,13 +278,11 @@ def main() -> None:
         inputs = verify_payloads(args.data_root)
         print("Verified three input archives", flush=True)
         prices = load_prices(args.data_root / PAYLOADS["prices"])
-        design = json.loads((ROOT / "forecasts/evidence/forecast-bounded-evidence-20261007/design.json").read_text())
-        weather, metadata = load_weather(args.data_root / PAYLOADS["weather"], design["locations"])
+        weather, metadata = load_weather(args.data_root / PAYLOADS["weather"], WEATHER_LOCATIONS)
         demand = load_demand(args.data_root / PAYLOADS["demand"], START, END)
         rows = build_rows(prices, weather, demand)
         weather_fields = list(weather)
     counts = summarize(rows, weather_fields)
-    expected = reconcile(counts, rows)
     args.output.mkdir(parents=True, exist_ok=True)
     path = args.output / "quarters.csv"
     with path.open("w", newline="") as output:
@@ -321,7 +290,7 @@ def main() -> None:
         writer.writeheader()
         writer.writerows(rows)
     report = {"start": START.isoformat(), "end_exclusive": END.isoformat(), "timezone": "Europe/Berlin",
-              "counts": counts, "reconciled_evidence": expected, "inputs": inputs, "weather": metadata,
+              "counts": counts, "inputs": inputs, "weather": metadata,
               "timing_limits": TIMING, "prices_attribution": "Bundesnetzagentur | SMARD.de",
               "transformations": {"price_lags_days": [1, 2, 7, 14], "price_daily_summaries_days": [1, 7],
                                   "clock_match": "same local quarter; average duplicates; nonexistent quarters missing",
