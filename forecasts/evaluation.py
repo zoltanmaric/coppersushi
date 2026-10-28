@@ -1,4 +1,5 @@
 """Run the local backtest as explicit feature, forecast and scoring stages."""
+import argparse
 import json
 from pathlib import Path
 
@@ -11,7 +12,7 @@ from forecasts.features import build_features
 from pandera.typing.polars import DataFrame
 from forecasts.tables import Features, artifact_table
 from forecasts.scoring import score_forecasts
-from forecasts.snapshot import InputReader
+from forecasts.snapshot import InputReader, read_local
 
 
 def evaluate(reader: InputReader, config: RunConfig, output: Path,
@@ -40,3 +41,22 @@ def save_evaluation(result: EvaluationResult, output: Path) -> None:
     output.mkdir(parents=True, exist_ok=True)
     pq.write_table(artifact_table(result.rows), output / "predictions.parquet", compression="zstd")
     (output / "report.json").write_text(json.dumps(result.report, indent=2, allow_nan=False) + "\n")
+
+
+def main() -> None:
+    """Evaluate a fixed local snapshot into a new output directory."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", type=Path, default=Path(__file__).with_name("run-config.json"))
+    parser.add_argument("--snapshot", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    config = RunConfig.from_dict(json.loads(args.config.read_text()))
+    manifest, tables = read_local(args.snapshot)
+    if manifest["snapshot_id"] != config.snapshot_id:
+        raise ValueError("Evaluation requires its configured input snapshot")
+    args.output.mkdir(parents=True, exist_ok=False)
+    evaluate(InputReader(tables), config, args.output)
+
+
+if __name__ == "__main__":
+    main()
