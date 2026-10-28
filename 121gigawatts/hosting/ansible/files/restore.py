@@ -62,7 +62,7 @@ def restore():
     subprocess.run(['chown', '-R', 'ghost:ghost', str(content)], check=True)
     # A restored browser session must not grant access on a new host.
     subprocess.run(['mysql', 'ghost_prod', '-e', 'TRUNCATE TABLE sessions;'], check=True)
-    print('Restored. Prior content retained for recovery; verify owner login before cutover.')
+    print('Restored. Prior content retained for recovery; verify owner login and restored content.')
 
 
 if __name__ == '__main__':
