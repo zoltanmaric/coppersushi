@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from forecasts.contracts import Report, Row
+from forecasts.input_types import Report, Row
 
 from forecasts.explain import build_payload, digest, export, METHODS, QUANTILES, scores
 

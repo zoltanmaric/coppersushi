@@ -1,26 +1,25 @@
 """Export a checked historical run as an offline, read-only explanation website."""
 import argparse
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import date, datetime
 import hashlib
 import json
 from pathlib import Path
 import shutil
 import subprocess
-from zoneinfo import ZoneInfo
 
 import numpy as np
 import pyarrow.parquet as pq
 
 from .scoring import metrics
-from .contracts import Report, Row
+from .input_types import Report, Row
+from .config import QUANTILES
+from .dataset import BERLIN, cutoff
 
 Scores = dict[str, dict[str, float | int]]
 
 ROOT = Path(__file__).resolve().parents[1]
-BERLIN = ZoneInfo('Europe/Berlin')
 METHODS = ('system', 'reference', 'prices', 'weather', 'demand')
-QUANTILES = (.025, .25, .5, .75, .975)
 
 def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -28,9 +27,10 @@ def digest(path: Path) -> str:
 
 def scores(rows: list[Row]) -> Scores:
     common = [r for r in rows if r['target'] is not None]
+    days = [date.fromisoformat(r['delivery_date']) for r in common]
     return {name: metrics([r['target'] for r in common],
                           [[r[f'{name}_q{q}'] for q in QUANTILES] for r in common],
-                          [r['delivery_date'] for r in common]) for name in METHODS}
+                          days) for name in METHODS}
 
 
 def reconcile(actual: Scores, expected: Scores) -> None:
@@ -88,7 +88,7 @@ def build_payload(run: Path) -> Report:
         fold_ids = {r['fold'] for r in selected}
         if len(fold_ids) != 1 or not fold_ids <= folds.keys():
             raise ValueError('Day does not resolve to one recorded fold')
-        issue = (datetime.fromisoformat(day) - timedelta(days=1)).replace(hour=11, tzinfo=BERLIN)
+        issue = cutoff(date.fromisoformat(day)).astimezone(BERLIN)
         points = []
         for row in selected:
             local = datetime.fromisoformat(row['delivery_utc']).astimezone(BERLIN)
