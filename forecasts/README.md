@@ -103,3 +103,21 @@ FORECAST_BASELINE_SNAPSHOT=data/forecasts/loaded-snapshot pixi run --locked pyth
 ```
 
 The test requires the snapshot ID recorded in its fixture. Ordinary dataset generation reports coverage without requiring it to match that historical year. Raw baseline archives belong at `data/forecasts/inputs/prices.zip`, `weather.zip` and `demand.zip`; existing saved S3 snapshots remain readable without relocating anything.
+
+## Tracked execution and reproduction
+
+Use a dedicated Python 3.12.13 environment with the complete dependency lock for accepted runs:
+
+```sh
+python3.12 -m venv data/forecasts/runtime
+data/forecasts/runtime/bin/python -m pip --isolated install --index-url https://pypi.org/simple -r forecasts/requirements-lock.txt
+data/forecasts/runtime/bin/python -m forecasts.run run --snapshot data/forecasts/loaded-snapshot
+```
+
+`forecasts.run` freezes configuration and provenance, launches local Metaflow, and records scores and artifacts in local MLflow. Execution directories live under `data/forecasts/runs/`. `--exploratory` permits development runs; they cannot satisfy accepted reproduction. The fixed S3 snapshot supplies inputs; execution artifacts must also be retained locally.
+
+```sh
+data/forecasts/runtime/bin/python -m forecasts.run reproduce RUN_ID --profile YOUR_LOCAL_PROFILE --bucket YOUR_PRIVATE_BUCKET
+```
+
+Reproduction restores the saved code and dependencies, reloads the S3 snapshot, and compares saved-model predictions and scores. It does not claim binary-identical retraining. [Scientific limits](../wiki/price-forecasting/evaluation.md#result) remain unchanged.
