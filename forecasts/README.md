@@ -106,20 +106,18 @@ The test requires the snapshot ID recorded in its fixture. Ordinary dataset gene
 
 ## Tracked execution and reproduction
 
-Development and tests use Pixi, including Metaflow and MLflow. Accepted execution still uses the baseline Python 3.12.13 lock below; the Pixi development environment will fail that exact-environment check. Migrating new accepted runs to Pixi is not implemented. Existing runs must retain their recorded environment.
-
-Use a dedicated Python 3.12.13 environment with the complete dependency lock for accepted runs:
+Run accepted execution from the normal development environment:
 
 ```sh
-python3.12 -m venv data/forecasts/runtime
-data/forecasts/runtime/bin/python -m pip --isolated install --index-url https://pypi.org/simple -r forecasts/requirements-lock.txt
-data/forecasts/runtime/bin/python -m forecasts.run run --snapshot data/forecasts/loaded-snapshot
+pixi run --locked python -m forecasts.run run --snapshot data/forecasts/loaded-snapshot
 ```
 
-`forecasts.run` checks that installed packages match the committed lock, freezes configuration and code, launches local Metaflow from that code archive, and records scores and artifacts in local MLflow. Keep mypy and other development tools in a separate environment. Execution directories live under `data/forecasts/runs/`; each retry gets a new identifier. Set `FORECAST_DATA_ROOT` to use another local output/tracking root. Accepted execution is independent of later checkout edits. `--exploratory` runs the mutable checkout and permits extra packages; these runs cannot satisfy accepted reproduction. The fixed S3 snapshot supplies inputs; execution artifacts must also be retained locally.
+The command requires committed code. It freezes the repository, `pyproject.toml`, `pixi.lock` and configuration, then restores a fresh Pixi `runtime` environment before running Metaflow. The manifest records the actual Python and installed packages, definition hashes, Pixi version, code and snapshot identity. Development-only packages are excluded. Runtime installation can use cached packages; it requires package-network access when the cache is incomplete.
+
+Execution directories live under `data/forecasts/runs/`; each retry gets a new identifier. Set `FORECAST_DATA_ROOT` to use another output/tracking root. `--exploratory` uses the mutable checkout and current interpreter; these runs cannot satisfy accepted reproduction. Inputs remain in S3, while execution artifacts must be retained locally.
 
 ```sh
-data/forecasts/runtime/bin/python -m forecasts.run reproduce RUN_ID --profile YOUR_LOCAL_PROFILE --bucket YOUR_PRIVATE_BUCKET
+pixi run --locked python -m forecasts.run reproduce RUN_ID --profile YOUR_LOCAL_PROFILE --bucket YOUR_PRIVATE_BUCKET
 ```
 
-Reproduction restores the saved code and dependencies, reloads the S3 snapshot, and compares saved-model predictions and scores. Each attempt lives under `data/forecasts/reproductions/RUN_ID/ATTEMPT_ID/`, with its status in `attempt.json` and successful verification in `result/verification.json`. Retry with the same command; failed and successful attempts remain intact. It does not claim binary-identical retraining. [Scientific limits](../wiki/price-forecasting/evaluation.md#result) remain unchanged.
+Reproduction uses the saved code and Pixi definitions on the recorded operating system and architecture, reloads the S3 snapshot, and compares saved-model predictions and scores. Each attempt lives under `data/forecasts/reproductions/RUN_ID/ATTEMPT_ID/`, with status in `attempt.json` and successful verification in `result/verification.json`. Retry with the same command; failed and successful attempts remain intact. The preserved lock must still be supported by the installed Pixi version. It does not claim binary-identical retraining. [Scientific limits](../wiki/price-forecasting/evaluation.md#result) remain unchanged.

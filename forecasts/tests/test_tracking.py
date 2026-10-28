@@ -74,10 +74,10 @@ class TrackingTests(unittest.TestCase):
             config_path = run.ROOT / 'forecasts/run-config.json'
             with patch.object(run, 'RUNS', root / 'runs'), patch.object(run, 'tracking_client', return_value=client):
                 first, _ = run.prepare(config_path, exploratory=True)
-                original = (first / 'manifest.json').read_bytes()
                 with patch.object(run.subprocess, 'run', side_effect=subprocess.CalledProcessError(1, 'fixture')):
                     with self.assertRaises(subprocess.CalledProcessError):
                         run.run_flow(first, root / 'snapshot')
+                original = (first / 'manifest.json').read_bytes()
                 second, config = run.prepare(config_path, exploratory=True)
                 def succeed(args: list[str], **kwargs: object) -> None:
                     attempt = args[args.index('--mlflow-run') + 1]
