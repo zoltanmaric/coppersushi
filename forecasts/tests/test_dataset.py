@@ -7,6 +7,7 @@ import unittest
 import zipfile
 
 from forecasts.prices import build_price_features
+from forecasts.tests.test_prices import price_history
 from forecasts.dataset import (
     build_rows, cutoff, holidays, load_demand, load_weather, quarters,
     select_demand, stamp,
@@ -40,7 +41,7 @@ class DatasetTests(unittest.TestCase):
 
     def test_price_lags_average_repeated_and_leave_nonexistent_quarters(self) -> None:
         times = [stamp(t) for t in ["2025-10-27T01:00:00Z", "2026-03-30T00:00:00Z", "2026-03-30T01:00:00Z"]]
-        values = build_price_features(self.prices, times)["price_lag_1"].to_list()
+        values = build_price_features(price_history(self.prices), times)["price_lag_1"].to_list()
         self.assertEqual(values, [10, None, 50])
 
     def test_demand_latest_usable_version_and_exact_deadline(self) -> None:

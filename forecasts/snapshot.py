@@ -1,5 +1,9 @@
 """Collect, publish and load fixed typed input snapshots; publish the manifest last."""
 from collections.abc import Mapping, Sequence
+from typing import cast
+
+import polars as pl
+from pandera.typing.polars import DataFrame
 from datetime import date
 from forecasts.input_types import DemandSeries, PriceSeries, Report, Row, WeatherSeries
 import argparse
@@ -13,11 +17,11 @@ import subprocess
 import time
 
 import pyarrow as pa
-from forecasts.prices import latest_versions, read_prices, select_history
+from forecasts.prices import PriceHistory, PriceVersions, build_price_features, latest_versions, read_prices, select_history
 import pyarrow.parquet as pq
 
 from forecasts.dataset import (
-    BERLIN, COUNTRY, END, FIELDS, PAYLOADS, ROOT, START, TIMING, build_rows, cutoff,
+    BERLIN, COUNTRY, END, FIELDS, PAYLOADS, ROOT, START, TIMING, assemble_rows, cutoff, quarters,
     digest, load_demand, load_prices, load_weather, reconcile, stamp, summarize,
     verify_payloads,
 )
@@ -141,85 +145,29 @@ def eligible(row: Row, deadline: datetime, live: bool = False) -> bool:
 
 def select_records(tables: Mapping[str, pa.Table | list[Row]], day: date, live: bool = False, issue_time: datetime | None = None) -> dict[str, list[Row]]:
     """Select source versions eligible for a delivery day and its issue time."""
-    deadline = cutoff(day)
-    if live:
-        if issue_time is None or issue_time.tzinfo is None:
-            raise ValueError("Live selection requires an actual timezone-aware issue timestamp")
-        if issue_time > deadline:
-            raise ValueError("Actual issue time is after the delivery day's deadline")
-        deadline = issue_time
-    records = {name: table.to_pylist() if hasattr(table, "to_pylist") else table for name, table in tables.items()}
-    selected: dict[str, list[Row]] = {"prices": [], "weather": [], "demand": []}
-    price_table = pa.Table.from_pylist(records["prices"], schema=SCHEMAS["prices"])
+    deadline = _issue_deadline(day, live, issue_time)
+    records = {name: table.to_pylist() if hasattr(table, "to_pylist") else table for name, table in tables.items() if name != "prices"}
+    selected = _select_covariates(records, day, deadline, live)
+    price_input = tables["prices"]
+    price_table = price_input if isinstance(price_input, pa.Table) else pa.Table.from_pylist(price_input, schema=SCHEMAS["prices"])
     selected["prices"] = select_history(read_prices(price_table), day, deadline, live).to_dicts()
-    for row in records["weather"]:
-        if (row["model"] != "icon_eu" or row["lead_hours"] != 48 or row["data_kind"] != "forecast"
-                or row["location"] not in LOCATIONS or row["variable"] not in FIELDS
-                or row["valid_utc"].astimezone(BERLIN).date() != day
-                or row["source_valid_utc"] - timedelta(hours=48) > deadline
-                or not eligible(row, deadline, live)):
-            continue
-        selected["weather"].append(row)
-    for row in records["demand"]:
-        if (row["area_code"] == COUNTRY and row["valid_utc"].astimezone(BERLIN).date() == day
-                and row["source_update_utc"] is not None and eligible(row, deadline, live)):
-            selected["demand"].append(row)
-    selected["weather"] = latest_rows(selected["weather"], ["valid_utc", "location", "variable"], "value")
     return selected
-
-
-def latest_rows(rows: list[Row], keys: Sequence[str], value: str) -> list[Row]:
-    """Select the latest version per row key, rejecting conflicting ties."""
-    selected: dict[tuple[object, ...], Row] = {}
-    earliest = datetime.min.replace(tzinfo=timezone.utc)
-    for row in rows:
-        key = tuple(row[k] for k in keys)
-        prior = selected.get(key)
-        update = row["source_update_utc"] or earliest
-        if prior is not None:
-            previous = prior["source_update_utc"] or earliest
-            if update == previous and row[value] != prior[value]:
-                raise ValueError("Conflicting source values at the same update time")
-            if update < previous:
-                continue
-        selected[key] = row
-    return list(selected.values())
-
-
-def select_inputs(tables: Mapping[str, pa.Table | list[Row]], day: date, live: bool = False, issue_time: datetime | None = None) -> tuple[PriceSeries, WeatherSeries, DemandSeries]:
-    """Convert eligible records into timestamp-indexed price, weather and demand inputs."""
-    selected = select_records(tables, day, live, issue_time)
-    prices: PriceSeries = {}
-    weather: WeatherSeries = {}
-    demand: DemandSeries = {}
-    for row in selected["prices"]:
-        t = row["valid_utc"]
-        if t in prices and prices[t] != row["price_eur_mwh"]:
-            raise ValueError("Ambiguous eligible price versions")
-        prices[t] = row["price_eur_mwh"]
-    for row in selected["weather"]:
-        key = f"{row['variable']}_{row['location']}"
-        values = weather.setdefault(key, {})
-        if row["valid_utc"] in values and values[row["valid_utc"]] != row["value"]:
-            raise ValueError("Ambiguous eligible weather versions")
-        values[row["valid_utc"]] = row["value"]
-    for row in selected["demand"]:
-        demand.setdefault(row["valid_utc"], []).append({"updated": row["source_update_utc"], "value": row["demand_mw"], "source": row["raw_key"]})
-    return prices, weather, demand
 
 
 class InputReader:
     """One shared reader and feature path for replay and later prediction."""
     def __init__(self, tables: Mapping[str, pa.Table]) -> None:
-        self.daily: dict[str, defaultdict[date, list[Row]]] = {name: defaultdict(list) for name in SCHEMAS}
+        self.daily: dict[str, defaultdict[date, list[Row]]] = {name: defaultdict(list) for name in ("weather", "demand")}
         self.truth: PriceSeries = {}
         self.weather_fields = WEATHER_FIELDS
+        self.prices = read_prices(tables["prices"])
         for name, table in tables.items():
+            if name == "prices":
+                continue
             for row in table.to_pylist():
                 self.daily[name][row["valid_utc"].astimezone(BERLIN).date()].append(row)
         # Retrospective truth is joined only by replay(), never by features().
-        for row in latest_versions(read_prices(tables["prices"])).to_dicts():
-            self.truth[row["valid_utc"]] = row["price_eur_mwh"]
+        self.truth = dict(latest_versions(self.prices).select("valid_utc", "price_eur_mwh").iter_rows())
 
     def features(self, day: date, live: bool = False, issue_time: datetime | None = None) -> list[Row]:
         """Build one delivery day’s features from inputs eligible at its issue.
@@ -227,13 +175,19 @@ class InputReader:
         Live selection requires a timezone-aware issue_time no later than the
         deadline. Return quarter-hour rows without realised target values.
         """
-        # Fourteen days cover every agreed price lag and daily summary.
-        candidates = {"prices": [row for lag in range(1, 15) for row in self.daily["prices"][day - timedelta(days=lag)]],
-                      "weather": self.daily["weather"][day], "demand": self.daily["demand"][day]}
-        prices, weather, demand = select_inputs(candidates, day, live, issue_time)
+        deadline = _issue_deadline(day, live, issue_time)
+        # Fourteen local days cover every agreed lag and daily summary.
+        candidates = cast(DataFrame[PriceVersions], self.prices.filter(
+            pl.col("valid_utc").dt.convert_time_zone("Europe/Berlin").dt.date() >= day - timedelta(days=14)))
+        selected = select_history(candidates, day, deadline, live)
+        history = PriceHistory.validate(selected.select("valid_utc", "price_eur_mwh"))
+        price_features = build_price_features(history, list(quarters(day, day + timedelta(days=1))))
+        covariates = _select_covariates({name: self.daily[name][day] for name in ("weather", "demand")},
+                                       day, deadline, live)
+        weather, demand = _covariate_inputs(covariates)
         for field in self.weather_fields:
             weather.setdefault(field, {})
-        return build_rows(prices, weather, demand, day, day + timedelta(days=1), targets={})
+        return assemble_rows(price_features, weather, demand, targets={})
 
     def replay(self, start: date, end: date) -> list[Row]:
         """Build features in [start, end), then join retrospective scoring truth."""
@@ -320,6 +274,76 @@ def main() -> None:
         publish(args.profile, args.region, args.bucket, args.directory, args.data_root)
     else:
         load(args.profile, args.region, args.bucket, args.snapshot_id, args.directory)
+
+
+def _issue_deadline(day: date, live: bool, issue_time: datetime | None) -> datetime:
+    deadline = cutoff(day)
+    if live:
+        if issue_time is None or issue_time.utcoffset() is None:
+            raise ValueError("Live selection requires an actual timezone-aware issue timestamp")
+        if issue_time > deadline:
+            raise ValueError("Actual issue time is after the delivery day's deadline")
+        deadline = issue_time
+    return deadline
+
+
+def _select_covariates(records: Mapping[str, list[Row]], day: date, deadline: datetime,
+                       live: bool) -> dict[str, list[Row]]:
+    selected: dict[str, list[Row]] = {"weather": [], "demand": []}
+    for row in records["weather"]:
+        if (row["model"] != "icon_eu" or row["lead_hours"] != 48 or row["data_kind"] != "forecast"
+                or row["location"] not in LOCATIONS or row["variable"] not in FIELDS
+                or row["valid_utc"].astimezone(BERLIN).date() != day
+                or row["source_valid_utc"] - timedelta(hours=48) > deadline
+                or not eligible(row, deadline, live)):
+            continue
+        selected["weather"].append(row)
+    for row in records["demand"]:
+        if (row["area_code"] == COUNTRY and row["valid_utc"].astimezone(BERLIN).date() == day
+                and row["source_update_utc"] is not None and eligible(row, deadline, live)):
+            selected["demand"].append(row)
+    selected["weather"] = _latest_rows(selected["weather"], ["valid_utc", "location", "variable"], "value")
+    return selected
+
+
+def _latest_rows(rows: list[Row], keys: Sequence[str], value: str) -> list[Row]:
+    """Keep latest weather versions, with the same tie rules as prices.
+
+    Missing updates rank oldest. Reject conflicting values at any equal update,
+    even if a newer revision supersedes them. Equal-value ties retain the last
+    input record. Unlike demand selection, a missing value can be the latest.
+    """
+    selected: dict[tuple[object, ...], Row] = {}
+    seen: dict[tuple[object, ...], object] = {}
+    earliest = datetime.min.replace(tzinfo=timezone.utc)
+    for row in rows:
+        key = tuple(row[k] for k in keys)
+        revision = (*key, row["source_update_utc"])
+        if revision in seen and seen[revision] != row[value]:
+            raise ValueError("Conflicting source values at the same update time")
+        seen[revision] = row[value]
+        prior = selected.get(key)
+        update = (row["source_update_utc"] is not None, row["source_update_utc"] or earliest)
+        if prior is not None:
+            previous = (prior["source_update_utc"] is not None, prior["source_update_utc"] or earliest)
+            if update < previous:
+                continue
+        selected[key] = row
+    return list(selected.values())
+
+
+def _covariate_inputs(selected: Mapping[str, list[Row]]) -> tuple[WeatherSeries, DemandSeries]:
+    weather: WeatherSeries = {}
+    demand: DemandSeries = {}
+    for row in selected["weather"]:
+        key = f"{row['variable']}_{row['location']}"
+        values = weather.setdefault(key, {})
+        if row["valid_utc"] in values and values[row["valid_utc"]] != row["value"]:
+            raise ValueError("Ambiguous eligible weather versions")
+        values[row["valid_utc"]] = row["value"]
+    for row in selected["demand"]:
+        demand.setdefault(row["valid_utc"], []).append({"updated": row["source_update_utc"], "value": row["demand_mw"], "source": row["raw_key"]})
+    return weather, demand
 
 
 if __name__ == "__main__":

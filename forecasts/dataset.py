@@ -1,6 +1,8 @@
 """Build an all-date replay from immutable, hash-verified evidence snapshots."""
 from collections.abc import Collection, Iterator, Sequence
-from forecasts.prices import build_price_features
+import polars as pl
+from pandera.typing.polars import DataFrame
+from forecasts.prices import PriceFeatures, PriceHistory, build_price_features
 from forecasts.input_types import DemandSeries, DemandVersion, PriceSeries, Report, Row, WeatherSeries
 import argparse
 from collections import Counter, defaultdict
@@ -183,13 +185,30 @@ def holidays(year: int) -> set[date]:
 
 
 def build_rows(prices: PriceSeries, weather: WeatherSeries, demand: DemandSeries, start: date = START, end: date = END, targets: PriceSeries | None = None) -> list[Row]:
-    """Build feature/audit rows for every delivery quarter, preserving missing inputs."""
-    delivery = list(quarters(start, end))
-    price_rows = build_price_features(prices, delivery).to_dicts()
-    targets = prices if targets is None else targets
+    """Adapt unversioned archive values to tables for the raw diagnostic CLI.
+
+    Snapshot prediction keeps tables intact and calls assemble_rows directly.
+    """
+    history = PriceHistory.validate(pl.DataFrame(
+        {"valid_utc": list(prices), "price_eur_mwh": list(prices.values())},
+        schema={"valid_utc": pl.Datetime("us", "UTC"), "price_eur_mwh": pl.Float64}))
+    features = build_price_features(history, list(quarters(start, end)))
+    return assemble_rows(features, weather, demand, prices if targets is None else targets)
+
+
+def assemble_rows(price_features: DataFrame[PriceFeatures], weather: WeatherSeries,
+                  demand: DemandSeries, targets: PriceSeries) -> list[Row]:
+    """Join price features with calendar, weather, demand and optional outcomes.
+
+    Convert price features to records only here, at the shared assembly boundary.
+    Prediction passes empty targets; retrospective replay joins truth separately.
+    """
+    price_rows = price_features.to_dicts()
+    years = {row["delivery_utc"].astimezone(BERLIN).year for row in price_rows}
     rows = []
-    holiday_dates = set().union(*(holidays(y) for y in range(start.year, end.year + 1)))
-    for timestamp, price_row in zip(delivery, price_rows, strict=True):
+    holiday_dates = set().union(*(holidays(y) for y in years))
+    for price_row in price_rows:
+        timestamp = price_row["delivery_utc"]
         local = timestamp.astimezone(BERLIN)
         day, quarter = local.date(), local.hour * 4 + local.minute // 15
         deadline = cutoff(day)
