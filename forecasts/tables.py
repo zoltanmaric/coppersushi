@@ -19,16 +19,13 @@ SOURCE_FLAGS = ("demand_source_unavailable", "weather_source_unavailable", "pric
 class Features(PriceFeatures):
     """Assembled inputs, with typed clocks and explicit nullable source values.
 
-    The two empty outcome fields preserve the input audit format; they cannot
-    carry training labels or scoring truth. Weather columns follow the fixed
-    location inventory. Missing indicators and source flags are binary.
+    Outcomes are excluded. Weather columns follow the fixed location inventory.
+    Missing indicators and source flags are binary.
     """
     delivery_date: pl.Date
     issue_cutoff_utc: UTC
     utc_offset_minutes: int
     clock_fold: int = pa.Field(isin=[0, 1])
-    price_eur_mwh: float = pa.Field(nullable=True)
-    target_missing: int = pa.Field(eq=1)
     quarter_of_day: int = pa.Field(ge=0, le=95)
     day_of_week: int = pa.Field(ge=0, le=6)
     month: int = pa.Field(ge=1, le=12)
@@ -59,8 +56,7 @@ class Features(PriceFeatures):
     def valid_inputs(cls, data: pa.PolarsData) -> pl.LazyFrame:
         """Reject leaked outcomes, invalid clocks and non-finite source values."""
         return data.lazyframe.select(
-            pl.col("price_eur_mwh").is_null()
-            & (pl.col("delivery_date") == pl.col("delivery_utc").dt.convert_time_zone("Europe/Berlin").dt.date())
+            (pl.col("delivery_date") == pl.col("delivery_utc").dt.convert_time_zone("Europe/Berlin").dt.date())
             & pl.all_horizontal([pl.col(f).is_null() | pl.col(f).is_finite()
                                  for f in [*PRICE_FEATURES, "demand_mw"]]))
 
@@ -73,7 +69,6 @@ class Predictions(pa.DataFrameModel):
     selected_model: str = pa.Field(isin=[*MODEL_METHODS, "reference"])
     fallback_reason: str
     fold: pl.Date
-    target_missing: int = pa.Field(eq=1)
     demand_missing: int = pa.Field(isin=[0, 1])
     demand_selected_update_utc: UTC = pa.Field(nullable=True)
 
@@ -117,7 +112,9 @@ class ScoredPredictions(Predictions):
 def feature_table(records: Sequence[Row]) -> DataFrame[Features]:
     """Parse input assembly records before entering local evaluation."""
     schema = Features.to_schema()
-    frame = pl.DataFrame(records, infer_schema_length=None)
+    if any(row["price_eur_mwh"] is not None or row["target_missing"] != 1 for row in records):
+        raise ValueError("Feature inputs must not contain outcomes")
+    frame = pl.DataFrame(records, infer_schema_length=None).drop("price_eur_mwh", "target_missing")
     for name, column in schema.columns.items():
         dtype = column.dtype.type
         if dtype == pl.Date:

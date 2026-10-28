@@ -64,6 +64,10 @@ class EvaluationTests(unittest.TestCase):
         self.assertEqual(table.height, 92)
         self.assertEqual(table.schema['delivery_date'], pl.Date)
         self.assertEqual(table.schema['delivery_utc'], pl.Datetime('us', 'UTC'))
+        self.assertNotIn('price_eur_mwh', table.columns)
+        self.assertNotIn('target_missing', table.columns)
+        with self.assertRaisesRegex(ValueError, 'outcomes'):
+            feature_table([{**row, 'price_eur_mwh': 42.} for row in records])
         # Inputs cannot silently become labels or carry a contradictory clock.
         with self.assertRaises(SchemaError):
             Features.validate(table.with_columns(pl.lit(42.).alias('price_eur_mwh')))
