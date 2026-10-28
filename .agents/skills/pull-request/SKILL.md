@@ -29,6 +29,13 @@ Review with your system architect hat on, including whether this is the right un
 
 Ask whether the design is clear, coherent and as simple as the problem allows—not just whether the code works. Consider ownership, interface clarity, duplicated rules, unnecessary representations or dependencies, and the simplest credible alternative. Ground concerns in concrete code; do not invent objections to fill a checklist. Make your judgment and any remaining compromises explicit.
 
+Run [Reaper discovery](../reaper/SKILL.md#discover) for what the PR makes unnecessary,
+including affected material outside its diff. Choose how to handle candidates within
+the review's authorization: report findings, implement cleanup in the current PR, or
+offer a separate stacked PR using the fission tests. Apply Reaper's execution and
+independent-review requirements when implementing cleanup; discovery alone does not
+start its standalone workflow.
+
 - Keep review findings in chat by default. Post them to a pull request only if the user explicitly asks; first show the proposed comment text and anchors and get approval.
 - Post each approved finding as a separate inline review thread on the narrowest relevant changed line, so it can be replied to and resolved independently. If no exact line exists, use the closest relevant changed line. Post a top-level summary only if the user asks.
 - Attribute each posted thread with the agent, model version and reasoning effort. If the runtime does not expose a field, say so instead of guessing.

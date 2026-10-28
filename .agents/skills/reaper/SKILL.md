@@ -1,6 +1,6 @@
 ---
 name: reaper
-description: Finds and deletes unnecessary code, tests, explainers, wiki content, agent instructions and abandoned worktrees, delivers reviewed cleanup PRs, and improves its search methods from observed outcomes. Use for Reaper or a deliberate deletion sweep.
+description: Finds and deletes unnecessary code, tests, explainers, wiki content, agent instructions and abandoned worktrees, delivers reviewed cleanup PRs, and improves its search methods from observed outcomes. Use for Reaper, a deliberate deletion sweep, or deletion discovery during PR review.
 ---
 
 # Reaper
@@ -8,18 +8,25 @@ description: Finds and deletes unnecessary code, tests, explainers, wiki content
 Reduce maintenance burden per unit of effort. Prefer removing a whole unnecessary
 thing over polishing its parts; do not optimize for deleted line counts.
 
-## Hunt and delete
+## Choose the workflow
+
+When called from another workflow, run **Discover** within the caller's scope and
+return candidates; let the caller choose reporting, edits or cleanup PRs within
+its authorization. Do not start standalone delivery or worktree cleanup implicitly.
+For a standalone sweep, discover, execute, deliver and review, then improve from use.
+
+## Discover
 
 - Work within the requested scope and budget. If unspecified, choose one bounded
-  area for the first pass. Inspect existing work before editing; use an isolated
-  branch or worktree when needed. Do not reap another agent's unfinished work.
+  area for the first pass. Inspect existing work and ownership; do not propose
+  reaping another agent's unfinished work.
 - Read relevant prior outcomes in `wiki/rule-provenance.md`. Search cheaply for
   abandoned code, superseded explainers, completed or obsolete specs and repeated knowledge.
   Investigate the strongest candidates first; age and absent references are clues,
   not sufficient reasons to delete.
 - For code, trace callers, public entry points, configuration and indirect use.
-  For prose, identify its remaining purpose and unique knowledge. Preserve useful
-  knowledge in its canonical home before removing a duplicate. Honor local
+  For prose, identify its remaining purpose and unique knowledge. Identify useful
+  knowledge that must move to its canonical home before removing a duplicate. Honor local
   protections, including immutable raw sources. Route agent procedures and task-local
   steps according to `information-home`; do not preserve expired instructions as
   wiki knowledge merely because they were unique to the deleted artifact.
@@ -28,19 +35,29 @@ thing over polishing its parts; do not optimize for deleted line counts.
   value. Propose deletion when the direction is obsolete; if remaining intent is
   unclear, ask whether it is still wanted rather than carrying it forward by default.
 - For tests, identify the meaningful failure each catches. Scrutinize tests that
-  mirror implementation, assert incidental details or duplicate coverage. Delete
-  tests without a useful purpose; simplify setup and assertions while preserving
+  mirror implementation, assert incidental details or duplicate coverage. Propose deleting
+  tests without a useful purpose or simplifying setup and assertions while preserving
   valuable regression checks. Explain what protection remains or is deliberately
   retired; a passing reduced suite alone does not establish adequate coverage.
-- Delete coherent units and repair their references. If a generator or workflow
-  recreates the waste, fix that source within scope or report it as follow-up.
-  Verify affected behavior, links and rendered content as appropriate.
-- Stop at the budget, when a coherent cleanup is ready, or when further hunting
+- Return concrete candidates with evidence, remaining users or knowledge, required
+  reference repairs and checks. Separate supported deletions from unresolved intent
+  questions. Identify generators or workflows that would recreate the waste.
+- Stop at the budget, when a coherent cleanup is identified, or when further hunting
   offers little likely value. Report a no-op honestly; do not manufacture deletions.
+
+## Execute
+
+- Use the caller's chosen delivery route; for standalone sweeps, use a cleanup PR.
+  Inspect existing changes and isolate conflicting work before editing. Delete
+  coherent units, preserve identified knowledge and repair references. Fix generators
+  within scope or report follow-up. Verify affected behavior, links and rendered content.
+- Have an independent agent review implemented cleanup, including cleanup made by
+  a reviewer. Follow **Deliver and review** for that check without requiring a new PR
+  when the caller chose edits to an existing one.
 
 ## Worktrees
 
-- Inventory worktrees and check owning chat/agent activity, running jobs, PR state,
+- When worktrees are in scope, inventory them and check owning chat/agent activity, running jobs, PR state,
   uncommitted and untracked work, unpushed commits and valuable ignored files.
   Treat age or a merged branch as a lead, not proof of abandonment; leave uncertain
   ownership for clarification. Exclude the active checkout and primary worktree.
@@ -56,7 +73,7 @@ thing over polishing its parts; do not optimize for deleted line counts.
 
 ## Deliver and review
 
-- Use the `pull-request` skill to open a draft cleanup PR. State what lost its
+- For a standalone sweep, use the `pull-request` skill to open a draft cleanup PR. State what lost its
   purpose, the supporting evidence and the checks performed.
 - Have an independent review agent inspect the actual diff and surrounding repo,
   with the requested scope and verification results. Ask it to look for lost
