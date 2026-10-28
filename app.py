@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 import plotly.graph_objects as go
-from dash import Dash, dcc, html, Input, Output, State, ctx, no_update
+from dash import Dash, dcc, html, Input, Output, State, Patch, ctx, no_update
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 
@@ -142,7 +142,7 @@ def network_layout(token: str | None = None) -> html.Div:
                 figure=dict(
                     data=[dict(type='scattermapbox', lon=[None], lat=[None], hoverinfo='skip')],
                     layout=dict(
-                        autosize=True, uirevision=True,
+                        autosize=True, uirevision=True, showlegend=False, hovermode='closest',
                         mapbox=dict(style=map_style.MAP_STYLE, accesstoken=token, **map_style.OPF_CAMERA),
                         margin=dict(l=0, r=0, t=0, b=0), paper_bgcolor='#111',
                     ),
@@ -202,7 +202,10 @@ def render(pathname: str, snapshot_index: int, slider_moved: bool) -> tuple:
         logging.exception('Loading %s failed', network_key)
         return no_update, no_update, no_update, no_update, no_update, f'Could not load {network_key}: {e}', True
     maximum, marks, snapshot_index, label = state
-    return selected, maximum, marks, snapshot_index, label, '', False
+    # The page owns the layout; loading an hour only replaces network traces.
+    update = Patch()
+    update['data'] = selected.to_plotly_json()['data']
+    return update, maximum, marks, snapshot_index, label, '', False
 
 
 def opf_snapshot_state(snapshots: pd.Index, snapshot_index: int, slider_moved: bool) -> tuple:
