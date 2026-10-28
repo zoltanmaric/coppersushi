@@ -1,0 +1,19 @@
+name: Hosting configuration
+on:
+  pull_request:
+    paths: ['hosting/**', '.github/workflows/hosting.yml']
+  push:
+    branches: [master]
+    paths: ['hosting/**', '.github/workflows/hosting.yml']
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+      - uses: astral-sh/setup-uv@v6
+      - run: make -C hosting setup test
