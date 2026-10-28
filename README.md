@@ -1,9 +1,11 @@
 # Copper Sushi 🍣
-## A Power System Analysis and Visualisation Tool
+## Electricity tools and 1.21 Gigawatts
 [![](assets/coppersushi-gif.gif)](https://121gigawatts.org/copper-sushi-power-flow-european-grid/)
 
-A simple Plotly/Dash web app for visualising power flow optimisation
-solutions  from [`pypsa-eur`](https://github.com/PyPSA/pypsa-eur).
+This monorepo owns the power-flow and grid-constraint apps, price forecasting,
+and the [1.21 Gigawatts Ghost theme and hosting](121gigawatts/README.md).
+The power-flow app visualises optimisation solutions from
+[`pypsa-eur`](https://github.com/PyPSA/pypsa-eur).
 
 The web app is deployed
 [**here**](https://121gigawatts.org/copper-sushi-power-flow-european-grid/),
@@ -59,7 +61,7 @@ Use `pixi add` / `pixi add --pypi` to change dependencies and commit both files.
 
 In PyCharm, select an **existing local Python interpreter** at
 `<checkout>/.pixi/envs/default/bin/python`. No Conda executable or Pixi plugin is needed.
-Exclude `.pixi` from indexing. The default environment covers the app and forecasts;
+Exclude `.pixi` from indexing. The default environment covers the app, forecasts and Ghost hosting Python;
 the package is installed editable, so imports also work outside the repository directory.
 Use Pixi to change packages, rather than the IDE's package installer.
 
@@ -113,7 +115,10 @@ unmapped; downloading the same endpoints again would not locate it.
 ```bash
 pixi run --locked test
 ```
-This runs app tests, forecast tests and forecast type checks.
+This runs app tests, forecast tests, forecast type checks, Ghost theme validation
+and hosting configuration checks. Node 22, Yarn, Terraform, Make and Ansible are
+installed by the same setup command. Theme npm packages retain `121gigawatts/yarn.lock`;
+Terraform providers retain their `.terraform.lock.hcl` files.
 The tests run against small checked-in fixtures under `tests/fixtures/`, never against the
 networks. Tests require no Mapbox token; they build figures without fetching map tiles.
 

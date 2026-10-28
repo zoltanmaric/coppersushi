@@ -26,7 +26,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest==9.1.1", "mypy==2.4.0"]
+dev = ["pytest==9.1.1", "mypy==2.4.0", "ansible-core==2.20.0"]
 
 [tool.setuptools.packages.find]
 include = ["coppersushi*", "forecasts*"]
@@ -43,6 +43,9 @@ python = "3.14.10.*"
 [tool.pixi.feature.dev.dependencies]
 git-lfs = "3.8.0.*"
 terraform = "1.5.7.*"
+nodejs = "22.*"
+yarn = "1.22.22.*"
+make = "4.4.1.*"
 
 [tool.pixi.pypi-dependencies]
 coppersushi = { path = ".", editable = true }
@@ -52,10 +55,19 @@ default = { features = ["dev"], solve-group = "default" }
 runtime = { features = [], solve-group = "default" }
 
 [tool.pixi.tasks]
-setup = "python -c \"import sys; print('Python interpreter:', sys.executable)\""
+setup = { cmd = "python -c \"import sys; print('Python interpreter:', sys.executable)\"", depends-on = ["theme-install", "hosting-setup"] }
 dev = "python app.py"
 test-app = "python -m pytest -q"
 test-forecast = "python -m unittest discover -s forecasts/tests -v"
 typecheck = "python -m mypy --config-file forecasts/mypy.ini"
-test = { depends-on = ["test-app", "test-forecast", "typecheck"] }
+test = { depends-on = ["test-app", "test-forecast", "typecheck", "theme-test", "hosting-test"] }
 solve = "python -m coppersushi.data_sources.pypsa_eur solve"
+theme-install = { cmd = "yarn install --frozen-lockfile --ignore-optional", cwd = "121gigawatts" }
+theme-dev = { cmd = "yarn dev", cwd = "121gigawatts" }
+theme-test = { cmd = "yarn test:ci", cwd = "121gigawatts" }
+theme-zip = { cmd = "yarn zip", cwd = "121gigawatts" }
+hosting-setup = "make -C 121gigawatts/hosting setup"
+hosting-test = "make -C 121gigawatts/hosting test"
+hosting-check = "make -C 121gigawatts/hosting check"
+hosting-configure = "make -C 121gigawatts/hosting configure"
+hosting-restore = "make -C 121gigawatts/hosting restore"

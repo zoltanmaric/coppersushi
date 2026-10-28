@@ -1,0 +1,20 @@
+---
+- name: Read the private Ghost configuration without logging secrets
+  ansible.builtin.set_fact:
+    ghost_config: "{{ lookup('ansible.builtin.file', ghost_config_file) | from_json }}"
+  no_log: true
+
+- name: Validate the expected configuration contract
+  ansible.builtin.assert:
+    that:
+      - ghost_config.url == site_url
+      - ghost_config.server.host == '127.0.0.1'
+      - ghost_config.server.port == 2368
+      - ghost_config.database.client == 'mysql'
+      - ghost_config.database.connection.host == '127.0.0.1'
+      - ghost_config.database.connection.database == 'ghost_prod'
+      - ghost_config.database.connection.user == 'ghostapp'
+      - ghost_config.paths.contentPath == '/var/www/121gigawatts/content'
+      - ghost_config.mail.transport == 'SMTP'
+    fail_msg: Private configuration does not match the documented deployment contract.
+  no_log: true

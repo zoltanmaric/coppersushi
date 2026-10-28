@@ -1,0 +1,9 @@
+---
+all:
+  hosts:
+    preview:
+      ansible_host: 192.0.2.10
+      ansible_user: root
+      ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+      # Verify the fingerprint independently before adding it to known_hosts.
+      ansible_ssh_common_args: "-o StrictHostKeyChecking=yes"
