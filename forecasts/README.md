@@ -4,17 +4,19 @@ Independent Germany–Luxembourg price forecasting. The [implementation spec](..
 
 ## Setup
 
-Python 3.11+ with IANA timezone data, AWS CLI v2 and an authenticated **user-local AWS profile**. Profile configuration and credentials belong outside this repository, normally in the user's AWS configuration directory. Never check in credentials, profile files, bucket names, Terraform state or account-specific settings. Generated inputs, snapshots, reports and environments stay in ignored `data/forecasts/`.
-
-From the repository root:
+Use the repository's [Pixi setup](../README.md#local-installation) and default Python interpreter.
+S3 commands also need AWS CLI v2 and an authenticated **user-local AWS profile**.
+Credentials, profile files, bucket names, Terraform state and generated inputs stay outside Git.
 
 ```sh
-python3 -m venv data/forecasts/venv
-data/forecasts/venv/bin/python -m pip --isolated install --index-url https://pypi.org/simple -r forecasts/requirements.txt
-data/forecasts/venv/bin/python -m unittest discover -s forecasts/tests -v
+pixi run --locked test-forecast
 ```
 
-The Parquet dependency is pinned; snapshot manifests also record Python/PyArrow versions, the requirements hash, code revision and whether code was uncommitted. Exploratory snapshots are marked; they do not establish an accepted reproducible model run.
+New snapshot manifests record Python/PyArrow versions, root project and Pixi lockfile
+hashes, code revision and whether code or dependency definitions were uncommitted.
+Existing manifests retain their recorded provenance. Historical reproduction uses the
+recorded revision and its original environment; the current development lock is not a
+replacement for a historical environment.
 
 ## S3 inputs
 
@@ -23,14 +25,14 @@ The input path stores three typed tables: `prices`, `weather` and `demand`. [Pri
 To collect the recorded year, place the three exact archives at their [baseline input inventory](data/baseline-inputs.json), under `data/forecasts/`. The [source contracts](../wiki/price-forecasting/data-sources.md) describe their sources. `--data-root` can reuse another checkout's downloads. Recollection from mutable feeds may produce different bytes; the recorded experiment requires matching archives or access to the private S3 snapshot.
 
 ```sh
-data/forecasts/venv/bin/python -m forecasts.snapshot --profile YOUR_LOCAL_PROFILE --bucket YOUR_PRIVATE_BUCKET collect --publish
+pixi run --locked python -m forecasts.snapshot --profile YOUR_LOCAL_PROFILE --bucket YOUR_PRIVATE_BUCKET collect --publish
 ```
 
 Use the printed snapshot ID explicitly:
 
 ```sh
-data/forecasts/venv/bin/python -m forecasts.snapshot --profile YOUR_LOCAL_PROFILE --bucket YOUR_PRIVATE_BUCKET load SNAPSHOT_ID
-data/forecasts/venv/bin/python -m forecasts.dataset --snapshot data/forecasts/loaded-snapshot
+pixi run --locked python -m forecasts.snapshot --profile YOUR_LOCAL_PROFILE --bucket YOUR_PRIVATE_BUCKET load SNAPSHOT_ID
+pixi run --locked python -m forecasts.dataset --snapshot data/forecasts/loaded-snapshot
 ```
 
 `--region` defaults to `eu-west-1`. Collection/publication accept `--directory`; loading also accepts it. A fresh checkout can load the selected snapshot directly, without raw downloads or source-provider requests.
@@ -77,8 +79,7 @@ Uploads and provider installation may exceed a minute; follow the repository's j
 Check the entire forecast tree, including tests and evidence scripts:
 
 ```sh
-data/forecasts/venv/bin/python -m pip install -r forecasts/requirements-dev.txt
-data/forecasts/venv/bin/python -m mypy --config-file forecasts/mypy.ini
+pixi run --locked typecheck
 ```
 
 The normal test suite also rejects missing function annotations anywhere under `forecasts/`. Missing third-party stubs remain an explicit limitation of static checking.

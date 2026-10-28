@@ -14,6 +14,7 @@ Keep the previous `image_uri` digest for rollback.
    these inputs and precomputes the hourly OPF maps.
 2. Build the Lambda target with a new image tag:
    `docker build --platform linux/amd64 --provenance=false --target lambda -t <image> .`
+   For a GHCR token error, see [GHCR authentication](#ghcr-authentication).
 3. Authenticate Docker to ECR using the configured AWS profile. Tag and push the
    image to the `repository_url` Terraform output. ECR tags are immutable: use a
    fresh tag for each build.
@@ -35,6 +36,34 @@ Keep the previous `image_uri` digest for rollback.
 
 To roll back, restore the previous image digest, review and apply another plan,
 and invalidate the static paths again.
+
+## GHCR authentication
+
+A saved GHCR credential rejected with HTTP 403 can block pulling the public Pixi
+image even when anonymous access and CI work. On macOS, an empty `DOCKER_CONFIG`
+directory is not an anonymous test: Docker can still discover the native keychain
+([Docker credential-store behavior](https://docs.docker.com/reference/cli/docker/login/#default-behavior)).
+
+For a local Docker Desktop build without changing saved logins, explicitly supply
+an empty GHCR auth entry and retain the current daemon endpoint:
+
+```sh
+(
+  set -e
+  registry_config=$(mktemp -d)
+  trap 'rm -rf "$registry_config"' EXIT
+  printf '%s\n' '{"auths":{"ghcr.io":{}}}' > "$registry_config/config.json"
+  docker_endpoint=$(docker context inspect --format '{{.Endpoints.docker.Host}}')
+  DOCKER_CONFIG="$registry_config" DOCKER_HOST="$docker_endpoint" \
+    docker build --platform linux/amd64 --provenance=false --target lambda -t <image> .
+)
+```
+
+Use the normal Docker configuration for the ECR login and push. To repair the
+normal GHCR login instead, refresh its credentials, or run `docker logout ghcr.io`
+if authenticated GHCR access is no longer needed. A successful anonymous build
+identifies the saved-credential problem; it does not establish why that credential
+was rejected.
 
 ## Initial setup
 

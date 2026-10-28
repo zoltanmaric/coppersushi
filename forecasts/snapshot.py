@@ -97,10 +97,10 @@ def collect(data_root: Path, output: Path) -> Report:
                        "rows": table.num_rows, "valid_min": min(times).isoformat(), "valid_max": max(times).isoformat(), "schema": describe(name)}
         print(f"Validated {name}: {table.num_rows} rows", flush=True)
     commit = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip()
-    dirty = bool(subprocess.check_output(["git", "-C", str(ROOT), "status", "--porcelain", "--", "forecasts"], text=True).strip())
+    dirty = bool(subprocess.check_output(["git", "-C", str(ROOT), "status", "--porcelain", "--", "forecasts", "pyproject.toml", "pixi.lock"], text=True).strip())
     manifest = {"schema_version": VERSION, "files": files, "raw": raw, "timing_limits": TIMING,
                 "code_revision": commit, "exploratory_code": dirty,
-                "environment": {"python": platform.python_version(), "pyarrow": pa.__version__, "requirements_sha256": digest(ROOT / "forecasts/requirements.txt")}}
+                "environment": {"python": platform.python_version(), "pyarrow": pa.__version__, "project_sha256": digest(ROOT / "pyproject.toml"), "pixi_lock_sha256": digest(ROOT / "pixi.lock")}}
     snapshot_id = identity(manifest)
     for name, entry in files.items():
         entry["key"] = f"snapshots/{snapshot_id}/{name}.parquet"

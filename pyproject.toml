@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "coppersushi"
+version = "0.1.0"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "dash==4.4.1",
+    "dash-bootstrap-components==2.0.4",
+    "pypsa==1.2.4",
+    "pandas==3.0.5",
+    "plotly==6.9.0",
+    "numpy==2.5.2",
+    "pandera[polars]==0.35.0",
+    "polars==2.1.0",
+    "openpyxl==3.1.5",
+    "gunicorn==26.0.0",
+    "boto3==1.43.118",
+    "pyyaml==6.0.3",
+    "geopandas>=1,<2",
+    "pyproj>=3.7,<4",
+    "shapely>=2,<3",
+    "pyarrow==25.0.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==9.1.1", "mypy==2.4.0"]
+
+[tool.setuptools.packages.find]
+include = ["coppersushi*", "forecasts*"]
+exclude = ["forecasts.tests*", "forecasts.evidence*"]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = [{ name = "macos-15-arm64", platform = "osx-arm64", macos = "15.0" }, "linux-64"]
+requires-pixi = ">=0.77.1,<0.78"
+
+[tool.pixi.dependencies]
+python = "3.14.10.*"
+
+[tool.pixi.feature.dev.dependencies]
+git-lfs = "3.8.0.*"
+terraform = "1.5.7.*"
+
+[tool.pixi.pypi-dependencies]
+coppersushi = { path = ".", editable = true }
+
+[tool.pixi.environments]
+default = { features = ["dev"], solve-group = "default" }
+runtime = { features = [], solve-group = "default" }
+
+[tool.pixi.tasks]
+setup = "python -c \"import sys; print('Python interpreter:', sys.executable)\""
+dev = "python app.py"
+test-app = "python -m pytest -q"
+test-forecast = "python -m unittest discover -s forecasts/tests -v"
+typecheck = "python -m mypy --config-file forecasts/mypy.ini"
+test = { depends-on = ["test-app", "test-forecast", "typecheck"] }
+solve = "python -m coppersushi.data_sources.pypsa_eur solve"
