@@ -1,7 +1,7 @@
 ---
 # Copy outside the repository. Paths below refer to private files on your Mac.
 domain: blog.example.org
-site_url: http://localhost:2371
+site_url: https://blog.example.org
 # A complete config.production.json with MySQL credentials and working SMTP.
 # Its url MUST equal site_url; server MUST bind 127.0.0.1:2368.
 ghost_config_file: /absolute/private/path/config.production.json

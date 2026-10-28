@@ -10,5 +10,5 @@
   do not describe uncommitted experiments as prior repository behavior.
 - Build and validate theme changes with `yarn test:ci`. Use the checks documented
   in `hosting/README.md` for hosting changes. Never put deployment credentials in CI.
-- The deployment target is the permanent CX23. DNS cutover and deletion of the
-  old live server need explicit approval; a code review is not that approval.
+- Production changes, including deployments, DNS changes and server deletion,
+  require explicit approval. Code review or merging a PR does not grant it.

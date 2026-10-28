@@ -60,12 +60,11 @@ For sizes that time out, generate animated variants offline and install them at
 ownership and permissions. Keep originals, avoid enlargement, and verify animation
 timing. Check that the rendered URLs return WebP directly without a slow redirect.
 
-## Run or migrate Ghost
+## Hosting
 
 Follow the [hosting runbook](hosting/README.md) for private inputs, server setup,
-restoration, preview checks, cutover, and rollback. Deployment is manual and
-separate from theme development. See the [rehearsal results](hosting/rehearsal.md)
-for what has been tested and what remains before production cutover.
+restoration, and site verification. Production runs Ghost behind Nginx on Hetzner.
+Deployment is manual and separate from theme development.
 
 [Hosting CI](.github/workflows/hosting.yml) validates Terraform, Ansible, and
 restore safeguards. It has no deployment credentials and does not change servers.

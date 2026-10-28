@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check sitemap pages and same-origin HTML media through a preview tunnel."""
+"""Check sitemap pages and same-origin HTML media for a site."""
 import argparse
 from html.parser import HTMLParser
 import json
@@ -31,7 +31,7 @@ def verify(base):
     base = base.rstrip('/') + '/'
     origin = urlsplit(base).netloc
     if urlsplit(base).scheme not in ('http', 'https'):
-        raise ValueError('Expected an HTTP or HTTPS preview URL')
+        raise ValueError('Expected an HTTP or HTTPS site URL')
     sitemap_queue = [urljoin(base, 'sitemap.xml')]
     visited = set()
     pages = set()
@@ -41,7 +41,7 @@ def verify(base):
     def read(url):
         with urlopen(url, timeout=30) as response:
             if urlsplit(response.url).netloc != origin:
-                raise ValueError('Redirect left preview origin: ' + response.url)
+                raise ValueError('Redirect left requested origin: ' + response.url)
             return response.read()
 
     while sitemap_queue:
@@ -59,7 +59,7 @@ def verify(base):
             links = [(entry.findtext('{*}loc') or '').strip() for entry in entries]
             for link in links:
                 if urlsplit(link).scheme not in ('http', 'https') or urlsplit(link).netloc != origin:
-                    raise ValueError('Sitemap points outside the preview: ' + link)
+                    raise ValueError('Sitemap points outside the requested origin: ' + link)
             if index:
                 sitemap_queue.extend(links)
             else:
@@ -90,7 +90,7 @@ def verify(base):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('base', help='Preview origin, e.g. http://localhost:2371')
+    parser.add_argument('base', help='Site origin, e.g. https://blog.example.org')
     args = parser.parse_args()
     report = verify(args.base)
     print(json.dumps(report, indent=2))

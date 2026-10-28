@@ -16,7 +16,7 @@
       ansible.builtin.slurp:
         src: "/var/www/121gigawatts/current/package.json"
       register: installed_package
-    - name: Require the rehearsed Ghost version
+    - name: Require the supported Ghost version
       ansible.builtin.assert:
         that: (installed_package.content | b64decode | from_json).version == ghost_version
   tasks:

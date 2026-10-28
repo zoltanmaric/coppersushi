@@ -2,7 +2,7 @@
 
 [Repository overview and theme workflow](../README.md)
 
-This configuration runs Ghost on a permanent Hetzner CX23: Ubuntu 24.04,
+Production runs Ghost on a permanent Hetzner CX23: Ubuntu 24.04,
 Node 22, MySQL 8, Ghost 6.72.0, Nginx, UFW, and 2 GiB swap. Ghost runs as an
 unprivileged account on loopback. Installation paths are fixed for this site.
 
@@ -51,7 +51,8 @@ Ghost `config.production.json` with MySQL database `ghost_prod`, user `ghostapp`
 and a strong password. Keep that password stable between runs; rotation is
 separate. Ghost binds `127.0.0.1:2368`, MySQL uses `127.0.0.1`, and content lives
 at `/var/www/121gigawatts/content`. Set the same URL in Ghost config and `site.yml`.
-Use `http://localhost:2371` for preview and working SMTP for login emails.
+Use the public HTTPS origin for production and working SMTP for login emails.
+Use `http://localhost:2371` only for an isolated restore preview.
 
 Supply `origin_certificate_file` and `origin_key_file`, or install both directly
 under `/etc/ssl/121gigawatts` and omit those inputs. Cloudflare Origin CA requires
@@ -117,16 +118,17 @@ MySQL; inspect that change before applying to a running site.
 
 ## Restore
 
-Prepare the restore pair from the **same validated Ghost 6 installation**:
+Use a matched SQL dump and content archive from the same validated Ghost 6
+snapshot. Set their paths in the private variables:
 
-- SQL: a full `mysqldump` of the Ghost database, gzip compressed. Use a private
-  MySQL option file, not a password in command arguments. Do not import Ghost 4
-  SQL directly into Ghost 6. Rehearse supported upgrades/imports first.
-- Content: a gzip tar archive of directories *inside* `content/`, including
-  uploads, settings, and the active migrated theme. Not the installation root,
-  config, or `node_modules`. The restore helper rejects links and escaping paths.
-- Verify the snapshot has the real owner's credentials, expected post/draft
-  counts, active theme, and uploads. A dummy test owner is not a deployable backup.
+- SQL: gzip-compressed full `mysqldump`; use a private MySQL option file for credentials.
+- Content: gzip tar of directories inside `content/`, including uploads, settings
+  and the active theme. Exclude config and `node_modules`; links and escaping paths
+  are rejected.
+
+Test recovery on an isolated target first. Confirm the owner account, post/draft
+counts and uploads. Backups must be compatible with the pinned Ghost version;
+version upgrades are a separate operation.
 
 On an empty target database only:
 
@@ -143,7 +145,10 @@ database for you.
 Back up the target and explicitly prepare an empty database before retrying a
 partial import. Keep previous content and SQL backups until validation passes.
 
-## Preview and checks
+## Site verification
+
+Check the public site with `python3 hosting/verify.py https://121gigawatts.org`.
+For an isolated restore preview, forward the loopback service:
 
 ```sh
 ssh -N -L 127.0.0.1:2371:127.0.0.1:2368 root@"$SERVER_IPV4"
@@ -151,11 +156,11 @@ ssh -N -L 127.0.0.1:2371:127.0.0.1:2368 root@"$SERVER_IPV4"
 python3 hosting/verify.py http://localhost:2371
 ```
 
-Open `http://localhost:2371/` and `/ghost/`. Verify owner login, email delivery,
+Open the site and `/ghost/`. Verify owner login, email delivery,
 post/draft counts, theme, navigation, GIFs, Google Slides, and the Copper Sushi
 map. The script checks sitemap pages and same-origin HTML assets; browser
 review is still needed for external embeds, CSS images, and interactions.
-Keep preview analytics injection disabled and save its original values privately.
+Disable analytics and use a test SMTP destination on an isolated restore target.
 
 Check HTTPS without DNS changes using the Cloudflare Origin CA trust bundle
 obtained from Cloudflare's official documentation:
@@ -165,27 +170,5 @@ curl --fail --cacert "$DEPLOY_PRIVATE/origin-ca.pem" \
   --resolve "$DOMAIN:443:$SERVER_IPV4" "https://$DOMAIN/"
 ```
 
-Do not disable certificate verification. While Ghost retains its localhost
-preview URL, canonical links and some redirects intentionally use localhost;
-check them again after setting the production URL, before the DNS switch.
-
-## Cutover and rollback
-
-1. **Before approval:** finish preview checks, verify SMTP and TLS, record DNS
-   values, and take fresh content/database backups. Freeze publishing and other
-   writes while taking the final snapshot. Reconcile anything changed on the
-   live site since the rehearsal and verify that snapshot again.
-2. **After cutover approval:** set Ghost's URL to the production HTTPS origin,
-   restore the saved production analytics injection, restart, and verify through
-   direct-IP HTTPS. Keep the working SMTP relay. Change only the intended
-   Cloudflare origin A record, preserving proxying, TLS mode, and mail records.
-   Validate the public site and admin. Keep the old server intact for rollback.
-3. **Rollback:** restore the recorded origin DNS value. If the new server has
-   received writes, back them up and reconcile them first; a DNS rollback alone
-   does not move content or memberships back. Continue the publishing freeze
-   until the cutover is accepted.
-
-After the cutover is accepted, retire the old server only with explicit approval.
-Keep the CX23 and its Terraform state as the permanent deployment.
-
-The [rehearsal record](rehearsal.md) summarizes deployment checks and remaining cutover work.
+Keep certificate verification enabled. Verify canonical links and redirects use
+the configured public HTTPS origin on production.
