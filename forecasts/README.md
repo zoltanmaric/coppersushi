@@ -79,7 +79,7 @@ Uploads and provider installation may exceed a minute; follow the repository's j
 [`evaluation.evaluate()`](evaluation.py) runs the fixed [scientific configuration](run-config.json): eligible features, monthly fitting, daily prediction and scoring. The [table contracts](tables.py) declare each stage's inputs and outputs. The [evaluation contract](../wiki/price-forecasting/evaluation.md) owns the method and limitations.
 
 ```sh
-data/forecasts/venv/bin/python -m forecasts.evaluation --snapshot data/forecasts/loaded-snapshot --output data/forecasts/evaluations/baseline
+pixi run --locked python -m forecasts.evaluation --snapshot data/forecasts/loaded-snapshot --output data/forecasts/evaluations/baseline
 ```
 
 Choose a new output directory. The command checks the snapshot identity and writes features, models, predictions and a report. This command does not preserve an execution environment or register a tracking run.
@@ -99,7 +99,7 @@ The normal test suite also rejects missing function annotations anywhere under `
 The recorded year's coverage is a regression fixture, not a constraint on newly collected data. To check the exact baseline snapshot explicitly:
 
 ```sh
-FORECAST_BASELINE_SNAPSHOT=data/forecasts/loaded-snapshot data/forecasts/venv/bin/python -m unittest forecasts.tests.test_baseline -v
+FORECAST_BASELINE_SNAPSHOT=data/forecasts/loaded-snapshot pixi run --locked python -m unittest forecasts.tests.test_baseline -v
 ```
 
 The test requires the snapshot ID recorded in its fixture. Ordinary dataset generation reports coverage without requiring it to match that historical year. Raw baseline archives belong at `data/forecasts/inputs/prices.zip`, `weather.zip` and `demand.zip`; existing saved S3 snapshots remain readable without relocating anything.
