@@ -19,7 +19,7 @@
 - [price-forecasting/forecast-infrastructure.md](price-forecasting/forecast-infrastructure.md) — S3 snapshots, local execution, wiki research planning and MLflow evidence
 - [price-forecasting/germany-luxembourg.md](price-forecasting/germany-luxembourg.md) — independent Germany–Luxembourg quarter-hour forecast: agreed CatBoost quantiles, public fundamentals and implementation handover
 - [price-forecasting/data-sources.md](price-forecasting/data-sources.md) — verified price, weather and demand contracts, twelve locations, timing gaps and diagnostic evidence
-- [price-forecasting/evaluation.md](price-forecasting/evaluation.md) — five quantiles, weighted interval score, chronological all-date replay and comparison controls
+- [price-forecasting/evaluation.md](price-forecasting/evaluation.md) — five quantiles, chronological comparisons and first baseline results with calibration limits
 - [price-forecasting/energy-arena-benchmarks.md](price-forecasting/energy-arena-benchmarks.md) — verified 11:00 benchmark histories: Eiser's fundamentals, BerriJ's longer coverage and the naive reference
 
 ## Entities
@@ -33,7 +33,7 @@
 
 ## Specs (working memory — burn-down state, not settled knowledge)
 - [specs/cnec-constraint-selection.md](specs/cnec-constraint-selection.md) — direct map selection, signed constraint contributions and interval navigation
-- [specs/day-ahead-price-forecast.md](specs/day-ahead-price-forecast.md) — first forecast build: validated S3 snapshots, then local model/evaluation and reproducible experiment records
+- [specs/day-ahead-price-forecast.md](specs/day-ahead-price-forecast.md) — verified first baseline and conditional research-history follow-up
 
 ## Literature (one digest per authoritative document, link only)
 - [literature/sdac-allocation-constraints-2026.md](literature/sdac-allocation-constraints-2026.md) — April 2026 Europe-wide inventory: Poland alone has an aggregate net-position cap; cable ramping and line sets are separate

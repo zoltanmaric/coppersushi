@@ -1,6 +1,6 @@
 # Price forecasting
 
-An independent forecasting product under `forecasts/`, with no dependency on the power-flow application. The first market is Germany–Luxembourg day-ahead electricity prices. As of 2026-10-09, typed S3 inputs and feature replay exist; training and experiment tracking remain planned.
+An independent forecasting product under `forecasts/`, with no dependency on the power-flow application. The first market is Germany–Luxembourg day-ahead electricity prices. As of 2026-10-09, typed S3 inputs, local training/evaluation and experiment tracking are implemented; cloud execution remains planned.
 
 ## Design
 
@@ -11,6 +11,8 @@ An independent forecasting product under `forecasts/`, with no dependency on the
 - [Implementation spec](specs/day-ahead-price-forecast.md): remaining work and acceptance checks.
 
 ## Dataflow
+
+This diagram retains the pre-evaluation architecture. Local evaluation is implemented as described above; its architecture presentation is consolidated in the frontend by [PR #112](https://github.com/zoltanmaric/coppersushi/pull/112). The intermediate stack layers leave this diagram unchanged.
 
 Solid nodes and edges represent implemented parts; dashed nodes and edges (`planned`) represent planned parts. Each arrow means "required to produce." Cloud execution is a later stage, subject to deployment validation.
 
