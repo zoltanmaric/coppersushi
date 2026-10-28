@@ -46,7 +46,7 @@ hooks. Clones with a custom `core.hooksPath` need to integrate the guard there m
 ## Local Installation
 Install [Pixi](https://pixi.sh) 0.77.1 and Git LFS (for Git outside Pixi, including the IDE).
 Supported development platforms are Apple Silicon macOS 15+ and Linux x86-64 (glibc 2.28+).
-From the repository root, one command installs the locked environment:
+The default interpreter is Python 3.14.10. From the repository root, one command installs the locked environment:
 
 ```sh
 pixi run --locked setup

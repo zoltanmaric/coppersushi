@@ -36,3 +36,7 @@ docs/superpowers/plans/
 
 .pixi/
 *.egg-info/
+
+node_modules/
+.terraform/
+dist/
