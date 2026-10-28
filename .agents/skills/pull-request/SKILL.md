@@ -13,7 +13,7 @@ description: Guides pull request creation, review, stacking, and local cleanup w
 
 ## Lifecycle protocol
 
-- **At PR creation** and **before marking ready for review**, apply the fission tests:
+- **At PR creation**, **before marking ready for review**, and **when reviewing**, apply the fission tests:
   - *The and-test*: if one plain title cannot cover every commit without "and", it is at least two PRs.
   - *The piggyback test*: any change that entered as "while we're at it" is a candidate layer.
 - **When scope grows inside an open PR** (a piggyback lands), record it immediately in a "Piggybacks" ledger in the PR body, one line per item **stating the verdict**: "rides — must be understood with the feature: <reason>" or "separable — chop offered". The fission decision at ready-time then reads off the ledger instead of anyone's memory.
@@ -25,7 +25,9 @@ description: Guides pull request creation, review, stacking, and local cleanup w
 
 ## Review findings
 
-Review with your system architect hat on. Ask whether the design is clear, coherent and as simple as the problem allows—not just whether the code works. Make your judgment and any remaining compromises explicit.
+Review with your system architect hat on, including whether this is the right unit of review. Propose a split when independently understandable changes would be easier to judge separately; keep changes together when separation would hide their reasoning.
+
+Ask whether the design is clear, coherent and as simple as the problem allows—not just whether the code works. Consider ownership, interface clarity, duplicated rules, unnecessary representations or dependencies, and the simplest credible alternative. Ground concerns in concrete code; do not invent objections to fill a checklist. Make your judgment and any remaining compromises explicit.
 
 - Keep review findings in chat by default. Post them to a pull request only if the user explicitly asks; first show the proposed comment text and anchors and get approval.
 - Post each approved finding as a separate inline review thread on the narrowest relevant changed line, so it can be replied to and resolved independently. If no exact line exists, use the closest relevant changed line. Post a top-level summary only if the user asks.
