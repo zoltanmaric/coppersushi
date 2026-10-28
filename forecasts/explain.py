@@ -13,24 +13,27 @@ import numpy as np
 import pyarrow.parquet as pq
 
 from .scoring import metrics
+from .contracts import Report, Row
+
+Scores = dict[str, dict[str, float | int]]
 
 ROOT = Path(__file__).resolve().parents[1]
 BERLIN = ZoneInfo('Europe/Berlin')
 METHODS = ('system', 'reference', 'prices', 'weather', 'demand')
 QUANTILES = (.025, .25, .5, .75, .975)
 
-def digest(path):
+def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def scores(rows):
+def scores(rows: list[Row]) -> Scores:
     common = [r for r in rows if r['target'] is not None]
     return {name: metrics([r['target'] for r in common],
                           [[r[f'{name}_q{q}'] for q in QUANTILES] for r in common],
                           [r['delivery_date'] for r in common]) for name in METHODS}
 
 
-def reconcile(actual, expected):
+def reconcile(actual: Scores, expected: Scores) -> None:
     for name in METHODS:
         if actual[name].keys() != expected[name].keys():
             raise ValueError(f'Metric fields differ for {name}')
@@ -39,7 +42,7 @@ def reconcile(actual, expected):
                 raise ValueError(f'Metric mismatch: {name}.{key}')
 
 
-def build_payload(run):
+def build_payload(run: Path) -> Report:
     manifest = json.loads((run / 'manifest.json').read_text())
     for name in ('predictions.parquet', 'report.json', 'config.json'):
         if digest(run / name) != manifest['artifacts'][name]:
@@ -72,8 +75,8 @@ def build_payload(run):
             or sum(r['target'] is not None for r in rows) != report['scored_rows']):
         raise ValueError('Report population differs from predictions')
     reconcile(scores(rows), report['metrics'])
-    grouped = defaultdict(list)
-    months = defaultdict(list)
+    grouped: dict[str, list[Row]] = defaultdict(list)
+    months: dict[str, list[Row]] = defaultdict(list)
     for row in rows:
         grouped[row['delivery_date']].append(row)
         months[row['delivery_date'][:7]].append(row)
@@ -123,7 +126,7 @@ def build_payload(run):
             'folds': folds, 'days': days}
 
 
-def export(run, output):
+def export(run: Path, output: Path) -> Path:
     if output.exists():
         raise ValueError('Choose a new output directory; exports are never overwritten')
     payload = build_payload(run)
@@ -135,7 +138,7 @@ def export(run, output):
     return output / 'index.html'
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
