@@ -107,7 +107,7 @@ def run_flow(directory: Path, snapshot: Path) -> None:
     """Execute accepted runs from their archive; keep exploratory runs in checkout.
 
     Output, Metaflow metadata and tracking live outside the extracted code.
-    Record success, failure or interruption in the selected local MLflow store.
+    Start MLflow tracking after runtime setup; record workflow completion or failure.
     """
     directory = directory.resolve()
     config = RunConfig.from_dict(json.loads((directory / "config.json").read_text()))
@@ -298,7 +298,7 @@ def _start_tracking(directory: Path, config: RunConfig) -> str:
         "timing_semantics": "orchestration_and_computation",
         "snapshot_id": config.snapshot_id, "code_revision": manifest["code_revision"],
         "forecast_run": manifest["run_id"], "exploratory": str(manifest["exploratory"]),
-        "experiment_fingerprint": manifest.get("experiment_fingerprint", manifest["run_id"]),
+        "experiment_fingerprint": manifest["experiment_fingerprint"],
     })
     try:
         for key in ("train_start", "evaluation_start", "end_exclusive"):
