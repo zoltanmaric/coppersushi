@@ -1,5 +1,9 @@
 """Scores, operational fallbacks and the complete selection/fit boundary."""
-from forecasts.contracts import FloatArray, Reference, Row
+from forecasts.contracts import FloatArray, Reference
+from forecasts.input_types import Row
+from forecasts.tables import Features, ScoredPredictions, feature_table, artifact_table
+from pandera.errors import SchemaError
+import polars as pl
 from datetime import date, timedelta
 from dataclasses import replace
 
@@ -54,6 +58,21 @@ def reader(records: dict[str, list[Row]]) -> InputReader:
 
 
 class EvaluationTests(unittest.TestCase):
+    def test_feature_contract_preserves_clocks_and_rejects_leaked_outcomes(self) -> None:
+        records = reader(history()).features(date(2026, 3, 29))
+        table = feature_table(records)
+        self.assertEqual(table.height, 92)
+        self.assertEqual(table.schema['delivery_date'], pl.Date)
+        self.assertEqual(table.schema['delivery_utc'], pl.Datetime('us', 'UTC'))
+        self.assertEqual(artifact_table(table).to_pylist(), records)
+        # Inputs cannot silently become labels or carry a contradictory clock.
+        with self.assertRaises(SchemaError):
+            Features.validate(table.with_columns(pl.lit(42.).alias('price_eur_mwh')))
+        with self.assertRaises(SchemaError):
+            Features.validate(table.with_columns(pl.lit(date(2026, 3, 30)).alias('delivery_date')))
+        with self.assertRaises(SchemaError):
+            Features.validate(table.drop('demand_missing'))
+
     def test_wis_known_cases_and_independent_reference(self) -> None:
         q = np.array([[-2., -1., 0., 1., 2.]] * 4)
         y = np.array([0., 3., -3., 1.])
@@ -67,13 +86,13 @@ class EvaluationTests(unittest.TestCase):
         y = np.zeros(196)
         q = np.array([[-1, -1, 0, 1, 1]] * 196)
         y[:100] = 2
-        result = metrics(y, q, ['2025-10-26'] * 100 + ['2025-10-27'] * 96)
+        result = metrics(y, q, [date(2025, 10, 26)] * 100 + [date(2025, 10, 27)] * 96)
         self.assertAlmostEqual(result['coverage_95'], 96 / 196)
         self.assertEqual(result['daily_coverage_95'], .5)
         self.assertEqual(result['rows'], 196)
 
     def test_block_comparison_reproducible_and_does_not_bridge_gaps(self) -> None:
-        days = [f'2026-01-{d:02}' for d in list(range(1, 8)) + list(range(20, 27))]
+        days = [date(2026, 1, d) for d in list(range(1, 8)) + list(range(20, 27))]
         y = np.zeros(14)
         ref = np.zeros((14, 5))
         pred = np.ones((14, 5))
@@ -101,12 +120,12 @@ class EvaluationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             for i, records in enumerate([before, after]):
                 r = reader(records)
-                features = [row for d in range(28) for row in r.features(date(2026, 3, 1) + timedelta(days=d))]
+                features = feature_table([row for d in range(28) for row in r.features(date(2026, 3, 1) + timedelta(days=d))])
                 training = select_training_data(r, features, fit_day, date(2026, 3, 15))
                 fitted = fit_month(r, features, fit_day, c, Path(temporary) / str(i))
                 self.assertFalse(fitted.failures)
                 outcomes.append((feature_matrix(training.rows, FEATURES['demand']), training.targets, fitted.reference,
-                                 predict_day(r.features(fit_day), fitted.models, fitted.reference, c)))
+                                 predict_day(feature_table(r.features(fit_day)), fitted.models, fitted.reference, c)))
         np.testing.assert_allclose(outcomes[0][0], outcomes[1][0], equal_nan=True)
         np.testing.assert_array_equal(outcomes[0][1], outcomes[1][1])
         self.assertEqual(outcomes[0][2], outcomes[1][2])
@@ -131,11 +150,22 @@ class EvaluationTests(unittest.TestCase):
             self.assertTrue(all(v is not None for v in before['target']))
             self.assertEqual(set(before['target_missing']), {0})
             self.assertEqual(report['missing_truth'], 0)
+            scored = pl.read_parquet(original / 'predictions.parquet').with_columns(
+                pl.col('delivery_utc').str.to_datetime(format='%+', time_zone='UTC'),
+                pl.col('delivery_date').str.to_date(), pl.col('fold').str.to_date(),
+                pl.col('demand_selected_update_utc').cast(pl.String).str.to_datetime(format='%+', time_zone='UTC'))
+            ScoredPredictions.validate(scored)
+            with self.assertRaises(SchemaError):
+                ScoredPredictions.validate(scored.with_columns(pl.lit(1).cast(pl.Int64).alias('target_missing')))
+            with self.assertRaises(SchemaError):
+                ScoredPredictions.validate(scored.with_columns(pl.lit(float('inf')).alias('system_q0.5')))
+            with self.assertRaises(SchemaError):
+                ScoredPredictions.validate(scored.with_columns((pl.col('system_q0.975') + 1).alias('system_q0.025')))
 
     def test_missing_sources_and_prediction_failure_choose_explicit_fallback(self) -> None:
         c = config()
         r = reader(history())
-        rows = r.features(date(2026, 3, 29))
+        rows = feature_table(r.features(date(2026, 3, 29)))
         class Model:
             def predict(self, x: FloatArray) -> FloatArray:
                 return np.tile([2., -2., 0., -1., 1.], (len(x), 1))
@@ -146,19 +176,16 @@ class EvaluationTests(unittest.TestCase):
         self.assertEqual(forecast.selected_model, 'demand')
         self.assertTrue((np.diff(forecast.ordered['demand'], axis=1) >= 0).all())
         self.assertEqual(forecast.crossings['demand'], 92)
-        for row in rows:
-            row['demand_source_unavailable'] = 1
+        rows = Features.validate(rows.with_columns(pl.lit(1).cast(pl.Int64).alias('demand_source_unavailable')))
         self.assertEqual(predict_day(rows, models, reference, c).selected_model, 'weather')
-        for row in rows:
-            row['weather_source_unavailable'] = 1
+        rows = Features.validate(rows.with_columns(pl.lit(1).cast(pl.Int64).alias('weather_source_unavailable')))
         self.assertEqual(predict_day(rows, models, reference, c).selected_model, 'prices')
-        for row in rows:
-            row['weather_source_unavailable'] = 0
-            row['demand_source_unavailable'] = 0
-            row['price_lags_unavailable'] = 1
+        rows = Features.validate(rows.with_columns(
+            pl.lit(0).cast(pl.Int64).alias('weather_source_unavailable'),
+            pl.lit(0).cast(pl.Int64).alias('demand_source_unavailable'),
+            pl.lit(1).cast(pl.Int64).alias('price_lags_unavailable')))
         self.assertEqual(predict_day(rows, models, reference, c).selected_model, 'reference')
-        for row in rows:
-            row['price_lags_unavailable'] = 0
+        rows = Features.validate(rows.with_columns(pl.lit(0).cast(pl.Int64).alias('price_lags_unavailable')))
         result = predict_day(rows, {}, reference, c)
         self.assertEqual(result.selected_model, 'reference')
         self.assertIn('prediction_failure', result.fallback_reason)

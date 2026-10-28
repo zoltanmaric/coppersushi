@@ -5,12 +5,14 @@ from catboost import CatBoostError
 import numpy as np
 
 from forecasts.config import RunConfig
-from forecasts.contracts import DayForecast, Predictor, Reference, Row
+from forecasts.contracts import DayForecast, Predictor, Reference
+from pandera.typing.polars import DataFrame
+from forecasts.tables import Features
 from forecasts.features import feature_matrix
 from forecasts.reference import predict_reference
 
 
-def predict_day(rows: list[Row], models: Mapping[str, Predictor], reference: Reference,
+def predict_day(rows: DataFrame[Features], models: Mapping[str, Predictor], reference: Reference,
                 config: RunConfig) -> DayForecast:
     """Predict five ordered quantiles per quarter and select a usable method.
 
@@ -35,13 +37,13 @@ def predict_day(rows: list[Row], models: Mapping[str, Predictor], reference: Ref
     reasons = []
     chosen = "reference"
     for name in ("demand", "weather", "prices"):
-        if rows[0]["price_lags_unavailable"]:
+        if rows["price_lags_unavailable"][0]:
             reasons.append(f"{name}:price_lags_unavailable")
         elif name in failures:
             reasons.append(f"{name}:prediction_failure")
-        elif name in ("demand", "weather") and rows[0]["weather_source_unavailable"]:
+        elif name in ("demand", "weather") and rows["weather_source_unavailable"][0]:
             reasons.append(f"{name}:weather_source_unavailable")
-        elif name == "demand" and rows[0]["demand_source_unavailable"]:
+        elif name == "demand" and rows["demand_source_unavailable"][0]:
             reasons.append("demand:demand_source_unavailable")
         else:
             chosen = name
