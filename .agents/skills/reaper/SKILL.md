@@ -30,6 +30,9 @@ For a standalone sweep, discover, execute, deliver and review, then improve from
   protections, including immutable raw sources. Route agent procedures and task-local
   steps according to `information-home`; do not preserve expired instructions as
   wiki knowledge merely because they were unique to the deleted artifact.
+- For wiki content, use [wiki maintenance](../llm-wiki/SKILL.md#maintenance) to
+  inspect links during discovery and maintain wiki integrity during execution.
+  Apply the content judgments here directly when that procedure refers back to Reaper.
 - For unfinished specs, compare their assumptions and intended outcome with later
   decisions and implemented behavior. Open checkboxes do not establish continuing
   value. Propose deletion when the direction is obsolete; if remaining intent is
