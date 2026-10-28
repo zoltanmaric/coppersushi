@@ -10,7 +10,8 @@ import zlib
 from forecasts.run import tracking_client
 
 
-def install(base_url: str) -> None:
+def install(run_id: str, base_url: str) -> None:
+    """Install comparison/history views for an explicitly selected execution."""
     config = json.loads(Path(__file__).with_name('review-views.json').read_text())
     if importlib.metadata.version('mlflow') != config['mlflow_version']:
         raise ValueError('Verify the saved-view format with the installed MLflow version first')
@@ -18,6 +19,12 @@ def install(base_url: str) -> None:
     experiment = client.get_experiment_by_name(config['experiment_name'])
     if experiment is None:
         raise ValueError('Load the local forecast tracking records before installing review views')
+    execution = client.get_run(run_id)
+    if (execution.info.experiment_id != experiment.experiment_id
+            or execution.data.tags.get('record_type') != 'execution'):
+        raise ValueError('Choose a forecast execution run, not a comparison child')
+    config['views']['run-review']['state']['searchFilter'] = (
+        f"tags.`mlflow.parentRunId` = '{execution.info.run_id}'")
     links = {}
     for key, view in config['views'].items():
         view_id = f'forecast-{key}'
@@ -38,4 +45,6 @@ def install(base_url: str) -> None:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--url', default='http://127.0.0.1:5001')
-    install(parser.parse_args().url)
+    parser.add_argument('--run', required=True, help='MLflow execution run to review')
+    args = parser.parse_args()
+    install(args.run, args.url)

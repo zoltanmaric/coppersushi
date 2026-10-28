@@ -16,6 +16,7 @@ class Conclusion(TypedDict):
 
 
 def publish(run_id: str, conclusion: Conclusion, artifact_path: str) -> None:
+    """Save a conclusion and update the same run’s visible notes."""
     client = tracking_client()
     run = client.get_run(run_id)
     # Validate the synopsis before publishing either representation.
@@ -29,7 +30,7 @@ def publish(run_id: str, conclusion: Conclusion, artifact_path: str) -> None:
         target = f"{base}{quote(evidence[len(prefix):], safe='')}" if evidence.startswith(prefix) else evidence
         sections.append(f"[Evidence: {evidence}]({target})")
     if run.data.tags.get('timing_semantics') == 'logging_only':
-        sections.append('Historical duration is logging-only; compute time was not recorded.')
+        sections.append('Duration measures result logging, not model training.')
     client.log_dict(run_id, dict(conclusion), artifact_path)
     client.set_tag(run_id, 'mlflow.note.content', '\n\n'.join(sections))
 

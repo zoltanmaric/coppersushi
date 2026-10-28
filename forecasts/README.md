@@ -82,15 +82,15 @@ Start the local UI on port 5001, then install the checked-in [view definitions](
 ```sh
 pixi run --locked mlflow ui --backend-store-uri "sqlite:///$PWD/data/forecasts/tracking/mlflow.db" --host 127.0.0.1 --port 5001
 # In another terminal:
-pixi run --locked python -m forecasts.review_views
+pixi run --locked python -m forecasts.review_views --run MLFLOW_RUN_ID
 ```
 
-The command prints **Forecast review**, our default entry link to the accepted baseline comparisons, and **Run history**. The views live with the experiment in the local tracking store, not only in browser preferences. Re-running setup updates the same two named views. Other saved views are untouched. This uses MLflow 3.17.0’s UI saved-view format; setup checks the installed version because that format is not a public configuration API. It does not replace MLflow’s global default Runs page.
+The command prints **Forecast review**, our default entry link to the selected run’s comparisons, and **Run history**. The views live with the experiment in the local tracking store, not only in browser preferences. Re-running setup updates the same two named views. Other saved views are untouched. This uses MLflow 3.17.0’s UI saved-view format; setup checks the installed version because that format is not a public configuration API. It does not replace MLflow’s global default Runs page.
 
-- **Baseline review:** accepted parent’s five comparison children; Description, WIS, median MAE and 95% coverage; WIS ascending. The accepted run ID is explicit in the definition, so later baseline promotion requires a deliberate update.
-- **Run history:** execution records, newest first; Description, creation date, evaluation start/end, snapshot ID and code revision. Empty Dataset/Models columns are hidden in both views. Historical Duration values measure logging only; compute time is unknown.
+- **Run comparison:** selected execution’s five comparison children; Description, WIS, median MAE and 95% coverage; WIS ascending. Pass the execution’s MLflow ID explicitly; comparison children and runs from other experiments are rejected.
+- **Run history:** execution records, newest first; Description, creation date, evaluation start/end, snapshot ID and code revision. Empty Dataset/Models columns are hidden in both views. Comparison-child Duration values measure result logging; workflow duration belongs to the execution.
 
-Open each printed link after setup to restore its filter, columns and sort. In the UI, **Views → Save as new view** keeps personal variations; overriding a shared view changes that saved layout until setup is rerun. The baseline and history links require this local tracking store; they are not hosted public results.
+Open each printed link after setup to restore its filter, columns and sort. In the UI, **Views → Save as new view** keeps personal variations; overriding a shared view changes that saved layout until setup is rerun. The comparison and history links require this local tracking store; they are not hosted public results.
 
 To publish a conclusion and derive the parent’s visible Notes from the same JSON:
 
