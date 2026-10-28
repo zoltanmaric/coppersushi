@@ -26,3 +26,9 @@ jobs:
           locked: true
       - run: pixi run --locked setup
       - run: pixi run --locked test
+      - name: Build the locked container environment
+        run: docker build --target environment -t coppersushi-environment .
+      - name: Check container activation and native libraries
+        run: >-
+          docker run --rm --entrypoint /bin/bash coppersushi-environment /opt/entrypoint.sh
+          python -c 'import dash, geopandas, netCDF4, numpy, pandas, pyarrow, pyproj, pypsa, shapely'

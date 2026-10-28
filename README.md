@@ -142,23 +142,12 @@ pixi run --locked python -m coppersushi.data_sources.pypsa_eur promote networks/
 copies it to `networks/opf-<day>.nc` and stages it — committing is the sanction, and each
 committed version is a Git LFS object kept forever. Set `PYPSA_EUR_DIR` to use a checkout elsewhere. Design: [`wiki/pypsa-eur-sibling.md`](wiki/pypsa-eur-sibling.md).
 
-## Installation on Heroku
-The image is built from your working tree, so `git lfs pull` first: the build refuses LFS
-pointers. Prepare the endpoint seed and OSM locator using the [market-data commands](#market-data)
-above before building. Docker includes only that seed and the locator CSVs from `data/` and
-validates both during the build. They survive dyno restarts as part of the image; runtime cache
-additions are disposable and may need another hourly fetch after a restart. Refresh the seed
-before subsequent deployments to retain broader coverage.
+## Production deployment
 
-Tokens travel as config vars, never in the image (`.secrets/` is docker-ignored).
-```bash
-heroku config:set MAPBOX_TOKEN=<token>
-heroku config:set ELECTRICITY_MAPS_API_KEY=<key>
-heroku container:push web
-heroku container:release web
-```
-Heroku's router can time out after 30 seconds. Gunicorn allows 90
-seconds so a slow request can finish saving its cache; **Retry** can then reuse it. There is no
-whole-day runtime fetch, background prefetcher, or additional cache service.
-The container installs the runtime subset of the same Pixi lock; it does not resolve
-a separate production dependency set.
+The app runs on AWS Lambda behind CloudFront. Follow the [deployment runbook](infra/lambda/README.md)
+to prepare bundled data, build the image and deploy an update.
+
+Docker uses Pixi's official image to install the `runtime` environment from the same
+`pyproject.toml` and `pixi.lock` used for development. The final image receives that
+prepared environment and its activation script; it needs no package manager or
+separate production dependency definition.

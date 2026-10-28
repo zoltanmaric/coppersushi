@@ -25,7 +25,7 @@ and configuration are described in [the power-flow architecture](sushi-2.md).
 
 The AWS deployment sets `ROOT_VIEW=full`: `/` and `/opf-2024` include the two app
 navigation links. `/embed/opf-2024` uses the same figure and callbacks without
-navigation. [Route design](../explainers/opf-2024-embed.html).
+navigation.
 
 **Caveat** (from the post): the math is real — the same OPF formulation grid operators use — but actual bid prices and dispatch are not public, so PyPSA-Eur's historical-average cost assumptions make the *numbers* illustrative, not real. See ch. 4 of the [PyPSA-Eur paper](https://arxiv.org/abs/1806.01613).
 

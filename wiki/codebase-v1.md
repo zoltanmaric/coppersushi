@@ -16,6 +16,6 @@ Dash/Plotly app, ~400 lines of Python across three modules. Written 2022, modern
 
 ## Lineage
 
-- 2022: built on PyPSA-Eur output; deployed via Docker/gunicorn to Heroku, embedded at 121gigawatts.org.
+- 2022: built on PyPSA-Eur output; embedded at 121gigawatts.org.
 - Oct 2022: forked as *milkshake* (load-siting tool: add a load at a bus, re-solve, paint the line-flow diff on this map — violet = increased, mint = decreased). Scenario diffing proved valuable and is a v2 feature candidate.
 - Aug 2026: dead code purged; pandas/Plotly/Dash API drift fixed (`fillna` CoW no-op, `ColorBar.titleside`, `app.run_server`).
