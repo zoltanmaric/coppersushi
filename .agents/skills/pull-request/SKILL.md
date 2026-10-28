@@ -25,6 +25,8 @@ description: Guides pull request creation, review, stacking, and local cleanup w
 
 ## Review findings
 
+Review with your system architect hat on. Ask whether the design is clear, coherent and as simple as the problem allows—not just whether the code works. Make your judgment and any remaining compromises explicit.
+
 - Keep review findings in chat by default. Post them to a pull request only if the user explicitly asks; first show the proposed comment text and anchors and get approval.
 - Post each approved finding as a separate inline review thread on the narrowest relevant changed line, so it can be replied to and resolved independently. If no exact line exists, use the closest relevant changed line. Post a top-level summary only if the user asks.
 - Attribute each posted thread with the agent, model version and reasoning effort. If the runtime does not expose a field, say so instead of guessing.
