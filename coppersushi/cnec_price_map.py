@@ -52,6 +52,8 @@ def _placed(constraints: pd.DataFrame, geometries: DataFrame[MappedCnecElements]
 
 
 def _hover(rows: pd.DataFrame) -> pd.Series:
+    if rows.empty:
+        return pd.Series(index=rows.index, dtype="str")
     ram = rows.ram.map(lambda value: "n/a" if pd.isna(value) else f"{value:,.0f} MW")
     capacity = rows.capacity.map(lambda value: "n/a" if pd.isna(value) else f"{value:,.0f} MW")
     contingency = rows.cont_name.fillna("Base case (no contingency)")

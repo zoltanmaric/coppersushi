@@ -33,3 +33,6 @@ docs/superpowers/plans/
 /infra/lambda/*.tfvars
 /infra/lambda/*.tfvars.json
 /infra/lambda/*.tfplan
+
+.pixi/
+*.egg-info/
