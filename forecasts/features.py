@@ -20,8 +20,8 @@ def build_features(reader: InputReader, start: date, end: date) -> list[Row]:
     """Build quarter-hour rows in [start, end), with no realised target values.
 
     Each day uses only inputs eligible by 11:00 Berlin on the preceding day.
-    The input reader selects source versions; dataset.build_rows creates price
-    lags, calendar fields, aligned weather/demand and missing-value flags.
+    The input reader selects source versions and builds typed price features;
+    dataset.assemble_rows joins calendar, weather/demand and missing-value flags.
     """
     rows = []
     day = start
