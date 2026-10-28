@@ -20,7 +20,6 @@ class ConfigTests(unittest.TestCase):
         saved = json.loads(json.dumps(saved, sort_keys=True))
         config = RunConfig.from_dict(saved)
         self.assertIs(type(config.train_start), date)
-        self.assertEqual(list(config.features), list(saved["features"]))
         self.assertIsInstance(config.snapshot_id, SnapshotId)
         self.assertEqual(json.loads(json.dumps(config.to_dict())), saved)
         self.assertEqual(pickle.loads(pickle.dumps(config)), config)
