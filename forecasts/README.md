@@ -114,10 +114,10 @@ data/forecasts/runtime/bin/python -m pip --isolated install --index-url https://
 data/forecasts/runtime/bin/python -m forecasts.run run --snapshot data/forecasts/loaded-snapshot
 ```
 
-`forecasts.run` freezes configuration and provenance, launches local Metaflow, and records scores and artifacts in local MLflow. Execution directories live under `data/forecasts/runs/`. `--exploratory` permits development runs; they cannot satisfy accepted reproduction. The fixed S3 snapshot supplies inputs; execution artifacts must also be retained locally.
+`forecasts.run` checks that installed packages match the committed lock, freezes configuration and code, launches local Metaflow from that code archive, and records scores and artifacts in local MLflow. Keep mypy and other development tools in a separate environment. Execution directories live under `data/forecasts/runs/`; each retry gets a new identifier. Set `FORECAST_DATA_ROOT` to use another local output/tracking root. Accepted execution is independent of later checkout edits. `--exploratory` runs the mutable checkout and permits extra packages; these runs cannot satisfy accepted reproduction. The fixed S3 snapshot supplies inputs; execution artifacts must also be retained locally.
 
 ```sh
 data/forecasts/runtime/bin/python -m forecasts.run reproduce RUN_ID --profile YOUR_LOCAL_PROFILE --bucket YOUR_PRIVATE_BUCKET
 ```
 
-Reproduction restores the saved code and dependencies, reloads the S3 snapshot, and compares saved-model predictions and scores. It does not claim binary-identical retraining. [Scientific limits](../wiki/price-forecasting/evaluation.md#result) remain unchanged.
+Reproduction restores the saved code and dependencies, reloads the S3 snapshot, and compares saved-model predictions and scores. Each attempt lives under `data/forecasts/reproductions/RUN_ID/ATTEMPT_ID/`, with its status in `attempt.json` and successful verification in `result/verification.json`. Retry with the same command; failed and successful attempts remain intact. It does not claim binary-identical retraining. [Scientific limits](../wiki/price-forecasting/evaluation.md#result) remain unchanged.

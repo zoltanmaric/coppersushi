@@ -15,7 +15,7 @@ CONFIG_PATH = Path(__file__).resolve().parents[1] / "run-config.json"
 
 class TrackingTests(unittest.TestCase):
     def test_success_failure_and_interrupt_are_persisted(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp, patch.object(run, 'ROOT', Path(tmp)):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(run, 'DATA_ROOT', Path(tmp)):
             directory = Path(tmp) / 'execution'
             directory.mkdir()
             config = RunConfig.from_dict(json.loads(CONFIG_PATH.read_text()))

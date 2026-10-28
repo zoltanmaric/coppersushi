@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from contextlib import contextmanager
+from collections.abc import Iterator
 
 import argparse
 import hashlib
@@ -10,7 +12,8 @@ import json
 import os
 from pathlib import Path
 import platform
-import shutil
+import re
+import tempfile
 import subprocess
 import sys
 import tarfile
@@ -26,7 +29,8 @@ if TYPE_CHECKING:
 from forecasts.dataset import ROOT, digest
 from forecasts.snapshot import canonical, load
 
-RUNS = ROOT / "data/forecasts/runs"
+DATA_ROOT = Path(os.environ.get("FORECAST_DATA_ROOT", ROOT / "data/forecasts")).resolve()
+RUNS = DATA_ROOT / "runs"
 
 
 APPROACHES = {
@@ -67,52 +71,69 @@ def main() -> None:
 
 
 def prepare(config_path: Path, exploratory: bool = False) -> tuple[Path, RunConfig]:
-    """Freeze configuration, code and environment in a new attempt directory."""
+    """Freeze an attempt; accepted runs require committed code and the exact lock.
+
+    Reject unrestorable environments before creating a run. Exploratory runs
+    may use checkout changes and extra packages, and cannot be reproduced as accepted.
+    """
     config = RunConfig.from_dict(json.loads(config_path.read_text()))
     code = _git("rev-parse", "HEAD")
     dirty = bool(_git("status", "--porcelain", "--untracked-files=normal"))
     if dirty and not exploratory:
         raise ValueError("Accepted runs require committed code; use --exploratory for development")
-    manifest = {"code_revision": code, "exploratory": dirty or exploratory, "config": config.to_dict(),
-                "environment": _environment(), "lock_sha256": digest(ROOT / "forecasts/requirements-lock.txt")}
-    manifest["experiment_fingerprint"] = hashlib.sha256(canonical(manifest)).hexdigest()
-    run_id = uuid.uuid4().hex[:24]
-    directory = RUNS / run_id
+    environment = _environment()
+    lock = ((ROOT / "forecasts/requirements-lock.txt").read_bytes() if exploratory else
+            subprocess.check_output(["git", "-C", str(ROOT), "show", f"{code}:forecasts/requirements-lock.txt"]))
+    if not exploratory:
+        _validate_lock(lock.decode(), environment["packages"])
+    manifest = {"code_revision": code, "exploratory": exploratory, "config": config.to_dict(),
+                "environment": environment, "lock_sha256": hashlib.sha256(lock).hexdigest()}
+    directory = RUNS / uuid.uuid4().hex[:24]
     directory.mkdir(parents=True, exist_ok=False)
-    manifest["run_id"] = run_id
-    (directory / "manifest.json").write_bytes(canonical(manifest))
     (directory / "config.json").write_bytes(canonical(config.to_dict()))
-    shutil.copyfile(ROOT / "forecasts/requirements-lock.txt", directory / "requirements-lock.txt")
+    (directory / "requirements-lock.txt").write_bytes(lock)
     with (directory / "code.tar").open('wb') as archive:
         subprocess.run(["git", "-C", str(ROOT), "archive", code, "forecasts"], stdout=archive, check=True)
+    manifest["code_sha256"] = digest(directory / "code.tar")
+    manifest["experiment_fingerprint"] = hashlib.sha256(canonical(manifest)).hexdigest()
+    manifest["run_id"] = directory.name
+    (directory / "manifest.json").write_bytes(canonical(manifest))
     return directory, config
 
 
 def run_flow(directory: Path, snapshot: Path) -> None:
-    """Run local Metaflow and record success, failure or interruption in MLflow."""
-    env = os.environ.copy()
-    env.update(METAFLOW_DEFAULT_DATASTORE="local", METAFLOW_DEFAULT_METADATA="local",
-               METAFLOW_DATASTORE_SYSROOT_LOCAL=str(ROOT / "data/forecasts/metaflow"),
-               METAFLOW_USER="forecast-local", PYTHONPATH=str(ROOT))
+    """Execute accepted runs from their archive; keep exploratory runs in checkout.
+
+    Output, Metaflow metadata and tracking live outside the extracted code.
+    Record success, failure or interruption in the selected local MLflow store.
+    """
+    directory = directory.resolve()
     config = RunConfig.from_dict(json.loads((directory / "config.json").read_text()))
-    mlflow_run = _start_tracking(directory, config)
-    client = tracking_client()
-    try:
-        subprocess.run([sys.executable, "-m", "forecasts.flow", "run", "--config", str(directory / "config.json"),
-                        "--snapshot", str(snapshot.resolve()), "--output", str(directory.resolve()),
-                        "--mlflow-run", mlflow_run], cwd=ROOT, env=env, check=True)
-    except BaseException as error:
-        interrupted = isinstance(error, (KeyboardInterrupt, SystemExit)) or (
-            isinstance(error, subprocess.CalledProcessError) and error.returncode in (-2, -15, 130, 143))
-        client.set_tag(mlflow_run, "failure_type", type(error).__name__)
-        client.set_terminated(mlflow_run, status="KILLED" if interrupted else "FAILED")
-        raise
-    else:
-        client.set_terminated(mlflow_run)
+    manifest = json.loads((directory / "manifest.json").read_text())
+    with _execution_code(directory, manifest) as code:
+        env = os.environ.copy()
+        env.update(METAFLOW_DEFAULT_DATASTORE="local", METAFLOW_DEFAULT_METADATA="local",
+                   METAFLOW_DATASTORE_SYSROOT_LOCAL=str(DATA_ROOT / "metaflow"),
+                   METAFLOW_USER="forecast-local", PYTHONPATH=str(code),
+                   FORECAST_DATA_ROOT=str(DATA_ROOT))
+        mlflow_run = _start_tracking(directory, config)
+        client = tracking_client()
+        try:
+            subprocess.run([sys.executable, "-m", "forecasts.flow", "run", "--config", str(directory / "config.json"),
+                            "--snapshot", str(snapshot.resolve()), "--output", str(directory),
+                            "--mlflow-run", mlflow_run], cwd=code, env=env, check=True)
+        except BaseException as error:
+            interrupted = isinstance(error, (KeyboardInterrupt, SystemExit)) or (
+                isinstance(error, subprocess.CalledProcessError) and error.returncode in (-2, -15, 130, 143))
+            client.set_tag(mlflow_run, "failure_type", type(error).__name__)
+            client.set_terminated(mlflow_run, status="KILLED" if interrupted else "FAILED")
+            raise
+        else:
+            client.set_terminated(mlflow_run)
 
 
-def reproduce(run_id: str, profile: str, bucket: str, region: str) -> None:
-    """Restore preserved code and dependencies, then verify saved-model replay."""
+def reproduce(run_id: str, profile: str, bucket: str, region: str) -> Path:
+    """Restore and verify a saved run in a new, retained attempt directory."""
     if len(run_id) != 24 or any(c not in '0123456789abcdef' for c in run_id):
         raise ValueError("Expected a 24-character accepted run identifier")
     source = RUNS / run_id
@@ -127,22 +148,39 @@ def reproduce(run_id: str, profile: str, bucket: str, region: str) -> None:
     for key in ('system', 'machine'):
         if _environment()[key] != manifest['environment'][key]:
             raise ValueError("Reproduction requires the recorded platform")
-    destination = ROOT / "data/forecasts/reproductions" / run_id
+    destination = DATA_ROOT / "reproductions" / run_id / uuid.uuid4().hex[:24]
     destination.mkdir(parents=True, exist_ok=False)
-    archive = source / "code.tar"
-    code = destination / "code"
-    with tarfile.open(archive) as f:
-        f.extractall(code, filter="data")
-    python = destination / "venv/bin/python"
-    subprocess.run([sys.executable, "-m", "venv", str(destination / "venv")], check=True)
-    subprocess.run([str(python), "-m", "pip", "--isolated", "install", "--index-url", "https://pypi.org/simple",
-                    "-r", str(code / "forecasts/requirements-lock.txt")], check=True)
-    # The restored revision handles input loading and evaluation, not the calling checkout.
-    env = os.environ.copy()
-    env['PYTHONPATH'] = str(code)
-    subprocess.run([str(python), "-m", "forecasts.run", "replay", "--source", str(source),
-                    "--destination", str(destination / "result"), "--profile", profile, "--bucket", bucket,
-                    "--region", region], cwd=code, env=env, check=True)
+    attempt = {"attempt_id": destination.name, "source_run_id": run_id, "status": "restoring"}
+    status = destination / "attempt.json"
+    status.write_bytes(canonical(attempt))
+    print(f"Reproduction attempt {destination}", flush=True)
+    try:
+        code = destination / "code"
+        with tarfile.open(source / "code.tar") as archive:
+            archive.extractall(code, filter="data")
+        python = destination / "venv/bin/python"
+        subprocess.run([sys.executable, "-m", "venv", str(destination / "venv")], check=True)
+        subprocess.run([str(python), "-m", "pip", "--isolated", "install", "--index-url", "https://pypi.org/simple",
+                        "-r", str(code / "forecasts/requirements-lock.txt")], check=True)
+        attempt["status"] = "replaying"
+        status.write_bytes(canonical(attempt))
+        env = os.environ.copy()
+        env.update(PYTHONPATH=str(code), FORECAST_DATA_ROOT=str(DATA_ROOT))
+        subprocess.run([str(python), "-m", "forecasts.run", "replay", "--source", str(source.resolve()),
+                        "--destination", str(destination / "result"), "--profile", profile, "--bucket", bucket,
+                        "--region", region], cwd=code, env=env, check=True)
+        verification = json.loads((destination / "result/verification.json").read_text())
+        if (verification.get("run_id") != run_id or not verification.get("predictions_match")
+                or not verification.get("scores_match")):
+            raise ValueError("Reproduction did not verify the requested run")
+    except BaseException as error:
+        attempt.update(status="interrupted" if isinstance(error, (KeyboardInterrupt, SystemExit)) else "failed",
+                       error_type=type(error).__name__)
+        status.write_bytes(canonical(attempt))
+        raise
+    attempt["status"] = "verified"
+    status.write_bytes(canonical(attempt))
+    return destination
 
 
 def replay(source: Path, destination: Path, profile: str, bucket: str, region: str) -> None:
@@ -194,7 +232,7 @@ def replay(source: Path, destination: Path, profile: str, bucket: str, region: s
 def tracking_client() -> MlflowClient:
     """Open the local SQLite MLflow store and create its directory if needed."""
     from mlflow import MlflowClient
-    tracking = ROOT / "data/forecasts/tracking"
+    tracking = DATA_ROOT / "tracking"
     tracking.mkdir(parents=True, exist_ok=True)
     return MlflowClient(tracking_uri=f"sqlite:///{tracking / 'mlflow.db'}")
 
@@ -247,7 +285,7 @@ def _start_tracking(directory: Path, config: RunConfig) -> str:
     name = "germany-luxembourg-local"
     experiment = client.get_experiment_by_name(name)
     experiment_id = experiment.experiment_id if experiment else client.create_experiment(
-        name, artifact_location=(ROOT / "data/forecasts/tracking/artifacts").as_uri())
+        name, artifact_location=(DATA_ROOT / "tracking/artifacts").as_uri())
     manifest = json.loads((directory / "manifest.json").read_text())
     label = "Exploratory quantile evaluation" if manifest["exploratory"] else "Quantile evaluation"
     run = client.create_run(experiment_id, tags={
@@ -269,6 +307,43 @@ def _start_tracking(directory: Path, config: RunConfig) -> str:
         client.set_terminated(run.info.run_id, status="FAILED")
         raise
     return run.info.run_id
+
+
+@contextmanager
+def _execution_code(directory: Path, manifest: Report) -> Iterator[Path]:
+    if manifest["exploratory"]:
+        yield ROOT
+        return
+    if _environment() != manifest["environment"]:
+        raise ValueError("Execution environment changed after preparation")
+    if digest(directory / "code.tar") != manifest["code_sha256"]:
+        raise ValueError("Frozen code archive differs from the prepared run")
+    with tempfile.TemporaryDirectory(prefix="forecast-code-") as temporary:
+        code = Path(temporary)
+        with tarfile.open(directory / "code.tar") as archive:
+            archive.extractall(code, filter="data")
+        lock = code / "forecasts/requirements-lock.txt"
+        if digest(lock) != manifest["lock_sha256"]:
+            raise ValueError("Frozen code and dependency lock disagree")
+        _validate_lock(lock.read_text(), manifest["environment"]["packages"])
+        yield code
+
+
+def _validate_lock(text: str, packages: dict[str, str]) -> None:
+    locked = {}
+    for line in text.splitlines():
+        if not line.strip() or line.startswith("#"):
+            continue
+        name, separator, version = line.strip().partition("==")
+        if not separator or not version or any(c.isspace() for c in version):
+            raise ValueError("Accepted execution requires a complete name==version lock")
+        locked[re.sub(r"[-_.]+", "-", name.lower())] = version
+    installed = {re.sub(r"[-_.]+", "-", name.lower()): version for name, version in packages.items()}
+    if installed != locked:
+        differences = sorted(name for name in installed.keys() | locked.keys()
+                             if installed.get(name) != locked.get(name))
+        raise ValueError("Environment does not match the restorable lock: " + ", ".join(differences)
+                         + ". Use a dedicated environment installed from requirements-lock.txt.")
 
 
 def _git(*args: str) -> str:
