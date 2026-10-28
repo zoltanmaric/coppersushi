@@ -11,7 +11,7 @@ Ghost 6, preserving the site's existing appearance.
 | Root `.hbs` files and `partials/` | Page layouts and shared Handlebars templates |
 | `assets/css/` and `assets/js/` | Theme styles and scripts; compiled output is in `assets/built/` |
 | [hosting/](hosting/README.md) | Terraform infrastructure, Ansible setup and restore, and the deployment runbook |
-| [.github/workflows/](.github/workflows/) | Theme and hosting configuration checks; no automatic deployment |
+| [Root CI](../.github/workflows/tests.yml) | Theme and hosting configuration checks; no automatic deployment |
 
 Posts, drafts, site settings, and uploaded media live in Ghost, not in this
 repository. Restoring a site requires separate database and content backups.
@@ -20,28 +20,29 @@ outside this public repository.
 
 ## Work on the theme
 
-Use Node.js 22.x and Yarn Classic (1.x). Run from the repository root:
+Use the [root Pixi setup](../README.md#local-installation). It supplies Node 22 and Yarn Classic.
+Run from the monorepo root:
 
 ```sh
-yarn install --frozen-lockfile
-yarn dev
+pixi run --locked setup
+pixi run --locked theme-dev
 ```
 
-`yarn dev` builds assets and watches for changes; it does not run Ghost. Preview
+`theme-dev` builds assets and watches for changes; it does not run Ghost. Preview
 changes in a separate Ghost 6 installation with this theme active.
 
 To build, validate, and package the theme:
 
 ```sh
-yarn test
-yarn zip
+pixi run --locked theme-test
+pixi run --locked theme-zip
 ```
 
-Upload `dist/121gigawatts.zip` through Ghost Admin's theme settings. Download the
+Upload `121gigawatts/dist/121gigawatts.zip` through Ghost Admin's theme settings. Download the
 active theme as a backup first. Uploading a theme changes its presentation;
 it does not upgrade Ghost or restore content.
 
-[Theme CI](.github/workflows/test.yml) runs `yarn test:ci`, which builds assets
+[Theme CI](../.github/workflows/tests.yml) runs `yarn test:ci`, which builds assets
 and checks Ghost 6 compatibility. The two known, non-blocking warnings concern
 optional custom fonts and the page title/feature-image toggle.
 
@@ -67,7 +68,7 @@ restoration, preview checks, cutover, and rollback. Deployment is manual and
 separate from theme development. See the [rehearsal results](hosting/rehearsal.md)
 for what has been tested and what remains before production cutover.
 
-[Hosting CI](.github/workflows/hosting.yml) validates Terraform, Ansible, and
+[Hosting CI](../.github/workflows/tests.yml) validates Terraform, Ansible, and
 restore safeguards. It has no deployment credentials and does not change servers.
 
 ## License

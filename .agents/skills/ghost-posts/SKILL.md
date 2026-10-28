@@ -34,7 +34,7 @@ for repeated images and retain originals for recovery. Verify hosted size,
 dimensions and animation: Ghost can recompress uploads. If using its saved
 original copy instead, verify that URL exists and its bytes match the conversion.
 Also check the actual responsive URLs rendered by the theme for slow resize
-redirects; see the [animated-image workflow](../../../README.md#animated-images).
+redirects; see the [animated-image workflow](../../../121gigawatts/README.md#animated-images).
 
 ## Preview
 

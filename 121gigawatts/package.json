@@ -17,10 +17,7 @@
         "test": "gscan --v6 .",
         "pretest:ci": "gulp build",
         "test:ci": "gscan --v6 --verbose .",
-        "pretest": "gulp build",
-        "preship": "yarn test",
-        "ship": "STATUS=$(git status --porcelain); echo $STATUS; if [ -z \"$STATUS\" ]; then yarn version && git push --follow-tags; else echo \"Uncomitted changes found.\" && exit 1; fi",
-        "postship": "git fetch && gulp release"
+        "pretest": "gulp build"
     },
     "author": {
         "name": "Ghost Foundation",
@@ -41,14 +38,14 @@
     ],
     "repository": {
         "type": "git",
-        "url": "https://github.com/TryGhost/Casper.git"
+        "url": "https://github.com/zoltanmaric/coppersushi.git",
+        "directory": "121gigawatts"
     },
     "bugs": "https://github.com/TryGhost/Casper/issues",
     "contributors": [
         "https://github.com/TryGhost/Casper/graphs/contributors"
     ],
     "devDependencies": {
-        "@tryghost/release-utils": "0.6.0",
         "autoprefixer": "9.7.6",
         "beeper": "2.0.0",
         "cssnano": "4.1.10",
@@ -59,7 +56,6 @@
         "gulp-postcss": "8.0.0",
         "gulp-uglify": "3.0.2",
         "gulp-zip": "5.0.1",
-        "inquirer": "7.1.0",
         "postcss-color-function": "4.1.0",
         "postcss-custom-properties": "9.1.1",
         "postcss-easy-import": "3.0.0",

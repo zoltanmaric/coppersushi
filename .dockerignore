@@ -28,3 +28,5 @@ infra/lambda/*.tfplan
 **/node_modules
 **/.terraform
 **/dist
+
+121gigawatts

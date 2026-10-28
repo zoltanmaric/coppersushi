@@ -13,19 +13,17 @@ certificate issuance/renewal remain manual. Git pushes and CI never deploy.
 
 ## Quick start
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/), Terraform
-1.5+, and Make. From the repository root:
+Use the [root Pixi setup](../../README.md#local-installation). From the monorepo root:
 
 ```sh
-make -C hosting setup
-make -C hosting test
+pixi run --locked setup
+pixi run --locked hosting-test
 ```
 
-`setup` installs the locked Python/Ansible environment and pinned Ansible
-collections. `test` validates configuration without connecting to a server.
-The Makefile contains direct tool commands, which you can also run individually.
-Commit `uv.lock` and `.terraform.lock.hcl`; these contain public dependency
-versions and checksums, not deployment state.
+Setup installs pinned Ansible collections in ignored `data/ansible/collections`.
+The test task validates configuration without connecting to a server.
+Python and tool versions live in the root manifest and `pixi.lock`; provider versions
+remain in `terraform/.terraform.lock.hcl`. The Makefile implements the hosting tasks.
 
 ## Private inputs
 
@@ -36,9 +34,9 @@ mode `0600`. Copy the three examples there once and fill them in:
 export DEPLOY_PRIVATE=/absolute/private/ghost
 umask 077
 mkdir -p "$DEPLOY_PRIVATE"
-cp hosting/terraform/site.tfvars.example "$DEPLOY_PRIVATE/site.tfvars"
-cp hosting/ansible/inventory.example.yml "$DEPLOY_PRIVATE/inventory.yml"
-cp hosting/ansible/site.example.yml "$DEPLOY_PRIVATE/site.yml"
+cp 121gigawatts/hosting/terraform/site.tfvars.example "$DEPLOY_PRIVATE/site.tfvars"
+cp 121gigawatts/hosting/ansible/inventory.example.yml "$DEPLOY_PRIVATE/inventory.yml"
+cp 121gigawatts/hosting/ansible/site.example.yml "$DEPLOY_PRIVATE/site.yml"
 ```
 
 Do not overwrite existing inputs when returning to this workflow. Keep real
@@ -64,7 +62,7 @@ Initialize Terraform, keeping its working data outside Git:
 
 ```sh
 export TF_DATA_DIR="$DEPLOY_PRIVATE/terraform-data"
-terraform -chdir=hosting/terraform init -lockfile=readonly
+pixi run --locked terraform -chdir=121gigawatts/hosting/terraform init -lockfile=readonly
 ```
 
 For an existing server, import its three resources once. Obtain their IDs from
@@ -72,16 +70,16 @@ Hetzner; verify they belong to the intended CX23. Skip these commands only when
 intentionally creating a new paid server.
 
 ```sh
-terraform -chdir=hosting/terraform import -state="$DEPLOY_PRIVATE/terraform.tfstate" -var-file="$DEPLOY_PRIVATE/site.tfvars" 'hcloud_primary_ip.site["ipv4"]' "$IPV4_ID"
-terraform -chdir=hosting/terraform import -state="$DEPLOY_PRIVATE/terraform.tfstate" -var-file="$DEPLOY_PRIVATE/site.tfvars" 'hcloud_primary_ip.site["ipv6"]' "$IPV6_ID"
-terraform -chdir=hosting/terraform import -state="$DEPLOY_PRIVATE/terraform.tfstate" -var-file="$DEPLOY_PRIVATE/site.tfvars" hcloud_server.site "$SERVER_ID"
+pixi run --locked terraform -chdir=121gigawatts/hosting/terraform import -state="$DEPLOY_PRIVATE/terraform.tfstate" -var-file="$DEPLOY_PRIVATE/site.tfvars" 'hcloud_primary_ip.site["ipv4"]' "$IPV4_ID"
+pixi run --locked terraform -chdir=121gigawatts/hosting/terraform import -state="$DEPLOY_PRIVATE/terraform.tfstate" -var-file="$DEPLOY_PRIVATE/site.tfvars" 'hcloud_primary_ip.site["ipv6"]' "$IPV6_ID"
+pixi run --locked terraform -chdir=121gigawatts/hosting/terraform import -state="$DEPLOY_PRIVATE/terraform.tfstate" -var-file="$DEPLOY_PRIVATE/site.tfvars" hcloud_server.site "$SERVER_ID"
 ```
 
 Plan, inspect the proposed changes, then explicitly apply the saved plan:
 
 ```sh
-terraform -chdir=hosting/terraform plan -state="$DEPLOY_PRIVATE/terraform.tfstate" -var-file="$DEPLOY_PRIVATE/site.tfvars" -out="$DEPLOY_PRIVATE/review.tfplan"
-terraform -chdir=hosting/terraform apply -state="$DEPLOY_PRIVATE/terraform.tfstate" "$DEPLOY_PRIVATE/review.tfplan"
+pixi run --locked terraform -chdir=121gigawatts/hosting/terraform plan -state="$DEPLOY_PRIVATE/terraform.tfstate" -var-file="$DEPLOY_PRIVATE/site.tfvars" -out="$DEPLOY_PRIVATE/review.tfplan"
+pixi run --locked terraform -chdir=121gigawatts/hosting/terraform apply -state="$DEPLOY_PRIVATE/terraform.tfstate" "$DEPLOY_PRIVATE/review.tfplan"
 ```
 
 Review creation, resize, backup charges, and deletion proposals. Adoption can
@@ -95,15 +93,15 @@ For a fresh restore target, install with Ghost held stopped so its database stay
 empty:
 
 ```sh
-make -C hosting configure HOLD=1
+pixi run --locked hosting-configure HOLD=1
 ```
 
 Omit `HOLD=1` only to start a new empty site. On an already configured server,
 predict changes before applying them:
 
 ```sh
-make -C hosting check
-make -C hosting configure
+pixi run --locked hosting-check
+pixi run --locked hosting-configure
 ```
 
 `configure` can restart services. Ansible check mode needs existing packages and
@@ -131,7 +129,7 @@ Prepare the restore pair from the **same validated Ghost 6 installation**:
 On an empty target database only:
 
 ```sh
-make -C hosting restore CONFIRM="RESTORE blog.example.org"
+pixi run --locked hosting-restore CONFIRM="RESTORE blog.example.org"
 ```
 
 Replace the confirmation domain with `domain` in the private variables. The
@@ -148,7 +146,7 @@ partial import. Keep previous content and SQL backups until validation passes.
 ```sh
 ssh -N -L 127.0.0.1:2371:127.0.0.1:2368 root@"$SERVER_IPV4"
 # In another terminal:
-python3 hosting/verify.py http://localhost:2371
+pixi run --locked python 121gigawatts/hosting/verify.py http://localhost:2371
 ```
 
 Open `http://localhost:2371/` and `/ghost/`. Verify owner login, email delivery,
