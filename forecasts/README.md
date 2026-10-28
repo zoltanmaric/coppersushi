@@ -106,6 +106,8 @@ The test requires the snapshot ID recorded in its fixture. Ordinary dataset gene
 
 ## Tracked execution and reproduction
 
+Development and tests use Pixi, including Metaflow and MLflow. Accepted execution still uses the baseline Python 3.12.13 lock below; the Pixi development environment will fail that exact-environment check. Migrating new accepted runs to Pixi is not implemented. Existing runs must retain their recorded environment.
+
 Use a dedicated Python 3.12.13 environment with the complete dependency lock for accepted runs:
 
 ```sh
