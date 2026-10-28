@@ -5,7 +5,9 @@ from typing import Protocol, TypedDict
 import numpy as np
 from numpy.typing import NDArray
 
-from forecasts.input_types import Row, Report
+from forecasts.input_types import Report
+from pandera.typing.polars import DataFrame
+from forecasts.tables import Features, Predictions, ScoredPredictions
 
 FloatArray = NDArray[np.float64]
 
@@ -26,7 +28,7 @@ class Predictor(Protocol):
 @dataclass
 class TrainingData:
     """Historical feature rows paired with labels eligible at the fit cutoff."""
-    rows: list[Row]
+    rows: DataFrame[Features]
     targets: FloatArray
 
 
@@ -53,7 +55,7 @@ class DayForecast:
 @dataclass
 class BacktestPredictions:
     """Fixed predictions and fit diagnostics, before joining realised prices."""
-    rows: list[Row]
+    rows: DataFrame[Predictions]
     folds: list[Report]
     failures: list[Report]
     fallback_rows: dict[str, int]
@@ -63,5 +65,5 @@ class BacktestPredictions:
 @dataclass
 class EvaluationResult:
     """Predictions joined with scoring truth, plus aggregate comparisons."""
-    rows: list[Row]
+    rows: DataFrame[ScoredPredictions]
     report: Report

@@ -5,18 +5,20 @@ import json
 from pathlib import Path
 
 from catboost import CatBoostError, CatBoostRegressor
-import numpy as np
+import polars as pl
+from typing import cast
+from pandera.typing.polars import DataFrame
+from forecasts.tables import Features
 
 from forecasts.config import RunConfig
-from forecasts.contracts import FittedMonth, FloatArray, Predictor, Row, TrainingData
-from forecasts.dataset import stamp
+from forecasts.contracts import FittedMonth, FloatArray, Predictor, TrainingData
 from forecasts.features import feature_matrix
 from forecasts.reference import fit_reference
 from forecasts.snapshot import InputReader
 from forecasts.labels import select_labels
 
 
-def fit_month(reader: InputReader, features: list[Row], fit_day: date,
+def fit_month(reader: InputReader, features: DataFrame[Features], fit_day: date,
               config: RunConfig, directory: Path,
               restore_models: Path | None = None) -> FittedMonth:
     """Fit and save a month's models using labels eligible at its first issue.
@@ -37,7 +39,7 @@ def fit_month(reader: InputReader, features: list[Row], fit_day: date,
     return FittedMonth(models, reference, len(training.rows), failures)
 
 
-def select_training_data(reader: InputReader, features: list[Row],
+def select_training_data(reader: InputReader, features: DataFrame[Features],
                          fit_day: date, start: date) -> TrainingData:
     """Pair earlier features with label versions eligible at this fit's cutoff.
 
@@ -45,19 +47,17 @@ def select_training_data(reader: InputReader, features: list[Row],
     used here. Raise ValueError if no eligible labels remain.
     """
     labels = select_labels(reader, fit_day)
-    rows, y = [], []
-    for row in features:
-        if start <= date.fromisoformat(row["delivery_date"]) < fit_day:
-            value = labels.get(stamp(row["delivery_utc"]))
-            if value is not None:
-                rows.append(row)
-                y.append(value)
-    if not rows:
+    outcomes = pl.DataFrame({"delivery_utc": list(labels), "_label": list(labels.values())},
+                            schema={"delivery_utc": pl.Datetime("us", "UTC"), "_label": pl.Float64})
+    paired = (features.filter((pl.col("delivery_date") >= start) & (pl.col("delivery_date") < fit_day))
+              .join(outcomes, on="delivery_utc", how="left", maintain_order="left")
+              .filter(pl.col("_label").is_not_null()))
+    if paired.is_empty():
         raise ValueError("No eligible training labels")
-    return TrainingData(rows, np.asarray(y))
+    return TrainingData(cast(DataFrame[Features], paired.drop("_label")), paired["_label"].to_numpy())
 
 
-def _fit_models(rows: list[Row], y: FloatArray, config: RunConfig,
+def _fit_models(rows: DataFrame[Features], y: FloatArray, config: RunConfig,
                 directory: Path) -> tuple[dict[str, Predictor], dict[str, str]]:
     directory.mkdir(parents=True, exist_ok=True)
     models, failures = {}, {}
