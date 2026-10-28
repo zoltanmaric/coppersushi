@@ -1,9 +1,5 @@
 """Pandera schema for the substation coordinates `data_sources/osm_locator.py` caches.
 
-Its own module rather than a section of `static_grid.py`: the table is an interim import of
-someone else's hand corrections, to be deleted whole when the matcher of
-`wiki/specs/jao-grid.md` derives coordinates from the workbook itself.
-
 One row per CSV row, names verbatim and duplicates kept: which locator name answers which
 JAO name is a matching decision, and it is made once, in the pure matcher.
 Coordinates are WGS 84 degrees, in the `x`/`y` order the source publishes them.

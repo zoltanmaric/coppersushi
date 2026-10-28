@@ -25,7 +25,7 @@ the constraint names, and the absence of an element EIC — and nothing else: JA
 real elements with real EICs, real limits and no location metadata at all, and classifying
 by a missing field would file those as constraints.
 
-Design: `wiki/specs/jao-grid.md`. Field meanings:
+Field meanings:
 `wiki/literature/jao-core-publication-handbook.md`.
 """
 

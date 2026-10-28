@@ -30,8 +30,6 @@ Column names are matched on their letters and digits alone, because the workbook
 the same unit differently from sheet to sheet — `Susceptance_B(μS)` on `Lines` uses GREEK
 SMALL LETTER MU and `Susceptance_B (µS)` on `Transformers` uses MICRO SIGN — and both
 ohm headers use OHM SIGN rather than the Greek omega an editor would type.
-
-Design: `wiki/specs/jao-grid.md`.
 """
 
 import re

@@ -29,23 +29,18 @@ flowchart LR
     jao_domain["jao_domain<br/>final flow-based domain: monitored elements with their substation names, PTDFs and RAM"]
     jao_endpoint_cache["jao_endpoint_cache<br/>validated seed bundled in the image; viewed-hour misses fetched and cached locally"]
     osm_locator["osm_locator<br/>core-tso-data's OSM-locator substation coordinates, unlicensed, fetched locally"]
-    cnec_geometry["cnec_geometry<br/>each named element and publisher placed by its published substations; interim until jao_elements"]
+    cnec_geometry["cnec_geometry<br/>each named element and publisher placed by its published substations"]
     zone_shapes["zone_shapes<br/>Core bidding-zone polygons derived from solved_network at image build; small bundled GeoJSON read at runtime"]
     mapbox_basemap["mapbox_basemap<br/>Mapbox's dark style fetched per process, label layers removed"]
 
     jao_static_grid["jao_static_grid<br/>JAO's Core Static Grid Model, fetched per release: real ratings and R/X/B/G per element EIC"]
 
-    unsimplified["unsimplified_build<br/>skip PyPSA-Eur's 380 kV lift: keep voltage levels and transformers"]:::planned
-    jao_elements["jao_elements<br/>JAO data + OSM substations → JAO's Core elements matched to our lines and transformers, with PTDFs, limits and shadow prices"]:::planned
     day_ahead_prices["day_ahead_prices<br/>published zonal clearing prices by market time unit"]
     cnec_market_snapshot["cnec_market_snapshot<br/>one market time unit: zonal prices, active rows, selected relative contribution"]
     cnec_price_figure["cnec_price_figure<br/>go.Figure: zonal price choropleth, market-binding CNECs and the selected row's zonal influence"]
     jao_map["jao_map<br/>/cnec/&lt;day&gt;: cleared zonal prices, active CNECs and selected PTDF contribution"]
-    trued_network["trued_network<br/>solved_network with JAO limits on matched lines and transformers, checked pairs attached"]:::planned
 
     pypsa_eur_pin --> pypsa_eur_run
-    pypsa_eur_pin -.-> unsimplified
-    unsimplified -.-> solved_network
     pypsa_eur_run --> solved_network
     opf_full["opf_full<br/>/ and /opf-2024: OPF with app navigation"]
     opf_embed["opf_embed<br/>/embed/opf-2024: map and hourly controls"]
@@ -60,28 +55,21 @@ flowchart LR
     osm_locator --> cnec_geometry
     cnec_geometry --> cnec_price_figure
     mapbox_basemap --> cnec_price_figure
-    solved_network -.-> jao_elements
-    jao_static_grid -.-> jao_elements
-    jao_static_grid -.-> trued_network
-    jao_active_constraints -.-> jao_elements
     adjacent_attribution --> cnec_market_snapshot
     jao_attribution --> cnec_market_snapshot
     cnec_geometry --> cnec_market_snapshot
     zone_shapes --> cnec_market_snapshot
     jao_active_constraints --> cnec_market_snapshot
     day_ahead_prices --> cnec_market_snapshot
-    jao_elements -.-> cnec_price_figure
     cnec_market_snapshot --> cnec_price_figure
     cnec_price_figure --> jao_map
-    jao_elements -.-> trued_network
-    solved_network -.-> trued_network
 ```
 
 Code is one package, `coppersushi/`, organised by domain noun; `io-boundary` in `coppersushi/AGENTS.md` names the two modules that touch the world.
 
 ## Future chapters
 
-True-up to actuals — renewable dispatch calibrated to zonal actuals, units ≥ 100 MW fixed to measured output, validation against measured cross-border flows ([nodal-disaggregation](nodal-disaggregation.md) for what is and is not measurable). Then flow-traced nodal carbon intensity, OPF counterfactuals, hosting. Working state: [specs/sushi-2.md](specs/sushi-2.md).
+True-up to actuals — renewable dispatch calibrated to zonal actuals, units ≥ 100 MW fixed to measured output, validation against measured cross-border flows ([nodal-disaggregation](nodal-disaggregation.md) for what is and is not measurable). Then flow-traced nodal carbon intensity and OPF counterfactuals.
 
 The OPF model has 4,390 buses and 24 hourly snapshots for 29 August 2024, displayed
 in Europe/Brussels time. The AWS deployment uses `ROOT_VIEW=full`: `/` and

@@ -71,6 +71,21 @@ flowchart TD
 
 Fork patches needed by `n_clusters: all` and dynamic prices are tracked in the [contribution ledger](upstream-contributions.md). `transmission_limit: v1.0` fixes line capacity; a larger volume factor permits expansion. The `highs-default` profile uses one thread unless overridden.
 
+## Voltage-simplification
+
+The 2026-09-08 comparison of the OSM base network with the solved network found
+6,863 buses, 9,162 lines and 878 transformers before simplification, versus
+4,390 buses, 7,371 lines and no transformers after the 380 kV lift. Transformer
+buses collapse into their higher-voltage bus. A transformer constraint therefore
+has no corresponding branch in the simplified OPF.
+
+Surviving lines retain their original-voltage suffix and capacity: fractional
+`num_parallel` absorbs the voltage change. Per-unit reactance differed by about
+5–10% at 220, 275 and 400 kV. Parallel corridors remain separate, while circuits
+on one tower are folded into one line. Losing one of k circuits changes that
+line's reactance by k/(k−1); it is not a whole-line outage unless every circuit
+is lost. These limits matter when comparing the model with published constraints.
+
 ## Fork-refs
 
 In the sibling, `remote.pushDefault` is `fork`, so a bare `git push` never targets upstream.

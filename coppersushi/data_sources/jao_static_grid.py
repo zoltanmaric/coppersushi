@@ -19,8 +19,6 @@ Three things are asserted before a byte is parsed, because the release is identi
 nothing inside the workbook itself: the zip's byte count, the workbook's date prefix — the
 containing folder is named for the upload month (`2024-10`), not the release — and the
 sheet names.
-
-Design: `wiki/specs/jao-grid.md`.
 """
 
 import io

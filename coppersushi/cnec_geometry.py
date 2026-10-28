@@ -1,8 +1,6 @@
 """Place JAO's monitored elements on the map from their published substation names.
 
-An interim stand-in for the `match_elements` step of `wiki/specs/jao-grid.md`: that work
-matches an element to a PyPSA branch and inherits the branch's coordinates, this places an
-element from its two substations alone and touches no network. JAO's domain feed names both
+Places an element from its two substations alone and touches no network. JAO's domain feed names both
 endpoints of every monitored element, so no element name is parsed here — the sole inference
 is which located substation a published name means. Three things make that inference:
 
