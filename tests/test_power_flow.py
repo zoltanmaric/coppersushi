@@ -2,6 +2,7 @@ import re
 import json
 
 import pypsa
+import plotly.graph_objects as go
 import pytest
 from pytest import approx
 
@@ -102,3 +103,35 @@ class TestPlotPowerFlow:
         import gzip
         assert 'build-token' not in gzip.decompress((tmp_path / '0.json.gz').read_bytes()).decode()
         assert fig.layout.mapbox.accesstoken == 'build-token'
+
+    @pytest.mark.parametrize('bundled', [False, True])
+    def test_hour_changes_replace_traces_without_overwriting_the_camera(self, n, tmp_path, monkeypatch, bundled):
+        import app
+        from dash import Patch
+        from coppersushi import map_style
+        from coppersushi.data_sources import opf_bundle
+
+        fig = ppf.colored_network_figure(n, 'net_power')
+        fig.update_layout(mapbox=map_style.OPF_CAMERA)
+        monkeypatch.setattr(app, 'mapbox_token', lambda: 'runtime-token')
+        if bundled:
+            opf_bundle.write(fig, n.snapshots, tmp_path)
+            load = opf_bundle.load
+            monkeypatch.setattr(opf_bundle, 'snapshots', lambda: n.snapshots)
+            monkeypatch.setattr(opf_bundle, 'load', lambda index, token: load(index, token, tmp_path))
+        else:
+            monkeypatch.setattr(opf_bundle, 'snapshots', lambda: None)
+            monkeypatch.setattr(app, 'figure_for', lambda key: (fig, n.snapshots))
+
+        initial = app.render('/opf-2024', 0, slider_moved=False)[0]
+        assert initial.layout.mapbox.zoom == map_style.OPF_CAMERA['zoom']
+        for index in [0, 6, 1]:
+            update, *_, message, is_open = app.render('/opf-2024', index, slider_moved=True)
+            assert isinstance(update, Patch)
+            assert not is_open and message == ''
+            operation, = update.to_plotly_json()['operations']
+            assert operation['operation'] == 'Assign'
+            assert operation['location'] == ['data']
+            actual = go.Figure(data=operation['params']['value'])
+            expected = go.Figure(data=ppf.show_snapshot(fig, index).data)
+            assert json.loads(actual.to_json()) == json.loads(expected.to_json())

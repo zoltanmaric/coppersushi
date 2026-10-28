@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 import plotly.graph_objects as go
-from dash import Dash, dcc, html, Input, Output, State, ctx, no_update
+from dash import Dash, dcc, html, Input, Output, State, Patch, ctx, no_update
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 
@@ -202,6 +202,11 @@ def render(pathname: str, snapshot_index: int, slider_moved: bool) -> tuple:
         logging.exception('Loading %s failed', network_key)
         return no_update, no_update, no_update, no_update, no_update, f'Could not load {network_key}: {e}', True
     maximum, marks, snapshot_index, label = state
+    if slider_moved:
+        # Dash keeps the user's camera in the figure; replace only the hour's traces.
+        update = Patch()
+        update['data'] = selected.to_plotly_json()['data']
+        selected = update
     return selected, maximum, marks, snapshot_index, label, '', False
 
 
