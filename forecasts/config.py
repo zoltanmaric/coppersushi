@@ -68,7 +68,7 @@ class RunConfig:
         return config
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialize the established JSON artifact format, including fixed contracts."""
+        """Serialize settings and fixed contracts as JSON values."""
         data = asdict(self)
         for name in ("history_start", "train_start", "evaluation_start", "end_exclusive"):
             data[name] = getattr(self, name).isoformat()
@@ -81,8 +81,7 @@ class RunConfig:
     def features(self) -> Mapping[str, tuple[str, ...]]:
         """Expose the fixed feature inventory without allowing callers to mutate it."""
         from forecasts.features import FEATURES
-        # Preserve the canonical JSON ordering used by existing saved runs.
-        return MappingProxyType({name: tuple(FEATURES[name]) for name in sorted(FEATURES)})
+        return MappingProxyType({name: tuple(fields) for name, fields in FEATURES.items()})
 
     def __post_init__(self) -> None:
         for name in ("history_start", "train_start", "evaluation_start", "end_exclusive"):
