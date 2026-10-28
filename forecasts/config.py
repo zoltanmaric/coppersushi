@@ -16,7 +16,7 @@ class RunConfig:
     """Validated execution settings; dates are dates, not serialized strings.
 
     The refit schedule, feature inventories and quantiles are implementation
-    constants. Saved JSON includes them for provenance and compatibility checks.
+    constants. Saved JSON includes them for provenance and contract checks.
     """
     snapshot_id: SnapshotId
     history_start: date
