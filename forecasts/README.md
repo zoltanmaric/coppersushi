@@ -42,7 +42,7 @@ pixi run --locked python -m forecasts.dataset --snapshot data/forecasts/loaded-s
 Build diagnostic feature outputs from a loaded snapshot:
 
 ```sh
-data/forecasts/venv/bin/python -m forecasts.dataset --snapshot data/forecasts/loaded-snapshot
+pixi run --locked python -m forecasts.dataset --snapshot data/forecasts/loaded-snapshot
 ```
 
 Outputs: `quarters.csv` and `report.json` under ignored `data/forecasts/dataset/`. The [input timing contract](../wiki/price-forecasting/data-sources.md#point-in-time) and [feature/evaluation contract](../wiki/price-forecasting/evaluation.md#defaults) define selection and transformations. See the viewer’s **How it works** for the pipeline.
@@ -116,7 +116,7 @@ Reproduction uses the saved code and Pixi definitions on the recorded operating 
 Export a saved run as an offline website with daily forecasts, full-period/monthly comparisons, an illustrated WIS calculation, the forecast contract and a selectable system-level pipeline. No fitting, source-provider calls or new AWS resources are involved.
 
 ```sh
-data/forecasts/venv/bin/python -m forecasts.explain --run data/forecasts/runs/RUN_ID --output data/forecasts/explainers/RUN_ID
+pixi run --locked python -m forecasts.explain --run data/forecasts/runs/RUN_ID --output data/forecasts/explainers/RUN_ID
 ```
 
 Open the output's `index.html` in a browser. Keep the adjacent `data.js`, styles and scripts together. Use a new output directory for each export; existing exports are not overwritten. Generated files remain under ignored `data/forecasts/` and are not published by this command.
