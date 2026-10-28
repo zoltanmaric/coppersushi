@@ -18,7 +18,7 @@ The Parquet dependency is pinned; snapshot manifests also record Python/PyArrow 
 
 ## S3 inputs
 
-The input path stores three typed tables: `prices`, `weather` and `demand`. [Python schemas](schemas.py) define column types, nullability, units and row keys; validation runs before publication and after loading. Delivery/valid time, source update time and original retrieval time remain distinct. Unknown original timestamps remain null. Source versions and raw archive links are retained.
+The input path stores three typed tables: `prices`, `weather` and `demand`. [Price contracts](prices.py) define price columns and checks and derive their Parquet schema; [other input schemas](schemas.py) define weather and demand contracts; validation runs before publication and after loading. Delivery/valid time, source update time and original retrieval time remain distinct. Unknown original timestamps remain null. Source versions and raw archive links are retained.
 
 To collect the recorded year, place the three exact archives at their [manifest paths](evidence/payload-manifest.json), under `data/forecasts/`. The [evidence instructions](evidence/README.md) describe their sources. `--data-root` can reuse another checkout's downloads. Recollection from mutable feeds may produce different bytes; the recorded experiment requires matching archives or access to the private S3 snapshot.
 

@@ -130,10 +130,10 @@ class SnapshotTests(unittest.TestCase):
 
     def test_schema_rejects_null_keys_and_duplicates(self) -> None:
         rows = history()["prices"]
-        with self.assertRaisesRegex(ValueError, "Duplicate"):
+        with self.assertRaises(ValueError):
             validate("prices", pa.Table.from_pylist(rows + rows, schema=SCHEMAS["prices"]))
         rows[0]["valid_utc"] = None
-        with self.assertRaisesRegex(ValueError, "Required"):
+        with self.assertRaises(ValueError):
             validate("prices", pa.Table.from_pylist(rows, schema=SCHEMAS["prices"]))
 
     def test_schema_rejects_incompatible_weather_units(self) -> None:

@@ -1,5 +1,6 @@
 """Build an all-date replay from immutable, hash-verified evidence snapshots."""
 from collections.abc import Collection, Iterator, Sequence
+from forecasts.prices import build_price_features
 from forecasts.input_types import DemandSeries, DemandVersion, PriceSeries, Report, Row, WeatherSeries
 import argparse
 from collections import Counter, defaultdict
@@ -11,7 +12,6 @@ import json
 import math
 from pathlib import Path
 import platform
-import statistics
 import zipfile
 from zoneinfo import ZoneInfo
 
@@ -101,27 +101,6 @@ def load_prices(path: Path) -> PriceSeries:
     return prices
 
 
-class PriceHistory:
-    def __init__(self, prices: PriceSeries) -> None:
-        self.clock = defaultdict(list)
-        self.daily = defaultdict(list)
-        for timestamp, value in prices.items():
-            if value is not None:
-                local = timestamp.astimezone(BERLIN)
-                self.clock[local.date(), local.hour * 4 + local.minute // 15].append(value)
-                self.daily[local.date()].append(value)
-        self.daily_stats = {day: (statistics.mean(values), min(values), max(values)) for day, values in self.daily.items()}
-
-    def lag(self, day: date, quarter: int, days: int) -> float | None:
-        """Return the earlier same-clock price, averaging duplicate clock quarters."""
-        values = self.clock.get((day - timedelta(days=days), quarter), [])
-        return statistics.mean(values) if values else None
-
-    def summary(self, day: date, days: int) -> tuple[float | None, float | None, float | None]:
-        """Return earlier daily mean/min/max, or three missing values."""
-        return self.daily_stats.get(day - timedelta(days=days), (None, None, None))
-
-
 def load_weather(path: Path, locations: Sequence[tuple[str, float, float]]) -> tuple[WeatherSeries, Report]:
     """Load hourly forecast fields and align radiation to the preceding hour."""
     with zipfile.ZipFile(path) as archive:
@@ -205,11 +184,12 @@ def holidays(year: int) -> set[date]:
 
 def build_rows(prices: PriceSeries, weather: WeatherSeries, demand: DemandSeries, start: date = START, end: date = END, targets: PriceSeries | None = None) -> list[Row]:
     """Build feature/audit rows for every delivery quarter, preserving missing inputs."""
-    history = PriceHistory(prices)
+    delivery = list(quarters(start, end))
+    price_rows = build_price_features(prices, delivery).to_dicts()
     targets = prices if targets is None else targets
     rows = []
     holiday_dates = set().union(*(holidays(y) for y in range(start.year, end.year + 1)))
-    for timestamp in quarters(start, end):
+    for timestamp, price_row in zip(delivery, price_rows, strict=True):
         local = timestamp.astimezone(BERLIN)
         day, quarter = local.date(), local.hour * 4 + local.minute // 15
         deadline = cutoff(day)
@@ -221,11 +201,7 @@ def build_rows(prices: PriceSeries, weather: WeatherSeries, demand: DemandSeries
                "quarter_of_day": quarter, "day_of_week": local.weekday(), "month": local.month,
                "public_holiday": int(day in holiday_dates), "price_timing_assumed": 1,
                "weather_timing_assumed": 1, "demand_timing_conditional": 1}
-        for days in (1, 2, 7, 14):
-            row[f"price_lag_{days}"] = history.lag(day, quarter, days)
-        for days in (1, 7):
-            for stat, value in zip(("mean", "min", "max"), history.summary(day, days)):
-                row[f"price_day_{days}_{stat}"] = value
+        row.update({key: value for key, value in price_row.items() if key != "delivery_utc"})
         for key in list(row):
             if key.startswith(("price_lag_", "price_day_")):
                 row[key + "_missing"] = int(row[key] is None)

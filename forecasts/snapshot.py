@@ -13,6 +13,7 @@ import subprocess
 import time
 
 import pyarrow as pa
+from forecasts.prices import latest_versions, read_prices, select_history
 import pyarrow.parquet as pq
 
 from forecasts.dataset import (
@@ -149,9 +150,8 @@ def select_records(tables: Mapping[str, pa.Table | list[Row]], day: date, live: 
         deadline = issue_time
     records = {name: table.to_pylist() if hasattr(table, "to_pylist") else table for name, table in tables.items()}
     selected: dict[str, list[Row]] = {"prices": [], "weather": [], "demand": []}
-    for row in records["prices"]:
-        if row["valid_utc"].astimezone(BERLIN).date() < day and eligible(row, deadline, live):
-            selected["prices"].append(row)
+    price_table = pa.Table.from_pylist(records["prices"], schema=SCHEMAS["prices"])
+    selected["prices"] = select_history(read_prices(price_table), day, deadline, live).to_dicts()
     for row in records["weather"]:
         if (row["model"] != "icon_eu" or row["lead_hours"] != 48 or row["data_kind"] != "forecast"
                 or row["location"] not in LOCATIONS or row["variable"] not in FIELDS
@@ -164,7 +164,6 @@ def select_records(tables: Mapping[str, pa.Table | list[Row]], day: date, live: 
         if (row["area_code"] == COUNTRY and row["valid_utc"].astimezone(BERLIN).date() == day
                 and row["source_update_utc"] is not None and eligible(row, deadline, live)):
             selected["demand"].append(row)
-    selected["prices"] = latest_rows(selected["prices"], ["valid_utc"], "price_eur_mwh")
     selected["weather"] = latest_rows(selected["weather"], ["valid_utc", "location", "variable"], "value")
     return selected
 
@@ -219,7 +218,7 @@ class InputReader:
             for row in table.to_pylist():
                 self.daily[name][row["valid_utc"].astimezone(BERLIN).date()].append(row)
         # Retrospective truth is joined only by replay(), never by features().
-        for row in latest_rows(tables["prices"].to_pylist(), ["valid_utc"], "price_eur_mwh"):
+        for row in latest_versions(read_prices(tables["prices"])).to_dicts():
             self.truth[row["valid_utc"]] = row["price_eur_mwh"]
 
     def features(self, day: date, live: bool = False, issue_time: datetime | None = None) -> list[Row]:
