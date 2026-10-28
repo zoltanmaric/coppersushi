@@ -14,13 +14,19 @@ thing over polishing its parts; do not optimize for deleted line counts.
   area for the first pass. Inspect existing work before editing; use an isolated
   branch or worktree when needed. Do not reap another agent's unfinished work.
 - Read relevant prior outcomes in `wiki/rule-provenance.md`. Search cheaply for
-  abandoned code, superseded explainers, completed specs and repeated knowledge.
+  abandoned code, superseded explainers, completed or obsolete specs and repeated knowledge.
   Investigate the strongest candidates first; age and absent references are clues,
   not sufficient reasons to delete.
 - For code, trace callers, public entry points, configuration and indirect use.
   For prose, identify its remaining purpose and unique knowledge. Preserve useful
   knowledge in its canonical home before removing a duplicate. Honor local
-  protections, including immutable raw sources.
+  protections, including immutable raw sources. Route agent procedures and task-local
+  steps according to `information-home`; do not preserve expired instructions as
+  wiki knowledge merely because they were unique to the deleted artifact.
+- For unfinished specs, compare their assumptions and intended outcome with later
+  decisions and implemented behavior. Open checkboxes do not establish continuing
+  value. Propose deletion when the direction is obsolete; if remaining intent is
+  unclear, ask whether it is still wanted rather than carrying it forward by default.
 - For tests, identify the meaningful failure each catches. Scrutinize tests that
   mirror implementation, assert incidental details or duplicate coverage. Delete
   tests without a useful purpose; simplify setup and assertions while preserving
