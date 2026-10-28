@@ -3,6 +3,8 @@ from forecasts.input_types import Report
 import math
 import pyarrow as pa
 from forecasts.dataset import FIELDS
+from forecasts.prices import PriceVersions, read_prices, snapshot_schema
+from pandera.errors import SchemaError
 
 VERSION = 1
 UTC_TIME = pa.timestamp("us", tz="UTC")
@@ -22,7 +24,7 @@ COMMON = [
     field("raw_key", pa.string()),
 ]
 SCHEMAS = {
-    "prices": pa.schema(COMMON + [field("price_eur_mwh", pa.float64(), True, "EUR/MWh")]),
+    "prices": snapshot_schema(),
     "weather": pa.schema(COMMON + [
         field("source_valid_utc", UTC_TIME), field("location", pa.string()),
         field("variable", pa.string()), field("value", pa.float64(), True),
@@ -31,7 +33,7 @@ SCHEMAS = {
     ]),
     "demand": pa.schema(COMMON + [field("area_code", pa.string()), field("demand_mw", pa.float64(), True, "MW")]),
 }
-KEYS = {"prices": ["valid_utc", "version_id"], "weather": ["valid_utc", "location", "variable", "version_id"], "demand": ["valid_utc", "area_code", "version_id"]}
+KEYS = {"prices": PriceVersions.Config.unique, "weather": ["valid_utc", "location", "variable", "version_id"], "demand": ["valid_utc", "area_code", "version_id"]}
 
 
 def describe(name: str) -> Report:
@@ -46,6 +48,12 @@ def validate(name: str, table: pa.Table) -> pa.Table:
     """Reject rows that violate the named schema, keys, units or value constraints."""
     if not table.schema.equals(SCHEMAS[name], check_metadata=True):
         raise ValueError(f"Schema mismatch: {name}")
+    if name == "prices":
+        try:
+            read_prices(table)
+        except SchemaError as error:
+            raise ValueError(f"Invalid prices: {error}") from error
+        return table
     for f in SCHEMAS[name]:
         if not f.nullable and table[f.name].null_count:
             raise ValueError(f"Required column contains null: {name}/{f.name}")

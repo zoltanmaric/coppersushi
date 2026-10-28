@@ -1,1 +1,4 @@
 pyarrow==25.0.1
+
+polars==2.1.0
+pandera[polars]==0.35.0

@@ -6,8 +6,10 @@ import tempfile
 import unittest
 import zipfile
 
+from forecasts.prices import build_price_features
+from forecasts.tests.test_prices import price_history
 from forecasts.dataset import (
-    build_rows, cutoff, holidays, load_demand, load_weather, PriceHistory, quarters,
+    build_rows, cutoff, holidays, load_demand, load_weather, quarters,
     select_demand, stamp,
 )
 
@@ -38,10 +40,9 @@ class DatasetTests(unittest.TestCase):
             self.assertTrue(all(b - a == timedelta(minutes=15) for a, b in zip(times, times[1:])))
 
     def test_price_lags_average_repeated_and_leave_nonexistent_quarters(self) -> None:
-        history = PriceHistory(self.prices)
-        self.assertEqual(history.lag(date(2025, 10, 27), 8, 1), 10)
-        self.assertIsNone(history.lag(date(2026, 3, 30), 8, 1))
-        self.assertEqual(history.lag(date(2026, 3, 30), 12, 1), 50)
+        times = [stamp(t) for t in ["2025-10-27T01:00:00Z", "2026-03-30T00:00:00Z", "2026-03-30T01:00:00Z"]]
+        values = build_price_features(price_history(self.prices), times)["price_lag_1"].to_list()
+        self.assertEqual(values, [10, None, 50])
 
     def test_demand_latest_usable_version_and_exact_deadline(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
