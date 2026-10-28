@@ -23,6 +23,8 @@ dependencies = [
     "pyproj>=3.7,<4",
     "shapely>=2,<3",
     "pyarrow==25.0.1",
+    "catboost==1.2.10",
+    "scoringrules==0.11.0",
 ]
 
 [project.optional-dependencies]
