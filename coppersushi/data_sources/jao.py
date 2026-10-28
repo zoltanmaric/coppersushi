@@ -9,7 +9,7 @@ request — a day of raw rows would be half a gigabyte. And the response is a pa
 whose `totalRows` can exceed the rows it carries, which is why every response is checked:
 a silently truncated hour is indistinguishable from a quiet one.
 
-Field meanings: `wiki/literature/jao-core-publication-handbook.md`. Design: `wiki/specs/jao-grid.md`.
+Field meanings: `wiki/literature/jao-core-publication-handbook.md`.
 """
 
 import json

@@ -34,9 +34,6 @@
 ## Specs (working memory — burn-down state, not settled knowledge)
 - [specs/cnec-constraint-selection.md](specs/cnec-constraint-selection.md) — direct map selection, signed constraint contributions and interval navigation
 - [specs/day-ahead-price-forecast.md](specs/day-ahead-price-forecast.md) — first forecast build: validated S3 snapshots, then local model/evaluation and reproducible experiment records
-- [specs/sushi-2.md](specs/sushi-2.md) — the Sep 11 cut: next steps and acceptance criteria
-- [specs/jao-grid.md](specs/jao-grid.md) — JAO's Core elements matched to our OSM grid: a map of what limited trade on a day, and true line and transformer limits from JAO's own numbers
-- [specs/architecture-review-graph.md](specs/architecture-review-graph.md) — lightweight architecture-review experiment: manual DAG, PR deltas, and an I/O-boundary test
 
 ## Literature (one digest per authoritative document, link only)
 - [literature/sdac-allocation-constraints-2026.md](literature/sdac-allocation-constraints-2026.md) — April 2026 Europe-wide inventory: Poland alone has an aggregate net-position cap; cable ramping and line sets are separate

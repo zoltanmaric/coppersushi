@@ -25,7 +25,7 @@ and configuration are described in [the power-flow architecture](sushi-2.md).
 
 The AWS deployment sets `ROOT_VIEW=full`: `/` and `/opf-2024` include the two app
 navigation links. `/embed/opf-2024` uses the same figure and callbacks without
-navigation. [Route design](../explainers/opf-2024-embed.html).
+navigation.
 
 **Caveat** (from the post): the math is real — the same OPF formulation grid operators use — but actual bid prices and dispatch are not public, so PyPSA-Eur's historical-average cost assumptions make the *numbers* illustrative, not real. See ch. 4 of the [PyPSA-Eur paper](https://arxiv.org/abs/1806.01613).
 
@@ -47,7 +47,7 @@ Newer virtual interfaces use [per-interval endpoint checks](virtual-hub-intercon
 
 The mock-up's numbers are illustrative; its hierarchy is the design: price as the base layer, the selected constraint purple, its influence reaching the zones without pretending to trace the physical path. The colours follow [sushi-2](sushi-2.md)'s visual language.
 
-Not on this page: a forecast before clearing, a reconstruction of actual or scheduled flows, PTDFs propagated through unmonitored branches, or a claim that the element was overloaded. Fetch commands for JAO's rows, the prices and the substation list are in the [README](../README.md#market-data). As of 2026-09-11 elements are placed by their published substation names, per publishing TSO and in that TSO's orientation; replacing that with [jao-grid](specs/jao-grid.md)'s matcher is planned, not built.
+Not on this page: a forecast before clearing, a reconstruction of actual or scheduled flows, PTDFs propagated through unmonitored branches, or a claim that the element was overloaded. Fetch commands for JAO's rows, the prices and the substation list are in the [README](../README.md#market-data). Elements are placed by their published substation names, per publishing TSO and in that TSO's orientation.
 
 ---
 

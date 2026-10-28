@@ -330,3 +330,10 @@ that work from CNECs. [Startup contract](../infra/lambda/README.md#runtime).
 AWS Lambda, S3 and CloudFront are the production hosting choice. The deployment is
 verified; the blog iframe update remains pending. Static OPF hosting is deferred.
 See [hosting](../infra/lambda/README.md).
+
+## [2026-10-28] decision | Retire JAO matching and true-up direction
+
+The JAO-to-PyPSA branch matcher, original-voltage build and rating true-up are no
+longer planned. Published-constraint mapping continues to use substation names;
+the implemented JAO readers remain. The voltage-simplification findings live in
+[pypsa-eur-sibling](pypsa-eur-sibling.md#voltage-simplification).
