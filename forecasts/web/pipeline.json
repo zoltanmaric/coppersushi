@@ -1,5 +1,5 @@
 {
-  "price": {
+  "prices": {
     "title": "Load SMARD auction prices",
     "input": "Weekly quarter-hour JSON series from Bundesnetzagentur | SMARD.de, for the Germany–Luxembourg bidding zone. Values are in €/MWh.",
     "operation": "Parse delivery timestamps into UTC, check duplicates and retain negative prices. A price below zero is a market outcome, not a missing value.",
@@ -17,7 +17,7 @@
     "operation": "Keep the Germany country series and its version timestamps. The input area is Germany; the target price area is Germany–Luxembourg. Preserve that distinction.",
     "output": "A demand value for each eligible delivery quarter, or a missing value with an availability indicator."
   },
-  "load": {
+  "snapshot": {
     "title": "Check and save prices, weather and demand",
     "input": "Saved data from each provider, together with when it was collected.",
     "operation": "Check units, time intervals, duplicate records and conflicting values. Save a fixed copy of the checked data so later runs can use exactly the same inputs.",
@@ -42,12 +42,12 @@
     "operation": "Use only price versions known by 11:00 Berlin on the day before the first delivery day being evaluated that month. Each past day’s model inputs still use that day’s original information deadline; later revisions cannot replace them.",
     "output": "Past inputs paired with prices the model can learn from. Prices for the month being evaluated are reserved for scoring predictions afterwards."
   },
-  "train": {
+  "fit": {
     "title": "Train three forecasting models once a month",
     "input": "The same past examples, compared using price history and calendar, then adding weather, then adding weather and demand.",
     "operation": "Learn how the inputs relate to prices and uncertainty. At each month boundary, add the newly available history to training, then reuse the trained models throughout the next month. Each past day’s inputs keep the deadline of 11:00 Berlin on the preceding day.",
     "output": "Three fitted CatBoost models: prices/calendar, plus weather, plus weather and demand. Save them and reuse them for every forecast day in that month. Settings are fixed before evaluation.",
-    "technical": "All three models use the same CatBoost settings. CatBoost combines decision trees and learns five percentiles by penalising over- and under-prediction differently for each percentile."
+    "technical": "All three models use the same CatBoost settings. CatBoost combines decision trees and learns five percentiles by penalising over- and under-prediction differently for each percentile. Local Metaflow execution uses the archived code and its locked Pixi runtime. Saved models, features and predictions retain their input and code identity; Parquet keeps native dates and UTC timestamps."
   },
   "predict": {
     "title": "Estimate prices and uncertainty for each quarter-hour",

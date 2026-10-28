@@ -480,9 +480,7 @@
       nodeDetail();
     }
     function nodeDetail() {
-      const key =
-        { prices: "price", snapshot: "load", fit: "train" }[node] || node;
-      const stage = D.pipeline[key],
+      const stage = D.pipeline[node],
         panel = $("node-detail");
       panel.replaceChildren(
         el("p", "HOW THIS STAGE WORKS", "eyebrow"),

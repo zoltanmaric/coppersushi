@@ -1,7 +1,7 @@
 """Export a checked historical run as an offline, read-only explanation website."""
 import argparse
 from collections import defaultdict
-from datetime import date, datetime
+from datetime import date
 import hashlib
 import json
 from pathlib import Path
@@ -27,7 +27,7 @@ def digest(path: Path) -> str:
 
 def scores(rows: list[Row]) -> Scores:
     common = [r for r in rows if r['target'] is not None]
-    days = [date.fromisoformat(r['delivery_date']) for r in common]
+    days = [r['delivery_date'] for r in common]
     return {name: metrics([r['target'] for r in common],
                           [[r[f'{name}_q{q}'] for q in QUANTILES] for r in common],
                           days) for name in METHODS}
@@ -61,8 +61,8 @@ def build_payload(run: Path) -> Report:
     if len(set(timestamps)) != len(rows):
         raise ValueError('Duplicate delivery timestamps')
     for row in rows:
-        local = datetime.fromisoformat(row['delivery_utc']).astimezone(BERLIN)
-        if local.date().isoformat() != row['delivery_date']:
+        local = row['delivery_utc'].astimezone(BERLIN)
+        if local.date() != row['delivery_date']:
             raise ValueError('Delivery date disagrees with Europe/Berlin timestamp')
         if row['target'] is not None and not np.isfinite(row['target']):
             raise ValueError('Non-finite target')
@@ -75,29 +75,29 @@ def build_payload(run: Path) -> Report:
             or sum(r['target'] is not None for r in rows) != report['scored_rows']):
         raise ValueError('Report population differs from predictions')
     reconcile(scores(rows), report['metrics'])
-    grouped: dict[str, list[Row]] = defaultdict(list)
+    grouped: dict[date, list[Row]] = defaultdict(list)
     months: dict[str, list[Row]] = defaultdict(list)
     for row in rows:
         grouped[row['delivery_date']].append(row)
-        months[row['delivery_date'][:7]].append(row)
+        months[row['delivery_date'].strftime('%Y-%m')].append(row)
     for month, selected in months.items():
         reconcile(scores(selected), report['breakdowns']['month'][month]['metrics'])
     folds = {f['first_delivery_day']: f for f in report['folds']}
     days = []
     for day, selected in sorted(grouped.items()):
-        fold_ids = {r['fold'] for r in selected}
+        fold_ids = {r['fold'].isoformat() for r in selected}
         if len(fold_ids) != 1 or not fold_ids <= folds.keys():
             raise ValueError('Day does not resolve to one recorded fold')
-        issue = cutoff(date.fromisoformat(day)).astimezone(BERLIN)
+        issue = cutoff(day).astimezone(BERLIN)
         points = []
         for row in selected:
-            local = datetime.fromisoformat(row['delivery_utc']).astimezone(BERLIN)
-            points.append({'utc': row['delivery_utc'], 'clock': local.strftime('%H:%M %Z'),
+            local = row['delivery_utc'].astimezone(BERLIN)
+            points.append({'utc': row['delivery_utc'].isoformat(), 'clock': local.strftime('%H:%M %Z'),
                            'actual': row['target'], 'q': {n: [row[f'{n}_q{q}'] for q in QUANTILES] for n in METHODS},
                            'selected': row['selected_model'], 'reason': row['fallback_reason'],
-                           'demand_update': row['demand_selected_update_utc'],
+                           'demand_update': row['demand_selected_update_utc'].isoformat() if row['demand_selected_update_utc'] is not None else None,
                            'missing': [k.removesuffix('_missing') for k, v in row.items() if k.endswith('_missing') and v]})
-        days.append({'date': day, 'issue': issue.isoformat(), 'fold': selected[0]['fold'],
+        days.append({'date': day.isoformat(), 'issue': issue.isoformat(), 'fold': selected[0]['fold'].isoformat(),
                      'metrics': scores(selected), 'missing_truth': sum(r['target'] is None for r in selected),
                      'points': points})
     revision = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
