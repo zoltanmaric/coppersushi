@@ -19,13 +19,37 @@ The power-flow page frames the existing public `/embed/opf-2024` app. The grid
 constraints card opens the existing tool in a new tab. The forecast card is marked
 in development; it does not pretend the unmerged forecast viewer is available.
 
-The launcher packages the theme, starts Ghost with SQLite, and seeds local sample
-content. Repeat it after theme changes. Its database, generated local owner
-credentials and copied theme live in ignored `data/ghost-trial/`. It has no live
-Ghost credentials and makes no production content, hosting or DNS changes.
+The launcher packages the theme and starts Ghost with SQLite. A new database gets
+sample content; subsequent starts preserve imported content, branding, navigation,
+and routes, adding the project links and routes. Repeat it after theme changes.
+Its database, generated local owner credentials and copied theme live in ignored
+`data/ghost-trial/`. It has no live Ghost credentials and makes no production
+content, hosting or DNS changes.
 Email delivery is disabled by pointing the local container at an unused loopback
-SMTP port; email device verification is disabled only in this loopback-only sample
+SMTP port; email device verification is disabled only in this loopback-only preview
 site. Stopping retains the preview database.
+
+## Preview with real content
+
+Use a Ghost JSON content export and a copy of `content/images/`, `media/`,
+`files/`, and `settings/` from the same site. Import into local Ghost through its
+Admin importer; no production database connection is needed. Remove the fresh
+installation's placeholder posts and pages before importing to avoid slug clashes.
+Keep the generated local owner account. Copy the uploaded files and routes, then
+rerun the launcher to apply the project theme and merge the project routes.
+
+Keep exports and the imported runtime in a private directory outside Git.
+`data/ghost-trial` can be a symlink to that runtime directory; the launcher resolves
+it before mounting Docker's content volume. Stop the preview before moving its
+state. Keep the previous state until the import is verified.
+
+Import only content, author display information, and presentation settings.
+Exclude credentials, subscribers, sessions, webhooks, and service configuration;
+disable analytics, code injection, newsletters, and social publishing in the local
+copy. Rewrite explicit site URLs to the local origin so article links and uploads
+stay local. Verify post/page titles, slugs and publication states, branding,
+navigation, and images after import and again after a restart. The launcher does
+not sanitize a production database for you.
 
 ## Theme controls
 

@@ -15,8 +15,10 @@ from urllib.error import HTTPError, URLError
 from urllib.request import HTTPCookieProcessor, Request, build_opener
 from zipfile import ZipFile
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
-STATE = ROOT / "data/ghost-trial"
+STATE = (ROOT / "data/ghost-trial").resolve()
 COMPOSE = ROOT / "121gigawatts/local/compose.yml"
 
 
@@ -29,7 +31,7 @@ def main() -> None:
         parser.error("GHOST_TRIAL_PORT must be between 1024 and 65535")
     origin = f"http://localhost:{port}"
     project = "coppersushi-ghost-" + hashlib.sha256(str(ROOT).encode()).hexdigest()[:10]
-    environment = {**os.environ, "COPPERSUSHI_ROOT": str(ROOT), "GHOST_TRIAL_PORT": str(port)}
+    environment = {**os.environ, "GHOST_TRIAL_CONTENT": str(STATE / "content"), "GHOST_TRIAL_PORT": str(port)}
     command = ["docker", "compose", "-p", project, "-f", str(COMPOSE)]
     if args.action == "down":
         subprocess.run([*command, "down"], env=environment, check=True)
@@ -40,7 +42,11 @@ def main() -> None:
     shutil.rmtree(theme)
     with ZipFile(ROOT / "121gigawatts/dist/121gigawatts.zip") as archive:
         archive.extractall(theme)
-    shutil.copyfile(ROOT / "121gigawatts/local/routes.yaml", STATE / "content/settings/routes.yaml")
+    routes_file = STATE / "content/settings/routes.yaml"
+    additions = yaml.safe_load((ROOT / "121gigawatts/local/routes.yaml").read_text())
+    routes = (yaml.safe_load(routes_file.read_text()) or {}) if routes_file.exists() else additions
+    routes["routes"] = {**(routes.get("routes") or {}), **additions["routes"]}
+    routes_file.write_text(yaml.safe_dump(routes, sort_keys=False))
     subprocess.run([*command, "up", "-d", "--force-recreate"], env=environment, check=True)
     client = Client(origin)
     deadline = time.monotonic() + 120
@@ -53,7 +59,8 @@ def main() -> None:
                 raise RuntimeError("Local Ghost did not start within 120 seconds; inspect docker compose logs") from None
             time.sleep(2)
     credentials = STATE / "owner.json"
-    if not setup["setup"][0]["status"]:
+    new_site = not setup["setup"][0]["status"]
+    if new_site:
         if not credentials.exists():
             descriptor = os.open(credentials, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
             with os.fdopen(descriptor, "w") as stream:
@@ -67,11 +74,15 @@ def main() -> None:
         raise RuntimeError("This local database has an owner but no trial credentials; refusing to change it")
     client.request("POST", "session/", json.loads(credentials.read_text()))
     client.request("PUT", "themes/121gigawatts/activate/", {})
-    settings = {
-        "title": "1.21 Gigawatts", "description": "Electricity systems, explored.",
-        "navigation": json.dumps([{"label": "Writing", "url": "/"}, {"label": "Projects", "url": "/projects/"}]),
-        "members_signup_access": "none",
-    }
+    current = {s["key"]: s["value"] for s in client.request("GET", "settings/")["settings"]}
+    navigation = json.loads(current.get("navigation") or "[]")
+    if new_site:
+        navigation = [{"label": "Writing", "url": "/"}]
+    if not any(item["url"].rstrip("/") == "/projects" for item in navigation):
+        navigation.append({"label": "Projects", "url": "/projects/"})
+    settings = {"navigation": json.dumps(navigation), "members_signup_access": "none"}
+    if new_site:
+        settings.update(title="1.21 Gigawatts", description="Electricity systems, explored.")
     client.request("PUT", "settings/", {"settings": [{"key": k, "value": v} for k, v in settings.items()]})
     client.request("PUT", "custom_theme_settings/", {"custom_theme_settings": [{"key": "show_projects", "value": True}]})
     for slug, title in [("projects", "Projects"), ("power-flow", "Copper Sushi — European power flow")]:
@@ -80,7 +91,7 @@ def main() -> None:
             client.request("POST", "pages/?source=html", {"pages": [{
                 "title": title, "slug": slug, "status": "published", "html": "<p>Explore electricity systems.</p>",
             }]})
-    if not client.request("GET", "posts/?filter=slug:power-flow-models")["posts"]:
+    if new_site:
         client.request("POST", "posts/?source=html", {"posts": [{
             "title": "What can a power-flow model tell us?", "slug": "power-flow-models",
             "status": "published", "feature_image": f"{origin}/assets/images/w2000/Gigawatts.jpg",
@@ -89,7 +100,7 @@ def main() -> None:
         }]})
     print(f"Ghost preview: {origin}/", flush=True)
     print(f"Project page: {origin}/projects/power-flow/", flush=True)
-    print("Local sample content only. Stop with: pixi run ghost-trial-stop", flush=True)
+    print("Local preview only. Stop with: pixi run ghost-trial-stop", flush=True)
 
 
 class Client:

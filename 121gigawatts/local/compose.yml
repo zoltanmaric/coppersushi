@@ -16,4 +16,4 @@ services:
       privacy__useGravatar: "false"
       privacy__useRpcPing: "false"
     volumes:
-      - "${COPPERSUSHI_ROOT}/data/ghost-trial/content:/var/lib/ghost/content"
+      - "${GHOST_TRIAL_CONTENT}:/var/lib/ghost/content"
