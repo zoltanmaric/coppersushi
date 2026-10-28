@@ -248,13 +248,6 @@ class InputReader:
             day += timedelta(days=1)
         return rows
 
-    def labels_at(self, fit_day: date) -> PriceSeries:
-        """Training truth is selected at the fold's first issue, separately from scoring truth."""
-        candidates = [row for day, rows in self.daily["prices"].items() if day < fit_day
-                      for row in rows if eligible(row, cutoff(fit_day))]
-        return {row["valid_utc"]: row["price_eur_mwh"]
-                for row in latest_rows(candidates, ["valid_utc"], "price_eur_mwh")}
-
 
 def publish(profile: str, region: str, bucket: str, directory: Path, data_root: Path) -> None:
     """Verify and upload snapshot objects, publishing the manifest last."""
