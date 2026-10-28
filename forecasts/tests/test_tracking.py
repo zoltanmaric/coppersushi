@@ -21,7 +21,7 @@ class TrackingTests(unittest.TestCase):
             config = RunConfig.from_dict(json.loads(CONFIG_PATH.read_text()))
             (directory / 'config.json').write_text(json.dumps(config.to_dict()))
             (directory / 'manifest.json').write_text(json.dumps(dict(
-                exploratory=True, code_revision='revision', run_id='fixture')))
+                exploratory=True, code_revision='revision', run_id='fixture', experiment_fingerprint='fixture')))
             client = run.tracking_client()
             ids = []
 
