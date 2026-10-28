@@ -46,6 +46,10 @@ flowchart LR
     opf_embed["opf_embed<br/>/embed/opf-2024: map and hourly controls"]
     net_power_map --> opf_full
     net_power_map --> opf_embed
+    ghost_navigation["ghost_navigation<br/>Ghost theme and site navigation settings"]
+    ghost_project_trial["ghost_project_trial<br/>local /projects/power-flow/ shell with independently hosted app"]
+    ghost_navigation --> ghost_project_trial
+    opf_embed --> ghost_project_trial
     solved_network --> net_power_map
     solved_network --> zone_shapes
     zone_shapes --> cnec_price_figure
@@ -95,3 +99,9 @@ and externally managed DNS; see [hosting](../infra/lambda/README.md#delivery).
 
 CloudFront caches only static asset routes. Page selection, layouts and data callbacks
 continue to use the existing server-side flow; see [hosting](../infra/lambda/README.md#delivery).
+
+The [local Ghost trial](../121gigawatts/local/README.md) renders navigation and a
+project page around the independently hosted OPF embed. It preserves the blog
+hero and article feed; the project strip is a theme setting. The project URL
+identifies the tool, while hour and camera remain inside the iframe. Production
+hosting and DNS are independent of this local integration.

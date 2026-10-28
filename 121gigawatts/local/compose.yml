@@ -1,0 +1,19 @@
+services:
+  ghost:
+    image: ghost:6.72.0
+    ports:
+      - "127.0.0.1:${GHOST_TRIAL_PORT:-2378}:2368"
+    environment:
+      NODE_ENV: development
+      security__staffDeviceVerification: "false"
+      url: "http://localhost:${GHOST_TRIAL_PORT:-2378}"
+      database__client: sqlite3
+      database__connection__filename: /var/lib/ghost/content/data/ghost-local.db
+      mail__transport: SMTP
+      mail__options__host: 127.0.0.1
+      mail__options__port: 1025
+      privacy__useUpdateCheck: "false"
+      privacy__useGravatar: "false"
+      privacy__useRpcPing: "false"
+    volumes:
+      - "${COPPERSUSHI_ROOT}/data/ghost-trial/content:/var/lib/ghost/content"

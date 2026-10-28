@@ -46,6 +46,12 @@ it does not upgrade Ghost or restore content.
 and checks Ghost 6 compatibility. The two known, non-blocking warnings concern
 optional custom fonts and the page title/feature-image toggle.
 
+## Local product preview
+
+The [Ghost project-page trial](local/README.md) runs the real theme and navigation
+around the independently hosted power-flow app. Start it with
+`pixi run --locked ghost-trial` from the monorepo root; Docker is required.
+
 ## Animated images
 
 Precompress animations before uploading. Ghost can recompress uploads; verify

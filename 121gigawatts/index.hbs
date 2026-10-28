@@ -17,11 +17,19 @@ into the {body} of the default.hbs template --}}
 <!--            <h2 class="site-description">{{@site.description}}</h2>-->
         </div>
     </div>
+    </div>
 </header>
 
 {{!-- The main content area --}}
 <main id="site-main" class="site-main outer">
     <div class="inner posts">
+
+        {{#if @custom.show_projects}}
+        <section class="project-strip" aria-label="Projects">
+            <div class="project-strip-heading"><h2>Projects</h2><a href="{{@site.url}}/projects/">All projects →</a></div>
+            {{> "project-cards"}}
+        </section>
+        {{/if}}
 
         <div class="post-feed">
             {{#foreach posts}}
