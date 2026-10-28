@@ -1,6 +1,6 @@
 ---
 name: pull-request
-description: Guides pull request creation and review, including posting findings, controlling scope, readying work for review, and splitting work into a stacked-PR chain.
+description: Guides pull request creation, review, stacking, and local cleanup when a PR merges or closes.
 ---
 
 # Pull requests
@@ -20,6 +20,7 @@ description: Guides pull request creation and review, including posting findings
 - When a test fires, **offer the chop** into a stack (mechanics below); the user decides. Layers split by "must be understood together", never by file type: a rule or doc whose evidence is the feature's code rides with the feature.
 - Every PR body carries an "Architecture delta" section (root `architecture-delta` rule).
 - Once a PR is ready for review, watch its review threads and checks while other work continues; stop watching when it becomes draft, merges or closes.
+- As soon as you learn a PR merged or closed, remove its local branch and unused worktree. Preserve uncommitted or local-only work and branches still needed by open PRs; report any cleanup blocked by those conditions. Use the worktree manager's archive operation for managed worktrees.
 - When a goldfish reviews a PR touching `.agents/` or any `AGENTS.md`, the critic reads `.agents/skills/AGENTS.md` and the vendor guidelines it links before the diff.
 
 ## Review findings
