@@ -1,6 +1,7 @@
+from typing import Any
 import urllib.request,urllib.parse,urllib.error,json,pathlib,datetime,time,concurrent.futures
 R=pathlib.Path(__file__).resolve().parent;(R/'weather').mkdir(exist_ok=True);(R/'prices').mkdir(exist_ok=True)
-def get(url,path):
+def get(url: str, path: pathlib.Path) -> dict[str, Any] | list[dict[str, Any]]:
  if path.exists():return json.loads(path.read_text())
  for a in range(3):
   try:
@@ -18,7 +19,7 @@ base={'latitude':'53.55,51.45,48.14,53.37,54.48,54.09,52.13,52.52,51.34,50.11,48
 # Same model, locations and variables in both arms. Test period fixed before fitting.
 start=datetime.date(2026,4,3);end=datetime.date(2026,10,5)
 dates=[start+datetime.timedelta(days=i) for i in range((end-start).days+1)]
-def run(day):
+def run(day: datetime.date) -> tuple[str, bool | str]:
  issue=day-datetime.timedelta(days=1);p={**base,'run':str(issue)+'T00:00','forecast_days':3}
  try:
   d=get('https://single-runs-api.open-meteo.com/v1/forecast?'+urllib.parse.urlencode(p),R/'weather'/('fresh-'+str(day)+'.json'))
@@ -30,11 +31,13 @@ with concurrent.futures.ThreadPoolExecutor(2) as pool:
   if i%15==0 or result[1] is not True:print('fresh',i+1,len(dates),result,flush=True)
 p={**base,'hourly':','.join(x+'_previous_day2' for x in base['hourly'].split(',')),'start_date':'2026-04-02','end_date':'2026-10-06'}
 get('https://previous-runs-api.open-meteo.com/v1/forecast?'+urllib.parse.urlencode(p),R/'weather'/'old.json');print('old weather saved',flush=True)
-idx=get('https://www.smard.de/app/chart_data/4169/DE/index_quarterhour.json',R/'prices'/'index.json')['timestamps']
+index=get('https://www.smard.de/app/chart_data/4169/DE/index_quarterhour.json',R/'prices'/'index.json')
+assert isinstance(index,dict)
+idx=index['timestamps']
 # Whole year also permits measuring lost within-hour price detail.
 a=int(datetime.datetime(2025,9,20,tzinfo=datetime.timezone.utc).timestamp()*1000);b=int(datetime.datetime(2026,10,6,tzinfo=datetime.timezone.utc).timestamp()*1000)
 weeks=[x for i,x in enumerate(idx) if x<b and (i==len(idx)-1 or idx[i+1]>a)]
-def week(x):
+def week(x: int) -> int:
  get(f'https://www.smard.de/app/chart_data/4169/DE/4169_DE_quarterhour_{x}.json',R/'prices'/f'{x}.json')
  return x
 with concurrent.futures.ThreadPoolExecutor(2) as pool:list(pool.map(week,weeks))

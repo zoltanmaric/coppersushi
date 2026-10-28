@@ -3,6 +3,7 @@
 AWS profiles belong to the user, never the repository. Account-specific state stays
 under ignored data/forecasts; this module does not read or export credentials.
 """
+from forecasts.input_types import Report
 import base64
 import json
 import os
@@ -12,7 +13,8 @@ import subprocess
 from forecasts.dataset import digest
 
 
-def aws(profile, region, *args):
+def aws(profile: str, region: str, *args: str) -> Report:
+    """Run an authenticated AWS CLI request and decode its JSON response."""
     result = subprocess.run(
         ["aws", "--profile", profile, "--region", region, "--no-cli-pager", "--output", "json", *args],
         check=True, capture_output=True, text=True, timeout=600,
@@ -21,7 +23,8 @@ def aws(profile, region, *args):
     return json.loads(result.stdout) if result.stdout.strip() else {}
 
 
-def requires_tls(policy, bucket):
+def requires_tls(policy: Report, bucket: str) -> bool:
+    """Check for a policy denying insecure access to all bucket/object operations."""
     resources = {f"arn:aws:s3:::{bucket}", f"arn:aws:s3:::{bucket}/*"}
     for statement in policy["Statement"]:
         action = statement.get("Action")
@@ -38,7 +41,8 @@ def requires_tls(policy, bucket):
     return False
 
 
-def verify_bucket(profile, region, bucket):
+def verify_bucket(profile: str, region: str, bucket: str) -> Report:
+    """Verify privacy, encryption, versioning and transport controls before publication."""
     block = aws(profile, region, "s3api", "get-public-access-block", "--bucket", bucket)["PublicAccessBlockConfiguration"]
     ownership = aws(profile, region, "s3api", "get-bucket-ownership-controls", "--bucket", bucket)
     encryption = aws(profile, region, "s3api", "get-bucket-encryption", "--bucket", bucket)
@@ -58,7 +62,7 @@ def verify_bucket(profile, region, bucket):
     return {"public_access_blocked": True, "acl_disabled": True, "encryption": "AES256", "versioning": "Enabled", "tls_required": True}
 
 
-def put_verified(profile, region, bucket, key, path):
+def put_verified(profile: str, region: str, bucket: str, key: str, path: Path) -> Report:
     """Conditional creation makes retries safe; verify any existing object's bytes."""
     sha = digest(path)
     listing = aws(profile, region, "s3api", "list-objects-v2", "--bucket", bucket, "--prefix", key)
@@ -72,7 +76,8 @@ def put_verified(profile, region, bucket, key, path):
     return {"key": key, "sha256": sha, "bytes": head["ContentLength"], "version_id": head["VersionId"]}
 
 
-def get_verified(profile, region, bucket, key, path, sha=None):
+def get_verified(profile: str, region: str, bucket: str, key: str, path: Path, sha: str | None = None) -> None:
+    """Download an object and reject bytes that differ from an expected hash."""
     aws(profile, region, "s3api", "get-object", "--bucket", bucket,
         "--key", key, "--checksum-mode", "ENABLED", str(path))
     if sha is not None and digest(path) != sha:

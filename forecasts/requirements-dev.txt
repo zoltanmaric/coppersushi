@@ -1,0 +1,2 @@
+-r requirements.txt
+mypy==2.4.0

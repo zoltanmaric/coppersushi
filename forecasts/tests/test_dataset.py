@@ -15,35 +15,35 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 
 class DatasetTests(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.prices = {stamp(t): p for t, p in json.loads((FIXTURES / "prices.json").read_text()).items()}
 
-    def archive(self, directory, fixture, name):
+    def archive(self, directory: str, fixture: str, name: str) -> Path:
         path = Path(directory) / "fixture.zip"
         with zipfile.ZipFile(path, "w") as archive:
             archive.write(FIXTURES / fixture, name)
         return path
 
-    def test_issue_cutoff_uses_preceding_days_offset(self):
+    def test_issue_cutoff_uses_preceding_days_offset(self) -> None:
         expected = {"2026-03-29": "2026-03-28T10:00:00+00:00", "2026-03-30": "2026-03-29T09:00:00+00:00",
                     "2025-10-26": "2025-10-25T09:00:00+00:00", "2025-10-27": "2025-10-26T10:00:00+00:00"}
         for day, value in expected.items():
             self.assertEqual(cutoff(date.fromisoformat(day)).isoformat(), value)
 
-    def test_clock_change_days_retain_all_utc_quarters(self):
+    def test_clock_change_days_retain_all_utc_quarters(self) -> None:
         for day, count in [(date(2025, 10, 26), 100), (date(2026, 3, 29), 92)]:
             times = list(quarters(day, day + timedelta(days=1)))
             self.assertEqual(len(times), count)
             self.assertEqual(len(set(times)), count)
             self.assertTrue(all(b - a == timedelta(minutes=15) for a, b in zip(times, times[1:])))
 
-    def test_price_lags_average_repeated_and_leave_nonexistent_quarters(self):
+    def test_price_lags_average_repeated_and_leave_nonexistent_quarters(self) -> None:
         history = PriceHistory(self.prices)
         self.assertEqual(history.lag(date(2025, 10, 27), 8, 1), 10)
         self.assertIsNone(history.lag(date(2026, 3, 30), 8, 1))
         self.assertEqual(history.lag(date(2026, 3, 30), 12, 1), 50)
 
-    def test_demand_latest_usable_version_and_exact_deadline(self):
+    def test_demand_latest_usable_version_and_exact_deadline(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = self.archive(directory, "demand.csv", "2026_03_DayAheadTotalLoadForecast_6.1.B_r3.csv")
             demand = load_demand(path, date(2026, 3, 29), date(2026, 3, 30))
@@ -53,10 +53,10 @@ class DatasetTests(unittest.TestCase):
         self.assertIsNone(select_demand(demand[stamp("2026-03-29T00:15:00Z")], cutoff(date(2026, 3, 29)))[0])
         self.assertEqual(select_demand([], cutoff(date(2026, 3, 29)))[2], "absent")
 
-    def test_weather_shift_repeat_gaps_and_ending_timestamp(self):
+    def test_weather_shift_repeat_gaps_and_ending_timestamp(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = self.archive(directory, "history.json", "history.json")
-            weather, metadata = load_weather(path, [["Hamburg", 53.55, 9.99]])
+            weather, metadata = load_weather(path, [("Hamburg", 53.55, 9.99)])
         rows = build_rows(self.prices, weather, {}, date(2026, 3, 29), date(2026, 3, 30))
         first_hour = [r for r in rows if r["delivery_utc"].startswith("2026-03-29T00:")]
         self.assertEqual(len(first_hour), 4)
@@ -68,14 +68,14 @@ class DatasetTests(unittest.TestCase):
         self.assertEqual(next_hour["weather_source_unavailable"], 0)
         self.assertEqual(metadata["retrieved_at_utc"], "2026-04-01T12:00:00+00:00")
 
-    def test_missing_sources_and_targets_do_not_drop_rows(self):
+    def test_missing_sources_and_targets_do_not_drop_rows(self) -> None:
         rows = build_rows(self.prices, {"wind_speed_120m_hamburg": {}}, {}, date(2026, 3, 29), date(2026, 3, 30))
         self.assertEqual(len(rows), 92)
         self.assertEqual(sum(r["target_missing"] for r in rows), 90)
         self.assertTrue(all(r["demand_source_unavailable"] and r["weather_source_unavailable"] for r in rows))
         self.assertEqual(next(r["price_eur_mwh"] for r in rows if r["delivery_utc"] == "2026-03-29T00:00:00+00:00"), -25)
 
-    def test_later_labels_do_not_change_features(self):
+    def test_later_labels_do_not_change_features(self) -> None:
         day = date(2026, 3, 29)
         before = build_rows(self.prices, {}, {}, day, day + timedelta(days=1))
         later_prices = {t: (100000 if t >= stamp("2026-03-29T00:00:00Z") else p) for t, p in self.prices.items()}
@@ -83,7 +83,7 @@ class DatasetTests(unittest.TestCase):
         features = [key for key in before[0] if key.startswith(("price_lag_", "price_day_"))]
         self.assertEqual([[r[k] for k in features] for r in before], [[r[k] for k in features] for r in after])
 
-    def test_nationwide_holidays(self):
+    def test_nationwide_holidays(self) -> None:
         days = holidays(2026)
         for day in ["2026-04-03", "2026-04-06", "2026-05-14", "2026-05-25", "2026-10-03"]:
             self.assertIn(date.fromisoformat(day), days)

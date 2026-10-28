@@ -15,11 +15,11 @@ with zipfile.ZipFile(root.parent / 'forecast-bounded-evidence-20261007/inputs.zi
 fields = ['temperature_2m_previous_day2', 'wind_speed_120m_previous_day2', 'shortwave_radiation_previous_day2']
 names = ['Hamburg', 'Essen', 'Munich', 'Emden', 'Husum', 'Rostock', 'Magdeburg', 'Berlin', 'Leipzig', 'Frankfurt', 'Stuttgart', 'Nuremberg']
 zone = ZoneInfo('Europe/Berlin')
-def stamp(day):
+def stamp(day: str) -> int:
     return int(dt.datetime.fromisoformat(day).replace(tzinfo=zone).timestamp())
 historical_times = list(range(stamp('2025-10-01'), stamp('2026-10-01'), 3600))
 future_times = list(range(stamp('2026-10-09'), stamp('2026-10-10'), 3600))
-def distance(a, b):
+def distance(a: dict[str, float], b: dict[str, float]) -> float:
     p, q = math.radians(a['latitude']), math.radians(b['latitude'])
     lon = math.radians(b['longitude'] - a['longitude'])
     return 12742 * math.asin(math.sqrt(math.sin((q-p)/2)**2 + math.cos(p)*math.cos(q)*math.sin(lon/2)**2))

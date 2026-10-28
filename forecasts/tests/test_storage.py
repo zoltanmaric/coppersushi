@@ -7,7 +7,7 @@ from forecasts.storage import requires_tls
 
 
 class StorageTests(unittest.TestCase):
-    def test_tls_policy_covers_every_principal_operation_and_resource(self):
+    def test_tls_policy_covers_every_principal_operation_and_resource(self) -> None:
         policies = json.loads((Path(__file__).parent / "fixtures/bucket-policies.json").read_text())
         self.assertTrue(requires_tls(policies["complete"], "fixture-bucket"))
         for name in ("delete_only", "bucket_only", "specific_principal", "extra_condition"):
