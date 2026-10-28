@@ -1,7 +1,7 @@
 {
   "contract": {
     "path": "wiki/price-forecasting/germany-luxembourg.md",
-    "sha256": "499becbfee8366b81afd89809e6927701300bf5ecaf79e2fd433a2303ad862fa"
+    "sha256": "7a88a17090bfe1a12383196f4bffaee77615cead817f4b7a9bec7fe6c2b03617"
   },
   "evaluation": {
     "path": "wiki/price-forecasting/evaluation.md",
