@@ -123,9 +123,7 @@ def _join_truth(rows: DataFrame[Predictions], truth: dict[datetime, float | None
                             schema={"delivery_utc": pl.Datetime("us", "UTC"), "target": pl.Float64})
     joined = rows.join(outcomes, on="delivery_utc", how="left", maintain_order="left").with_columns(
         pl.col("target").is_null().cast(pl.Int64).alias("target_missing"))
-    # Preserve the established artifact order while adding truth only here.
-    first = ["delivery_utc", "delivery_date", "demand_available", "target"]
-    return ScoredPredictions.validate(joined.select(*first, *[name for name in rows.columns if name not in first]))
+    return ScoredPredictions.validate(joined)
 
 
 def _method_scores(rows: DataFrame[ScoredPredictions], names: Sequence[str], config: RunConfig) -> Report:
