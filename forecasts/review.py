@@ -5,14 +5,23 @@ from pathlib import Path
 from urllib.parse import quote
 
 from forecasts.run import tracking_client
+from typing import NotRequired, TypedDict
 
 
-def publish(run_id, conclusion, artifact_path):
+class Conclusion(TypedDict):
+    result: str
+    limitations: str
+    decision: str
+    evidence_artifacts: NotRequired[list[str]]
+
+
+def publish(run_id: str, conclusion: Conclusion, artifact_path: str) -> None:
     client = tracking_client()
     run = client.get_run(run_id)
     # Validate the synopsis before publishing either representation.
-    sections = [f"**{label}:** {conclusion[key]}" for label, key in
-                [('Result', 'result'), ('Limitation', 'limitations'), ('Decision', 'decision')]]
+    sections = [f"**Result:** {conclusion['result']}",
+                f"**Limitation:** {conclusion['limitations']}",
+                f"**Decision:** {conclusion['decision']}"]
     base = f"/get-artifact?run_id={run_id}&path="
     sections.append(f"[Full conclusion]({base}{quote(artifact_path, safe='')})")
     for evidence in conclusion.get('evidence_artifacts', []):
@@ -21,7 +30,7 @@ def publish(run_id, conclusion, artifact_path):
         sections.append(f"[Evidence: {evidence}]({target})")
     if run.data.tags.get('timing_semantics') == 'logging_only':
         sections.append('Historical duration is logging-only; compute time was not recorded.')
-    client.log_dict(run_id, conclusion, artifact_path)
+    client.log_dict(run_id, dict(conclusion), artifact_path)
     client.set_tag(run_id, 'mlflow.note.content', '\n\n'.join(sections))
 
 

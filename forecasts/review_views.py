@@ -10,7 +10,7 @@ import zlib
 from forecasts.run import tracking_client
 
 
-def install(base_url):
+def install(base_url: str) -> None:
     config = json.loads(Path(__file__).with_name('review-views.json').read_text())
     if importlib.metadata.version('mlflow') != config['mlflow_version']:
         raise ValueError('Verify the saved-view format with the installed MLflow version first')
