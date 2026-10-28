@@ -1,0 +1,17 @@
+{
+  "prices": {
+    "path": "inputs/prices.zip",
+    "bytes": 1641853,
+    "sha256": "36468f77a7436e86b991fd64b668af8dc2d6bfc612b1e7c1df0081f520083053"
+  },
+  "weather": {
+    "path": "inputs/weather.zip",
+    "bytes": 725204,
+    "sha256": "f65510bdbeaf2a1c9ed3afee038d8ff0619e69311543ae724716d1d4d35675ea"
+  },
+  "demand": {
+    "path": "inputs/demand.zip",
+    "bytes": 11731980,
+    "sha256": "3493b97647b04317edb0818b808f3bcd8e0fd5819aa0ca803d0dd398a341cc89"
+  }
+}

@@ -20,7 +20,7 @@ The Parquet dependency is pinned; snapshot manifests also record Python/PyArrow 
 
 The input path stores three typed tables: `prices`, `weather` and `demand`. [Price contracts](prices.py) define price columns and checks and derive their Parquet schema; [other input schemas](schemas.py) define weather and demand contracts; validation runs before publication and after loading. Delivery/valid time, source update time and original retrieval time remain distinct. Unknown original timestamps remain null. Source versions and raw archive links are retained.
 
-To collect the recorded year, place the three exact archives at their [manifest paths](evidence/payload-manifest.json), under `data/forecasts/`. The [evidence instructions](evidence/README.md) describe their sources. `--data-root` can reuse another checkout's downloads. Recollection from mutable feeds may produce different bytes; the recorded experiment requires matching archives or access to the private S3 snapshot.
+To collect the recorded year, place the three exact archives at their [baseline input inventory](data/baseline-inputs.json), under `data/forecasts/`. The [source contracts](../wiki/price-forecasting/data-sources.md) describe their sources. `--data-root` can reuse another checkout's downloads. Recollection from mutable feeds may produce different bytes; the recorded experiment requires matching archives or access to the private S3 snapshot.
 
 ```sh
 data/forecasts/venv/bin/python -m forecasts.snapshot --profile YOUR_LOCAL_PROFILE --bucket YOUR_PRIVATE_BUCKET collect --publish
@@ -82,3 +82,13 @@ data/forecasts/venv/bin/python -m mypy --config-file forecasts/mypy.ini
 ```
 
 The normal test suite also rejects missing function annotations anywhere under `forecasts/`. Missing third-party stubs remain an explicit limitation of static checking.
+
+## Historical input regression
+
+The recorded year's coverage is a regression fixture, not a constraint on newly collected data. To check the exact baseline snapshot explicitly:
+
+```sh
+FORECAST_BASELINE_SNAPSHOT=data/forecasts/loaded-snapshot data/forecasts/venv/bin/python -m unittest forecasts.tests.test_baseline -v
+```
+
+The test requires the snapshot ID recorded in its fixture. Ordinary dataset generation reports coverage without requiring it to match that historical year. Raw baseline archives belong at `data/forecasts/inputs/prices.zip`, `weather.zip` and `demand.zip`; existing saved S3 snapshots remain readable without relocating anything.
