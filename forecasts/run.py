@@ -12,7 +12,6 @@ import json
 import os
 from pathlib import Path
 import platform
-import re
 import tempfile
 import subprocess
 import sys
@@ -71,29 +70,32 @@ def main() -> None:
 
 
 def prepare(config_path: Path, exploratory: bool = False) -> tuple[Path, RunConfig]:
-    """Freeze an attempt; accepted runs require committed code and the exact lock.
+    """Freeze committed code and environment definitions for a new attempt.
 
-    Reject unrestorable environments before creating a run. Exploratory runs
-    may use checkout changes and extra packages, and cannot be reproduced as accepted.
+    Accepted execution restores Pixi's runtime from this archive, independently
+    of the launcher's packages. Exploratory execution uses the current checkout.
     """
     config = RunConfig.from_dict(json.loads(config_path.read_text()))
     code = _git("rev-parse", "HEAD")
     dirty = bool(_git("status", "--porcelain", "--untracked-files=normal"))
     if dirty and not exploratory:
         raise ValueError("Accepted runs require committed code; use --exploratory for development")
-    environment = _environment()
-    lock = ((ROOT / "forecasts/requirements-lock.txt").read_bytes() if exploratory else
-            subprocess.check_output(["git", "-C", str(ROOT), "show", f"{code}:forecasts/requirements-lock.txt"]))
-    if not exploratory:
-        _validate_lock(lock.decode(), environment["packages"])
+    definitions = {
+        name: ((ROOT / name).read_bytes() if exploratory else
+               subprocess.check_output(["git", "-C", str(ROOT), "show", f"{code}:{name}"]))
+        for name in ("pyproject.toml", "pixi.lock")}
     manifest = {"code_revision": code, "exploratory": exploratory, "config": config.to_dict(),
-                "environment": environment, "lock_sha256": hashlib.sha256(lock).hexdigest()}
+                "environment_manager": "pixi", "runtime_environment": "runtime",
+                "platform": {"system": platform.system(), "machine": platform.machine()},
+                "project_sha256": hashlib.sha256(definitions["pyproject.toml"]).hexdigest(),
+                "lock_sha256": hashlib.sha256(definitions["pixi.lock"]).hexdigest()}
     directory = RUNS / uuid.uuid4().hex[:24]
     directory.mkdir(parents=True, exist_ok=False)
     (directory / "config.json").write_bytes(canonical(config.to_dict()))
-    (directory / "requirements-lock.txt").write_bytes(lock)
+    for name, content in definitions.items():
+        (directory / name).write_bytes(content)
     with (directory / "code.tar").open('wb') as archive:
-        subprocess.run(["git", "-C", str(ROOT), "archive", code, "forecasts"], stdout=archive, check=True)
+        subprocess.run(["git", "-C", str(ROOT), "archive", code], stdout=archive, check=True)
     manifest["code_sha256"] = digest(directory / "code.tar")
     manifest["experiment_fingerprint"] = hashlib.sha256(canonical(manifest)).hexdigest()
     manifest["run_id"] = directory.name
@@ -111,15 +113,21 @@ def run_flow(directory: Path, snapshot: Path) -> None:
     config = RunConfig.from_dict(json.loads((directory / "config.json").read_text()))
     manifest = json.loads((directory / "manifest.json").read_text())
     with _execution_code(directory, manifest) as code:
-        env = os.environ.copy()
+        env = _code_environment(code)
         env.update(METAFLOW_DEFAULT_DATASTORE="local", METAFLOW_DEFAULT_METADATA="local",
                    METAFLOW_DATASTORE_SYSROOT_LOCAL=str(DATA_ROOT / "metaflow"),
                    METAFLOW_USER="forecast-local", PYTHONPATH=str(code),
                    FORECAST_DATA_ROOT=str(DATA_ROOT))
+        command = ([sys.executable] if manifest["exploratory"] else
+                   _restore_runtime(code, manifest, env))
+        manifest["environment"] = _environment() if manifest["exploratory"] else _probe_environment(command, code, env)
+        if not manifest["exploratory"]:
+            manifest["pixi_version"] = subprocess.check_output(["pixi", "--version"], text=True).strip()
+        (directory / "manifest.json").write_bytes(canonical(manifest))
         mlflow_run = _start_tracking(directory, config)
         client = tracking_client()
         try:
-            subprocess.run([sys.executable, "-m", "forecasts.flow", "run", "--config", str(directory / "config.json"),
+            subprocess.run([*command, "-m", "forecasts.flow", "run", "--config", str(directory / "config.json"),
                             "--snapshot", str(snapshot.resolve()), "--output", str(directory),
                             "--mlflow-run", mlflow_run], cwd=code, env=env, check=True)
         except BaseException as error:
@@ -143,8 +151,6 @@ def reproduce(run_id: str, profile: str, bucket: str, region: str) -> Path:
     for name, expected in manifest["artifacts"].items():
         if digest(source / name) != expected:
             raise ValueError(f"Preserved artifact checksum mismatch: {name}")
-    if _environment()["python"] != manifest["environment"]["python"]:
-        raise ValueError(f"Use Python {manifest['environment']['python']} to restore this environment")
     for key in ('system', 'machine'):
         if _environment()[key] != manifest['environment'][key]:
             raise ValueError("Reproduction requires the recorded platform")
@@ -158,15 +164,13 @@ def reproduce(run_id: str, profile: str, bucket: str, region: str) -> Path:
         code = destination / "code"
         with tarfile.open(source / "code.tar") as archive:
             archive.extractall(code, filter="data")
-        python = destination / "venv/bin/python"
-        subprocess.run([sys.executable, "-m", "venv", str(destination / "venv")], check=True)
-        subprocess.run([str(python), "-m", "pip", "--isolated", "install", "--index-url", "https://pypi.org/simple",
-                        "-r", str(code / "forecasts/requirements-lock.txt")], check=True)
+        env = _code_environment(code)
+        command = _restore_runtime(code, manifest, env)
+        if _probe_environment(command, code, env) != manifest["environment"]:
+            raise ValueError("Restored dependency environment differs from the accepted run")
         attempt["status"] = "replaying"
         status.write_bytes(canonical(attempt))
-        env = os.environ.copy()
-        env.update(PYTHONPATH=str(code), FORECAST_DATA_ROOT=str(DATA_ROOT))
-        subprocess.run([str(python), "-m", "forecasts.run", "replay", "--source", str(source.resolve()),
+        subprocess.run([*command, "-m", "forecasts.run", "replay", "--source", str(source.resolve()),
                         "--destination", str(destination / "result"), "--profile", profile, "--bucket", bucket,
                         "--region", region], cwd=code, env=env, check=True)
         verification = json.loads((destination / "result/verification.json").read_text())
@@ -192,8 +196,7 @@ def replay(source: Path, destination: Path, profile: str, bucket: str, region: s
     manifest = json.loads((source / "manifest.json").read_text())
     if _environment() != manifest["environment"]:
         raise ValueError("Restored dependency environment differs from the accepted run")
-    if digest(ROOT / "forecasts/requirements-lock.txt") != manifest["lock_sha256"]:
-        raise ValueError("Restored dependency lock differs")
+    _validate_definitions(ROOT, manifest)
     config = RunConfig.from_dict(manifest["config"])
     snapshot = destination / "snapshot"
     _, tables = load(profile, region, bucket, config.snapshot_id, snapshot)
@@ -314,36 +317,46 @@ def _execution_code(directory: Path, manifest: Report) -> Iterator[Path]:
     if manifest["exploratory"]:
         yield ROOT
         return
-    if _environment() != manifest["environment"]:
-        raise ValueError("Execution environment changed after preparation")
     if digest(directory / "code.tar") != manifest["code_sha256"]:
         raise ValueError("Frozen code archive differs from the prepared run")
     with tempfile.TemporaryDirectory(prefix="forecast-code-") as temporary:
         code = Path(temporary)
         with tarfile.open(directory / "code.tar") as archive:
             archive.extractall(code, filter="data")
-        lock = code / "forecasts/requirements-lock.txt"
-        if digest(lock) != manifest["lock_sha256"]:
-            raise ValueError("Frozen code and dependency lock disagree")
-        _validate_lock(lock.read_text(), manifest["environment"]["packages"])
+        _validate_definitions(code, manifest)
         yield code
 
 
-def _validate_lock(text: str, packages: dict[str, str]) -> None:
-    locked = {}
-    for line in text.splitlines():
-        if not line.strip() or line.startswith("#"):
-            continue
-        name, separator, version = line.strip().partition("==")
-        if not separator or not version or any(c.isspace() for c in version):
-            raise ValueError("Accepted execution requires a complete name==version lock")
-        locked[re.sub(r"[-_.]+", "-", name.lower())] = version
-    installed = {re.sub(r"[-_.]+", "-", name.lower()): version for name, version in packages.items()}
-    if installed != locked:
-        differences = sorted(name for name in installed.keys() | locked.keys()
-                             if installed.get(name) != locked.get(name))
-        raise ValueError("Environment does not match the restorable lock: " + ", ".join(differences)
-                         + ". Use a dedicated environment installed from requirements-lock.txt.")
+def _restore_runtime(code: Path, manifest: Report, env: dict[str, str]) -> list[str]:
+    """Install only the preserved runtime; never resolve a new dependency set."""
+    _validate_definitions(code, manifest)
+    if manifest["runtime_environment"] != "runtime":
+        raise ValueError("Accepted execution requires the runtime environment")
+    subprocess.run(["pixi", "install", "--locked", "--environment", "runtime",
+                    "--manifest-path", str(code / "pyproject.toml"), "--no-config"],
+                   cwd=code, env=env, check=True)
+    return ["pixi", "run", "--locked", "--environment", "runtime",
+            "--manifest-path", str(code / "pyproject.toml"), "--no-config", "python", "-s"]
+
+
+def _validate_definitions(code: Path, manifest: Report) -> None:
+    definitions = {"pyproject.toml": "project_sha256", "pixi.lock": "lock_sha256"}
+    for name, field in definitions.items():
+        if digest(code / name) != manifest[field]:
+            raise ValueError(f"Frozen dependency definition differs: {name}")
+
+
+def _code_environment(code: Path) -> dict[str, str]:
+    env = os.environ.copy()
+    for key in ("PYTHONHOME", "PYTHONUSERBASE", "VIRTUAL_ENV"):
+        env.pop(key, None)
+    env.update(PYTHONPATH=str(code), PYTHONNOUSERSITE="1", FORECAST_DATA_ROOT=str(DATA_ROOT))
+    return env
+
+
+def _probe_environment(command: list[str], code: Path, env: dict[str, str]) -> Report:
+    probe = "import json; from forecasts.run import _environment; print(json.dumps(_environment()))"
+    return json.loads(subprocess.check_output([*command, "-c", probe], cwd=code, env=env, text=True))
 
 
 def _git(*args: str) -> str:
