@@ -9,6 +9,7 @@ from forecasts.contracts import FloatArray, Reference, Row
 from forecasts.dataset import BERLIN
 from forecasts.scoring import QUANTILES
 from forecasts.snapshot import InputReader
+from forecasts.labels import select_labels
 
 
 def fit_reference(reader: InputReader, rows: list[Row], y: FloatArray,
@@ -19,7 +20,7 @@ def fit_reference(reader: InputReader, rows: list[Row], y: FloatArray,
     issue. Reject a fit without enough errors or history for all local quarters.
     """
     history_start = config.history_start
-    labels = {t: v for t, v in reader.labels_at(fit_day).items() if t.astimezone(BERLIN).date() >= history_start}
+    labels = {t: v for t, v in select_labels(reader, fit_day).items() if t.astimezone(BERLIN).date() >= history_start}
     medians = _quarter_medians(labels, config.reference_min_per_quarter)
     if set(medians) != set(range(96)):
         raise ValueError("Insufficient reference history for every local quarter")
@@ -27,7 +28,7 @@ def fit_reference(reader: InputReader, rows: list[Row], y: FloatArray,
     for row, actual in zip(rows, y):
         day = date.fromisoformat(row["delivery_date"])
         if day not in past:
-            earlier = {t: v for t, v in reader.labels_at(day).items() if t.astimezone(BERLIN).date() >= history_start}
+            earlier = {t: v for t, v in select_labels(reader, day).items() if t.astimezone(BERLIN).date() >= history_start}
             past[day] = _quarter_medians(earlier, config.reference_min_per_quarter)
         estimate = _simple_estimate(row, past[day])
         if estimate is None:

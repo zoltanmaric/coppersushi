@@ -13,6 +13,7 @@ from forecasts.dataset import stamp
 from forecasts.features import feature_matrix
 from forecasts.reference import fit_reference
 from forecasts.snapshot import InputReader
+from forecasts.labels import select_labels
 
 
 def fit_month(reader: InputReader, features: list[Row], fit_day: date,
@@ -43,7 +44,7 @@ def select_training_data(reader: InputReader, features: list[Row],
     Feature rows retain their own historical cutoffs. Scoring truth is never
     used here. Raise ValueError if no eligible labels remain.
     """
-    labels = reader.labels_at(fit_day)
+    labels = select_labels(reader, fit_day)
     rows, y = [], []
     for row in features:
         if start <= date.fromisoformat(row["delivery_date"]) < fit_day:
