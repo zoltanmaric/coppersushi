@@ -1,0 +1,213 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Reading PR 105 · Copper Sushi</title><style>
+:root{color-scheme:dark;--bg:#191b1f;--panel:#222128;--text:#e9e5ef;--muted:#b4acbf;--purple:#c49bff;--line:#484052;--cyan:#65dfdc}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 system-ui,sans-serif}main{max-width:1180px;margin:auto;padding:64px 40px 100px}a{color:var(--purple);text-underline-offset:4px}a:hover{color:var(--cyan)}a:focus-visible,summary:focus-visible{outline:2px solid var(--cyan);outline-offset:5px}h1{font-size:clamp(38px,5.7vw,70px);line-height:1.06;letter-spacing:-.045em;max-width:850px;margin:22px 0}h2{font-size:32px;line-height:1.2;letter-spacing:-.025em;margin:0 0 20px}h3{font-size:25px;line-height:1.25;margin:7px 0 12px}p{margin:10px 0 18px}.eyebrow{font-size:12px;font-weight:700;letter-spacing:.17em;color:var(--purple)}.lead{max-width:850px;font-size:21px;color:var(--muted)}.meta{font-size:13px;color:var(--muted)}header{padding-bottom:36px;border-bottom:1px solid var(--line);background:radial-gradient(ellipse at 80% 0,#aa66ed15,transparent 65%)}nav{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}nav a{border:1px solid var(--line);padding:8px 15px;border-radius:7px;text-decoration:none;font-size:14px}.intro{display:grid;grid-template-columns:1.2fr 1fr;gap:28px;margin:42px 0}.box{padding:26px;background:var(--panel);border:1px solid var(--line);border-radius:10px}.box p:last-child{margin-bottom:0}code,.mono{font:14px/1.5 ui-monospace,SFMono-Regular,monospace}p code{color:var(--cyan)}.map{border:1px solid var(--line);border-radius:12px;background:#201f26;margin:26px 0 50px;overflow:auto}.map svg{display:block;width:100%;min-width:740px}.map rect{fill:#2b2535;stroke:#8d6eaf;stroke-width:1.2;rx:9}.map .input{fill:#22272b;stroke:#58676c}.map .loop{fill:#191b1f;stroke:#8d6eaf;stroke-dasharray:7 5}.map .truth{fill:#302b24;stroke:#b69b73}.map text{fill:var(--text);font-size:16px}.map .title{font-weight:650;font-size:18px}.map .small{font-size:13px;fill:var(--muted)}.map .label{font-size:12px;letter-spacing:1px;fill:var(--purple)}.map .mono{font-size:14px;fill:var(--cyan)}.map .arrow{fill:none;stroke:var(--cyan);stroke-width:1.5;marker-end:url(#arrow)}.map .truth-arrow{fill:none;stroke:#ffd180;stroke-width:1.5;stroke-dasharray:6 5;marker-end:url(#amber)}.map a:hover rect{stroke:var(--cyan);stroke-width:2}.stage{scroll-margin-top:24px;display:grid;grid-template-columns:70px 1fr;gap:20px;border-top:1px solid var(--line);padding:38px 0}.num{font-size:35px;font-weight:700;color:var(--purple);line-height:1.1}.code-link{font-family:ui-monospace,monospace;font-size:14px}.io{display:grid;grid-template-columns:1fr 1fr;gap:24px;border-left:2px solid var(--purple);padding:4px 0 4px 20px;margin:24px 0}.io b{color:var(--cyan);font-size:13px}.io p{margin:6px 0;font-size:15px}.review{background:#2b2535;padding:15px 18px;border-radius:6px}.review b{color:var(--purple)}summary{cursor:pointer;color:var(--purple);padding:10px 0}.source{margin-top:16px}.source pre{overflow:auto;max-height:540px;padding:20px;background:#141519;border:1px solid var(--line);border-radius:8px;tab-size:4}.source code{font-size:13px}table{border-collapse:collapse;width:100%;font-size:15px}td,th{text-align:left;vertical-align:top;padding:14px;border-bottom:1px solid var(--line)}th{color:var(--purple)}.bottom{margin-top:42px}.note{color:#ffd180}.checks{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}.checks b{display:block;color:var(--cyan);font-size:22px}footer{border-top:1px solid var(--line);margin-top:45px;padding-top:24px;color:var(--muted);font-size:13px}@media(max-width:760px){main{padding:32px 20px}.intro,.io,.checks{grid-template-columns:1fr}.stage{grid-template-columns:40px 1fr;gap:12px}.num{font-size:25px}h2{font-size:27px}.code-link{overflow-wrap:anywhere}td,th{padding:10px}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}@media print{body{background:white;color:#222}main{padding:0}.box,.map,.review{background:#fafafa;color:#222}a{color:#503478}details pre{max-height:none}.stage{break-inside:avoid}}
+</style><main><header><span class="eyebrow">COPPER SUSHI / CODE REVIEW / PR #105</span><h1>Load. Build. Fit.<br>Predict. Score.</h1><p class="lead">A reading route through the local forecast evaluation. Start with the public workflow; open a helper only when its contract is not enough.</p><p class="meta">Review companion · 28 October 2026 · working branch <code>codex/forecast-local-evaluation</code> · refactor awaiting human review</p><nav><a href="#map">Follow the flow</a><a href="#load">Read the stages</a><a href="#boundaries">Files & public contracts</a><a href="#proof">What stayed the same</a><a href="https://github.com/zoltanmaric/coppersushi/pull/105/files">Open PR #105 ↗</a></nav></header><section class="box bottom"><span class="eyebrow">REVIEW THE FOUNDATIONS FIRST</span><h2>Three separate review units.</h2><p><a href="https://github.com/zoltanmaric/coppersushi/pull/132">#132 · Typed input interfaces</a> stands on main. Read input_types.py and the input method signatures; its check prevents missing annotations.</p><p><a href="https://github.com/zoltanmaric/coppersushi/pull/133">#133 · Price tables</a> owns the first source migration. Read prices.py: PriceVersions → read_prices() → select_history() → build_price_features() → PriceFeatures. The Pandera contract also generates the existing Parquet schema. Polars performs version selection, local-clock grouping and joins. A series adapter connects this source to the existing weather/demand assembly.</p><p><a href="https://github.com/zoltanmaric/coppersushi/pull/105">#105 · Local evaluation</a> starts above those foundations. Follow the workflow below for configuration, feature assembly, training, prediction and scoring.</p></section>
+<div class="intro"><section class="box"><span class="eyebrow">START HERE</span><h2>The workflow fits on one screen.</h2><p><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/evaluation.py#L16">evaluation.py · evaluate()</a> is the plain-Python entry point. Read its body from top to bottom. It calls feature construction, the monthly forecast loop and scoring, then saves the result.</p><details class="source"><summary>Read evaluation.py · evaluate()</summary><pre><code>def evaluate(reader: InputReader, config: RunConfig, output: Path,
+             restore_models: Path | None = None) -&gt; Report:
+    &quot;&quot;&quot;Build historical inputs, forecast monthly windows, then score fixed outputs.
+
+    Save feature rows, models, predictions and the report in output. For accepted
+    reproduction, restore_models selects preserved fits instead of retraining.
+    &quot;&quot;&quot;
+    features = build_features(reader, config.history_start, config.end_exclusive)
+    save_features(features, output)
+    predictions = forecast_months(reader, features, config, output, restore_models)
+    result = score_forecasts(predictions, reader.truth, config)
+    save_evaluation(result, output)
+    return result.report</code></pre></details></section><section class="box"><span class="eyebrow">THEN FOLLOW THE RUNNER</span><h2>Orchestration stays thin.</h2><p><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/flow.py">flow.py</a> has explicit steps: <code>start → features → backtest → score → track → end</code>. It calls the same ordinary Python stage functions. It does not contain model mathematics.</p><p>The CLI begins at <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/run.py#L41">run.py · main()</a>: freeze the attempt, then launch Metaflow. Read provenance and reproduction after the computational path.</p><p class="note">This PR implements historical evaluation. It does not add a hosted product page, a daily scheduler or an arbitrary-day forecast command.</p></section></div>
+<section id="map"><span class="eyebrow">THE CALLS AND THE DATA BETWEEN THEM</span><h2>One forecast path. Two separate label boundaries.</h2><p>Training labels may teach the model. Scoring truth may only judge its fixed predictions. Both originate in the price table, but they are selected and used separately.</p><div class="map"><svg viewBox="0 0 1040 1030" role="img" aria-labelledby="map-title map-desc">
+<title id="map-title">The public call path of pull request 105</title><desc id="map-desc">Read a local snapshot and build daily features. For each month, select training labels and fit models, then predict its days. Join scoring truth only after prediction. Save and track the results. Each stage links to its reading card below.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" fill="#65dfdc"/></marker><marker id="amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#ffd180"/></marker></defs>
+<text x="32" y="35" class="label">DATA ALREADY AVAILABLE BEFORE #105</text><text x="450" y="35" class="label">NEW EVALUATION PATH · CLICK A STAGE</text>
+<rect x="24" y="63" width="320" height="119" class="input"/><text x="44" y="93" class="title">S3 snapshot → local directory</text><text x="44" y="122">prices.parquet · weather.parquet</text><text x="44" y="149">demand.parquet · manifest.json</text><text x="44" y="171" class="small">snapshot.load() is a separate earlier command</text>
+<path d="M344 120 H450" class="arrow"/>
+<a href="#load"><rect x="450" y="75" width="550" height="90"/><text x="470" y="106" class="title">1 · Validate and load</text><text x="470" y="137" class="mono">snapshot.read_local() → Arrow tables</text></a>
+<path d="M725 165 V225" class="arrow"/><text x="742" y="202" class="small">InputReader(tables)</text>
+<a href="#features"><rect x="450" y="225" width="550" height="95"/><text x="470" y="257" class="title">2 · Build each day's model inputs</text><text x="470" y="289" class="mono">features.build_features() → feature rows</text></a>
+<rect x="425" y="375" width="595" height="287" class="loop"/><text x="445" y="405" class="label">backtest.forecast_months() · REPEAT FOR EACH MONTH</text>
+<path d="M580 320 V441" class="arrow"/><text x="461" y="350" class="small">earlier feature rows</text><path d="M850 320 V441" class="arrow"/><text x="803" y="350" class="small">this month's rows</text>
+<a href="#train"><rect x="445" y="441" width="252" height="123"/><text x="462" y="473" class="title">3 · Fit on earlier days</text><text x="462" y="504" class="mono">training.fit_month()</text><text x="462" y="537" class="small">3 models + reference</text></a>
+<a href="#predict"><rect x="735" y="441" width="263" height="123"/><text x="751" y="473" class="title">4 · Predict each day</text><text x="751" y="504" class="mono">prediction.predict_day()</text><text x="751" y="537" class="small">5 quantiles + fallback choice</text></a>
+<path d="M697 507 H735" class="arrow"/><text x="450" y="603" class="small">Fit once per month. Use fresh historical inputs for each day.</text><text x="450" y="631" class="small">The next month adds eligible labels. No scoring truth enters here.</text>
+<rect x="24" y="441" width="320" height="123" class="input"/><text x="44" y="473" class="title">Training labels</text><text x="44" y="504" class="mono">InputReader.labels_at(fit_day)</text><text x="44" y="537" class="small">Only versions eligible at the fit cutoff</text><path d="M344 507 H445" class="arrow"/>
+<path d="M866 564 V732" class="arrow"/><text x="879" y="696" class="small">fixed forecasts</text>
+<a href="#score"><rect x="450" y="732" width="550" height="105"/><text x="470" y="765" class="title">5 · Join outcomes and score</text><text x="470" y="797" class="mono">scoring.score_forecasts() → EvaluationResult</text><text x="470" y="822" class="small">Common target rows · monthly breakdowns · uncertainty</text></a>
+<rect x="24" y="732" width="320" height="105" class="truth"/><text x="44" y="765" class="title">Scoring truth</text><text x="44" y="797" class="mono">InputReader.truth</text><text x="44" y="822" class="small">Latest retained realised prices</text><path d="M344 784 H450" class="truth-arrow"/>
+<path d="M725 837 V899" class="arrow"/>
+<a href="#save"><rect x="450" y="899" width="550" height="100"/><text x="470" y="931" class="title">6 · Save results and record provenance</text><text x="470" y="963" class="mono">save_evaluation() → run.track() → run.finish()</text><text x="470" y="988" class="small">Parquet + JSON + models · local MLflow</text></a>
+<text x="24" y="945" class="small">Solid arrows: inputs passed onward.</text><text x="24" y="973" class="small">Amber arrow: truth joins after prediction.</text>
+</svg></div></section>
+<article id="load" class="stage"><div class="num">01</div><div><span class="eyebrow">READ THIS ENTRY POINT</span><h3>Load the fixed input tables</h3><p class="code-link"><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/snapshot.py#L108">snapshot.py · read_local()</a></p><p>The tables hold SMARD prices, ICON-EU forecast weather for twelve locations, and ENTSO-E country demand. This is inherited input code, not a new provider download in #105. The normal run reads a local copy of the selected S3 snapshot. It checks the manifest, hashes, schemas and row counts. Metaflow also checks that its ID matches the frozen configuration.</p><div class="io"><div><b>Receives</b><p>A directory containing the manifest and three Parquet tables.</p></div><div><b>Returns / saves</b><p>Manifest and named Arrow tables. InputReader indexes those records by delivery day.</p></div></div><p class="review"><b>Review question</b> Is this the exact snapshot selected before the run?</p><p>For the new caller, read <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/flow.py#L26">flow.py · start()</a>. To see S3 loading, read <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/snapshot.py#L278">snapshot.py · load()</a>.</p><details class="source"><summary>Read snapshot.py · read_local()</summary><pre><code>def read_local(directory: Path) -&gt; tuple[Report, dict[str, pa.Table]]:
+    &quot;&quot;&quot;Verify snapshot identity, hashes and schemas before returning Arrow tables.&quot;&quot;&quot;
+    manifest = json.loads((directory / &quot;manifest.json&quot;).read_text())
+    snapshot_id = manifest[&quot;snapshot_id&quot;]
+    if manifest[&quot;schema_version&quot;] != VERSION or set(manifest[&quot;files&quot;]) != set(SCHEMAS):
+        raise ValueError(&quot;Unsupported or incomplete snapshot manifest&quot;)
+    payload = {k: v for k, v in manifest.items() if k != &quot;snapshot_id&quot;}
+    payload = json.loads(json.dumps(payload))
+    for entry in payload[&quot;files&quot;].values():
+        entry.pop(&quot;key&quot;)
+    if identity(payload) != snapshot_id:
+        raise ValueError(&quot;Manifest content does not match snapshot identifier&quot;)
+    tables = {}
+    for name, entry in manifest[&quot;files&quot;].items():
+        if entry[&quot;file&quot;] != f&quot;{name}.parquet&quot; or entry[&quot;key&quot;] != f&quot;snapshots/{snapshot_id}/{name}.parquet&quot; or entry[&quot;schema&quot;] != describe(name):
+            raise ValueError(&quot;Snapshot file location/schema is not canonical&quot;)
+        path = directory / entry[&quot;file&quot;]
+        if digest(path) != entry[&quot;sha256&quot;] or path.stat().st_size != entry[&quot;bytes&quot;]:
+            raise ValueError(f&quot;Snapshot file checksum mismatch: {name}&quot;)
+        tables[name] = validate(name, pq.read_table(path))
+        if tables[name].num_rows != entry[&quot;rows&quot;]:
+            raise ValueError(f&quot;Snapshot row count mismatch: {name}&quot;)
+    return manifest, tables</code></pre></details></div></article><article id="features" class="stage"><div class="num">02</div><div><span class="eyebrow">READ THIS ENTRY POINT</span><h3>Build features before fitting</h3><p class="code-link"><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/features.py#L19">features.py · build_features()</a></p><p>For each delivery day, InputReader.features() first selects eligible source versions. prices.build_price_features() constructs same-clock lags and daily summaries. dataset.build_rows() combines them with calendar fields, aligned weather/demand and missing flags. There are no realised target values in these rows.</p><div class="io"><div><b>Receives</b><p>InputReader and the historical start/end dates.</p></div><div><b>Returns / saves</b><p>Quarter-hour feature rows. save_features() writes features.parquet for auditing.</p></div></div><p class="review"><b>Review question</b> Do the inputs reflect what was eligible at each historical issue time?</p><p>Drill down only if needed: <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/snapshot.py#L224">InputReader.features()</a> → <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/snapshot.py#L189">snapshot.py · select_inputs()</a> → <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/dataset.py#L185">dataset.py · build_rows()</a>. <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/features.py#L34">features.py · feature_matrix()</a> selects only the explicit FEATURES columns; it never passes the whole row to CatBoost.</p><details class="source"><summary>Read features.py · build_features()</summary><pre><code>def build_features(reader: InputReader, start: date, end: date) -&gt; list[Row]:
+    &quot;&quot;&quot;Build quarter-hour rows in [start, end), with no realised target values.
+
+    Each day uses only inputs eligible by 11:00 Berlin on the preceding day.
+    The input reader selects source versions; dataset.build_rows creates price
+    lags, calendar fields, aligned weather/demand and missing-value flags.
+    &quot;&quot;&quot;
+    rows = []
+    day = start
+    while day &lt; end:
+        rows.extend(reader.features(day))
+        day += timedelta(days=1)
+    return rows</code></pre></details></div></article><article id="train" class="stage"><div class="num">03</div><div><span class="eyebrow">READ THIS ENTRY POINT</span><h3>Fit one monthly window</h3><p class="code-link"><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/training.py#L18">training.py · fit_month()</a></p><p>select_training_data() pairs earlier feature rows with eligible label versions. The prices model uses calendar and price history; weather adds forecast weather; demand adds forecast demand. Three CatBoost fits use those fixed inventories. fit_reference() calibrates the simpler comparison using training-only errors. The returned FittedMonth names its models, reference, training-row count and fit failures.</p><div class="io"><div><b>Receives</b><p>Historical feature rows, the first delivery day of the month, settings and an output directory.</p></div><div><b>Returns / saves</b><p>FittedMonth; models/YYYY-MM-DD/*.cbm, reference.json and failures.json.</p></div></div><p class="review"><b>Review question</b> Are both training labels and reference calibration restricted to eligible history?</p><p>First, see how the monthly loop calls fitting and daily prediction:</p><details class="source"><summary>Read backtest.py · forecast_months()</summary><pre><code>def forecast_months(reader: InputReader, features: list[Row], config: RunConfig,
+                    output: Path, restore_models: Path | None = None) -&gt; BacktestPredictions:
+    &quot;&quot;&quot;Fit each monthly window, then predict its days without joining scoring truth.
+
+    Features were frozen at each day&#x27;s own issue cutoff. Each successive fit
+    adds eligible past labels. Save models by the first delivery date of their
+    window; return fixed predictions and diagnostics for later scoring.
+    &quot;&quot;&quot;
+    by_day: dict[str, list[Row]] = defaultdict(list)
+    for row in features:
+        by_day[row[&quot;delivery_date&quot;]].append(row)
+    predictions: list[Row] = []
+    folds: list[Report] = []
+    failures: list[Report] = []
+    fallback: Counter[str] = Counter()
+    crossings: Counter[str] = Counter()
+    fold = config.evaluation_start
+    end = config.end_exclusive
+    while fold &lt; end:
+        stop = min(_next_month(fold), end)
+        print(f&quot;Fitting fold {fold} -&gt; {stop}&quot;, flush=True)
+        fitted = fit_month(reader, features, fold, config, output / &quot;models&quot; / fold.isoformat(),
+                           restore_models / fold.isoformat() if restore_models else None)
+        folds.append({&quot;first_delivery_day&quot;: fold.isoformat(), &quot;end_exclusive&quot;: stop.isoformat(),
+                      &quot;fit_cutoff&quot;: cutoff(fold).isoformat(), &quot;training_rows&quot;: fitted.training_rows,
+                      &quot;reference&quot;: fitted.reference, &quot;fit_failures&quot;: fitted.failures})
+        day = fold
+        while day &lt; stop:
+            rows = by_day[day.isoformat()]
+            forecast = predict_day(rows, fitted.models, fitted.reference, config)
+            predictions.extend(_prediction_records(rows, forecast, fold, config))
+            if forecast.failures:
+                failures.append({&quot;day&quot;: day.isoformat(), &quot;models&quot;: forecast.failures})
+            crossings.update(forecast.crossings)
+            fallback[forecast.selected_model] += len(rows)
+            day += timedelta(days=1)
+        fold = stop
+    return BacktestPredictions(predictions, folds, failures, dict(fallback), dict(crossings))</code></pre></details><p>Read next: <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/training.py#L39">training.py · select_training_data()</a> and <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/reference.py#L14">reference.py · fit_reference()</a>. Internal fitting/loading helpers are below these public entry points.</p><details class="source"><summary>Read training.py · fit_month()</summary><pre><code>def fit_month(reader: InputReader, features: list[Row], fit_day: date,
+              config: RunConfig, directory: Path,
+              restore_models: Path | None = None) -&gt; FittedMonth:
+    &quot;&quot;&quot;Fit and save a month&#x27;s models using labels eligible at its first issue.
+
+    Model failures are recorded for explicit prediction fallback. Reproduction
+    loads preserved models instead of refitting them, but recalibrates the
+    reference from the same eligible history.
+    &quot;&quot;&quot;
+    training = select_training_data(reader, features, fit_day, config.train_start)
+    reference = fit_reference(reader, training.rows, training.targets, fit_day, config)
+    if restore_models is None:
+        models, failures = _fit_models(training.rows, training.targets, config, directory)
+    else:
+        models, failures = _restore_models(restore_models, config)
+        directory.mkdir(parents=True, exist_ok=True)
+    (directory / &quot;reference.json&quot;).write_text(json.dumps(reference, sort_keys=True))
+    (directory / &quot;failures.json&quot;).write_text(json.dumps(failures, sort_keys=True))
+    return FittedMonth(models, reference, len(training.rows), failures)</code></pre></details></div></article><article id="predict" class="stage"><div class="num">04</div><div><span class="eyebrow">READ THIS ENTRY POINT</span><h3>Predict each day with that fit</h3><p class="code-link"><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/prediction.py#L13">prediction.py · predict_day()</a></p><p>The fitted models stay fixed for the month. Each day receives its own historically eligible feature rows. Quantiles are sorted; raw outputs remain available. The automatic method prefers demand, then weather, prices and finally the reference, depending on source availability and prediction success.</p><div class="io"><div><b>Receives</b><p>One day’s feature rows, fitted models, reference and settings.</p></div><div><b>Returns / saves</b><p>DayForecast: raw and ordered quantiles, failures, crossing counts, selected_model and fallback_reason.</p></div></div><p class="review"><b>Review question</b> Is method selection independent of realised prices and evaluation scores?</p><p>Read the loop in <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/backtest.py#L14">backtest.py · forecast_months()</a> to see the order: fit month → predict its days → advance month. It returns BacktestPredictions without joining realised outcomes.</p><details class="source"><summary>Read prediction.py · predict_day()</summary><pre><code>def predict_day(rows: list[Row], models: Mapping[str, Predictor], reference: Reference,
+                config: RunConfig) -&gt; DayForecast:
+    &quot;&quot;&quot;Predict five ordered quantiles per quarter and select a usable method.
+
+    Keep raw outputs and crossing counts. Choose demand → weather → prices →
+    reference from source availability and execution success, never scores.
+    An individual model failure receives the reference forecast.
+    &quot;&quot;&quot;
+    ref = predict_reference(rows, reference)
+    raw, predictions, failures, crossing = {}, {}, {}, {}
+    for name, fields in config.features.items():
+        try:
+            if name not in models:
+                raise ValueError(&quot;Model fit failed&quot;)
+            q = np.asarray(models[name].predict(feature_matrix(rows, fields)))
+            if q.shape != (len(rows), 5) or not np.isfinite(q).all():
+                raise ValueError(&quot;Non-finite or incomplete model output&quot;)
+            raw[name], predictions[name] = q, np.sort(q, axis=1)
+            crossing[name] = int((np.diff(q, axis=1) &lt; 0).any(axis=1).sum())
+        except (CatBoostError, ValueError) as error:
+            failures[name] = str(error)
+            raw[name], predictions[name], crossing[name] = ref, ref, 0
+    reasons = []
+    chosen = &quot;reference&quot;
+    for name in (&quot;demand&quot;, &quot;weather&quot;, &quot;prices&quot;):
+        if rows[0][&quot;price_lags_unavailable&quot;]:
+            reasons.append(f&quot;{name}:price_lags_unavailable&quot;)
+        elif name in failures:
+            reasons.append(f&quot;{name}:prediction_failure&quot;)
+        elif name in (&quot;demand&quot;, &quot;weather&quot;) and rows[0][&quot;weather_source_unavailable&quot;]:
+            reasons.append(f&quot;{name}:weather_source_unavailable&quot;)
+        elif name == &quot;demand&quot; and rows[0][&quot;demand_source_unavailable&quot;]:
+            reasons.append(&quot;demand:demand_source_unavailable&quot;)
+        else:
+            chosen = name
+            break
+    predictions.update(reference=ref, system=predictions.get(chosen, ref))
+    return DayForecast(raw, predictions, failures, crossing, chosen, &quot;;&quot;.join(reasons))</code></pre></details></div></article><article id="score" class="stage"><div class="num">05</div><div><span class="eyebrow">READ THIS ENTRY POINT</span><h3>Compare fixed forecasts with outcomes</h3><p class="code-link"><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/scoring.py#L18">scoring.py · score_forecasts()</a></p><p>Only now are realised outcomes joined. Every method is scored on the same rows with available truth. Rows with missing truth remain in the output and their counts are reported. The report includes aggregate and monthly scores, demand-availability breakdowns and paired seven-day-block comparisons.</p><div class="io"><div><b>Receives</b><p>BacktestPredictions, a separate truth mapping and the frozen configuration.</p></div><div><b>Returns / saves</b><p>EvaluationResult with scored rows and the report.</p></div></div><p class="review"><b>Review question</b> Can scoring truth affect an earlier prediction? The scoring function receives predictions, not a fitting callback.</p><p>For formulas, read <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/scoring.py#L61">scoring.py · wis()</a>, <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/scoring.py#L68">scoring.py · metrics()</a> and <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/scoring.py#L88">scoring.py · paired_blocks()</a>.</p><details class="source"><summary>Read scoring.py · score_forecasts()</summary><pre><code>def score_forecasts(backtest: BacktestPredictions, truth: dict[datetime, float | None],
+                    config: RunConfig) -&gt; EvaluationResult:
+    &quot;&quot;&quot;Join realised prices only after prediction, then score common target rows.
+
+    Keep rows without truth in the output and disclose their count. Report
+    aggregate/monthly/demand scores and paired seven-day-block comparisons.
+    Raise ValueError when no scoring truth exists.
+    &quot;&quot;&quot;
+    predictions = _join_truth(backtest.rows, truth)
+    scored = [r for r in predictions if r[&quot;target&quot;] is not None]
+    if not scored:
+        raise ValueError(&quot;No evaluation truth&quot;)
+    names = [*config.features, &quot;reference&quot;, &quot;system&quot;]
+    groups: dict[str, dict[str, list[Row]]] = {&quot;month&quot;: defaultdict(list), &quot;demand_available&quot;: defaultdict(list)}
+    for row in predictions:
+        groups[&quot;month&quot;][row[&quot;delivery_date&quot;][:7]].append(row)
+        groups[&quot;demand_available&quot;][str(row[&quot;demand_available&quot;])].append(row)
+    breakdowns = {}
+    for group_name, group in groups.items():
+        breakdowns[group_name] = {
+            key: {&quot;delivery_rows&quot;: len(rows), &quot;missing_truth&quot;: sum(r[&quot;target&quot;] is None for r in rows),
+                  &quot;forecast_coverage&quot;: 1.,
+                  &quot;metrics&quot;: _method_scores([r for r in rows if r[&quot;target&quot;] is not None], names, config)}
+            for key, rows in group.items()
+        }
+    report = {
+        &quot;metrics&quot;: _method_scores(scored, names, config), &quot;breakdowns&quot;: breakdowns,
+        &quot;comparison&quot;: paired_blocks(
+            np.array([r[&quot;target&quot;] for r in scored]),
+            {name: np.array([[r[f&quot;{name}_q{q}&quot;] for q in config.quantiles] for r in scored]) for name in names},
+            [r[&quot;delivery_date&quot;] for r in scored], config.bootstrap),
+        &quot;delivery_rows&quot;: len(predictions), &quot;scored_rows&quot;: len(scored),
+        &quot;missing_truth&quot;: len(predictions) - len(scored), &quot;forecast_coverage&quot;: 1.,
+        &quot;fallback_rows&quot;: backtest.fallback_rows, &quot;prediction_failures&quot;: backtest.failures,
+        &quot;raw_crossing_rows&quot;: backtest.crossing_rows,
+        &quot;raw_crossing_fraction&quot;: {name: count / len(predictions) for name, count in backtest.crossing_rows.items()},
+        &quot;folds&quot;: backtest.folds, &quot;timing_limits&quot;: TIMING,
+        &quot;limitations&quot;: [&quot;Retrospective single-year evaluation; August–September were inspected in earlier diagnostics.&quot;,
+                        &quot;Historical price/weather availability assumed; demand UpdateTime semantics conditional.&quot;,
+                        &quot;Intervals are marginal per quarter; no trading-profitability or daily-readiness claim.&quot;]}
+    return EvaluationResult(predictions, report)</code></pre></details></div></article><article id="save" class="stage"><div class="num">06</div><div><span class="eyebrow">READ THIS ENTRY POINT</span><h3>Save evidence after computation</h3><p class="code-link"><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/evaluation.py#L37">evaluation.py · save_evaluation()</a></p><p>Save the scored rows and report, then link the run in MLflow. run.track() records method comparisons and artifacts. run.finish() hashes artifacts and records the final MLflow/Metaflow identifiers. The outer run_flow() marks the execution finished, failed or killed.</p><div class="io"><div><b>Receives</b><p>EvaluationResult and the attempt directory created before execution.</p></div><div><b>Returns / saves</b><p>predictions.parquet, report.json and the final manifest; local MLflow execution and comparison records.</p></div></div><p class="review"><b>Review question</b> Can the saved run identify its exact data, code, settings and outputs?</p><p>Read <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/run.py#L69">run.py · prepare()</a> for the initial freeze; <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/run.py#L91">run.py · run_flow()</a> for lifecycle handling; <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/run.py#L202">run.py · track()</a> and <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/run.py#L233">run.py · finish()</a> for persistence.</p><details class="source"><summary>Read evaluation.py · save_evaluation()</summary><pre><code>def save_evaluation(result: EvaluationResult, output: Path) -&gt; None:
+    &quot;&quot;&quot;Save scored prediction rows and the JSON report with their existing schemas.&quot;&quot;&quot;
+    output.mkdir(parents=True, exist_ok=True)
+    pq.write_table(pa.Table.from_pylist(result.rows), output / &quot;predictions.parquet&quot;, compression=&quot;zstd&quot;)
+    (output / &quot;report.json&quot;).write_text(json.dumps(result.report, indent=2, allow_nan=False) + &quot;\n&quot;)</code></pre></details></div></article>
+<section id="boundaries" class="bottom"><span class="eyebrow">WHAT TO READ / WHAT TO SKIP AT FIRST</span><h2>The file boundaries are the review boundaries.</h2><table><thead><tr><th>File</th><th>Public responsibility</th><th>First pass</th></tr></thead><tbody><tr><td><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/evaluation.py">evaluation.py</a></td><td>Top-level stage sequence and result persistence.</td><td>Read evaluate() first.</td></tr><tr><td><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/flow.py">flow.py</a></td><td>Metaflow step boundaries.</td><td>See where the stage outputs are carried.</td></tr><tr><td><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/features.py">features.py</a></td><td>Historical feature rows and explicit matrix columns.</td><td>Read build_features(); inspect FEATURES.</td></tr><tr><td><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/backtest.py">backtest.py</a></td><td>Monthly fit → daily prediction loop.</td><td>Read forecast_months().</td></tr><tr><td><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/training.py">training.py</a></td><td>Eligible labels and one monthly fit.</td><td>Read fit_month(), then select_training_data().</td></tr><tr><td><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/reference.py">reference.py</a></td><td>Training-only reference calibration and prediction.</td><td>Read after the model path.</td></tr><tr><td><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/prediction.py">prediction.py</a></td><td>Quantiles and operational fallback selection.</td><td>Read predict_day().</td></tr><tr><td><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/scoring.py">scoring.py</a></td><td>Truth join, report, scores and paired comparisons.</td><td>Read score_forecasts(); then the metric you care about.</td></tr><tr><td><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/config.py">config.py</a></td><td>Validated, immutable runtime configuration; JSON conversion at the boundary.</td><td>Read RunConfig.from_dict(), its typed fields and to_dict().</td></tr><tr><td><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/contracts.py">contracts.py</a></td><td>Named stage results.</td><td>Open beside the function whose return you are reading.</td></tr><tr><td><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/run.py">run.py</a></td><td>CLI, frozen attempts, tracking and reproduction.</td><td>Read after the calculation.</td></tr><tr><td><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/snapshot.py">snapshot.py</a></td><td>Inherited snapshot validation and point-in-time selection.</td><td>Drill down for input eligibility.</td></tr><tr><td><a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/forecasts/dataset.py">dataset.py</a></td><td>Calendar, weather/demand and price-feature assembly.</td><td>Drill down for feature definitions.</td></tr></tbody></table>
+<div class="intro"><div class="box"><h3>Public first; private below.</h3><p>The main entry point comes first, then public operations, then <code>_internal_helpers</code>. Public functions explain their inputs, outputs, time cutoffs and side effects where relevant. A small function earns its place by naming a real operation.</p><p>Leading underscores are Python’s convention for internal names; public-first ordering is this project’s reading convention. It is not a Python requirement.</p></div><div class="box"><h3>Types describe the handoffs.</h3><p><code>TrainingData</code>, <code>FittedMonth</code>, <code>DayForecast</code>, <code>BacktestPredictions</code> and <code>EvaluationResult</code> replace unnamed stage results. Function arguments and returns are annotated; obvious local types are inferred.</p><p>RunConfig.from_dict() converts serialized settings to dates, a validated SnapshotId and frozen CatBoost/bootstrap/tolerance objects. Only to_dict() converts these values back to the saved JSON format. The monthly schedule, quantiles and feature inventories are fixed contracts, not constructor options. Dynamic Arrow rows and JSON reports remain heterogeneous mappings. PriceVersions and PriceFeatures validate price tables with Pandera; other input schemas retain their existing checks. The inherited input path, tests and evidence scripts are also annotated and included in the package-wide check.</p></div></div></section>
+<section id="proof" class="bottom"><span class="eyebrow">REFACTOR VERIFICATION</span><h2>A clearer implementation of the same calculation.</h2><div class="checks"><div class="box"><b>33 tests</b>All #105 forecast tests pass, including fitting leakage, fallbacks, scores and tracking lifecycle.</div><div class="box"><b>26,204 rows</b>All nine months retain identical saved-model predictions and report. Price daily means differ by at most 5.7 × 10⁻¹⁴ €/MWh after the Polars conversion; other feature columns are identical.</div><div class="box"><b>Real workflow</b>A small March run completed every new Metaflow stage and recorded its MLflow artifacts.</div></div><p>Before/after fitting checks cover the March clock-change fixture. Configuration tests cover saved-JSON round trips, immutable settings, serialization between Metaflow steps, invalid dates, identifiers, numeric values and unsupported contracts. Mypy passed for the entire forecast tree, including tests and evidence scripts with untyped function definitions rejected; third-party missing stubs were ignored.</p><p class="note">These checks establish refactor equivalence, not improved forecasting quality. Historical availability assumptions and poor interval calibration are unchanged. No new research comparison was performed.</p></section>
+<footer>This is a PR-specific reading guide for #105, not a second living product architecture document. Retire it when it no longer helps review. Scientific contracts remain in the <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/wiki/price-forecasting/evaluation.md">evaluation spec</a> and <a href="https://github.com/zoltanmaric/coppersushi/blob/codex/forecast-local-evaluation/wiki/price-forecasting/data-sources.md#point-in-time">point-in-time contract</a>. Later stack layers own the product’s “How it works” view.<br>Python conventions: <a href="https://peps.python.org/pep-0008/#public-and-internal-interfaces">PEP 8</a> · <a href="https://peps.python.org/pep-0257/">PEP 257</a>.</footer></main></html>

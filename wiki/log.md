@@ -395,3 +395,6 @@ The camera review reproduced electricity hidden after an initial programmatic fi
 ## [2026-11-09] decision | Accept nine unavailable June days
 
 [Historical coverage](jao-availability.md#historical-gaps) accepts June 2–9 and June 11 as unavailable. End recovery investigation; finish and verify the other 352 requested days. Missing inputs remain missing, and these accepted gaps do not block extending the supported historical window.
+## [2026-10-09] ingest | First quantile forecast evaluation
+
+The fixed baseline improves weighted interval score against its distributional reference, while both nominal uncertainty bands under-cover. Weather accounts for the headline gain; adding demand does not improve the weather-only headline score. Further quality experiments and prospective evidence need a separate continuation decision. [Result and limits](price-forecasting/evaluation.md#result).
