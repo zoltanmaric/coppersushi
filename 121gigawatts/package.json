@@ -91,6 +91,19 @@
                 "bookmark",
                 "gallery"
             ]
+        },
+        "custom": {
+            "show_projects": {
+                "type": "boolean",
+                "default": false,
+                "group": "homepage",
+                "description": "Show the project strip below the existing homepage artwork."
+            },
+            "app_origin": {
+                "type": "text",
+                "default": "https://coppersushi.121gigawatts.org",
+                "description": "Origin serving the Copper Sushi apps, without a trailing slash."
+            }
         }
     },
     "dependencies": {}

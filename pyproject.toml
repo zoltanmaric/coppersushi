@@ -71,3 +71,5 @@ hosting-test = "make -C 121gigawatts/hosting test"
 hosting-check = "make -C 121gigawatts/hosting check"
 hosting-configure = "make -C 121gigawatts/hosting configure"
 hosting-restore = "make -C 121gigawatts/hosting restore"
+ghost-trial = { cmd = "python scripts/ghost_trial.py up", depends-on = ["theme-zip"] }
+ghost-trial-stop = "python scripts/ghost_trial.py down"

@@ -69,6 +69,8 @@ Use Pixi to change packages, rather than the IDE's package installer.
 Direct IDE Python runs use the interpreter's packages; external tools invoked by name
 may also need the Pixi environment's `bin` directory on the run configuration's `PATH`.
 
+For the combined blog/project preview, see the [local Ghost trial](121gigawatts/local/README.md).
+
 ### Mapbox Token
 A Mapbox access token is required to run the app. Tokenless startup is unsupported.
 Register for a free token at [mapbox.com](https://www.mapbox.com/), then paste it into

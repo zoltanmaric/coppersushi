@@ -1,0 +1,17 @@
+{{!< default}}
+<header class="site-header project-site-header">{{> "site-header"}}</header>
+<main id="site-main" class="project-workspace">
+    <div class="project-toolbar outer">
+        <div>
+            <a class="project-back" href="{{@site.url}}/projects/">← Projects</a>
+            <h1>Copper Sushi <span>European power flow</span></h1>
+        </div>
+        <a href="{{@custom.app_origin}}/embed/opf-2024" target="_blank" rel="noopener">Open full screen ↗</a>
+    </div>
+    <div class="project-frame-wrap">
+        <iframe class="project-frame" src="{{@custom.app_origin}}/embed/opf-2024"
+            title="Copper Sushi interactive European power-flow map"
+            allow="fullscreen" allowfullscreen></iframe>
+    </div>
+    <p class="project-help">Map not responding? <a href="{{@custom.app_origin}}/embed/opf-2024" target="_blank" rel="noopener">Open the app directly ↗</a></p>
+</main>

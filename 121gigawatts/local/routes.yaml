@@ -1,0 +1,16 @@
+routes:
+  /projects/:
+    template: projects
+    data: page.projects
+  /projects/power-flow/:
+    template: project-power-flow
+    data: page.power-flow
+
+collections:
+  /:
+    permalink: /{slug}/
+    template: index
+
+taxonomies:
+  tag: /tag/{slug}/
+  author: /author/{slug}/
