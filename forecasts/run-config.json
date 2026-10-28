@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "snapshot_id": "8bf5b5de2dc94d9d5db62fe9178dee50ac7e08005c2c6790e351e95081910a6d",
+  "history_start": "2025-10-01",
+  "train_start": "2025-10-15",
+  "evaluation_start": "2026-01-01",
+  "end_exclusive": "2026-10-01",
+  "refit": "monthly_expanding",
+  "quantiles": [0.025, 0.25, 0.5, 0.75, 0.975],
+  "catboost": {
+    "iterations": 400,
+    "depth": 6,
+    "learning_rate": 0.05,
+    "l2_leaf_reg": 3,
+    "random_seed": 20261009,
+    "thread_count": 1,
+    "task_type": "CPU",
+    "nan_mode": "Min",
+    "bootstrap_type": "No",
+    "random_strength": 0,
+    "allow_writing_files": false,
+    "verbose": false,
+    "loss_function": "MultiQuantile:alpha=0.025,0.25,0.5,0.75,0.975"
+  },
+  "reference_min_errors": 1344,
+  "reference_min_per_quarter": 14,
+  "bootstrap": {"seed": 20261009, "samples": 2000, "block_days": 7},
+  "tolerance": {"absolute": 0.000001, "relative": 0.000000001}
+}

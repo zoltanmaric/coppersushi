@@ -628,3 +628,7 @@ Reconstructed the [20 November cap effect](polish-export-cap-investigation.md#no
 ## [2026-11-20] query | Critical Elements publication failure
 
 The [publication incident](jao-availability.md#evidence) exposed an empty Polish alternative-price feed, a reduced JAO page-size limit and incomplete zonal prices.
+
+## [2026-10-09] ingest | First quantile forecast evaluation
+
+The fixed baseline improves weighted interval score against its distributional reference, while both nominal uncertainty bands under-cover. Weather accounts for the headline gain; adding demand does not improve the weather-only headline score. Further quality experiments and prospective evidence need a separate continuation decision. [Result and limits](price-forecasting/evaluation.md#result).
