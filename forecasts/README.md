@@ -80,9 +80,9 @@ The [research index](../wiki/price-forecasting/research/index.md) holds proposal
 Start the local UI on port 5001, then install the checked-in [view definitions](review-views.json):
 
 ```sh
-data/forecasts/venv/bin/mlflow ui --backend-store-uri "sqlite:///$PWD/data/forecasts/tracking/mlflow.db" --host 127.0.0.1 --port 5001
+pixi run --locked mlflow ui --backend-store-uri "sqlite:///$PWD/data/forecasts/tracking/mlflow.db" --host 127.0.0.1 --port 5001
 # In another terminal:
-data/forecasts/venv/bin/python -m forecasts.review_views
+pixi run --locked python -m forecasts.review_views
 ```
 
 The command prints **Forecast review**, our default entry link to the accepted baseline comparisons, and **Run history**. The views live with the experiment in the local tracking store, not only in browser preferences. Re-running setup updates the same two named views. Other saved views are untouched. This uses MLflow 3.17.0’s UI saved-view format; setup checks the installed version because that format is not a public configuration API. It does not replace MLflow’s global default Runs page.
@@ -95,7 +95,7 @@ Open each printed link after setup to restore its filter, columns and sort. In t
 To publish a conclusion and derive the parent’s visible Notes from the same JSON:
 
 ```sh
-data/forecasts/venv/bin/python -m forecasts.review --run MLFLOW_RUN_ID --conclusion PATH_TO_CONCLUSION_JSON --artifact-path research/conclusion.json
+pixi run --locked python -m forecasts.review --run MLFLOW_RUN_ID --conclusion PATH_TO_CONCLUSION_JSON --artifact-path research/conclusion.json
 ```
 
 The conclusion contains `result`, `limitations`, `decision` and optional `evidence_artifacts` links. Keep full reasoning and retrospective status in that artifact; the command surfaces its summary and evidence links without altering frozen predictions, models or manifests. Re-run after editing the conclusion to keep Notes synchronized.
