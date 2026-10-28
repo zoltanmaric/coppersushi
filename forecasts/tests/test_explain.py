@@ -1,5 +1,5 @@
 """The presentation must preserve evidence, including awkward clock and truth cases."""
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import json
 from pathlib import Path
 import tempfile
@@ -27,8 +27,8 @@ class ExplainTest(unittest.TestCase):
             stop = (start + timedelta(days=1)).astimezone(ZoneInfo('UTC'))
             current = start.astimezone(ZoneInfo('UTC'))
             while current < stop:
-                row: Row = {'delivery_utc': current.isoformat(), 'delivery_date': day,
-                       'fold': day[:8] + '01', 'target': None if day.startswith('2026-10') else -5.,
+                row: Row = {'delivery_utc': current, 'delivery_date': date.fromisoformat(day),
+                       'fold': date.fromisoformat(day).replace(day=1), 'target': None if day.startswith('2026-10') else -5.,
                        'selected_model': 'weather', 'fallback_reason': 'demand:demand_source_unavailable',
                        'demand_selected_update_utc': None, 'demand_missing': 1}
                 for name in METHODS:
@@ -43,7 +43,7 @@ class ExplainTest(unittest.TestCase):
                   'missing_truth': 100, 'breakdowns': {'month': {}}, 'folds': [], 'timing_limits': {},
                   'limitations': [], 'raw_crossing_fraction': {}, 'prediction_failures': [], 'fallback_rows': {'weather':192}}
         for month in ('2026-03', '2026-10'):
-            selected = [r for r in self.rows if r['delivery_date'].startswith(month)]
+            selected = [r for r in self.rows if r['delivery_date'].strftime('%Y-%m') == month]
             report['breakdowns']['month'][month] = {'metrics': scores(selected)}
             report['folds'].append({'first_delivery_day': month + '-01'})
         (self.run_dir / 'report.json').write_text(json.dumps(report))
