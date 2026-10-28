@@ -31,7 +31,7 @@
 
 - **file-urls** — Refer to files in chat by their full `file:///` URL, never by a bare or relative path.
 
-- **html-preview** — Present HTML in the browser viewer. In Codex, use `open_in_codex` with `target.type: "browser"` and the `file:///` URL; the `file` target opens raw source. A queued request does not confirm rendering.
+- **html-preview** — Present HTML in the browser viewer. In Codex, use `open_in_codex` with `target.type: "browser"` and the `file:///` URL; the `file` target opens raw source. During UI iteration, edit the implementation and refresh the same local preview; do not create new exports or preview copies for each edit. A queued request does not confirm rendering.
 
 - **named-adds** — Stage named paths, never `git add -A` or `git add .`: untracked files you didn't mean to commit ride along silently.
 
@@ -39,6 +39,6 @@
 
 - **worktrees** — Isolate conflicting concurrent work. Multiple agents commonly work in this repository at once. Create worktrees under the gitignored `worktrees/` directory. If another agent's changes conflict with yours, offer to move your work to a worktree rather than overwrite or discard either set of changes.
 
-- **information-home** — Put a fact where it is locally useful, once, and link rather than repeat it. Docstrings and comments: what the code does, and why it is non-obvious — not its callers, not its history. `README.md`: current responsibilities and how to install and run; describe what is, never history, migration plans or pending cutovers. `wiki/`: domain knowledge, design decisions and specs (`wiki/specs/`), stating what is; `wiki/log.md`: what changed. Commit message and PR description: why *this* change — evidence, bugs found, dependencies, rejected alternatives. `AGENTS.md` and `.agents/skills/`: durable instruction to agents, nothing else.
+- **information-home** — Put a fact where it is locally useful, once, and link rather than repeat it. Docstrings and comments: what the code does, and why it is non-obvious — not its callers, not its history. `README.md`: current responsibilities and how to install and run; describe what is, never history, migration plans or pending cutovers. The product frontend owns its architecture explanation, with one readable source in the repository. `wiki/`: scientific contracts, domain knowledge, design decisions and specs (`wiki/specs/`), stating what is; `wiki/log.md`: what changed. Commit message and PR description: why *this* change — evidence, bugs found, dependencies, rejected alternatives. `AGENTS.md` and `.agents/skills/`: durable instruction to agents, nothing else.
 
-- **architecture-delta** — Declare the architecture delta in every PR. Every PR body carries an "Architecture delta" section: "None", or one line per change to the affected product's dataflow graph (`wiki/sushi-2.md` for power flow; `wiki/price-forecasting.md` for forecasting), updated in the same PR. The graph holds implemented parts (solid) and planned parts (dashed, class `planned`): a plan PR adds or removes dashed parts, a feature PR turns them solid — reviewers see what was fleshed out.
+- **architecture-delta** — Every PR body carries an "Architecture delta" section: "None", or one line per change to the affected product’s canonical explanation, updated in the same PR. Forecasting uses frontend "How it works", sourced from `forecasts/web/pipeline.json`; power flow uses `wiki/sushi-2.md`. Keep implemented and planned behavior explicit. Link to the canonical explanation rather than maintaining duplicate diagrams or README narratives.

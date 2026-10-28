@@ -15,7 +15,7 @@
 
 ## Price forecasting
 
-- [price-forecasting.md](price-forecasting.md) — independent forecast product, architecture graph and links to design and implementation
+- [price-forecasting.md](price-forecasting.md) — independent forecast product, canonical frontend explanation and scientific contracts
 - [price-forecasting/forecast-infrastructure.md](price-forecasting/forecast-infrastructure.md) — S3 snapshots, local execution, wiki research planning and MLflow evidence
 - [price-forecasting/germany-luxembourg.md](price-forecasting/germany-luxembourg.md) — independent Germany–Luxembourg quarter-hour forecast: agreed CatBoost quantiles, public fundamentals and implementation handover
 - [price-forecasting/data-sources.md](price-forecasting/data-sources.md) — verified price, weather and demand contracts, twelve locations, timing gaps and diagnostic evidence
@@ -33,7 +33,6 @@
 
 ## Specs
 
-- [Forecast product explainer](../explainers/forecast-product.html) — approved visual design for results, metrics and the forecasting method
 
 ### Earlier implementation working memory
 - [specs/cnec-constraint-selection.md](specs/cnec-constraint-selection.md) — direct map selection, signed constraint contributions and interval navigation

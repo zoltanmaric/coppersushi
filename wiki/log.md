@@ -341,3 +341,7 @@ the implemented JAO readers remain. The voltage-simplification findings live in
 ## [2026-10-09] ingest | First quantile forecast evaluation
 
 The fixed baseline improves weighted interval score against its distributional reference, while both nominal uncertainty bands under-cover. Weather accounts for the headline gain; adding demand does not improve the weather-only headline score. Further quality experiments and prospective evidence need a separate continuation decision. [Result and limits](price-forecasting/evaluation.md#result).
+
+## [2026-10-20] decision | Forecast architecture ownership
+
+The forecast frontend “How it works” owns the architecture explanation, with readable stages and connections in `forecasts/web/pipeline.json`. The wiki retains scientific contracts and decisions; README owns commands and links. [Product overview](price-forecasting.md#architecture).
