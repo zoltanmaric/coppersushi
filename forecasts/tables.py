@@ -4,7 +4,6 @@ from collections.abc import Sequence
 import pandera.polars as pa
 from pandera.typing.polars import DataFrame
 import polars as pl
-import pyarrow as arrow
 
 from forecasts.config import QUANTILES
 from forecasts.input_types import Row
@@ -116,7 +115,7 @@ class ScoredPredictions(Predictions):
 
 
 def feature_table(records: Sequence[Row]) -> DataFrame[Features]:
-    """Parse the legacy input assembly once, before entering local evaluation."""
+    """Parse input assembly records before entering local evaluation."""
     schema = Features.to_schema()
     frame = pl.DataFrame(records, infer_schema_length=None)
     for name, column in schema.columns.items():
@@ -128,22 +127,6 @@ def feature_table(records: Sequence[Row]) -> DataFrame[Features]:
         else:
             frame = frame.with_columns(pl.col(name).cast(dtype, strict=True))
     return Features.validate(frame)
-
-
-def artifact_table(frame: pl.DataFrame) -> arrow.Table:
-    """Serialize domain dates to the established Parquet string representation.
-
-    Model code never reads these strings. Arrow infers the legacy nullable
-    column types here, preserving compatibility with saved baseline artifacts.
-    """
-    records = frame.to_dicts()
-    temporal = [name for name, dtype in frame.schema.items()
-                if dtype == pl.Date or isinstance(dtype, pl.Datetime)]
-    for record in records:
-        for name in temporal:
-            value = record[name]
-            record[name] = value.isoformat() if value is not None else None
-    return arrow.Table.from_pylist(records)
 
 
 def _finite(data: pa.PolarsData) -> pl.LazyFrame:

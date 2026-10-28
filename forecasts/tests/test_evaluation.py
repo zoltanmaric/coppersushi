@@ -1,7 +1,7 @@
 """Scores, operational fallbacks and the complete selection/fit boundary."""
 from forecasts.contracts import FloatArray, Reference
 from forecasts.input_types import Row
-from forecasts.tables import Features, ScoredPredictions, feature_table, artifact_table
+from forecasts.tables import Features, ScoredPredictions, feature_table
 from pandera.errors import SchemaError
 import polars as pl
 from datetime import date, timedelta
@@ -64,7 +64,6 @@ class EvaluationTests(unittest.TestCase):
         self.assertEqual(table.height, 92)
         self.assertEqual(table.schema['delivery_date'], pl.Date)
         self.assertEqual(table.schema['delivery_utc'], pl.Datetime('us', 'UTC'))
-        self.assertEqual(artifact_table(table).to_pylist(), records)
         # Inputs cannot silently become labels or carry a contradictory clock.
         with self.assertRaises(SchemaError):
             Features.validate(table.with_columns(pl.lit(42.).alias('price_eur_mwh')))
@@ -150,10 +149,7 @@ class EvaluationTests(unittest.TestCase):
             self.assertTrue(all(v is not None for v in before['target']))
             self.assertEqual(set(before['target_missing']), {0})
             self.assertEqual(report['missing_truth'], 0)
-            scored = pl.read_parquet(original / 'predictions.parquet').with_columns(
-                pl.col('delivery_utc').str.to_datetime(format='%+', time_zone='UTC'),
-                pl.col('delivery_date').str.to_date(), pl.col('fold').str.to_date(),
-                pl.col('demand_selected_update_utc').cast(pl.String).str.to_datetime(format='%+', time_zone='UTC'))
+            scored = pl.read_parquet(original / 'predictions.parquet')
             ScoredPredictions.validate(scored)
             with self.assertRaises(SchemaError):
                 ScoredPredictions.validate(scored.with_columns(pl.lit(1).cast(pl.Int64).alias('target_missing')))
