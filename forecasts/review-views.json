@@ -1,12 +1,11 @@
 {
   "mlflow_version": "3.17.0",
   "experiment_name": "germany-luxembourg-local",
-  "default_view": "baseline-review",
+  "default_view": "run-review",
   "views": {
-    "baseline-review": {
-      "name": "Baseline review",
+    "run-review": {
+      "name": "Run comparison",
       "state": {
-        "searchFilter": "tags.`mlflow.parentRunId` = 'a3149d4e7c624c46a4320fa95d2132db'",
         "orderByKey": "metrics.`wis`",
         "orderByAsc": true,
         "startTime": "ALL",
