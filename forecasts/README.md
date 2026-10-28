@@ -114,7 +114,7 @@ pixi run --locked python -m forecasts.run run --snapshot data/forecasts/loaded-s
 
 The command requires committed code. It freezes the repository, `pyproject.toml`, `pixi.lock` and configuration, then restores a fresh Pixi `runtime` environment before running Metaflow. The manifest records the actual Python and installed packages, definition hashes, Pixi version, code and snapshot identity. Development-only packages are excluded. Runtime installation can use cached packages; it requires package-network access when the cache is incomplete.
 
-Execution directories live under `data/forecasts/runs/`; each retry gets a new identifier. Set `FORECAST_DATA_ROOT` to use another output/tracking root. `--exploratory` uses the mutable checkout and current interpreter; these runs cannot satisfy accepted reproduction. Inputs remain in S3, while execution artifacts must be retained locally.
+Execution directories live under `data/forecasts/runs/`; each retry gets a new identifier. Set `FORECAST_DATA_ROOT` to use another output/tracking root. `--exploratory` uses the mutable checkout and current interpreter; these runs cannot satisfy accepted reproduction. Inputs remain in S3, while execution artifacts must be retained locally. For smoke tests and PR verification, set `FORECAST_DATA_ROOT` to a temporary directory so validation does not enter research history.
 
 ```sh
 pixi run --locked python -m forecasts.run reproduce RUN_ID --profile YOUR_LOCAL_PROFILE --bucket YOUR_PRIVATE_BUCKET
