@@ -9,7 +9,7 @@
   },
   "inputs": {
     "path": "wiki/price-forecasting/data-sources.md",
-    "sha256": "d2c12fa557c3f5084968847029ad0fea05bb16733ab41231b332916a6a83e8be"
+    "sha256": "749d389c9cb98cd2e55ea54d2fab579992a05794236712fb2ee998115600c112"
   },
   "infrastructure": {
     "path": "wiki/price-forecasting/forecast-infrastructure.md",
