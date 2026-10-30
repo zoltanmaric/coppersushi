@@ -58,6 +58,21 @@ superseded by newer sources, orphan pages, concepts mentioned but lacking a
 page, missing cross-references, data gaps worth a web search. Suggest new
 questions and sources.
 
+## Maintenance
+
+- Work within the caller's scope. During PR review, inspect affected wiki pages and
+  their incoming and outgoing links; report findings unless edits are authorized.
+- Check local link targets and heading anchors. Repair a broken reference when its
+  intended destination is supported by the content or history; otherwise report the
+  uncertainty. A broken link alone does not justify deleting useful content.
+- Use [Reaper discovery](../reaper/SKILL.md#discover) to judge obsolete or redundant
+  content. Return candidates to the caller; do not start another standalone sweep.
+- When applying cleanup, move useful knowledge to its existing home, repair incoming
+  links to changed pages or headings, and update `index.md`. Verify the affected links
+  resolve. Honor raw-source protections and the local rules for `log.md`.
+- Keep maintenance bounded to existing knowledge; leave new research and new-page
+  proposals to the broader lint or ingest operations.
+
 ## Special files
 
 - **`index.md`** — content catalog: every page with a link and one-line
