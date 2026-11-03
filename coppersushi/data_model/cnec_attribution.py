@@ -48,10 +48,12 @@ class PolishAlternative(JaoRecord):
 
 
 class AttributionRow(BaseModel):
-    """Scaling and Polish cap inputs for one market interval, encoded as browser JSON.
+    """Inputs for explaining why electricity prices differ between bidding zones.
 
-    These are inputs to price attribution, not calculated price contributions.
-    Null means the input is unavailable.
+    Attribution calculates how much each binding grid or import/export limit
+    contributes to that price difference, in EUR/MWh. This row holds the scaling
+    factor and Polish cap inputs for one market interval, encoded as browser JSON.
+    Null means an input is unavailable.
     """
 
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
