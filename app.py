@@ -439,7 +439,8 @@ def enrich_cnec(attribution, day, retries, interval_index, selected, viewed):
     result = render_cnec(day, interval_index, selected, attribution)
     view = result.view
     if view is None:
-        raise PreventUpdate
+        return {**token, 'interval': interval_index, 'selected': selected,
+                'error': result.error}
     return {**token, 'interval': interval_index, 'selected': selected,
             'figure': view.figure, 'options': view.constraint_options,
             'reference': f'Reference: {view.reference or "unavailable"}'}
@@ -448,14 +449,18 @@ def enrich_cnec(attribution, day, retries, interval_index, selected, viewed):
 app.clientside_callback(
     """function(view, day, retries, interval, selected) {
         const unchanged = [window.dash_clientside.no_update, window.dash_clientside.no_update,
+                           window.dash_clientside.no_update, window.dash_clientside.no_update,
                            window.dash_clientside.no_update];
         if (!view || view.day !== day || view.request !== retries ||
             view.interval !== interval || view.selected !== selected) return unchanged;
-        return [view.figure, view.options, view.reference];
+        if (view.error) return [...unchanged.slice(0, 3), view.error, true];
+        return [view.figure, view.options, view.reference, '', false];
     }""",
     Output('cnec-map', 'figure', allow_duplicate=True),
     Output('cnec-constraint', 'options', allow_duplicate=True),
     Output('cnec-reference-zone', 'children', allow_duplicate=True),
+    Output('cnec-status', 'children', allow_duplicate=True),
+    Output('cnec-status', 'is_open', allow_duplicate=True),
     Input('cnec-enriched-view', 'data'),
     State('cnec-date', 'value'),
     State('cnec-retry', 'n_clicks'),

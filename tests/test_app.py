@@ -278,3 +278,33 @@ def test_browser_enrichment_roundtrip_preserves_contributions(monkeypatch, conte
     expected = cnec_page.render(day, mapped_elements(), 0, '1', basemap='white-bg')
     assert result.error == ""
     assert result.view.figure.to_json() == expected.figure.to_json()
+
+
+def test_enrichment_render_error_reaches_browser_with_selection_scope(monkeypatch):
+    token = {'day': '2024-08-29', 'request': 0}
+    payload = {**token, 'rows': json.loads(inputs().context.to_json(orient='records', date_format='iso'))}
+    monkeypatch.setattr(app, 'render_cnec', lambda *args: app.CnecRender(None, 'render failed'))
+    assert app.enrich_cnec(payload, token['day'], 0, 3, '42', token) == {
+        **token, 'interval': 3, 'selected': '42', 'error': 'render failed',
+    }
+
+
+def test_browser_enrichment_displays_only_current_render_errors():
+    import re
+    import subprocess
+    source = (REPO / 'app.py').read_text()
+    callback = re.search(r'"""(function\(view, day, retries, interval, selected\).*?)"""', source, re.S).group(1)
+    script = 'const apply = ' + callback + ';\n' + '''
+        const assert = require('node:assert/strict');
+        global.window = {dash_clientside: {no_update: 'unchanged'}};
+        const view = {day: '2024-08-29', request: 1, interval: 3, selected: '42', error: 'render failed'};
+        assert.deepEqual(apply(view, view.day, 1, 3, '42'),
+                         ['unchanged', 'unchanged', 'unchanged', 'render failed', true]);
+        for (const args of [['2024-08-30', 1, 3, '42'], [view.day, 2, 3, '42'],
+                            [view.day, 1, 4, '42'], [view.day, 1, 3, '43']]) {
+            assert.deepEqual(apply(view, ...args), Array(5).fill('unchanged'));
+        }
+        const success = {...view, error: undefined, figure: {}, options: [], reference: 'Reference: DE'};
+        assert.deepEqual(apply(success, view.day, 1, 3, '42'), [{}, [], 'Reference: DE', '', false]);
+    '''
+    subprocess.run(['node', '-e', script], check=True, capture_output=True, text=True)
