@@ -12,6 +12,8 @@ from typing import NamedTuple
 
 import numpy as np
 import pandas as pd
+from pandera.typing import DataFrame
+from coppersushi.data_model.jao import PriceContributions
 import plotly.graph_objects as go
 
 from coppersushi import map_style
@@ -133,7 +135,7 @@ def _dots(zonal: pd.DataFrame, reference: str) -> list[go.Scattermapbox]:
     return map_style.haloed(dots, factor=DOT_HALO_FACTOR)
 
 
-def overlay(selected: pd.Series, centres: pd.DataFrame, contribution: pd.DataFrame) -> Overlay:
+def overlay(selected: pd.Series, centres: pd.DataFrame, contribution: DataFrame[PriceContributions]) -> Overlay:
     """The selected row's rays and zone dots over the price layer.
 
     ``selected`` is the row with its geometry, ``centres`` one label point per drawn zone.

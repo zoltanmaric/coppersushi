@@ -20,6 +20,8 @@ from coppersushi.data_model.jao import (
     ConstraintPtdfs,
 )
 from coppersushi.data_model.market import DayAheadPrices
+from coppersushi.data_model.cnec_attribution import AdjacentAttribution, AdjacentUnavailable
+from coppersushi.data_model.network_views import BiddingZoneShapes
 from coppersushi.market_day import MARKET_TZ, MarketDay
 
 
@@ -28,13 +30,13 @@ class Day:
     """Delivery-day inputs; geometry is resolved separately for the viewed interval."""
 
     market_day: MarketDay
-    zones: pd.DataFrame
+    zones: DataFrame[BiddingZoneShapes]
     constraints: DataFrame[ActiveConstraints]
     ptdfs: DataFrame[ConstraintPtdfs]
     external_constraints: DataFrame[ActiveExternalConstraints]
     prices: DataFrame[DayAheadPrices]
     context: DataFrame[AttributionContext] | None = None
-    adjacent: pd.DataFrame | None = None
+    adjacent: DataFrame[AdjacentAttribution] | AdjacentUnavailable | None = None
 
 
 class Rendered(NamedTuple):
@@ -182,7 +184,8 @@ def render(
     interfaces = external[external.hub.isin(cnec_attribution.INTERFACES)
                           & external.coefficient.isin([-1, 1])
                           & external.name.str.startswith("External Constraint")]
-    options = _constraint_options(pd.concat([active, caps, interfaces], ignore_index=True))
+    option_tables: list[pd.DataFrame] = [active, caps, interfaces]
+    options = _constraint_options(pd.concat(option_tables, ignore_index=True))
     option_values = {option["value"] for option in options} - {NO_SELECTION["value"]}
     chosen = "" if selected_source_id is None else str(selected_source_id)
     selected_value = chosen if chosen in option_values else None

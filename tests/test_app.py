@@ -71,7 +71,7 @@ def test_cnec_retry_draws_new_endpoints_without_reloading_the_day(tmp_path, monk
 
     monkeypatch.setattr(jao, "_get", offline)
     result = app.render_cnec(MarketDay.on("2024-08-29"), 0, None)
-    assert result.view is None and "Please retry" in result.error
+    assert isinstance(result, app.CnecRenderFailure) and "Please retry" in result.error
     fc = json.loads((REPO / "tests/fixtures/synthetic-jao/final-computation-hour.json").read_text())["data"]
     calls = []
 
@@ -82,7 +82,7 @@ def test_cnec_retry_draws_new_endpoints_without_reloading_the_day(tmp_path, monk
     monkeypatch.setattr(jao, "_get", fetch)
     result = app.render_cnec(MarketDay.on("2024-08-29"), 0, None)
     figure = result.view.figure
-    assert result.error == ""
+    assert isinstance(result, app.CnecRendered)
     assert "2 of 2 active rows mapped" in figure.layout.annotations[0].text
     assert len(calls) == 1
     app.render_cnec(MarketDay.on("2024-08-29"), 0, "1")
@@ -226,7 +226,7 @@ def test_enrichment_preserves_current_interval_and_selection(monkeypatch):
     attribution = app.attribution_to_browser(inputs().context, MarketDay.on(token['day'])).model_dump(mode='json')
     seen = []
     view = cnec_page.render(inputs(), mapped_elements(), 0, None)
-    monkeypatch.setattr(app, 'render_cnec', lambda *args: seen.append(args) or app.CnecRender(view))
+    monkeypatch.setattr(app, 'render_cnec', lambda *args: seen.append(args) or app.CnecRendered(view))
     result = app.enrich_cnec(attribution, token['day'], 7, '42', token)
     assert seen == [(MarketDay.on(token['day']), 7, '42', app.AttributionPayload.model_validate(attribution))]
     assert result['figure'] is view.figure
@@ -238,10 +238,10 @@ def test_enrichment_preserves_current_interval_and_selection(monkeypatch):
 
 
 def test_loaded_cnec_view_rejects_a_missing_interval():
-    token = {'day': '2024-08-29', 'request': 0}
+    token = {'day': '2024-08-29'}
     with pytest.raises(ValueError, match="missing its interval index"):
         app.update_cnec(None, 0, 0, None, None, None,
-                        token['day'], token, [], token, 0)
+                        token['day'], token, [], token)
 
 
 def test_enrichment_failure_leaves_base_map_usable_and_retryable(monkeypatch):
@@ -256,7 +256,7 @@ def test_enrichment_failure_leaves_base_map_usable_and_retryable(monkeypatch):
         app.enrich_cnec(failed, token['day'], 0, None, token)
     monkeypatch.setattr(app, 'ctx', SimpleNamespace(triggered_id='cnec-next'))
     seen = []
-    monkeypatch.setattr(app, 'render_cnec', lambda *args: seen.append(args) or app.CnecRender(None, 'unavailable'))
+    monkeypatch.setattr(app, 'render_cnec', lambda *args: seen.append(args) or app.CnecRenderFailure('unavailable'))
     app.update_cnec(None, 0, 1, 0, None, failed, token['day'], token, [], token)
     assert seen[0][1] == 1
     monkeypatch.setattr(app.attribution_source, 'load_day', lambda _: inputs().context)
@@ -281,14 +281,14 @@ def test_browser_enrichment_roundtrip_preserves_contributions(monkeypatch, conte
     monkeypatch.setattr(app, 'basemap', lambda: 'white-bg')
     result = app.render_cnec(MarketDay.on('2024-08-29'), 0, '1', app.AttributionPayload.model_validate(attribution))
     expected = cnec_page.render(day, mapped_elements(), 0, '1', basemap='white-bg')
-    assert result.error == ""
+    assert isinstance(result, app.CnecRendered)
     assert result.view.figure.to_json() == expected.figure.to_json()
 
 
 def test_enrichment_render_error_reaches_browser_with_selection_scope(monkeypatch):
     token = {'day': '2024-08-29'}
     payload = app.attribution_to_browser(inputs().context, MarketDay.on(token['day'])).model_dump(mode='json')
-    monkeypatch.setattr(app, 'render_cnec', lambda *args: app.CnecRender(None, 'render failed'))
+    monkeypatch.setattr(app, 'render_cnec', lambda *args: app.CnecRenderFailure('render failed'))
     assert app.enrich_cnec(payload, token['day'], 3, '42', token) == {
         **token, 'interval': 3, 'selected': '42', 'error': 'render failed',
     }
@@ -313,3 +313,11 @@ def test_browser_enrichment_displays_only_current_render_errors():
         assert.deepEqual(apply(success, view.day, 3, '42'), [{}, [], 'Reference: DE', '', false]);
     '''
     subprocess.run(['node', '-e', script], check=True, capture_output=True, text=True)
+
+
+
+def test_missing_render_interval_does_not_default_to_midnight(monkeypatch):
+    monkeypatch.setattr(app, "cnec_day", lambda _: inputs())
+    result = app.render_cnec(MarketDay.on("2024-08-29"), None, None)
+    assert isinstance(result, app.CnecRenderFailure)
+    assert result.error

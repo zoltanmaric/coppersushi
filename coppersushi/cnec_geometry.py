@@ -24,6 +24,7 @@ from collections.abc import Iterator
 
 import pandas as pd
 from pandera.typing import DataFrame
+from coppersushi.data_model.osm_locator import LocatedSubstations
 
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
 from coppersushi.data_model.jao import ElementEnds
@@ -91,7 +92,7 @@ def _cluster(points: list[Point]) -> list[Point]:
     return places
 
 
-def substation_index(substations: pd.DataFrame) -> dict[str, list[Point]]:
+def substation_index(substations: DataFrame[LocatedSubstations]) -> dict[str, list[Point]]:
     """Every key a located substation answers to, and the distinct places it can mean."""
     located: dict[str, list[Point]] = {}
     for _, row in substations.iterrows():
@@ -161,7 +162,7 @@ def _placement(substation_from: str | None, substation_to: str | None, index: di
 
 def locate_elements(
     ends: DataFrame[ElementEnds],
-    substations: pd.DataFrame,
+    substations: DataFrame[LocatedSubstations],
     aliases: dict[str, str] | None = None,
 ) -> DataFrame[MappedCnecElements]:
     """One row per publisher and named element, placed between its substations where located.

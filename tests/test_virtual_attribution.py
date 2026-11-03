@@ -39,9 +39,11 @@ def test_all_new_interfaces_accept_independent_terms_and_reject_unexplained_spre
 def test_nordic_outer_term_keeps_sign_and_requires_correct_interval_and_coefficients(hub):
     rows = json.loads((FIXTURES / 'nordic.json').read_text())
     assert attribution.nordic_outer_term(rows, hub, INTERVAL) == pytest.approx(-2.0)
-    assert attribution.nordic_outer_term(rows, hub, INTERVAL + pd.Timedelta(minutes=15)) is None
+    with pytest.raises(ValueError, match="requested interval"):
+        attribution.nordic_outer_term(rows, hub, INTERVAL + pd.Timedelta(minutes=15))
     del rows[0]['ptdf_' + attribution.NORDIC_HUBS[hub]]
-    assert attribution.nordic_outer_term(rows, hub, INTERVAL) is None
+    with pytest.raises(ValueError, match="missing columns"):
+        attribution.nordic_outer_term(rows, hub, INTERVAL)
 
 
 def test_validated_interface_ray_uses_selected_dual_and_retains_adjacent_price():
@@ -75,3 +77,57 @@ def test_validated_interface_ray_uses_selected_dual_and_retains_adjacent_price()
                                  adjacent=adjacent.assign(adjacent_price=case['export_adjacent_price']))
     assert export.reference == case['owner']
     assert export.contribution.set_index('zone').contribution[case['other']] == 10.0
+
+
+def test_adjacent_loader_distinguishes_unavailable_data_from_failure(monkeypatch, tmp_path):
+    from coppersushi.data_sources import virtual_attribution as source
+    from coppersushi.data_model.cnec_attribution import AdjacentUnavailable
+    from coppersushi.market_day import MarketDay
+
+    monkeypatch.setattr(source.jao, "JAO_DIR", tmp_path)
+    monkeypatch.setattr(source.cache, "restore", lambda *args: False)
+    day = MarketDay.containing(INTERVAL)
+    assert isinstance(source.load_interval(day, INTERVAL, "ALBE"), AdjacentUnavailable)
+    monkeypatch.setattr(source.jao, "_get", lambda *args, **kwargs: [])
+    absent = source.load_interval(day, INTERVAL, "DE_DK1_VH")
+    assert isinstance(absent, AdjacentUnavailable)
+    assert "unavailable" in absent.reason
+    assert not list(tmp_path.rglob("*.json"))
+
+    def offline(*args, **kwargs):
+        raise OSError("Nordic feed offline")
+
+    monkeypatch.setattr(source.jao, "_get", offline)
+    with pytest.raises(OSError, match="Nordic feed offline"):
+        source.load_interval(day, INTERVAL, "DE_DK1_VH")
+
+
+def test_adjacent_loader_returns_a_validated_table(monkeypatch, tmp_path):
+    from coppersushi.data_sources import virtual_attribution as source
+    from coppersushi.data_model.cnec_attribution import AdjacentAttribution
+    from coppersushi.market_day import MarketDay
+
+    rows = json.loads((FIXTURES / "nordic.json").read_text())
+    case = next(c for c in CASES if c["hub"] == "DE_DK1_VH")
+    prices = pd.DataFrame(case["prices"]).assign(interval=INTERVAL)
+    monkeypatch.setattr(source.jao, "JAO_DIR", tmp_path)
+    monkeypatch.setattr(source.cache, "restore", lambda *args: False)
+    monkeypatch.setattr(source.cache, "publish", lambda *args: None)
+    monkeypatch.setattr(source.jao, "_get", lambda *args, **kwargs: rows)
+    monkeypatch.setattr(source, "_prices", lambda *args: prices)
+    result = source.load_interval(MarketDay.containing(INTERVAL), INTERVAL, "DE_DK1_VH")
+    assert isinstance(result, pd.DataFrame)
+    AdjacentAttribution.validate(result)
+    assert result.adjacent_term.iloc[0] == pytest.approx(-2.0)
+
+
+def test_unavailable_adjacent_reason_is_visible():
+    from coppersushi.data_model.cnec_attribution import AdjacentUnavailable
+
+    case = next(c for c in CASES if c["hub"] == "DE_DK1_VH")
+    physical, ptdfs, external, prices = [pd.DataFrame(case[k]).assign(interval=INTERVAL)
+                                      for k in ["physical", "ptdfs", "external", "prices"]]
+    result = cnec_market.snapshot(physical, ptdfs, external, prices, INTERVAL,
+        cnec_market.ConstraintKey(201), alpha=.5, adjacent=AdjacentUnavailable("Publication pending"))
+    assert result.contribution is None
+    assert result.note == "Publication pending"

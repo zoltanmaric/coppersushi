@@ -9,9 +9,13 @@ from shapely.geometry import Point
 from pandera.typing import DataFrame
 
 from coppersushi.data_model.cnec_attribution import (
-    AlphaFactor, AllocationConstraint, NetPosition, PolishAlternative, AttributionContext,
+    AlphaFactor, AllocationConstraint, NetPosition, PolishAlternative, AttributionContext, CountryCaps,
 )
 
+from coppersushi.data_model.market import ZonalPrices
+from coppersushi.data_model.jao import ConstraintPtdfs, ActiveConstraints, ActiveExternalConstraints
+from coppersushi.data_model.cnec_price_map import MappedCnecElements
+from coppersushi.data_model.network_views import BiddingZoneShapes
 from coppersushi.market import CORE_ZONES
 from coppersushi.market_day import MarketDay
 
@@ -100,30 +104,34 @@ def price_spread(reference_price: float, other_price: float, contribution: float
     return PriceSpread(observed, contribution, observed - contribution)
 
 
-def country_caps(inputs: pd.DataFrame | None, prices: pd.DataFrame, interval: pd.Timestamp) -> pd.DataFrame:
+def country_caps[Prices: ZonalPrices](inputs: DataFrame[AttributionContext] | None, prices: DataFrame[Prices], interval: pd.Timestamp) -> DataFrame[CountryCaps]:
     """Only a saturated PL cap with a correctly signed, nonzero validated dual is binding."""
     columns = ["source_id", "interval", "name", "shadow_price", "direction", "capacity", "delta"]
     if inputs is None or inputs.empty:
-        return pd.DataFrame(columns=columns)
+        return CountryCaps.validate(pd.DataFrame(columns=columns).assign(
+            interval=pd.Series([], dtype="datetime64[ns, UTC]")))
     rows = inputs[inputs.interval.eq(interval)]
     price = prices[prices.interval.eq(interval) & prices.zone.eq("PL")]
     if len(rows) != 1 or len(price) != 1:
-        return pd.DataFrame(columns=columns)
+        return CountryCaps.validate(pd.DataFrame(columns=columns).assign(
+            interval=pd.Series([], dtype="datetime64[ns, UTC]")))
     row = rows.iloc[0]
     delta = country_cap_effect(float(price.price.iloc[0]), float(row.polish_alt))
     if not np.isfinite(delta) or abs(delta) <= 1e-9:
-        return pd.DataFrame(columns=columns)
+        return CountryCaps.validate(pd.DataFrame(columns=columns).assign(
+            interval=pd.Series([], dtype="datetime64[ns, UTC]")))
     if delta < 0 and abs(row.polish_position - row.export_limit) <= 0.051:
         identity, sense, capacity = -2, "export", row.export_limit
     elif delta > 0 and abs(row.polish_position + row.import_limit) <= 0.051:
         identity, sense, capacity = -1, "import", row.import_limit
     else:
-        return pd.DataFrame(columns=columns)
+        return CountryCaps.validate(pd.DataFrame(columns=columns).assign(
+            interval=pd.Series([], dtype="datetime64[ns, UTC]")))
     return pd.DataFrame([[identity, interval, f"Poland aggregate {sense} cap", abs(delta), sense,
-                          capacity, delta]], columns=columns)
+                          capacity, delta]], columns=columns).pipe(CountryCaps.validate)
 
 
-def physical_reference(row: pd.Series, geometries: pd.DataFrame, zones: pd.DataFrame) -> str | None:
+def physical_reference(row: pd.Series, geometries: DataFrame[MappedCnecElements], zones: DataFrame[BiddingZoneShapes]) -> str | None:
     """Reference the publisher-oriented sending endpoint, requiring unique zone coverage."""
     matched = geometries[geometries.eic.eq(row.eic) & geometries.tso.eq(row.tso)
                          & geometries.name.eq(row['name'])]
@@ -147,8 +155,8 @@ def virtual_reference(row: pd.Series) -> str | None:
     return other if row.coefficient == 1 else owner
 
 
-def alegro_validated(ptdfs: pd.DataFrame, physical: pd.DataFrame, external: pd.DataFrame,
-                     prices: pd.DataFrame, alpha: float) -> bool:
+def alegro_validated[Prices: ZonalPrices](ptdfs: DataFrame[ConstraintPtdfs], physical: DataFrame[ActiveConstraints], external: DataFrame[ActiveExternalConstraints],
+                     prices: DataFrame[Prices], alpha: float) -> bool:
     """Independent virtual-hub stationarity and observed endpoint-spread checks.
 
     Keep distinct source duals at both ALEGrO ends. They are terms of one cap's total
@@ -186,25 +194,30 @@ def nordic_outer_term(rows: list[dict], hub: str, interval: pd.Timestamp) -> flo
     """Published Nordic virtual-minus-country potential, with no Core α scaling.
 
     Compare endpoints within the same synchronous group; Nordic groups do not share
-    one balance-price constant. An entirely missing shadow-price column is unavailable.
+    one balance-price constant. Empty feeds or unpublished shadow prices are unavailable; invalid records raise.
     """
-    virtual = NORDIC_HUBS.get(hub)
-    if virtual is None or not rows:
+    virtual = NORDIC_HUBS[hub]
+    if not rows:
         return None
     other = INTERFACES[hub][1]
     frame = pd.DataFrame(rows)
     required = {"id", "dateTimeUtc", "shadowPrice", f"ptdf_{virtual}", f"ptdf_{other}"}
-    if not required.issubset(frame) or frame.id.duplicated().any():
+    missing = required - set(frame.columns)
+    if missing:
+        raise ValueError(f"Nordic response missing columns: {sorted(missing)}")
+    if frame.id.duplicated().any():
+        raise ValueError("Nordic response has duplicate row IDs")
+    if not pd.to_datetime(frame.dateTimeUtc, utc=True).eq(interval).all():
+        raise ValueError("Nordic response does not match the requested interval")
+    duals = pd.to_numeric(frame.shadowPrice, errors="raise")
+    if duals.isna().any():
         return None
-    if not pd.to_datetime(frame.dateTimeUtc, utc=True, errors="coerce").eq(interval).all():
-        return None
-    duals = pd.to_numeric(frame.shadowPrice, errors="coerce")
-    if not duals.notna().any() or (duals.dropna() < 0).any():
-        return None
+    if (duals < 0).any() or not np.isfinite(duals).all():
+        raise ValueError("Nordic shadow prices must be finite and nonnegative")
     active = frame[duals.gt(0)]
-    coefficients = active[[f"ptdf_{virtual}", f"ptdf_{other}"]].apply(pd.to_numeric, errors="coerce")
-    if not np.isfinite(coefficients.to_numpy()).all() or not np.isfinite(duals.dropna()).all():
-        return None
+    coefficients = active[[f"ptdf_{virtual}", f"ptdf_{other}"]].apply(pd.to_numeric, errors="raise")
+    if not np.isfinite(coefficients.to_numpy()).all():
+        raise ValueError("Active Nordic PTDF coefficients must be finite")
     difference = coefficients[f"ptdf_{virtual}"] - coefficients[f"ptdf_{other}"]
     return float(-(duals.loc[active.index] * difference).sum())
 
@@ -220,8 +233,8 @@ def interface_spread(core_outer: float, bound_term: float, adjacent_outer: float
 LOSS_HUBS = {'NL_NO2_NorNed', 'DE_NO2_BigHub', 'DE_SE4_Baltic'}
 
 
-def virtual_validated(hub: str, ptdfs: pd.DataFrame, physical: pd.DataFrame,
-                      external: pd.DataFrame, prices: pd.DataFrame, inputs: pd.DataFrame | None,
+def virtual_validated[Prices: ZonalPrices](hub: str, ptdfs: DataFrame[ConstraintPtdfs], physical: DataFrame[ActiveConstraints],
+                      external: DataFrame[ActiveExternalConstraints], prices: DataFrame[Prices], inputs: DataFrame[AttributionContext] | None,
                       alpha: float, adjacent: pd.Series) -> bool:
     """Require the complete candidate endpoint decomposition to match published prices.
 

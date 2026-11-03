@@ -1,3 +1,4 @@
+from coppersushi.data_model.market import ElectricityMapsPriceResponse
 import json
 
 import pandas as pd
@@ -31,7 +32,8 @@ def inputs() -> cnec_page.Day:
         constraints=cnecs.active_constraints(rows),
         ptdfs=cnecs.constraint_ptdfs(rows),
         external_constraints=cnecs.active_external_constraints(rows),
-        prices=market.day_ahead_prices(json.loads(PRICES.read_text())["responses"]),
+        prices=market.day_ahead_prices([ElectricityMapsPriceResponse.model_validate(payload)
+            for payload in json.loads(PRICES.read_text())["responses"]]),
         context=pd.read_csv(REPO / "tests/fixtures/cnec-attribution/historical-context.csv").assign(
             interval=lambda f: pd.to_datetime(f.interval, utc=True)),
     )

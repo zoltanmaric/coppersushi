@@ -4,8 +4,12 @@ import math
 
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 from pandera.typing import DataFrame
+from coppersushi.data_model.cnec_attribution import CountryCaps
+from coppersushi.data_model.network_views import BiddingZoneShapes
+from coppersushi.data_model.market import ZonalPrices
+from coppersushi.data_model.jao import ActiveConstraints, ActiveExternalConstraints
+import plotly.graph_objects as go
 
 from coppersushi import cnec_attribution, cnec_influence, map_style, market
 from coppersushi.cnec_market import Snapshot
@@ -23,7 +27,7 @@ TARGET_SIZE = 8
 POINT_SIZE = 9
 
 
-def _priced_zones(zones: pd.DataFrame, prices: pd.DataFrame) -> pd.DataFrame:
+def _priced_zones(zones: DataFrame[BiddingZoneShapes], prices: DataFrame[ZonalPrices]) -> pd.DataFrame:
     priced = zones[["zone", "geometry"]].merge(
         prices[["zone", "price"]], on="zone", how="inner", validate="one_to_one"
     )
@@ -45,7 +49,7 @@ def _zone_centres(priced_zones: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def _placed(constraints: pd.DataFrame, geometries: DataFrame[MappedCnecElements]) -> pd.DataFrame:
+def _placed(constraints: DataFrame[ActiveConstraints], geometries: DataFrame[MappedCnecElements]) -> pd.DataFrame:
     return constraints.merge(
         geometries, on=["eic", "tso", "name"], how="left", validate="many_to_one"
     )
@@ -261,9 +265,9 @@ def _line_hit_targets(rows: pd.DataFrame) -> go.Scattermapbox:
         text=hover, hoverinfo="text", showlegend=False)
 
 
-def _cap_traces(zones: pd.DataFrame, caps: pd.DataFrame | None, selected_id: int | None) -> list:
+def _cap_traces(zones: DataFrame[BiddingZoneShapes], caps: DataFrame[CountryCaps], selected_id: int | None) -> list:
     traces: list[go.Scattermapbox] = []
-    if caps is None or caps.empty:
+    if caps.empty:
         return traces
     polish = zones[zones.zone.eq("PL")]
     if len(polish) != 1:
@@ -291,7 +295,7 @@ def _cap_traces(zones: pd.DataFrame, caps: pd.DataFrame | None, selected_id: int
     return traces
 
 
-def _interfaces(external: pd.DataFrame, centres: pd.DataFrame) -> pd.DataFrame:
+def _interfaces(external: DataFrame[ActiveExternalConstraints], centres: pd.DataFrame) -> pd.DataFrame:
     """Schematic endpoint anchors; never represent a combined interface as one cable route."""
     anchors = {r.zone: (r.x, r.y) for r in centres.itertuples()}
     anchors.update(cnec_attribution.ADJACENT_ANCHORS)
@@ -351,7 +355,7 @@ def _view(priced_zones: pd.DataFrame, adjacent: pd.DataFrame | None = None) -> d
 
 
 def figure(
-    zones: pd.DataFrame,
+    zones: DataFrame[BiddingZoneShapes],
     geometries: DataFrame[MappedCnecElements],
     view: Snapshot,
     mapbox_token: str | None = None,
@@ -380,7 +384,7 @@ def figure(
     virtual = _selected(interfaces, view.selected_id)
     if virtual is not None:
         selected = virtual
-    if view.caps is not None and view.selected_id in view.caps.source_id.values:
+    if view.selected_id in view.caps.source_id.values:
         anchor = centres[centres.zone.eq("PL")]
         if len(anchor) == 1:
             point = anchor.iloc[0]
@@ -400,7 +404,7 @@ def figure(
         if virtual is not None:
             effect = effects.iloc[0]
             annotation += f"<br><b>{effect.zone}: {effect.contribution:+,.2f} €/MWh relative to {view.reference}</b>"
-        elif view.caps is not None and view.selected_id in view.caps.source_id.values:
+        elif view.selected_id in view.caps.source_id.values:
             annotation += f"<br><b>Other Core zones: {effects.contribution.iloc[0]:+,.2f} €/MWh relative to PL</b>"
         influence = cnec_influence.overlay(selected, centres, view.contribution)
         traces += influence.traces
