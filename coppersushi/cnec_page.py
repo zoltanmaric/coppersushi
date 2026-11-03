@@ -86,11 +86,10 @@ def layout(day: str | None = None, mapbox_token: str | None = None) -> html.Div:
                         placeholder="Select a binding row",
                     ),
                     html.Span(id="cnec-reference-zone"),
-                    dbc.Button("Retry", id="cnec-retry", n_clicks=0, color="secondary"),
                 ],
                 style={
                     "display": "grid",
-                    "gridTemplateColumns": "12em minmax(20em, 1fr) auto auto",
+                    "gridTemplateColumns": "12em minmax(20em, 1fr) auto",
                     "gap": "0.6em",
                     "padding": "0.4em 1em",
                 },

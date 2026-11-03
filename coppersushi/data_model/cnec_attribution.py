@@ -73,11 +73,10 @@ class AttributionRow(BaseModel):
 
 
 class AttributionRequest(BaseModel):
-    """Delivery date and retry identifier shared by attribution browser responses."""
+    """Delivery date shared by attribution browser responses."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
     day: date
-    request: int | None
 
     @field_validator('day', mode='before')
     @classmethod
@@ -114,11 +113,10 @@ class AttributionContext(pa.DataFrameModel):
         coerce = True
 
 
-def attribution_to_browser(frame: DataFrame[AttributionContext], day: MarketDay,
-                           request: int | None) -> AttributionPayload:
+def attribution_to_browser(frame: DataFrame[AttributionContext], day: MarketDay) -> AttributionPayload:
     """Build a typed browser payload from a day's table, preserving missing inputs as None."""
     return AttributionPayload.model_validate({
-        'day': day.date, 'request': request,
+        'day': day.date,
         'rows': frame.astype(object).where(frame.notna(), None).to_dict(orient='records'),
         'complete': bool(frame.notna().all().all()),
     })
