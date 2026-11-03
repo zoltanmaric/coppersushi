@@ -7,6 +7,7 @@ See wiki/flow-based-market-coupling.md#attribution for an example and interpreta
 """
 
 
+import datetime
 from datetime import date
 
 import pandas as pd
@@ -14,7 +15,7 @@ import pandera.pandas as pa
 from pandera.typing import DataFrame, Series
 from pydantic import AwareDatetime, BaseModel, ConfigDict, StrictFloat, StrictInt, field_validator
 
-from coppersushi.data_model.jao import UtcTimestamp
+from coppersushi.data_model.jao import ZonedTimestamp
 from coppersushi.market_day import MarketDay
 
 
@@ -101,7 +102,7 @@ class AttributionFailure(AttributionRequest):
 class AttributionContext(pa.DataFrameModel):
     """Table of scaling and Polish cap inputs, one UTC market interval per row."""
 
-    interval: Series[UtcTimestamp] = pa.Field(unique=True)
+    interval: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC}, unique=True)
     alpha: Series[float] = pa.Field(nullable=True)
     import_limit: Series[float] = pa.Field(nullable=True)
     export_limit: Series[float] = pa.Field(nullable=True)

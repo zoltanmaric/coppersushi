@@ -387,6 +387,8 @@ def update_cnec(click: dict | None, previous: int | None, next_: int | None,
     if (viewed_day != token or not ready or 'error' in ready
             or ready.get('day') != day):
         raise PreventUpdate
+    if interval_index is None:
+        raise ValueError("Loaded CNEC view is missing its interval index")
     delivery = MarketDay.on(day)
     enrichment = attribution if attribution and attribution.get('day') == day else None
     if ctx.triggered_id == 'cnec-map':
@@ -394,11 +396,11 @@ def update_cnec(click: dict | None, previous: int | None, next_: int | None,
             raise PreventUpdate
         selected = cnec_page.clicked_selection(click, options or [], selected)
     elif ctx.triggered_id == 'cnec-previous':
-        interval_index = cnec_page.advance_interval(delivery, interval_index or 0, -1)
+        interval_index = cnec_page.advance_interval(delivery, interval_index, -1)
     elif ctx.triggered_id == 'cnec-next':
-        interval_index = cnec_page.advance_interval(delivery, interval_index or 0, 1)
+        interval_index = cnec_page.advance_interval(delivery, interval_index, 1)
     payload = AttributionPayload.model_validate(enrichment) if enrichment and enrichment.get('rows') is not None else None
-    return cnec_outputs(render_cnec(delivery, interval_index or 0, selected, payload))
+    return cnec_outputs(render_cnec(delivery, interval_index, selected, payload))
 
 
 @app.callback(

@@ -1,6 +1,7 @@
 from datetime import UTC, date, datetime
 
 import pandas as pd
+import pytest
 
 from coppersushi.market_day import MARKET_TZ, MarketDay
 
@@ -81,5 +82,6 @@ def test_an_hour_inside_the_day_still_names_the_day():
     assert MarketDay.containing(datetime(2024, 8, 29, 22, tzinfo=UTC)).date == date(2024, 8, 30)
 
 
-def test_containing_reads_a_naive_instant_as_utc():
-    assert MarketDay.containing(datetime.fromisoformat("2024-08-28 22:00")).date == date(2024, 8, 29)
+def test_containing_rejects_a_naive_instant():
+    with pytest.raises(ValueError, match="timezone-aware"):
+        MarketDay.containing(datetime.fromisoformat("2024-08-28 22:00"))

@@ -237,6 +237,13 @@ def test_enrichment_preserves_current_interval_and_selection(monkeypatch):
     assert len(seen) == 1
 
 
+def test_loaded_cnec_view_rejects_a_missing_interval():
+    token = {'day': '2024-08-29', 'request': 0}
+    with pytest.raises(ValueError, match="missing its interval index"):
+        app.update_cnec(None, 0, 0, None, None, None,
+                        token['day'], token, [], token, 0)
+
+
 def test_enrichment_failure_leaves_base_map_usable_and_retryable(monkeypatch):
     from types import SimpleNamespace
     token = {'day': '2024-08-29'}

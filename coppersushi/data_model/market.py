@@ -1,9 +1,11 @@
 """Typed tables for market outcomes published outside the network model."""
 
+import datetime
+
 from pandera.typing import Series
 import pandera.pandas as pa
 
-from coppersushi.data_model.jao import UtcTimestamp
+from coppersushi.data_model.jao import ZonedTimestamp
 
 
 class DayAheadPrices(pa.DataFrameModel):
@@ -15,12 +17,12 @@ class DayAheadPrices(pa.DataFrameModel):
     never one frame whose rows change length partway down.
     """
 
-    interval: Series[UtcTimestamp]
+    interval: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC})
     zone: Series[str]
     price: Series[float]
     unit: Series[str] = pa.Field(eq="EUR/MWh")
     source: Series[str]
-    updated_at: Series[UtcTimestamp]
+    updated_at: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC})
 
     class Config:
         strict = False

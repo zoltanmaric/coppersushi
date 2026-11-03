@@ -34,9 +34,10 @@ class MarketDay:
 
     @classmethod
     def containing(cls, moment: datetime, zone: ZoneInfo = MARKET_TZ) -> "MarketDay":
-        """The operating day an instant falls in; a naive instant is read as UTC."""
-        aware = moment if moment.tzinfo else moment.replace(tzinfo=UTC)
-        return cls(aware.astimezone(zone).date(), zone)
+        """The operating day an explicitly timezone-aware instant falls in."""
+        if moment.utcoffset() is None:
+            raise ValueError("MarketDay.containing requires a timezone-aware instant")
+        return cls(moment.astimezone(zone).date(), zone)
 
     @property
     def start_time_local(self) -> datetime:

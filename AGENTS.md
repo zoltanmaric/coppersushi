@@ -37,7 +37,7 @@
 
 - **worktrees** — Isolate conflicting concurrent work. Multiple agents commonly work in this repository at once. Create worktrees under the gitignored `worktrees/` directory. If another agent's changes conflict with yours, offer to move your work to a worktree rather than overwrite or discard either set of changes.
 
-- **typed-boundaries** — Parse and validate external values at entry points. Inside the application, pass domain types and validated models rather than raw strings or dictionaries. Serialize only at exit points. Reuse existing types; do not introduce wrappers for primitives that have no distinct domain meaning.
+- **typed-boundaries** — Parse and validate external values at entry points. Inside the application, pass domain types and validated models rather than raw strings or dictionaries. Serialize only at exit points. Require inputs that determine meaning; never use defaults to disguise missing or invalid values. Reuse existing types; do not introduce wrappers for primitives that have no distinct domain meaning.
 
 - **model-docstrings** — Give data models concise docstrings explaining what they represent, unless the model is trivial and its name already makes that clear.
 
