@@ -10,10 +10,11 @@ description: Investigates external API outages, HTTP 5xx failures, and outage du
 2. Compare the same request from the failing runtime and an independent client.
    If results differ, inspect credentials, proxies, DNS and request differences;
    distinguish local authentication failures from provider unavailability.
-3. For cause and timing, check provider notices alongside public outage histories
-   (Downdetector, IsItDownRightNow, Down for Everyone or Just Me), timestamped user
-   reports and application logs. Search the exact hostname and service, not just
-   the provider's name. Render JavaScript-driven monitor results when needed.
+3. For outage news and timing, search Twitter/X or its mirrors first for provider
+   announcements and timestamped user reports. Search the exact hostname and
+   service, not just the provider's name. Then check provider notices, public outage
+   histories (Downdetector, IsItDownRightNow, Down for Everyone or Just Me) and
+   application logs. Render JavaScript-driven monitor results when needed.
 4. Separate first observed failure, last observed failure, last known success and
    first observed recovery. A search crawl date, missing report, or a monitor's
    “UP” label does not establish API health or continuous uptime. Check whether
