@@ -14,6 +14,7 @@ dependencies = [
     "plotly==6.9.0",
     "numpy==2.5.2",
     "pandera[polars]==0.35.0",
+    "pydantic==2.14.1",
     "polars==2.1.0",
     "openpyxl==3.1.5",
     "gunicorn==26.0.0",
@@ -59,7 +60,9 @@ setup = { cmd = "python -c \"import sys; print('Python interpreter:', sys.execut
 dev = "python app.py"
 test-app = "python -m pytest -q"
 test-forecast = "python -m unittest discover -s forecasts/tests -v"
-typecheck = "python -m mypy --config-file forecasts/mypy.ini"
+typecheck-forecast = "python -m mypy --config-file forecasts/mypy.ini"
+typecheck-attribution = "python -m mypy --config-file mypy-attribution.ini"
+typecheck = { depends-on = ["typecheck-forecast", "typecheck-attribution"] }
 test = { depends-on = ["test-app", "test-forecast", "typecheck", "theme-test", "hosting-test"] }
 solve = "python -m coppersushi.data_sources.pypsa_eur solve"
 theme-install = { cmd = "yarn install --frozen-lockfile --ignore-optional", cwd = "121gigawatts" }

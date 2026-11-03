@@ -28,6 +28,14 @@ availability notices do not establish Core availability.
 reported UP when inspected after the failures, but its “last down more than a week
 ago” result missed this observed incident. No usable crowdsourced start time was found.
 
+### Rate-limits
+
+[JAO's October 1, 2025 access notice](https://www.jao.eu/sites/default/files/news_media/PuTo%20Communication.pdf) specifies **100 requests per minute per user or IP address**. It also recommends checking monitoring/metadata endpoints for freshness before large data requests. The quota must be budgeted across concurrent callers, not separately for each worker.
+
+For bulk queries, use the project's empirically successful conservative pace: **at most 40 request starts/minute, spaced 1.5 seconds apart in aggregate**. The [annual audit](jao-constraint-types.md#active-audit) completed 549 requests at that pace without rate limiting. This is operational guidance, not a separate JAO limit or a guarantee when other clients share the IP. The shared `_get` helper does not enforce a global throttle; individual attribution sleeps cannot enforce an aggregate limit across processes.
+
+On 2026-11-03, an unpaced four-worker Polish-feed sweep received 100 successful responses followed by HTTP 429 responses. The probe saved status/errors but not the 429 headers or bodies, so whether JAO supplied `Retry-After` is unknown. After a 65-second cooldown, 12 retries succeeded before the sweep was stopped. For future 429s, retain and honor `Retry-After` when present; otherwise back off at least a minute before resuming conservatively. Do not count a 429 as an empty dataset. The notice does not specify the rate-window algorithm or reset headers.
+
 ## Cache
 
 As inspected on **2026-11-03**, the app already supports private S3 persistence:

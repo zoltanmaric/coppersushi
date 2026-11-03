@@ -10,6 +10,7 @@ import pytest
 
 from coppersushi import REPO, cnec_attribution as attribution, cnec_market, cnec_page, cnecs
 from coppersushi.market_day import MarketDay
+from coppersushi.data_model.cnec_attribution import AlphaFactor, AllocationConstraint, NetPosition, PolishAlternative
 from tests.test_cnec_page import read_zones
 
 FIXTURE = REPO / "tests/fixtures/cnec-attribution"
@@ -29,7 +30,10 @@ def tables():
 
 def context(feeds=None):
     feeds = feeds or inputs()['feeds']
-    return attribution.context(MarketDay.on('2026-09-12'), *feeds.values())
+    models = (AlphaFactor, AllocationConstraint, NetPosition, PolishAlternative)
+    return attribution.context(MarketDay.on('2026-09-12'),
+                               *[[model.model_validate(row) for row in rows]
+                                 for model, rows in zip(models, feeds.values())])
 
 
 def test_polish_quarters_require_four_unique_ids_and_matching_positions():

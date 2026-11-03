@@ -29,6 +29,8 @@ Review with your system architect hat on, including whether this is the right un
 
 Ask whether the design is clear, coherent and as simple as the problem allows—not just whether the code works. Consider ownership, interface clarity, duplicated rules, unnecessary representations or dependencies, and the simplest credible alternative. Ground concerns in concrete code; do not invent objections to fill a checklist. Make your judgment and any remaining compromises explicit.
 
+Check whether raw external representations escape their boundary, or internal callers unnecessarily serialize and reconstruct domain objects.
+
 Run [Reaper discovery](../reaper/SKILL.md#discover) for what the PR makes unnecessary,
 including affected material outside its diff. Choose how to handle candidates within
 the review's authorization: report findings, implement cleanup in the current PR, or
