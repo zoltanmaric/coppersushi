@@ -8,33 +8,41 @@ from coppersushi.data_model.jao import UtcTimestamp
 
 
 class JaoRecord(BaseModel):
-    """Only consumed fields are modeled; additional publisher fields are harmless."""
+    """A timestamped JAO publication record; unconsumed publisher fields are ignored."""
 
     model_config = ConfigDict(extra="ignore", allow_inf_nan=False)
     dateTimeUtc: AwareDatetime
 
 
 class AlphaFactor(JaoRecord):
+    """Published flow-based scaling factor for one market interval."""
+
     alphaFactor: StrictFloat
 
 
 class AllocationConstraint(JaoRecord):
+    """Polish aggregate import and export limits in MW for one market interval."""
+
     limitDown_PL: StrictFloat
     limitUp_PL: StrictFloat
 
 
 class NetPosition(JaoRecord):
+    """Polish net position in MW for one market interval."""
+
     hub_PL: StrictFloat
 
 
 class PolishAlternative(JaoRecord):
+    """Polish net position and alternative price used to infer the cap contribution."""
+
     id: StrictInt
     border_PL_ALT: StrictFloat
     border_PL_SDAC_NP: StrictFloat
 
 
 class AttributionRow(BaseModel):
-    """JSON null means an unavailable input, never a zero contribution."""
+    """Attribution inputs for one interval in browser JSON; null means unavailable."""
 
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     interval: AwareDatetime
