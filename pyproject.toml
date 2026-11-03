@@ -27,7 +27,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest==9.1.1", "mypy==2.4.0", "ansible-core==2.20.0"]
+dev = [
+    "pytest==9.1.1",
+    "mypy==2.4.0",
+    "ansible-core==2.20.0",
+    "pandas-stubs==3.0.5.260914",
+    "types-shapely==2.1.0.20261030",
+    "types-PyYAML==6.0.12.20261103",
+    "boto3-stubs[s3,secretsmanager]==1.43.118",
+    "pyarrow-stubs==20.0.0.20260819",
+    "plotly-stubs==0.1.4",
+]
 
 [tool.setuptools.packages.find]
 include = ["coppersushi*", "forecasts*"]
@@ -60,9 +70,7 @@ setup = { cmd = "python -c \"import sys; print('Python interpreter:', sys.execut
 dev = "python app.py"
 test-app = "python -m pytest -q"
 test-forecast = "python -m unittest discover -s forecasts/tests -v"
-typecheck-forecast = "python -m mypy --config-file forecasts/mypy.ini"
-typecheck-attribution = "python -m mypy --config-file mypy-attribution.ini"
-typecheck = { depends-on = ["typecheck-forecast", "typecheck-attribution"] }
+typecheck = "python -m mypy --config-file mypy.ini"
 test = { depends-on = ["test-app", "test-forecast", "typecheck", "theme-test", "hosting-test"] }
 solve = "python -m coppersushi.data_sources.pypsa_eur solve"
 theme-install = { cmd = "yarn install --frozen-lockfile --ignore-optional", cwd = "121gigawatts" }

@@ -5,7 +5,7 @@ import pandera.errors
 import pytest
 
 from coppersushi import REPO, cnecs
-from coppersushi.data_model.jao import Elements
+from coppersushi.data_model.jao import Elements, ZonedTimestamp
 
 FIXTURES = REPO / "tests" / "fixtures" / "synthetic-jao"
 
@@ -56,6 +56,13 @@ def test_one_row_per_element_hour_and_direction():
 
 def test_hour_is_utc_aware():
     assert str(cnecs.elements(final_computation()).hour.dt.tz) == "UTC"
+
+
+def test_timestamp_type_requires_an_explicit_timezone():
+    with pytest.raises(TypeError, match="tz"):
+        ZonedTimestamp()
+    with pytest.raises(TypeError, match="explicit timezone"):
+        ZonedTimestamp(tz=None)
 
 
 def test_a_naive_hour_is_rejected_rather_than_localised():

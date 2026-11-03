@@ -12,6 +12,7 @@ a silently truncated hour is indistinguishable from a quiet one.
 Field meanings: `wiki/literature/jao-core-publication-handbook.md`.
 """
 
+from datetime import datetime
 import json
 import logging
 import sys
@@ -22,7 +23,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 import pandas as pd
-import pandera as pa
+import pandera.pandas as pa
 from pandera.typing import DataFrame
 
 from coppersushi import cnecs
@@ -69,10 +70,6 @@ class ActiveDay(NamedTuple):
     external_constraints: DataFrame[ActiveExternalConstraints]
 
 
-MODELS = (Elements, Contingencies, ShadowPrices, ExternalConstraintsWithPrices, ElementEnds)
-ACTIVE_MODELS = (ActiveConstraints, ConstraintPtdfs, ActiveExternalConstraints)
-
-
 def day_dir(day: str) -> Path:
     return JAO_DIR / day
 
@@ -88,13 +85,13 @@ def check_complete(endpoint: str, rows: list[dict], total: int) -> None:
         raise RuntimeError(f"{endpoint} returned {len(rows)} of {total} rows: the response is paginated")
 
 
-def _stamp(moment: pd.Timestamp) -> str:
+def _stamp(moment: datetime) -> str:
     """An instant in the form the service's `FromUtc`/`ToUtc` expect."""
     return moment.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
 def _get(
-    endpoint: str, start: pd.Timestamp, end: pd.Timestamp, timeout: int = TIMEOUT_SECONDS,
+    endpoint: str, start: datetime, end: datetime, timeout: int = TIMEOUT_SECONDS,
     base_url: str = BASE_URL,
 ) -> list[dict]:
     """The rows of one page over `[start, end)`, refusing a truncated response."""
@@ -187,7 +184,8 @@ def write_day(
     tables = Day(elements, contingencies, shadow_prices, external_constraints, element_ends)
     _check_domain_contract(tables)
     directory.mkdir(parents=True, exist_ok=True)
-    for name, frame in zip(Day._fields, tables):
+    frames: tuple[pd.DataFrame, ...] = tuple(tables)
+    for name, frame in zip(Day._fields, frames):
         frame.to_csv(_path(directory, name), index=False)
     logger.info("jao: wrote %s", directory)
     return directory
@@ -201,37 +199,44 @@ def write_active_day(
 ) -> Path:
     """Cache normalized active flow-based tables locally; their directory is gitignored."""
     directory.mkdir(parents=True, exist_ok=True)
-    for name, frame in zip(ActiveDay._fields, (constraints, ptdfs, external_constraints)):
+    frames: tuple[pd.DataFrame, ...] = (constraints, ptdfs, external_constraints)
+    for name, frame in zip(ActiveDay._fields, frames):
         frame.to_csv(_path(directory, f"active_{name}"), index=False)
     logger.info("jao: wrote active flow-based tables to %s", directory)
     return directory
 
 
+def _read_table[Schema: pa.DataFrameModel](
+    directory: Path, name: str, model: type[Schema], time_column: str | None,
+) -> DataFrame[Schema]:
+    frame = pd.read_csv(_path(directory, name))
+    if time_column is not None:
+        frame[time_column] = pd.to_datetime(frame[time_column], utc=True, format="ISO8601")
+    return model.validate(_restore_blanks(frame, model))
+
+
 def read_day(directory: Path) -> Day:
     """The five tables back from CSV, each validated once its zone is restored."""
-    frames = []
-    for name, model in zip(Day._fields, MODELS):
-        frame = pd.read_csv(_path(directory, name))
-        if "hour" in frame:
-            # `read_csv`'s own date parsing is inconsistent about tz across versions, so the
-            # column is read as text and converted here.
-            frame = frame.assign(hour=pd.to_datetime(frame.hour, utc=True))
-        frames.append(_restore_blanks(frame, model).pipe(model.validate))
-    day = Day(*frames)
+    day = Day(
+        _read_table(directory, "elements", Elements, "hour"),
+        _read_table(directory, "contingencies", Contingencies, "hour"),
+        _read_table(directory, "shadow_prices", ShadowPrices, "hour"),
+        _read_table(directory, "external_constraints", ExternalConstraintsWithPrices, "hour"),
+        _read_table(directory, "element_ends", ElementEnds, None),
+    )
     _check_domain_contract(day)
     return day
 
 
 def read_active_day(directory: Path) -> ActiveDay:
-    frames = []
-    for name, model in zip(ActiveDay._fields, ACTIVE_MODELS):
-        frame = pd.read_csv(_path(directory, f"active_{name}"))
-        frame = frame.assign(interval=pd.to_datetime(frame.interval, utc=True, format="ISO8601"))
-        frames.append(_restore_blanks(frame, model).pipe(model.validate))
-    return ActiveDay(*frames)
+    return ActiveDay(
+        _read_table(directory, "active_constraints", ActiveConstraints, "interval"),
+        _read_table(directory, "active_ptdfs", ConstraintPtdfs, "interval"),
+        _read_table(directory, "active_external_constraints", ActiveExternalConstraints, "interval"),
+    )
 
 
-def _restore_blanks(frame: pd.DataFrame, model: type) -> pd.DataFrame:
+def _restore_blanks(frame: pd.DataFrame, model: type[pa.DataFrameModel]) -> pd.DataFrame:
     """Put back the empty strings CSV cannot tell from missing values.
 
     `normalise_tso` writes `""` for the TSO of a constraint that belongs to none, and a
@@ -348,7 +353,7 @@ def _check_domain_contract(day: Day) -> None:
     priced = day.shadow_prices[day.shadow_prices.hour.isin(day.elements.hour)]
     identity = ["eic", "tso", "name"]
     required = pd.concat(
-        [day.elements[identity], priced[identity]], ignore_index=True
+        [pd.DataFrame(day.elements[identity]), pd.DataFrame(priced[identity])], ignore_index=True
     ).drop_duplicates()
     _require_element_ends(required, day.element_ends)
 

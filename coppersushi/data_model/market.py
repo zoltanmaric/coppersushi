@@ -1,12 +1,53 @@
 """Typed tables for market outcomes published outside the network model."""
 
+import datetime
+from typing import Literal
+
+from pydantic import AwareDatetime, BaseModel, ConfigDict, StrictFloat, StrictStr
+
 from pandera.typing import Series
 import pandera.pandas as pa
 
-from coppersushi.data_model.jao import UtcTimestamp
+from coppersushi.data_model.jao import ZonedTimestamp
 
 
-class DayAheadPrices(pa.DataFrameModel):
+class ElectricityMapsPrice(BaseModel):
+    """One published zonal day-ahead price and its source update time."""
+
+    model_config = ConfigDict(extra="ignore", allow_inf_nan=False)
+
+    zone: StrictStr
+    datetime: AwareDatetime
+    updatedAt: AwareDatetime
+    value: StrictFloat
+    unit: Literal["EUR/MWh"]
+    source: StrictStr
+
+
+class ElectricityMapsPriceResponse(BaseModel):
+    """One zone's published prices at the resolution stated by Electricity Maps."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    zone: StrictStr
+    temporalGranularity: Literal["hourly", "15_minutes"]
+    data: list[ElectricityMapsPrice]
+
+
+class ZonalPrices(pa.DataFrameModel):
+    """Observed price per zone and interval, including adjacent-zone quotes for rendering."""
+
+    interval: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC})
+    zone: Series[str]
+    price: Series[float]
+
+    class Config:
+        strict = False
+        coerce = True
+        unique = ["interval", "zone"]
+
+
+class DayAheadPrices(ZonalPrices):
     """Published zonal day-ahead prices, one per zone and market time unit.
 
     The grain is the market day's, hourly or quarter-hourly, and `market.check_complete` pins
@@ -15,12 +56,9 @@ class DayAheadPrices(pa.DataFrameModel):
     never one frame whose rows change length partway down.
     """
 
-    interval: Series[UtcTimestamp]
-    zone: Series[str]
-    price: Series[float]
     unit: Series[str] = pa.Field(eq="EUR/MWh")
     source: Series[str]
-    updated_at: Series[UtcTimestamp]
+    updated_at: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC})
 
     class Config:
         strict = False

@@ -3,7 +3,7 @@
 import pandas as pd
 from pandera.typing import DataFrame
 
-from coppersushi.data_model.market import DayAheadPrices
+from coppersushi.data_model.market import DayAheadPrices, ElectricityMapsPriceResponse
 from coppersushi.market_day import MarketDay
 
 CORE_ZONES = ("AT", "BE", "CZ", "DE", "FR", "HR", "HU", "NL", "PL", "RO", "SI", "SK")
@@ -23,17 +23,18 @@ ZONE_NAMES = {
 }
 
 
-def day_ahead_prices(payloads: list[dict]) -> DataFrame[DayAheadPrices]:
+def day_ahead_prices(payloads: list[ElectricityMapsPriceResponse]) -> DataFrame[DayAheadPrices]:
     """Electricity Maps price responses as one row per source interval and zone."""
-    rows = [row for payload in payloads for row in payload["data"]]
-    frame = pd.DataFrame(rows).rename(
-        columns={"datetime": "interval", "value": "price", "updatedAt": "updated_at"}
+    columns = ["interval", "zone", "price", "unit", "source", "updated_at"]
+    frame = pd.DataFrame.from_records(
+        [(row.datetime, row.zone, row.value, row.unit, row.source, row.updatedAt)
+         for payload in payloads for row in payload.data],
+        columns=columns,
     )
     frame = frame.assign(
-        interval=pd.to_datetime(frame.interval, utc=True, format="ISO8601"),
-        updated_at=pd.to_datetime(frame.updated_at, utc=True, format="ISO8601"),
+        interval=pd.to_datetime(frame.interval, utc=True),
+        updated_at=pd.to_datetime(frame.updated_at, utc=True),
     )
-    columns = ["interval", "zone", "price", "unit", "source", "updated_at"]
     return frame[columns].sort_values(["interval", "zone"], ignore_index=True).pipe(DayAheadPrices.validate)
 
 

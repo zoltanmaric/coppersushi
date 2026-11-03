@@ -10,33 +10,34 @@ Domain: wiki/flow-based-market-coupling.md. Timezones: coppersushi/AGENTS.md.
 """
 
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date as Date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 import pandas as pd
 
 MARKET_TZ = ZoneInfo("Europe/Brussels")  # CET/CEST, the zone Core's day-ahead market runs on
 # A delivery-day label, not an instant. ``MarketDay`` applies ``MARKET_TZ`` at both midnights.
-FIFTEEN_MINUTE_DELIVERY_DAY = date(2025, 10, 1)
+FIFTEEN_MINUTE_DELIVERY_DAY = Date(2025, 10, 1)
 
 
 @dataclass(frozen=True)
 class MarketDay:
     """One operating day in ``zone``, as the half-open window ``[start, end)``."""
 
-    date: date
+    date: Date
     zone: ZoneInfo = MARKET_TZ
 
     @classmethod
-    def on(cls, day: str | date, zone: ZoneInfo = MARKET_TZ) -> "MarketDay":
+    def on(cls, day: str | Date, zone: ZoneInfo = MARKET_TZ) -> "MarketDay":
         """The operating day of a calendar date, ``"2024-08-29"`` or a ``datetime.date``."""
-        return cls(date.fromisoformat(day) if isinstance(day, str) else day, zone)
+        return cls(Date.fromisoformat(day) if isinstance(day, str) else day, zone)
 
     @classmethod
     def containing(cls, moment: datetime, zone: ZoneInfo = MARKET_TZ) -> "MarketDay":
-        """The operating day an instant falls in; a naive instant is read as UTC."""
-        aware = moment if moment.tzinfo else moment.replace(tzinfo=UTC)
-        return cls(aware.astimezone(zone).date(), zone)
+        """The operating day an explicitly timezone-aware instant falls in."""
+        if moment.utcoffset() is None:
+            raise ValueError("MarketDay.containing requires a timezone-aware instant")
+        return cls(moment.astimezone(zone).date(), zone)
 
     @property
     def start_time_local(self) -> datetime:

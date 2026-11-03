@@ -12,7 +12,7 @@ repository fixtures; cached CSVs live under ignored ``data/electricity-maps/``.
 """
 
 from concurrent.futures import ThreadPoolExecutor
-import json
+from datetime import datetime
 import logging
 import sys
 import urllib.parse
@@ -20,12 +20,12 @@ import urllib.request
 from pathlib import Path
 
 import pandas as pd
-import pandera as pa
+import pandera.pandas as pa
 from pandera.typing import DataFrame
 
 from coppersushi import REPO, market
 from coppersushi.data_sources import cache, credentials
-from coppersushi.data_model.market import DayAheadPrices
+from coppersushi.data_model.market import DayAheadPrices, ElectricityMapsPriceResponse
 from coppersushi.market_day import MarketDay
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ def api_token() -> str:
     return credentials.token("ELECTRICITY_MAPS_API_KEY", TOKEN_FILE)
 
 
-def _stamp(moment) -> str:
+def _stamp(moment: datetime) -> str:
     return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -57,24 +57,24 @@ def query(zone: str, day: MarketDay) -> dict[str, str]:
     }
 
 
-def _get(zone: str, day: MarketDay, token: str) -> dict:
+def _get(zone: str, day: MarketDay, token: str) -> ElectricityMapsPriceResponse:
     logger.info("electricity maps: GET published prices for %s on %s", zone, day.date)
     url = f"{BASE_URL}?{urllib.parse.urlencode(query(zone, day))}"
     request = urllib.request.Request(url, headers={"auth-token": token})
     with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
-        return json.load(response)
+        return ElectricityMapsPriceResponse.model_validate_json(response.read())
 
 
-def check_answered_as_asked(zone: str, day: MarketDay, payload: dict) -> None:
+def check_answered_as_asked(zone: str, day: MarketDay, payload: ElectricityMapsPriceResponse) -> None:
     """Raise unless the envelope names the zone and resolution the request asked for.
 
     The rows are checked later, as one table against the market day; this is what the envelope
     alone can answer, and what a default answer fails.
     """
-    if payload.get("zone") != zone:
-        raise RuntimeError(f"price response says zone {payload.get('zone')!r}, expected {zone!r}")
+    if payload.zone != zone:
+        raise RuntimeError(f"price response says zone {payload.zone!r}, expected {zone!r}")
     asked = TEMPORAL_GRANULARITY[day.market_time_unit]
-    answered = payload.get("temporalGranularity")
+    answered = payload.temporalGranularity
     if answered != asked:
         raise RuntimeError(f"{zone} prices for {day.date} came {answered!r}, asked {asked!r}")
 
@@ -88,7 +88,7 @@ def fetch_day(
     market_day = MarketDay.on(day)
     credential = token or api_token()
 
-    def fetch_zone(zone):
+    def fetch_zone(zone: str) -> ElectricityMapsPriceResponse:
         payload = _get(zone, market_day, credential)
         check_answered_as_asked(zone, market_day, payload)
         return payload

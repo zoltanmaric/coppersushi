@@ -5,7 +5,7 @@ import os
 import shutil
 import subprocess
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import NamedTuple
 
@@ -40,7 +40,11 @@ def solve(experiment: str | None = None) -> Path:
                 " ".join(cmd), sibling)
     subprocess.run(cmd, cwd=sibling, check=True)
     solved = sibling / "results" / cfg["run"]["name"] / "networks" / f"solved_{horizons[0]}.nc"
-    day = MarketDay.containing(datetime.fromisoformat(cfg["snapshots"]["start"])).date.isoformat()
+    # PyPSA-Eur config stores naive UTC; interpret it only at this adapter boundary.
+    start = datetime.fromisoformat(cfg["snapshots"]["start"])
+    if start.utcoffset() is None:
+        start = start.replace(tzinfo=UTC)
+    day = MarketDay.containing(start).date.isoformat()
     candidate = networks.candidate(day, pin.sha, CONFIG.read_bytes(), experiment)
     candidate.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(solved, candidate)
@@ -60,7 +64,7 @@ def snapshots(day: MarketDay) -> pd.DatetimeIndex:
 
 def config_window(day: MarketDay) -> tuple[str, str]:
     """The market day's window as naive-UTC strings, the form PyPSA-Eur's ``snapshots`` takes."""
-    return tuple(moment.strftime("%Y-%m-%d %H:%M") for moment in (day.start_time_utc, day.end_time_utc))
+    return day.start_time_utc.strftime("%Y-%m-%d %H:%M"), day.end_time_utc.strftime("%Y-%m-%d %H:%M")
 
 
 def promote(candidate: Path) -> Path:

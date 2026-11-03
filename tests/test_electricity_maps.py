@@ -1,4 +1,7 @@
 import json
+from io import BytesIO
+
+from pydantic import ValidationError
 from threading import Barrier
 from pathlib import Path
 
@@ -6,24 +9,26 @@ import pandas as pd
 import pytest
 
 from coppersushi import REPO, market
+from coppersushi.data_model.market import ElectricityMapsPriceResponse
 from coppersushi.data_sources import electricity_maps
 from coppersushi.market_day import MarketDay
 
 FIXTURES = REPO / "tests" / "fixtures" / "synthetic-electricity-maps"
 
 
-def hourly_day() -> dict:
+def hourly_day() -> ElectricityMapsPriceResponse:
     """AT on 2024-08-29, an hourly market day."""
-    return json.loads((FIXTURES / "day-ahead-prices-day.json").read_text())
+    return ElectricityMapsPriceResponse.model_validate_json((FIXTURES / "day-ahead-prices-day.json").read_text())
 
 
-def quarter_hourly_day() -> dict:
+def quarter_hourly_day() -> ElectricityMapsPriceResponse:
     """AT on 2026-09-10, a quarter-hourly market day."""
-    return json.loads((FIXTURES / "day-ahead-prices-quarter-hour-day.json").read_text())
+    return ElectricityMapsPriceResponse.model_validate_json((FIXTURES / "day-ahead-prices-quarter-hour-day.json").read_text())
 
 
-def one_hour() -> list[dict]:
-    return json.loads((FIXTURES / "day-ahead-prices-hour.json").read_text())["responses"]
+def one_hour() -> list[ElectricityMapsPriceResponse]:
+    return [ElectricityMapsPriceResponse.model_validate(payload) for payload in
+            json.loads((FIXTURES / "day-ahead-prices-hour.json").read_text())["responses"]]
 
 
 def test_the_request_asks_for_the_day_at_its_market_time_unit():
@@ -114,7 +119,7 @@ def test_stamp_is_utc_api_format():
 
 def test_zone_requests_overlap_and_still_return_a_complete_day(monkeypatch):
     payloads = json.loads((FIXTURES / "day-ahead-prices-core-day.json").read_text())
-    by_zone = {payload["zone"]: payload for payload in payloads}
+    by_zone = {payload["zone"]: ElectricityMapsPriceResponse.model_validate(payload) for payload in payloads}
     all_started = Barrier(len(by_zone), timeout=5)
 
     def get(zone, day, token):
@@ -128,7 +133,7 @@ def test_zone_requests_overlap_and_still_return_a_complete_day(monkeypatch):
 
 def test_one_failed_zone_does_not_cache_a_partial_day(tmp_path, monkeypatch):
     payloads = json.loads((FIXTURES / "day-ahead-prices-core-day.json").read_text())
-    by_zone = {payload["zone"]: payload for payload in payloads}
+    by_zone = {payload["zone"]: ElectricityMapsPriceResponse.model_validate(payload) for payload in payloads}
     monkeypatch.setattr(electricity_maps, "CACHE_DIR", tmp_path)
     monkeypatch.setattr(electricity_maps, "api_token", lambda: "secret")
 
@@ -141,3 +146,24 @@ def test_one_failed_zone_does_not_cache_a_partial_day(tmp_path, monkeypatch):
     with pytest.raises(OSError, match="prices unavailable"):
         electricity_maps.load_day("2024-08-29")
     assert not electricity_maps.day_path("2024-08-29").exists()
+
+
+def test_http_boundary_returns_validated_price_records(monkeypatch):
+    content = (FIXTURES / "day-ahead-prices-day.json").read_bytes()
+    monkeypatch.setattr(electricity_maps.urllib.request, "urlopen",
+                        lambda *args, **kwargs: BytesIO(content))
+    payload = electricity_maps._get("AT", MarketDay.on("2024-08-29"), "secret")
+    assert isinstance(payload, ElectricityMapsPriceResponse)
+    assert payload.data[0].datetime.utcoffset() is not None
+    assert payload.data[0].value == hourly_day().data[0].value
+
+
+@pytest.mark.parametrize("field,value", [("value", None), ("datetime", "2024-08-28T22:00:00")])
+def test_http_boundary_rejects_missing_price_or_timezone(monkeypatch, field, value):
+    payload = json.loads((FIXTURES / "day-ahead-prices-day.json").read_text())
+    payload["data"][0][field] = value
+    monkeypatch.setattr(electricity_maps.urllib.request, "urlopen",
+                        lambda *args, **kwargs: BytesIO(json.dumps(payload).encode()))
+    with pytest.raises(ValidationError) as failure:
+        electricity_maps._get("AT", MarketDay.on("2024-08-29"), "secret")
+    assert failure.value.errors()[0]["loc"] == ("data", 0, field)

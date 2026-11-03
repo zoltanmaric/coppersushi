@@ -1,11 +1,14 @@
 from dataclasses import replace
 import logging
 from time import perf_counter
-from typing import NamedTuple
+from typing import Any, NamedTuple
+from collections.abc import Callable
+from functools import partial
 import os
 from pathlib import Path
 
 import pandas as pd
+from pandera.typing import DataFrame
 
 import plotly.graph_objects as go
 from dash import Dash, dcc, html, Input, Output, State, Patch, ctx, no_update
@@ -13,6 +16,7 @@ import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 
 from coppersushi import cnec_geometry, cnec_page, map_style, power_flow
+from coppersushi.data_model.network_views import BiddingZoneShapes
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
 from coppersushi.data_model.cnec_attribution import AttributionPayload, AttributionFailure, attribution_to_browser, attribution_from_browser
 from coppersushi.data_sources import opf_bundle, zone_shapes, credentials, virtual_attribution, cnec_attribution as attribution_source, electricity_maps, jao, mapbox_styles, networks, osm_locator
@@ -32,7 +36,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def timed(stage, function, *args, **kwargs):
+def timed[**P, R](stage: str, function: Callable[P, R], *args: P.args, **kwargs: P.kwargs) -> R:
     """Report server stages under Gunicorn as well as the development server."""
     started = perf_counter()
     try:
@@ -46,7 +50,7 @@ NETWORK_LOADERS = {
 }
 # Unsanctioned solves are viewable at /candidates/<file stem>
 NETWORK_LOADERS.update({
-    f'candidates/{path.stem}': (lambda path=path: networks.load(path))
+    f'candidates/{path.stem}': partial(networks.load, path)
     for path in sorted(networks.CANDIDATES_DIR.glob('*.nc'))
 })
 ROOT_VIEW = os.environ.get('ROOT_VIEW', 'embed')
@@ -55,7 +59,7 @@ if ROOT_VIEW not in {'embed', 'full'}:
 
 CNEC_ROUTE = 'cnec'  # /cnec, or /cnec/<delivery day> to open on one day
 _cache: dict[str, tuple[go.Figure, pd.Index]] = {}
-_zones: dict[str, pd.DataFrame] = {}
+_zones: dict[str, DataFrame[BiddingZoneShapes]] = {}
 _cnec_days: dict[MarketDay, cnec_page.Day] = {}
 _basemap: dict[str, dict] = {}
 
@@ -83,14 +87,14 @@ def figure_for(network_key: str) -> tuple[go.Figure, pd.Index]:
     return _cache[network_key]
 
 
-def core_zones() -> pd.DataFrame:
+def core_zones() -> DataFrame[BiddingZoneShapes]:
     """The Core bidding zones' polygons from the bundled outline shelf."""
     if 'core' not in _zones:
         _zones['core'] = zone_shapes.load()
     return _zones['core']
 
 
-def cnec_geometries(day: cnec_page.Day, interval_index: int) -> MappedCnecElements:
+def cnec_geometries(day: cnec_page.Day, interval_index: int) -> DataFrame[MappedCnecElements]:
     """Resolve the viewed interval before drawing; new endpoints must be visible immediately."""
     intervals = day.market_day.market_time_units()
     interval = intervals[min(max(interval_index, 0), len(intervals) - 1)]
@@ -186,7 +190,7 @@ app.layout = html.Div([
 
 
 @app.callback(Output('page', 'children'), Input('url', 'pathname'))
-def show_page(pathname: str, root_view: str = ROOT_VIEW):
+def show_page(pathname: str, root_view: str = ROOT_VIEW) -> html.Div:
     if is_cnec_path(pathname):
         return html.Div([navigation(), cnec_page.layout(cnec_day_from_path(pathname), mapbox_token())])
     if network_key_from_path(pathname) is None:
@@ -204,7 +208,7 @@ def render(pathname: str, snapshot_index: int, slider_moved: bool) -> tuple:
     if network_key is None:
         raise PreventUpdate
     try:
-        snapshots = opf_bundle.snapshots() if network_key == 'opf-2024' else None
+        snapshots: pd.Index | None = opf_bundle.snapshots() if network_key == 'opf-2024' else None
         if snapshots is None:
             fig, snapshots = figure_for(network_key)
             state = opf_snapshot_state(snapshots, snapshot_index, slider_moved)
@@ -229,7 +233,7 @@ def opf_snapshot_state(snapshots: pd.Index, snapshot_index: int, slider_moved: b
     local = local.tz_localize('UTC') if local.tz is None else local
     local = local.tz_convert(MARKET_TZ)
     if not slider_moved or not 0 <= snapshot_index < len(snapshots):
-        snapshot_index = min(range(len(local)), key=lambda i: abs(local[i].hour - 12))
+        snapshot_index = min(enumerate(local), key=lambda item: abs(item[1].hour - 12))[0]
     marks = {
         idx: dict(label=snapshot.strftime('%H:%M')
                   if snapshot.hour % 4 == 0 or idx == len(local) - 1 else ' ')
@@ -250,13 +254,23 @@ def opf_snapshot_state(snapshots: pd.Index, snapshot_index: int, slider_moved: b
     Output('status', 'is_open'),
     Input('url', 'pathname'),
     Input('snapshot-slider', 'value'))
-def update_figure(pathname: str, snapshot_index: int):
+def update_figure(pathname: str, snapshot_index: int) -> tuple:
     return render(pathname, snapshot_index, ctx.triggered_id == 'snapshot-slider')
 
 
-class CnecRender(NamedTuple):
-    view: cnec_page.Rendered | None
-    error: str = ''
+class CnecRendered(NamedTuple):
+    """A successfully rendered map and its matching controls."""
+
+    view: cnec_page.Rendered
+
+
+class CnecRenderFailure(NamedTuple):
+    """A render failure to display without replacing the previous map."""
+
+    error: str
+
+
+type CnecRender = CnecRendered | CnecRenderFailure
 
 
 def render_cnec(day: MarketDay, interval_index: int, selected: str | None, attribution: AttributionPayload | None = None) -> CnecRender:
@@ -266,27 +280,27 @@ def render_cnec(day: MarketDay, interval_index: int, selected: str | None, attri
         if attribution is not None:
             inputs = replace(inputs, context=attribution_from_browser(attribution))
         intervals = inputs.market_day.market_time_units()
-        interval = intervals[min(max(interval_index or 0, 0), len(intervals) - 1)]
+        interval = intervals[min(max(interval_index, 0), len(intervals) - 1)]
         chosen = inputs.external_constraints[
             inputs.external_constraints.source_id.astype(str).eq(str(selected))
             & inputs.external_constraints.interval.eq(interval)]
         if len(chosen) == 1:
-            inputs = replace(inputs, adjacent=timed("adjacent_attribution", virtual_attribution.load_interval, day.date.isoformat(), interval, chosen.hub.iloc[0]))
+            inputs = replace(inputs, adjacent=timed("adjacent_attribution", virtual_attribution.load_interval, day, interval, chosen.hub.iloc[0]))
         rendered = timed("figure", cnec_page.render,
-            inputs, cnec_geometries(inputs, interval_index or 0),
-            interval_index or 0, selected, mapbox_token=mapbox_token(), basemap=timed("basemap", basemap)
+            inputs, cnec_geometries(inputs, interval_index),
+            interval_index, selected, mapbox_token=mapbox_token(), basemap=timed("basemap", basemap)
         )
     except Exception as e:  # noqa: BLE001 — every loader failure must reach the page
         logging.exception('Loading the CNEC day %s failed', day)
-        return CnecRender(None, f'Could not load {day.date.isoformat()}: {e}')
-    return CnecRender(rendered)
+        return CnecRenderFailure(f'Could not load {day.date.isoformat()}: {e}')
+    return CnecRendered(rendered)
 
 
 def cnec_outputs(result: CnecRender) -> tuple:
     """Convert a render result to the map/control outputs at the Dash boundary."""
-    view = result.view
-    if view is None:
+    if isinstance(result, CnecRenderFailure):
         return (no_update,) * 6 + (result.error, True) + (no_update,) * 4
+    view = result.view
     return (
         view.figure, view.interval_max, view.interval_marks, view.interval_value,
         view.constraint_options, view.constraint_value, '', False,
@@ -351,14 +365,14 @@ CNEC_OUTPUTS = [
                                                         Output('cnec-attribution-status', 'children')],
     Input('cnec-prices-ready', 'data'),
     State('cnec-date', 'value'))
-def open_cnec(ready, day):
+def open_cnec(ready: dict[str, Any] | None, day: str) -> tuple:
     token = {'day': day}
     if not ready or ready.get('day') != day:
         raise PreventUpdate
     if 'error' in ready:
-        return (*cnec_outputs(CnecRender(None, f"Could not load {day}: {ready['error']}")), no_update, no_update)
+        return (*cnec_outputs(CnecRenderFailure(f"Could not load {day}: {ready['error']}")), no_update, no_update)
     result = render_cnec(MarketDay.on(day), 0, None)
-    loaded = result.view is not None
+    loaded = isinstance(result, CnecRendered)
     return (*cnec_outputs(result), token if loaded else no_update,
             'Loading country caps and price contributions…' if loaded else no_update)
 
@@ -376,12 +390,16 @@ def open_cnec(ready, day):
     State('cnec-constraint', 'options'),
     State('cnec-view-day', 'data'),
     prevent_initial_call=True)
-def update_cnec(click, previous, next_, interval_index, selected, attribution,
-                day, ready, options, viewed_day):
+def update_cnec(click: dict | None, previous: int | None, next_: int | None,
+                interval_index: int | None, selected: str | None, attribution: dict | None,
+                day: str, ready: dict | None, options: list[dict] | None,
+                viewed_day: dict | None) -> tuple:
     token = {'day': day}
     if (viewed_day != token or not ready or 'error' in ready
             or ready.get('day') != day):
         raise PreventUpdate
+    if interval_index is None:
+        raise ValueError("Loaded CNEC view is missing its interval index")
     delivery = MarketDay.on(day)
     enrichment = attribution if attribution and attribution.get('day') == day else None
     if ctx.triggered_id == 'cnec-map':
@@ -389,9 +407,9 @@ def update_cnec(click, previous, next_, interval_index, selected, attribution,
             raise PreventUpdate
         selected = cnec_page.clicked_selection(click, options or [], selected)
     elif ctx.triggered_id == 'cnec-previous':
-        interval_index = cnec_page.advance_interval(delivery, interval_index or 0, -1)
+        interval_index = cnec_page.advance_interval(delivery, interval_index, -1)
     elif ctx.triggered_id == 'cnec-next':
-        interval_index = cnec_page.advance_interval(delivery, interval_index or 0, 1)
+        interval_index = cnec_page.advance_interval(delivery, interval_index, 1)
     payload = AttributionPayload.model_validate(enrichment) if enrichment and enrichment.get('rows') is not None else None
     return cnec_outputs(render_cnec(delivery, interval_index, selected, payload))
 
@@ -400,7 +418,7 @@ def update_cnec(click, previous, next_, interval_index, selected, attribution,
     Output('cnec-attribution-ready', 'data'),
     Input('cnec-view-day', 'data'),
     State('cnec-date', 'value'))
-def load_cnec_attribution(viewed, day):
+def load_cnec_attribution(viewed: dict | None, day: str) -> dict:
     """Start enrichment only after the base map has reached the browser."""
     token = {'day': day}
     if viewed != token:
@@ -422,17 +440,18 @@ def load_cnec_attribution(viewed, day):
     State('cnec-constraint', 'value'),
     State('cnec-view-day', 'data'),
     prevent_initial_call=True)
-def enrich_cnec(attribution, day, interval_index, selected, viewed):
+def enrich_cnec(attribution: dict | None, day: str, interval_index: int,
+                selected: str | None, viewed: dict | None) -> dict:
     """Keep navigation independent of the pending attribution request."""
     token = {'day': day}
     if (viewed != token or not attribution or attribution.get('rows') is None
             or attribution.get('day') != day):
         raise PreventUpdate
     result = render_cnec(MarketDay.on(day), interval_index, selected, AttributionPayload.model_validate(attribution))
-    view = result.view
-    if view is None:
+    if isinstance(result, CnecRenderFailure):
         return {**token, 'interval': interval_index, 'selected': selected,
                 'error': result.error}
+    view = result.view
     return {**token, 'interval': interval_index, 'selected': selected,
             'figure': view.figure, 'options': view.constraint_options,
             'reference': f'Reference: {view.reference or "unavailable"}'}

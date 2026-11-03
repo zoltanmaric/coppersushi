@@ -4,21 +4,23 @@ import pandera.pandas as pa
 import pytest
 
 from coppersushi import REPO, market
+from coppersushi.data_model.market import ElectricityMapsPriceResponse
 from coppersushi.market_day import MarketDay
 
 FIXTURES = REPO / "tests" / "fixtures" / "synthetic-electricity-maps"
 
 
-def payloads() -> list[dict]:
-    return json.loads((FIXTURES / "day-ahead-prices-hour.json").read_text())["responses"]
+def payloads() -> list[ElectricityMapsPriceResponse]:
+    return [ElectricityMapsPriceResponse.model_validate(payload) for payload in
+            json.loads((FIXTURES / "day-ahead-prices-hour.json").read_text())["responses"]]
 
 
-def hourly_day() -> list[dict]:
-    return [json.loads((FIXTURES / "day-ahead-prices-day.json").read_text())]
+def hourly_day() -> list[ElectricityMapsPriceResponse]:
+    return [ElectricityMapsPriceResponse.model_validate_json((FIXTURES / "day-ahead-prices-day.json").read_text())]
 
 
-def quarter_hourly_day() -> list[dict]:
-    return [json.loads((FIXTURES / "day-ahead-prices-quarter-hour-day.json").read_text())]
+def quarter_hourly_day() -> list[ElectricityMapsPriceResponse]:
+    return [ElectricityMapsPriceResponse.model_validate_json((FIXTURES / "day-ahead-prices-quarter-hour-day.json").read_text())]
 
 
 def test_day_ahead_prices_are_tidy_and_keep_provenance():

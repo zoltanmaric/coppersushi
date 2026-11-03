@@ -1,6 +1,10 @@
 """Optional durable cache: one validated input bundle per atomic private S3 object."""
 
 from functools import lru_cache
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from mypy_boto3_s3 import S3Client
 import gzip
 import json
 import logging
@@ -15,7 +19,7 @@ DATA_DIR = Path(os.environ.get("COPPERSUSHI_DATA_DIR", REPO / "data"))
 
 
 @lru_cache(maxsize=1)
-def _client():
+def _client() -> 'S3Client':
     import boto3
     from botocore.config import Config
     return boto3.client("s3", config=Config(connect_timeout=5, read_timeout=10,

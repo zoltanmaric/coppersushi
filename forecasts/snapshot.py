@@ -92,7 +92,8 @@ def collect(data_root: Path, output: Path) -> Report:
         path = output / f"{name}.parquet"
         pq.write_table(table, path, compression="zstd", version="2.6")
         validate(name, pq.read_table(path))
-        times = table["valid_utc"].to_pylist()
+        # validate() above enforces non-null UTC timestamps.
+        times = cast(list[datetime], table["valid_utc"].to_pylist())
         files[name] = {"file": path.name, "sha256": digest(path), "bytes": path.stat().st_size,
                        "rows": table.num_rows, "valid_min": min(times).isoformat(), "valid_max": max(times).isoformat(), "schema": describe(name)}
         print(f"Validated {name}: {table.num_rows} rows", flush=True)

@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from coppersushi import REPO, cnec_market, cnecs, market
+from coppersushi.data_model.market import ElectricityMapsPriceResponse
 
 FIXTURE = REPO / "tests" / "fixtures" / "synthetic-jao" / "active-fb-day.json"
 
@@ -15,8 +16,8 @@ def active_rows() -> list[dict]:
 PRICE_FIXTURE = REPO / "tests" / "fixtures" / "synthetic-electricity-maps" / "day-ahead-prices-day.json"
 
 
-def price_payloads() -> list[dict]:
-    return [json.loads(PRICE_FIXTURE.read_text())]
+def price_payloads() -> list[ElectricityMapsPriceResponse]:
+    return [ElectricityMapsPriceResponse.model_validate_json(PRICE_FIXTURE.read_text())]
 
 
 def inputs():

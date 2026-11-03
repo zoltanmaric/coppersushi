@@ -7,14 +7,16 @@ See wiki/flow-based-market-coupling.md#attribution for an example and interpreta
 """
 
 
+import datetime
 from datetime import date
+from dataclasses import dataclass
 
 import pandas as pd
 import pandera.pandas as pa
 from pandera.typing import DataFrame, Series
 from pydantic import AwareDatetime, BaseModel, ConfigDict, StrictFloat, StrictInt, field_validator
 
-from coppersushi.data_model.jao import UtcTimestamp
+from coppersushi.data_model.jao import ZonedTimestamp
 from coppersushi.market_day import MarketDay
 
 
@@ -101,7 +103,7 @@ class AttributionFailure(AttributionRequest):
 class AttributionContext(pa.DataFrameModel):
     """Table of scaling and Polish cap inputs, one UTC market interval per row."""
 
-    interval: Series[UtcTimestamp] = pa.Field(unique=True)
+    interval: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC}, unique=True)
     alpha: Series[float] = pa.Field(nullable=True)
     import_limit: Series[float] = pa.Field(nullable=True)
     export_limit: Series[float] = pa.Field(nullable=True)
@@ -111,6 +113,44 @@ class AttributionContext(pa.DataFrameModel):
     class Config:
         strict = True
         coerce = True
+
+
+class CountryCaps(pa.DataFrameModel):
+    """Binding Polish aggregate import/export limits and their price effects for an interval."""
+
+    source_id: Series[int]
+    interval: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC})
+    name: Series[str]
+    shadow_price: Series[float] = pa.Field(gt=0)
+    direction: Series[str] = pa.Field(isin=["import", "export"])
+    capacity: Series[float]
+    delta: Series[float]
+
+    class Config:
+        strict = True
+        coerce = True
+        unique = ["interval", "source_id"]
+
+
+class AdjacentAttribution(pa.DataFrameModel):
+    """Observed adjacent-zone price and its independent market term for one virtual interface."""
+
+    interval: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC})
+    hub: Series[str]
+    adjacent_term: Series[float]
+    adjacent_price: Series[float]
+
+    class Config:
+        strict = True
+        coerce = True
+        unique = ["interval", "hub"]
+
+
+@dataclass(frozen=True)
+class AdjacentUnavailable:
+    """Expected absence of usable adjacent-market evidence, with a displayable reason."""
+
+    reason: str
 
 
 def attribution_to_browser(frame: DataFrame[AttributionContext], day: MarketDay) -> AttributionPayload:

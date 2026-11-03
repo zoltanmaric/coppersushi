@@ -14,7 +14,6 @@ from coppersushi import map_style
 from coppersushi.data_model.network_views import (
     BranchInfo,
     BranchInfoForSnapshot,
-    BranchQuantityByComponentAndName,
     BusCoordinates,
     NodeInfoForSnapshot,
 )
@@ -28,7 +27,7 @@ NUM_TRACES_PER_SNAPSHOT = 4
 pio.templates.default = "plotly_dark"
 
 
-def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.DataFrame, technology: str = None) -> pd.Series:
+def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.DataFrame, technology: str | None = None) -> pd.DataFrame:
     attribute_by_generators = generators_t_attr.filter(like=technology) if technology else generators_t_attr
 
     # Rename generators columns to their corresponding bus names
@@ -39,7 +38,7 @@ def sum_generators_t_attribute_by_bus(n: pypsa.Network, generators_t_attr: pd.Da
 
     # Group and sum by bus, in case there's multiple generators for a tech substring
     # (e.g. offwind and onwind for 'wind')
-    attribute_by_buses_sum = attribute_by_buses.groupby(by=lambda bus_name: bus_name, axis='columns').sum()
+    attribute_by_buses_sum = attribute_by_buses.T.groupby(level=0).sum().T
     return attribute_by_buses_sum
 
 
@@ -105,11 +104,11 @@ def get_branch_info(n: pypsa.Network) -> DataFrame[BranchInfo]:
 
 
 def to_branches_by_component_and_name(
-        branches: pd.DataFrame, snapshot: pd.Timestamp, component: str, quantity: str
-) -> DataFrame[BranchQuantityByComponentAndName]:
+        branches: pd.Series, component: str, quantity: str
+) -> pd.DataFrame:
     """Indexes the given series by component (Link or Line) and branch name.
     """
-    df = branches[quantity].loc[snapshot].rename(quantity).rename_axis('name').to_frame()
+    df = branches.rename(quantity).rename_axis('name').to_frame()
     df['component'] = component
     return df.set_index('component', append=True).reorder_levels(['component', 'name'])
 
@@ -117,9 +116,9 @@ def to_branches_by_component_and_name(
 def get_branch_info_for_snapshot(
         n: pypsa.Network, branch_info: DataFrame[BranchInfo], snapshot: pd.Timestamp
 ) -> DataFrame[BranchInfoForSnapshot]:
-    lines_t_p0 = to_branches_by_component_and_name(n.lines_t, snapshot, 'Line', 'p0')
-    links_t_p0 = to_branches_by_component_and_name(n.links_t, snapshot, 'Link', 'p0')
-    transformers_t_p0 = to_branches_by_component_and_name(n.transformers_t, snapshot, 'Transformer', 'p0')
+    lines_t_p0 = to_branches_by_component_and_name(n.lines_t.p0.loc[snapshot], 'Line', 'p0')
+    links_t_p0 = to_branches_by_component_and_name(n.links_t.p0.loc[snapshot], 'Link', 'p0')
+    transformers_t_p0 = to_branches_by_component_and_name(n.transformers_t.p0.loc[snapshot], 'Transformer', 'p0')
     branch_info_t = branch_info.join(pd.concat([lines_t_p0, links_t_p0, transformers_t_p0]))
 
     branch_info_t['branch_loading'] = abs(branch_info_t.p0) / branch_info_t.p_max * 100
@@ -170,7 +169,7 @@ def create_traces(
         node_info_t: DataFrame[NodeInfoForSnapshot],
         branch_info_t: DataFrame[BranchInfoForSnapshot],
         cmax: float
-) -> (go.Trace, go.Trace, go.Trace, go.Trace):
+) -> tuple[go.Scattermapbox, go.Scattermapbox, go.Scattermapbox, go.Scattermapbox]:
     loaded_filter = branch_info_t.branch_loading > 99
     edges_x = get_branch_edge(branch_info_t, 'x')
     edges_y = get_branch_edge(branch_info_t, 'y')
@@ -245,7 +244,7 @@ def create_traces(
     return node_trace, loaded_branches_trace, easy_branches_trace, branch_direction_trace
 
 
-def get_interquartile_range(df: pd.DataFrame) -> pd.DataFrame:
+def get_interquartile_range(df: pd.DataFrame) -> tuple[float, float]:
 
     q1 = np.quantile(df, 0.25)
     q3 = np.quantile(df, 0.75)
@@ -268,7 +267,7 @@ def show_snapshot(fig: go.Figure, snapshot_index: int) -> go.Figure:
     return selected
 
 
-def colored_network_figure(n: pypsa.Network, what: str, mapbox_token: str | None = None, technology: str = None) -> go.Figure:
+def colored_network_figure(n: pypsa.Network, what: str | pd.DataFrame, mapbox_token: str | None = None, technology: str | None = None) -> go.Figure:
     # Create Network Graph
     fig = go.Figure(layout=go.Layout(
         showlegend=False,
@@ -282,7 +281,7 @@ def colored_network_figure(n: pypsa.Network, what: str, mapbox_token: str | None
     ))
 
     snapshots = n.snapshots  # [0:1]
-    if type(what) == pd.DataFrame:
+    if isinstance(what, pd.DataFrame):
         node_values = what
     elif what == 'net_power':
         node_values = n.buses_t.p

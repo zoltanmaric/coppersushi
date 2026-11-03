@@ -5,6 +5,7 @@ Units and meanings are the handbook's (`wiki/literature/jao-core-publication-han
 """
 
 import datetime
+from dataclasses import field
 
 import pandas as pd
 import pandera.pandas as pa
@@ -14,16 +15,21 @@ from pandera.typing import Series
 
 
 @dtypes.immutable(init=True)
-class UtcTimestamp(pandas_engine.DateTime):
-    """A UTC timestamp that refuses naive input rather than coercing it.
+class ZonedTimestamp(pandas_engine.DateTime):
+    """A timestamp with an explicit target timezone that refuses naive input.
 
     Pandera's own UTC coercion localises a naive column, which would silently bless a
     timestamp whose true zone was never known (`coppersushi/AGENTS.md`, explicit-timezones).
     """
 
-    tz: datetime.tzinfo | str | None = "UTC"
+    tz: datetime.tzinfo = field(kw_only=True)
 
-    def coerce(self, data_container):
+    def __post_init__(self) -> None:
+        if self.tz is None:
+            raise TypeError("ZonedTimestamp requires an explicit timezone")
+        super().__post_init__()
+
+    def coerce(self, data_container: pd.Series | pd.DataFrame) -> pd.Series | pd.DataFrame:
         dtype = getattr(data_container, "dtype", None)
         if not isinstance(dtype, pd.DatetimeTZDtype):
             raise TypeError(f"expected tz-aware timestamps, got {dtype}")
@@ -33,7 +39,7 @@ class UtcTimestamp(pandas_engine.DateTime):
 class Elements(pa.DataFrameModel):
     """One row per (hour, element EIC, direction): a presolved, physical CNEC."""
 
-    hour: Series[UtcTimestamp]  # Market time unit, its first instant
+    hour: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC})  # Market time unit, its first instant
     eic: Series[str]  # EIC code of the monitored element
     name: Series[str]  # The TSO's name for the element
     tso: Series[str]  # Monitoring TSO, upper case
@@ -82,7 +88,7 @@ class ElementEnds(pa.DataFrameModel):
 class Contingencies(pa.DataFrameModel):
     """One row per branch of every contingency behind a presolved element."""
 
-    hour: Series[UtcTimestamp]
+    hour: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC})
     eic: Series[str]  # EIC of the monitored element, not of the outaged branch
     direction: Series[str]  # DIRECT or OPPOSITE
     cont_name: Series[str] = pa.Field(nullable=True)  # Free-text name of the whole contingency
@@ -100,7 +106,7 @@ class Contingencies(pa.DataFrameModel):
 class ShadowPrices(pa.DataFrameModel):
     """One row per binding element, direction and hour of the shadow-price feed."""
 
-    hour: Series[UtcTimestamp]
+    hour: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC})
     eic: Series[str]
     name: Series[str]
     tso: Series[str]
@@ -121,7 +127,7 @@ class ExternalConstraints(pa.DataFrameModel):
     They carry no element, so no EIC, substations or element type — only a name and a limit.
     """
 
-    hour: Series[UtcTimestamp]
+    hour: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC})
     name: Series[str]  # e.g. "External Constraint BE_AL_export"
     tso: Series[str]  # Often empty: several of these belong to no single TSO
     direction: Series[str] = pa.Field(nullable=True)  # "NA" in the domain feed
@@ -160,7 +166,7 @@ class ActiveConstraints(pa.DataFrameModel):
 
     source_id: Series[int] = pa.Field(unique=True)  # Stable row identifier from the publication
     capacity: Series[float] = pa.Field(nullable=True)  # Published maximum admissible flow [MW]
-    interval: Series[UtcTimestamp]
+    interval: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC})
     eic: Series[str]
     name: Series[str]
     tso: Series[str]
@@ -182,7 +188,7 @@ class ConstraintPtdfs(pa.DataFrameModel):
     """A binding physical row’s Core and virtual-hub PTDFs, one hub per row."""
 
     source_id: Series[int]
-    interval: Series[UtcTimestamp]
+    interval: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC})
     eic: Series[str]
     direction: Series[str]
     cont_name: Series[str] = pa.Field(nullable=True)
@@ -194,12 +200,24 @@ class ConstraintPtdfs(pa.DataFrameModel):
         coerce = True
 
 
-class ConstraintContributions(ConstraintPtdfs):
+class PriceContributions(pa.DataFrameModel):
+    """One selected constraint's price effect per zone relative to an explicit reference."""
+
+    source_id: Series[int]
+    zone: Series[str]
+    reference_zone: Series[str]
+    contribution: Series[float]  # EUR/MWh
+
+    class Config:
+        strict = False
+        coerce = True
+        unique = ["source_id", "zone"]
+
+
+class ConstraintContributions(ConstraintPtdfs, PriceContributions):
     """One selected row's relative zonal price contribution under an explicit reference."""
 
-    reference_zone: Series[str]
-    ptdf_difference: Series[float]
-    contribution: Series[float]  # -shadow_price * ptdf_difference / alpha [EUR/MWh]
+    ptdf_difference: Series[float]  # contribution = -shadow_price * ptdf_difference / alpha
 
     class Config:
         strict = False
@@ -214,7 +232,7 @@ class ActiveExternalConstraints(pa.DataFrameModel):
     coefficient: Series[float] = pa.Field(nullable=True)
     capacity: Series[float] = pa.Field(nullable=True)
 
-    interval: Series[UtcTimestamp]
+    interval: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC})
     name: Series[str]
     tso: Series[str]
     direction: Series[str]
