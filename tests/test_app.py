@@ -259,9 +259,16 @@ def test_enrichment_failure_leaves_base_map_usable_and_retryable(monkeypatch):
     assert 'rows' in app.load_cnec_attribution({**token, 'request': 1}, token['day'], 1)
 
 
-def test_browser_enrichment_roundtrip_preserves_contributions(monkeypatch):
+@pytest.mark.parametrize("context_file", ["historical-context.csv", "missing-context.csv"])
+def test_browser_enrichment_roundtrip_preserves_contributions(monkeypatch, context_file):
     from dataclasses import replace
     day = inputs()
+    fixtures = REPO / 'tests/fixtures/cnec-attribution'
+    context = pd.read_csv(fixtures / context_file).assign(
+        interval=lambda f: pd.to_datetime(f.interval, utc=True))
+    polish_price = pd.read_csv(fixtures / 'polish-price.csv').assign(
+        interval=lambda f: pd.to_datetime(f.interval, utc=True))
+    day = replace(day, context=context, prices=pd.concat([day.prices, polish_price]))
     attribution = {'rows': json.loads(day.context.to_json(orient='records', date_format='iso'))}
     monkeypatch.setattr(app, 'cnec_day', lambda _: replace(day, context=None))
     monkeypatch.setattr(app, 'cnec_geometries', lambda *_: mapped_elements())

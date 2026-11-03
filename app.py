@@ -265,6 +265,8 @@ def render_cnec(day: str, interval_index: int, selected: str | None, attribution
         inputs = timed("day_inputs", cnec_day, day)
         if attribution and attribution.get("rows") is not None:
             context = pd.DataFrame(attribution["rows"])
+            # JSON nulls in entirely missing numeric columns otherwise remain None.
+            context = context.astype({c: float for c in context if c != "interval"})
             context["interval"] = pd.to_datetime(context.interval, utc=True)
             inputs = replace(inputs, context=context)
         intervals = inputs.market_day.market_time_units()
