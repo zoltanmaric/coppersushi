@@ -1,4 +1,10 @@
-"""Contracts for JAO attribution objects and the normalized attribution table."""
+"""Inputs for explaining electricity-price differences between bidding zones.
+
+Price attribution calculates each binding constraint's contribution to an observed
+price difference, in EUR/MWh. These models hold supplementary inputs: flow-based
+scaling and Polish import/export limits, net positions and alternative prices.
+See wiki/flow-based-market-coupling.md#attribution for an example and interpretation.
+"""
 
 import pandera.pandas as pa
 from pandera.typing import Series
@@ -42,7 +48,11 @@ class PolishAlternative(JaoRecord):
 
 
 class AttributionRow(BaseModel):
-    """Attribution inputs for one interval in browser JSON; null means unavailable."""
+    """Scaling and Polish cap inputs for one market interval, encoded as browser JSON.
+
+    These are inputs to price attribution, not calculated price contributions.
+    Null means the input is unavailable.
+    """
 
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     interval: AwareDatetime
@@ -54,7 +64,7 @@ class AttributionRow(BaseModel):
 
 
 class AttributionPayload(BaseModel):
-    """Browser enrichment scoped to the day and retry that requested it."""
+    """A day of price-attribution inputs or a load error, tied to its browser request."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
     day: str
@@ -65,7 +75,7 @@ class AttributionPayload(BaseModel):
 
 
 class AttributionContext(pa.DataFrameModel):
-    """One UTC market interval per row; optional feeds stay numeric when missing."""
+    """Table of scaling and Polish cap inputs, one UTC market interval per row."""
 
     interval: Series[UtcTimestamp] = pa.Field(unique=True)
     alpha: Series[float] = pa.Field(nullable=True)

@@ -351,3 +351,7 @@ retention in [JAO availability](jao-availability.md).
 ## [2026-11-03] query | JAO request-rate contract
 
 Found JAO's October 2025 notice establishing 100 requests/minute per user or IP. Added the source and the previously successful aggregate 40/minute bulk-query pace to [JAO availability](jao-availability.md#rate-limits). The Polish sweep's 429 headers were not retained, so Retry-After behavior remains unknown.
+
+## [2026-11-03] query | Meaning of price attribution
+
+Defined [price attribution](flow-based-market-coupling.md#attribution) with a numerical example, distinguishing supplementary calculation inputs, resulting price contributions, and the separate question of prices after removing a constraint.

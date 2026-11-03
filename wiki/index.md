@@ -5,7 +5,7 @@
 - [jao-constraint-types.md](jao-constraint-types.md) — row classification across physical assets, country caps, virtual hubs, equality and LTA constraints, with verified metadata gaps
 - [country-import-export-caps.md](country-import-export-caps.md) — all-Core country-cap coverage, price effects, Polish alternative-price evidence and publication gaps
 - [copper-plate-problem.md](copper-plate-problem.md) — the EU market-design argument motivating this project (copper plate, redispatch, co-optimisation, locational pricing)
-- [flow-based-market-coupling.md](flow-based-market-coupling.md) — how cross-zonal capacity reaches the day-ahead market: NTC pipes versus Core's flow-based CNEC constraints, PTDF, RAM, shadow prices, and what a nodal OPF does and does not reproduce
+- [flow-based-market-coupling.md](flow-based-market-coupling.md) — how cross-zonal capacity reaches the day-ahead market: NTC pipes versus Core's flow-based CNEC constraints, PTDF, RAM, shadow prices, price attribution, and what a nodal OPF does and does not reproduce
 - [core-day-ahead-capacity-calculation.md](core-day-ahead-capacity-calculation.md) — how the August 2024 Core process turned grid models into auction constraints: actor map, vocabulary, one binding row carried through to its shadow price and zonal spread, the eleven-step chain and decision rights
 - [agent-workflow-design.md](agent-workflow-design.md) — rationale and sources behind the `design-first` and `ablation` rules and the grill/spec/goldfish skills
 - [rule-provenance.md](rule-provenance.md) — the observed stumble behind each `AGENTS.md` rule and skill line; the `ablation` rule's lookup table

@@ -102,6 +102,14 @@ One more assumption hides in the PTDFs. When a zone's net export rises by a mega
 
 When an element hits its limit, it gets a **shadow price**: the value of one more MW of room on it. That shadow price is what splits zonal prices. (A second, rarer cause: the TSOs also cap some zones' total imports or exports for stability, called **external constraints**, and one of those binding splits the zone's price with no line involved.) The more a zone's exports load the element, the lower its price; the importing side gets the highest. In the example, if the Belgium–France line binds, the Netherlands (0.8 of every exported MW lands on it) gets the lowest price, Germany (0.3) sits between, and France is highest. A price split under flow-based coupling therefore names its cause: this element or this zone limit, at this hour.
 
+### Attribution
+
+**Price attribution calculates how much a binding constraint contributes to the observed electricity-price difference between two bidding zones, in €/MWh for one market interval.** A constraint may be a monitored grid element's flow limit or a country's total import/export limit.
+
+For example, suppose zone A costs €100/MWh and zone B €120/MWh. Their observed difference is €20/MWh. If the selected constraint contributes +€8/MWh to B minus A, the remaining €12/MWh is the remainder, including other constraints and any unexplained discrepancy. Contributions can have opposite signs and cancel; they need not each lie between zero and the observed difference.
+
+This explains the auction result under the stated calculation convention. It does not predict the prices if that constraint were removed: that would require rerunning the market. The attribution input models store the extra scaling factors and Polish cap data needed for the calculation, not its resulting €/MWh contributions. The calculation and its validation limits follow below.
+
 ### Price-contribution
 
 For a signed flow-based row with coefficients `a`, its raw published term for `P_z − P_r` is `−μ × (a_z − a_r)`. Physical rows use [PTDFs](core-day-ahead-capacity-calculation.md#ptdf); [country caps](country-import-export-caps.md#price-effect) need their own coefficients and duals. Contributions can cancel. This is attribution of a cleared outcome, not a prediction after removing a constraint. Do not multiply by the display's `direction` again without establishing whether the published coefficients already include that orientation.
