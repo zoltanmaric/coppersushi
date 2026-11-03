@@ -250,7 +250,7 @@ def active_constraints(rows: list[dict]) -> DataFrame[ActiveConstraints]:
 def constraint_ptdfs(rows: list[dict]) -> DataFrame[ConstraintPtdfs]:
     """Every physical active row’s Core and virtual-hub PTDF vector in long form."""
     frame = _physical(_frame(rows)).rename(columns={"hour": "interval"})
-    hub_columns = {column: column[4:] for column in frame if column.startswith("hub_") and column not in {"hub_from", "hub_to"}}
+    hub_columns = {column: column[4:] for column in frame.columns if isinstance(column, str) and column.startswith("hub_") and column not in {"hub_from", "hub_to"}}
     missing = sorted({f"hub_{zone}" for zone in CORE_ZONES} - set(frame.columns))
     if missing:
         raise ValueError(f"active flow-based response is missing Core PTDF columns: {missing}")
@@ -269,10 +269,10 @@ def active_external_constraints(rows: list[dict]) -> DataFrame[ActiveExternalCon
     frame = _frame(rows)
     frame = frame[_is_non_physical(frame)].rename(columns={"hour": "interval"})
     frame = frame.assign(tso=normalise_tso(frame.tso))
-    hub_columns = [c for c in frame if c.startswith("hub_") and c not in {"hub_from", "hub_to"}]
+    hub_columns = [c for c in frame.columns if isinstance(c, str) and c.startswith("hub_") and c not in {"hub_from", "hub_to"}]
     vectors = frame[hub_columns].fillna(0)
     single = vectors.ne(0).sum(axis=1).eq(1)
-    hub = vectors.abs().idxmax(axis=1).str.removeprefix("hub_")
+    hub = vectors.abs().idxmax(axis=1).astype(str).str.removeprefix("hub_")
     coefficient = vectors.sum(axis=1)
     frame = frame.assign(hub=hub.where(single, ""), coefficient=coefficient.where(single),
                          capacity=frame.get("fmax", float("nan")))

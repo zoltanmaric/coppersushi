@@ -42,7 +42,7 @@ class Rendered(NamedTuple):
 
     figure: go.Figure
     interval_max: int
-    interval_marks: dict[int, str]
+    interval_marks: dict[int, dict]
     interval_value: int
     constraint_options: list[dict]
     constraint_value: str | None  # Bootstrap select values are strings
@@ -168,7 +168,7 @@ def render(
     day: Day,
     mapped_elements: DataFrame[MappedCnecElements],
     interval_index: int,
-    selected_source_id: int | None,
+    selected_source_id: str | int | None,
     mapbox_token: str | None = None,
     basemap: str | dict = map_style.MAP_STYLE,
 ) -> Rendered:
@@ -202,6 +202,7 @@ def render(
         if reference_zone is None:
             note = "Contribution unavailable: sending endpoint has no unambiguous Core bidding zone."
     if note:
+        assert selected is not None
         snapshot = cnec_market.snapshot(day.constraints, day.ptdfs, day.external_constraints,
                                        day.prices, interval, context=day.context)
         snapshot = snapshot._replace(selected_id=selected.source_id, note=note)

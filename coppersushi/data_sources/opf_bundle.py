@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 import plotly.io as pio
+import plotly.graph_objects as go
 
 from coppersushi import REPO, map_style, power_flow
 from coppersushi.data_sources import networks
@@ -19,7 +20,7 @@ def snapshots(directory: Path = DIRECTORY) -> pd.DatetimeIndex | None:
     return pd.DatetimeIndex(pd.to_datetime(json.loads(path.read_text()), utc=True), tz='UTC')
 
 
-def write(fig, times: pd.DatetimeIndex, directory: Path) -> None:
+def write(fig: go.Figure, times: pd.Index, directory: Path) -> None:
     directory.mkdir(parents=True, exist_ok=True)
     # PyPSA stores naive UTC snapshots; normalize them at the bundle boundary.
     times = pd.DatetimeIndex(pd.to_datetime(times, utc=True), tz='UTC')
@@ -31,7 +32,7 @@ def write(fig, times: pd.DatetimeIndex, directory: Path) -> None:
     (directory / 'snapshots.json').write_text(json.dumps([t.isoformat() for t in times]))
 
 
-def load(index: int, token: str, directory: Path = DIRECTORY):
+def load(index: int, token: str, directory: Path = DIRECTORY) -> go.Figure:
     with gzip.open(directory / f'{index}.json.gz', 'rt') as source:
         fig = pio.from_json(source.read())
     fig.update_layout(mapbox_accesstoken=token)

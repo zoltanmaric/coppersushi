@@ -37,7 +37,7 @@ def load_interval(day: str, interval: pd.Timestamp, hub: str) -> pd.DataFrame | 
         return None
     _, other, _ = cnec_attribution.INTERFACES[hub]
     try:
-        outer = 0.0
+        outer: float | None = 0.0
         if hub in cnec_attribution.NORDIC_HUBS:
             path = jao.JAO_DIR / 'nordic' / f'{interval.strftime("%Y%m%dT%H%MZ")}.json'
             key = f"jao/nordic/{path.stem}"

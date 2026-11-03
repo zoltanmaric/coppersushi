@@ -94,13 +94,13 @@ def _cluster(points: list[Point]) -> list[Point]:
 def substation_index(substations: pd.DataFrame) -> dict[str, list[Point]]:
     """Every key a located substation answers to, and the distinct places it can mean."""
     located: dict[str, list[Point]] = {}
-    for row in substations.itertuples():
-        for key in keys(row.name):
+    for _, row in substations.iterrows():
+        for key in keys(row["name"]):
             located.setdefault(key, []).append((float(row.x), float(row.y)))
     return {key: _cluster(points) for key, points in located.items()}
 
 
-def _candidates(name, index: dict[str, list[Point]], aliases: dict[str, str]):
+def _candidates(name: str | None, index: dict[str, list[Point]], aliases: dict[str, str]) -> tuple[str, list[Point], float] | None:
     """The places a published substation name can mean, under its best-scoring key."""
     if pd.isna(name):
         return None
@@ -118,12 +118,10 @@ def _closest(from_places: list[Point], to_places: list[Point]) -> tuple[Point, P
     )
 
 
-def _placement(element, index: dict[str, list[Point]], aliases: dict[str, str]) -> dict:
+def _placement(substation_from: str | None, substation_to: str | None, index: dict[str, list[Point]], aliases: dict[str, str]) -> dict:
     """Where one monitored element is drawn, or why it is not drawn at all."""
-    ends = [
-        _candidates(element.substation_from, index, aliases),
-        _candidates(element.substation_to, index, aliases),
-    ]
+    from_end = _candidates(substation_from, index, aliases)
+    to_end = _candidates(substation_to, index, aliases)
     unplaced = {
         "branch_id": None,
         "x0": None,
@@ -134,9 +132,10 @@ def _placement(element, index: dict[str, list[Point]], aliases: dict[str, str]) 
         "bus_source": UNRESOLVED,
         "score": 0.0,
     }
-    if any(end is None for end in ends):
+    if from_end is None or to_end is None:
         return unplaced
-    (from_key, from_places, from_score), (to_key, to_places, to_score) = ends
+    from_key, from_places, from_score = from_end
+    to_key, to_places, to_score = to_end
     if from_key == to_key:
         # A transformer or phase shifter sits at one site, so there is no span to
         # disambiguate with: an ambiguous name leaves it unplaced rather than guessed.
@@ -183,12 +182,12 @@ def locate_elements(
         {
             "eic": element.eic,
             "tso": element.tso,
-            "name": element.name,
+            "name": element["name"],
             "element_type": element.element_type,
             "branch_type": "Transformer" if element.element_type in POINT_TYPES else "Line",
-            **_placement(element, index, by_alias),
+            **_placement(element.substation_from, element.substation_to, index, by_alias),
         }
-        for element in ends.itertuples()
+        for _, element in ends.iterrows()
     ]
     return pd.DataFrame(rows, columns=list(MappedCnecElements.to_schema().columns)).pipe(
         MappedCnecElements.validate

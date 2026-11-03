@@ -145,7 +145,7 @@ def _branch_side(rows: pd.DataFrame, is_tieline: bool) -> pd.DataFrame:
         {
             # `Substation_1` and `Substation_2` are both headed `Full_name`, which pandas
             # de-duplicates into `Full_name` and `Full_name.1` in sheet order.
-            "eic": _column(rows, "eiccode").astype("string").str.strip().replace(EIC_PLACEHOLDER, pd.NA),
+            "eic": _column(rows, "eiccode").astype("string").str.strip().replace({EIC_PLACEHOLDER: pd.NA}),
             "name": _text(rows, "nename"),
             "tso": _text(rows, "tso"),
             "substation_from": _text(rows, "fullname"),

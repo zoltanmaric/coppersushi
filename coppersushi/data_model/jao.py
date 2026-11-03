@@ -21,9 +21,9 @@ class UtcTimestamp(pandas_engine.DateTime):
     timestamp whose true zone was never known (`coppersushi/AGENTS.md`, explicit-timezones).
     """
 
-    tz: datetime.tzinfo | str | None = "UTC"
+    tz: datetime.tzinfo | None = datetime.UTC
 
-    def coerce(self, data_container):
+    def coerce(self, data_container: pd.Series | pd.DataFrame) -> pd.Series | pd.DataFrame:
         dtype = getattr(data_container, "dtype", None)
         if not isinstance(dtype, pd.DatetimeTZDtype):
             raise TypeError(f"expected tz-aware timestamps, got {dtype}")

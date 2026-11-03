@@ -100,7 +100,7 @@ def price_spread(reference_price: float, other_price: float, contribution: float
     return PriceSpread(observed, contribution, observed - contribution)
 
 
-def country_caps(inputs: pd.DataFrame, prices: pd.DataFrame, interval: pd.Timestamp) -> pd.DataFrame:
+def country_caps(inputs: pd.DataFrame | None, prices: pd.DataFrame, interval: pd.Timestamp) -> pd.DataFrame:
     """Only a saturated PL cap with a correctly signed, nonzero validated dual is binding."""
     columns = ["source_id", "interval", "name", "shadow_price", "direction", "capacity", "delta"]
     if inputs is None or inputs.empty:
@@ -134,7 +134,7 @@ def physical_reference(row: pd.Series, geometries: pd.DataFrame, zones: pd.DataF
         return None
     end = 0 if row.direction == "DIRECT" else 1
     point = Point(mapped[f"x{end}"], mapped[f"y{end}"])
-    candidates = [z.zone for z in zones.itertuples() if z.geometry.covers(point)]
+    candidates = [zone for zone, geometry in zip(zones.zone, zones.geometry) if geometry.covers(point)]
     return candidates[0] if len(candidates) == 1 and candidates[0] in CORE_ZONES else None
 
 

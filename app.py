@@ -1,11 +1,14 @@
 from dataclasses import replace
 import logging
 from time import perf_counter
-from typing import NamedTuple
+from typing import Any, NamedTuple
+from collections.abc import Callable
+from functools import partial
 import os
 from pathlib import Path
 
 import pandas as pd
+from pandera.typing import DataFrame
 
 import plotly.graph_objects as go
 from dash import Dash, dcc, html, Input, Output, State, Patch, ctx, no_update
@@ -32,7 +35,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def timed(stage, function, *args, **kwargs):
+def timed[**P, R](stage: str, function: Callable[P, R], *args: P.args, **kwargs: P.kwargs) -> R:
     """Report server stages under Gunicorn as well as the development server."""
     started = perf_counter()
     try:
@@ -46,7 +49,7 @@ NETWORK_LOADERS = {
 }
 # Unsanctioned solves are viewable at /candidates/<file stem>
 NETWORK_LOADERS.update({
-    f'candidates/{path.stem}': (lambda path=path: networks.load(path))
+    f'candidates/{path.stem}': partial(networks.load, path)
     for path in sorted(networks.CANDIDATES_DIR.glob('*.nc'))
 })
 ROOT_VIEW = os.environ.get('ROOT_VIEW', 'embed')
@@ -90,7 +93,7 @@ def core_zones() -> pd.DataFrame:
     return _zones['core']
 
 
-def cnec_geometries(day: cnec_page.Day, interval_index: int) -> MappedCnecElements:
+def cnec_geometries(day: cnec_page.Day, interval_index: int) -> DataFrame[MappedCnecElements]:
     """Resolve the viewed interval before drawing; new endpoints must be visible immediately."""
     intervals = day.market_day.market_time_units()
     interval = intervals[min(max(interval_index, 0), len(intervals) - 1)]
@@ -186,7 +189,7 @@ app.layout = html.Div([
 
 
 @app.callback(Output('page', 'children'), Input('url', 'pathname'))
-def show_page(pathname: str, root_view: str = ROOT_VIEW):
+def show_page(pathname: str, root_view: str = ROOT_VIEW) -> html.Div:
     if is_cnec_path(pathname):
         return html.Div([navigation(), cnec_page.layout(cnec_day_from_path(pathname), mapbox_token())])
     if network_key_from_path(pathname) is None:
@@ -204,7 +207,7 @@ def render(pathname: str, snapshot_index: int, slider_moved: bool) -> tuple:
     if network_key is None:
         raise PreventUpdate
     try:
-        snapshots = opf_bundle.snapshots() if network_key == 'opf-2024' else None
+        snapshots: pd.Index | None = opf_bundle.snapshots() if network_key == 'opf-2024' else None
         if snapshots is None:
             fig, snapshots = figure_for(network_key)
             state = opf_snapshot_state(snapshots, snapshot_index, slider_moved)
@@ -229,7 +232,7 @@ def opf_snapshot_state(snapshots: pd.Index, snapshot_index: int, slider_moved: b
     local = local.tz_localize('UTC') if local.tz is None else local
     local = local.tz_convert(MARKET_TZ)
     if not slider_moved or not 0 <= snapshot_index < len(snapshots):
-        snapshot_index = min(range(len(local)), key=lambda i: abs(local[i].hour - 12))
+        snapshot_index = min(enumerate(local), key=lambda item: abs(item[1].hour - 12))[0]
     marks = {
         idx: dict(label=snapshot.strftime('%H:%M')
                   if snapshot.hour % 4 == 0 or idx == len(local) - 1 else ' ')
@@ -250,7 +253,7 @@ def opf_snapshot_state(snapshots: pd.Index, snapshot_index: int, slider_moved: b
     Output('status', 'is_open'),
     Input('url', 'pathname'),
     Input('snapshot-slider', 'value'))
-def update_figure(pathname: str, snapshot_index: int):
+def update_figure(pathname: str, snapshot_index: int) -> tuple:
     return render(pathname, snapshot_index, ctx.triggered_id == 'snapshot-slider')
 
 
@@ -351,7 +354,7 @@ CNEC_OUTPUTS = [
                                                         Output('cnec-attribution-status', 'children')],
     Input('cnec-prices-ready', 'data'),
     State('cnec-date', 'value'))
-def open_cnec(ready, day):
+def open_cnec(ready: dict[str, Any] | None, day: str) -> tuple:
     token = {'day': day}
     if not ready or ready.get('day') != day:
         raise PreventUpdate
@@ -376,8 +379,10 @@ def open_cnec(ready, day):
     State('cnec-constraint', 'options'),
     State('cnec-view-day', 'data'),
     prevent_initial_call=True)
-def update_cnec(click, previous, next_, interval_index, selected, attribution,
-                day, ready, options, viewed_day):
+def update_cnec(click: dict | None, previous: int | None, next_: int | None,
+                interval_index: int | None, selected: str | None, attribution: dict | None,
+                day: str, ready: dict | None, options: list[dict] | None,
+                viewed_day: dict | None) -> tuple:
     token = {'day': day}
     if (viewed_day != token or not ready or 'error' in ready
             or ready.get('day') != day):
@@ -393,14 +398,14 @@ def update_cnec(click, previous, next_, interval_index, selected, attribution,
     elif ctx.triggered_id == 'cnec-next':
         interval_index = cnec_page.advance_interval(delivery, interval_index or 0, 1)
     payload = AttributionPayload.model_validate(enrichment) if enrichment and enrichment.get('rows') is not None else None
-    return cnec_outputs(render_cnec(delivery, interval_index, selected, payload))
+    return cnec_outputs(render_cnec(delivery, interval_index or 0, selected, payload))
 
 
 @app.callback(
     Output('cnec-attribution-ready', 'data'),
     Input('cnec-view-day', 'data'),
     State('cnec-date', 'value'))
-def load_cnec_attribution(viewed, day):
+def load_cnec_attribution(viewed: dict | None, day: str) -> dict:
     """Start enrichment only after the base map has reached the browser."""
     token = {'day': day}
     if viewed != token:
@@ -422,7 +427,8 @@ def load_cnec_attribution(viewed, day):
     State('cnec-constraint', 'value'),
     State('cnec-view-day', 'data'),
     prevent_initial_call=True)
-def enrich_cnec(attribution, day, interval_index, selected, viewed):
+def enrich_cnec(attribution: dict | None, day: str, interval_index: int,
+                selected: str | None, viewed: dict | None) -> dict:
     """Keep navigation independent of the pending attribution request."""
     token = {'day': day}
     if (viewed != token or not attribution or attribution.get('rows') is None

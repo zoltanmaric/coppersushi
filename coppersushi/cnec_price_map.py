@@ -74,7 +74,7 @@ def _line_coordinates(rows: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
     return lon, lat
 
 
-def _bearing(x0, y0, x1, y1):
+def _bearing(x0: pd.Series, y0: pd.Series, x1: pd.Series, y1: pd.Series) -> pd.Series:
     """Bearing of each drawn segment in degrees clockwise from north.
 
     Measured in the Web Mercator plane the map draws in, so a marker rotated by it lies
@@ -108,11 +108,11 @@ def _price_traces(
             "features": [
                 {
                     "type": "Feature",
-                    "id": row.zone,
+                    "id": zone,
                     "properties": {},
-                    "geometry": row.geometry.__geo_interface__,
+                    "geometry": geometry.__geo_interface__,
                 }
-                for row in priced_zones.itertuples()
+                for zone, geometry in zip(priced_zones.zone, priced_zones.geometry)
             ],
         },
         locations=priced_zones.zone,
@@ -186,7 +186,7 @@ def _constraint_traces(
     unique_lines = line_rows.drop_duplicates("branch_id")
     lon, lat = _line_coordinates(unique_lines)
 
-    def line(name: str, width: float, lon, lat) -> list[go.Scattermapbox]:
+    def line(name: str, width: float, lon: np.ndarray | list[float], lat: np.ndarray | list[float]) -> list[go.Scattermapbox]:
         core = go.Scattermapbox(
             name=name,
             lon=lon,
@@ -239,6 +239,8 @@ def _constraint_traces(
 
 
 def _selected(placed: pd.DataFrame, source_id: int | None) -> pd.Series | None:
+    if source_id is None:
+        return None
     rows = placed[placed.source_id.eq(source_id)]
     return rows.iloc[0] if len(rows) == 1 else None
 
@@ -259,8 +261,8 @@ def _line_hit_targets(rows: pd.DataFrame) -> go.Scattermapbox:
         text=hover, hoverinfo="text", showlegend=False)
 
 
-def _cap_traces(zones: pd.DataFrame, caps: pd.DataFrame, selected_id: int | None) -> list:
-    traces = []
+def _cap_traces(zones: pd.DataFrame, caps: pd.DataFrame | None, selected_id: int | None) -> list:
+    traces: list[go.Scattermapbox] = []
     if caps is None or caps.empty:
         return traces
     polish = zones[zones.zone.eq("PL")]
@@ -307,15 +309,15 @@ def _interfaces(external: pd.DataFrame, centres: pd.DataFrame) -> pd.DataFrame:
 
 
 def _interface_traces(interfaces: pd.DataFrame, selected_id: int | None) -> list:
-    traces = []
+    traces: list[go.Scattermapbox] = []
     for asset, group in interfaces.groupby("asset"):
         row = group.iloc[0]
         ids = ",".join(group.source_id.astype(str))
         text = "<br><br>".join(
-            f"{r.name}<br>Schematic {asset}: {r.owner}–{r.other}<br>"
-            f"Sending end: {cnec_attribution.virtual_reference(pd.Series(r._asdict())) or 'unavailable'}<br>"
+            f"{r['name']}<br>Schematic {asset}: {r.owner}–{r.other}<br>"
+            f"Sending end: {cnec_attribution.virtual_reference(r) or 'unavailable'}<br>"
             f"Capacity: {r.capacity:,.0f} MW · Shadow price: {r.shadow_price:,.2f} €/MWh"
-            for r in group.itertuples())
+            for _, r in group.iterrows())
         n = 41
         traces.append(go.Scattermapbox(name=f"{asset} interface", lon=np.linspace(row.x0, row.x1, n),
             lat=np.linspace(row.y0, row.y1, n), mode="lines+markers",
@@ -393,11 +395,12 @@ def figure(
     if view.note:
         annotation += "<br>" + view.note
     if selected is not None and view.contribution is not None:
+        assert view.reference is not None
         effects = view.contribution[view.contribution.zone.ne(view.reference)]
         if virtual is not None:
             effect = effects.iloc[0]
             annotation += f"<br><b>{effect.zone}: {effect.contribution:+,.2f} €/MWh relative to {view.reference}</b>"
-        elif view.selected_id in view.caps.source_id.values:
+        elif view.caps is not None and view.selected_id in view.caps.source_id.values:
             annotation += f"<br><b>Other Core zones: {effects.contribution.iloc[0]:+,.2f} €/MWh relative to PL</b>"
         influence = cnec_influence.overlay(selected, centres, view.contribution)
         traces += influence.traces

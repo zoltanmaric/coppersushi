@@ -3,6 +3,8 @@
 from typing import NamedTuple
 
 import pandas as pd
+from pandera.typing import DataFrame
+from coppersushi.data_model.jao import ConstraintPtdfs
 
 from coppersushi import cnecs, cnec_attribution
 from coppersushi.market import CORE_ZONES
@@ -38,7 +40,7 @@ def _at_interval(frame: pd.DataFrame, interval: pd.Timestamp) -> pd.DataFrame:
 
 def snapshot(
     constraints: pd.DataFrame,
-    ptdfs: pd.DataFrame,
+    ptdfs: DataFrame[ConstraintPtdfs],
     external_constraints: pd.DataFrame,
     prices: pd.DataFrame,
     interval: pd.Timestamp,
@@ -53,7 +55,7 @@ def snapshot(
         raise ValueError("interval must be timezone-aware")
     current = _at_interval(constraints, interval)
     external = _at_interval(external_constraints, interval)
-    contribution = None
+    contribution: pd.DataFrame | None = None
     caps = cnec_attribution.country_caps(context, prices, interval)
     cap_inputs = None if context is None else _at_interval(context, interval)
     note = ""

@@ -60,7 +60,7 @@ def snapshots(day: MarketDay) -> pd.DatetimeIndex:
 
 def config_window(day: MarketDay) -> tuple[str, str]:
     """The market day's window as naive-UTC strings, the form PyPSA-Eur's ``snapshots`` takes."""
-    return tuple(moment.strftime("%Y-%m-%d %H:%M") for moment in (day.start_time_utc, day.end_time_utc))
+    return day.start_time_utc.strftime("%Y-%m-%d %H:%M"), day.end_time_utc.strftime("%Y-%m-%d %H:%M")
 
 
 def promote(candidate: Path) -> Path:

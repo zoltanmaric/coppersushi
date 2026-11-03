@@ -92,20 +92,6 @@ class BranchInfo(pa.DataFrameModel):
         coerce = True
 
 
-class BranchQuantityByComponentAndName(pa.DataFrameModel):
-    """One quantity indexed by (component, name).
-
-    Generic over `quantity`; `p0` is the column documented here, and the model carries
-    no validation so another `quantity` still passes.
-    """
-
-    p0: Series[float]  # PyPSA: Line/Link/Transformer.p0
-
-    class Config:
-        strict = False
-        coerce = True
-
-
 class BranchInfoForSnapshot(BranchInfo):
     """`BranchInfo` plus per-snapshot flow."""
 

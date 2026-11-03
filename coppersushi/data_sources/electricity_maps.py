@@ -12,6 +12,7 @@ repository fixtures; cached CSVs live under ignored ``data/electricity-maps/``.
 """
 
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 import json
 import logging
 import sys
@@ -43,7 +44,7 @@ def api_token() -> str:
     return credentials.token("ELECTRICITY_MAPS_API_KEY", TOKEN_FILE)
 
 
-def _stamp(moment) -> str:
+def _stamp(moment: datetime) -> str:
     return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -88,7 +89,7 @@ def fetch_day(
     market_day = MarketDay.on(day)
     credential = token or api_token()
 
-    def fetch_zone(zone):
+    def fetch_zone(zone: str) -> dict:
         payload = _get(zone, market_day, credential)
         check_answered_as_asked(zone, market_day, payload)
         return payload

@@ -68,9 +68,6 @@ class Model(NamedTuple):
     branches: DataFrame[Branches]
 
 
-TABLES = {"transformers": Transformers, "branches": Branches}  # file stem → its model
-
-
 def release_dir(release: str) -> Path:
     return STATIC_GRID_DIR / release
 
@@ -81,7 +78,7 @@ def check_download(spec: Release, payload: bytes) -> None:
         raise RuntimeError(f"{spec.path}: {len(payload)} bytes, expected {spec.zip_bytes}")
 
 
-def check_workbook(release: str, name: str, sheets: list[str]) -> None:
+def check_workbook(release: str, name: str, sheets: list[str | int]) -> None:
     """Raise unless the extracted workbook is this release's, with the sheets it should have."""
     expected_date = release.replace("-", "")
     if not name.startswith(expected_date):
@@ -136,7 +133,8 @@ def write_release(
     an unusable reactance, and EICs it publishes twice.
     """
     directory.mkdir(parents=True, exist_ok=True)
-    for name, frame in {"transformers": transformers, "branches": branches}.items():
+    tables: dict[str, pd.DataFrame] = {"transformers": transformers, "branches": branches}
+    for name, frame in tables.items():
         report(name, frame)
         frame.to_csv(directory / f"{name}.csv", index=False)
     logger.info("jao static grid: wrote %s", directory)
@@ -157,10 +155,8 @@ def report(name: str, frame: pd.DataFrame) -> None:
 def read_release(directory: Path) -> Model:
     """The two tables back from CSV, each validated."""
     return Model(
-        **{
-            name: pd.read_csv(directory / f"{name}.csv").pipe(model.validate)
-            for name, model in TABLES.items()
-        }
+        transformers=pd.read_csv(directory / "transformers.csv").pipe(Transformers.validate),
+        branches=pd.read_csv(directory / "branches.csv").pipe(Branches.validate),
     )
 
 

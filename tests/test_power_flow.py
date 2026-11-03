@@ -41,6 +41,14 @@ class TestPlotPowerFlow:
         # and p_nom_opt * p_max_pu for links
         assert link.p_max == approx(0.0002 * 1.0, abs=0.0001)
 
+    def test_generator_totals_combine_technologies_on_each_bus(self, n):
+        totals = ppf.sum_generators_t_attribute_by_bus(n, n.generators_t.p)
+        wind = ppf.sum_generators_t_attribute_by_bus(n, n.generators_t.p, "wind")
+        assert totals.index.equals(n.snapshots)
+        assert totals.columns.is_unique
+        assert totals.loc[n.snapshots[6], "5624"] == approx(312.710707, abs=1e-6)
+        assert wind.loc[n.snapshots[6], "5624"] == approx(99.046965, abs=1e-6)
+
     def test_get_node_info_for_snapshot(self, n):
         node_info_t = ppf.get_node_info_for_snapshot(n, n.snapshots[6])
         node = node_info_t.loc['5624']

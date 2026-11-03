@@ -81,7 +81,7 @@ def _rays(origin: tuple[float, float], zonal: pd.DataFrame) -> list[go.Scatterma
     widths = _sized(influenced.contribution, *RAY_WIDTH)
     haloed = []
     label_lon, label_lat, labels = [], [], []
-    for row, width in zip(influenced.itertuples(), widths):
+    for (_, row), width in zip(influenced.iterrows(), widths):
         lon, lat = arc(origin, (row.x, row.y))
         midpoint = len(lon) // 2
         label_lon.append(lon[midpoint])
@@ -112,7 +112,7 @@ def _rays(origin: tuple[float, float], zonal: pd.DataFrame) -> list[go.Scatterma
 def _dots(zonal: pd.DataFrame, reference: str) -> list[go.Scattermapbox]:
     """A dot on every drawn zone, sized and coloured by its contribution."""
     at_reference = zonal.zone.eq(reference)
-    text = zonal.zone + " · " + np.where(
+    text: pd.Series = zonal.zone + " · " + np.where(
         at_reference,
         "reference zone",
         zonal.contribution.map(lambda value: f"{value:+,.2f} €/MWh") + f" relative to {reference}",
@@ -143,9 +143,11 @@ def overlay(selected: pd.Series, centres: pd.DataFrame, contribution: pd.DataFra
     columns = ["zone", "x", "y"] + (["price"] if "price" in centres else [])
     zonal = contribution.merge(centres[columns], on="zone", how="inner")
     reference_price = centres[centres.zone.eq(reference)]
+    observed: list[str] | str
+    remainder: list[str] | str
     if "price" in centres and len(reference_price) == 1:
         spreads = [price_spread(reference_price.price.iloc[0], row.price, row.contribution)
-                   for row in zonal.itertuples()]
+                   for _, row in zonal.iterrows()]
         observed = [f"{spread.observed:+,.2f} €/MWh" if pd.notna(spread.observed) else "unavailable"
                     for spread in spreads]
         remainder = [f"{spread.remainder:+,.2f} €/MWh" if pd.notna(spread.remainder) else "unavailable"

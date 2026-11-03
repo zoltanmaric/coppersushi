@@ -14,8 +14,8 @@ BUNDLE = REPO / "data" / "core-zone-shapes.geojson"
 
 def write(zones: pd.DataFrame, path: Path) -> None:
     BiddingZoneShapes.validate(zones)
-    features = [{"type": "Feature", "properties": {"zone": row.zone},
-                 "geometry": mapping(row.geometry)} for row in zones.itertuples()]
+    features = [{"type": "Feature", "properties": {"zone": zone},
+                 "geometry": mapping(geometry)} for zone, geometry in zip(zones.zone, zones.geometry)]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"type": "FeatureCollection", "features": features}))
 
