@@ -269,7 +269,8 @@ def test_browser_enrichment_roundtrip_preserves_contributions(monkeypatch, conte
     polish_price = pd.read_csv(fixtures / 'polish-price.csv').assign(
         interval=lambda f: pd.to_datetime(f.interval, utc=True))
     day = replace(day, context=context, prices=pd.concat([day.prices, polish_price]))
-    attribution = {'rows': json.loads(day.context.to_json(orient='records', date_format='iso'))}
+    attribution = {'day': '2024-08-29', 'request': 0, 'complete': False,
+                   'rows': json.loads(day.context.to_json(orient='records', date_format='iso'))}
     monkeypatch.setattr(app, 'cnec_day', lambda _: replace(day, context=None))
     monkeypatch.setattr(app, 'cnec_geometries', lambda *_: mapped_elements())
     monkeypatch.setattr(app, 'mapbox_token', lambda: None)

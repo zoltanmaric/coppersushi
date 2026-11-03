@@ -1,0 +1,50 @@
+[
+  {
+    "name": "null",
+    "record": {
+      "dateTimeUtc": "2026-09-11T22:00:00Z",
+      "alphaFactor": null
+    },
+    "valid": true
+  },
+  {
+    "name": "extra",
+    "record": {
+      "dateTimeUtc": "2026-09-11T22:00:00Z",
+      "alphaFactor": 1,
+      "publisherNote": "extra"
+    },
+    "valid": true
+  },
+  {
+    "name": "missing",
+    "record": {
+      "dateTimeUtc": "2026-09-11T22:00:00Z"
+    },
+    "valid": false
+  },
+  {
+    "name": "text",
+    "record": {
+      "dateTimeUtc": "2026-09-11T22:00:00Z",
+      "alphaFactor": "unavailable"
+    },
+    "valid": false
+  },
+  {
+    "name": "numeric-string",
+    "record": {
+      "dateTimeUtc": "2026-09-11T22:00:00Z",
+      "alphaFactor": "1"
+    },
+    "valid": false
+  },
+  {
+    "name": "naive",
+    "record": {
+      "dateTimeUtc": "2026-09-11T22:00:00",
+      "alphaFactor": 1
+    },
+    "valid": false
+  }
+]

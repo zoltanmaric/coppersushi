@@ -5,6 +5,8 @@ from datetime import datetime
 from typing import NamedTuple
 
 import pandas as pd
+from pandera.typing import DataFrame
+from coppersushi.data_model.cnec_attribution import AttributionContext
 import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
 from dash import dcc, html
@@ -31,7 +33,7 @@ class Day:
     ptdfs: DataFrame[ConstraintPtdfs]
     external_constraints: DataFrame[ActiveExternalConstraints]
     prices: DataFrame[DayAheadPrices]
-    context: pd.DataFrame | None = None
+    context: DataFrame[AttributionContext] | None = None
     adjacent: pd.DataFrame | None = None
 
 

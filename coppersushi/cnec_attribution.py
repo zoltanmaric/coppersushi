@@ -1,10 +1,16 @@
 """Validated normalized-FB attribution inputs and explicit virtual-interface mapping."""
 
 from typing import NamedTuple
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
 from shapely.geometry import Point
+from pandera.typing import DataFrame
+
+from coppersushi.data_model.cnec_attribution import (
+    AlphaFactor, AllocationConstraint, NetPosition, PolishAlternative, AttributionContext,
+)
 
 from coppersushi.market import CORE_ZONES
 from coppersushi.market_day import MarketDay
@@ -27,18 +33,21 @@ ADJACENT_ANCHORS = {"DK1": (9.1, 56.1), "DK2": (12.0, 55.6), "NO2": (7.4, 58.6),
                     "SE4": (14.2, 56.2), "LT": (24.0, 55.2), "BG": (25.3, 42.7)}
 
 
-def context(day: MarketDay, alpha_rows: list[dict], cap_rows: list[dict],
-            position_rows: list[dict], polish_rows: list[dict]) -> pd.DataFrame:
+def context(day: MarketDay, alpha_rows: list[AlphaFactor], cap_rows: list[AllocationConstraint],
+            position_rows: list[NetPosition], polish_rows: list[PolishAlternative]) -> DataFrame[AttributionContext]:
     """Align public feeds; reconstruct PL quarters only with IDs and an NP cross-check.
 
     Each incomplete or ambiguous input remains missing. Historical hourly PL support is
     deliberately unavailable: the empirical adapter was validated only after MTU change.
     """
     result = pd.DataFrame({"interval": day.market_time_units()})
-    for rows, fields in [(alpha_rows, {"alphaFactor": "alpha"}),
-                         (cap_rows, {"limitDown_PL": "import_limit", "limitUp_PL": "export_limit"}),
-                         (position_rows, {"hub_PL": "polish_position"})]:
-        frame = pd.DataFrame(rows)
+    feeds: list[tuple[Sequence[AlphaFactor | AllocationConstraint | NetPosition], dict[str, str]]] = [
+        (alpha_rows, {"alphaFactor": "alpha"}),
+        (cap_rows, {"limitDown_PL": "import_limit", "limitUp_PL": "export_limit"}),
+        (position_rows, {"hub_PL": "polish_position"}),
+    ]
+    for rows, fields in feeds:
+        frame = pd.DataFrame([row.model_dump() for row in rows])
         if frame.empty or not set(fields).issubset(frame):
             for column in fields.values():
                 result[column] = np.nan
@@ -48,10 +57,10 @@ def context(day: MarketDay, alpha_rows: list[dict], cap_rows: list[dict],
         result = result.merge(frame[["interval", *fields]].rename(columns=fields),
                               on="interval", how="left", validate="one_to_one")
     result["polish_alt"] = np.nan
-    polish = pd.DataFrame(polish_rows)
+    polish = pd.DataFrame([row.model_dump() for row in polish_rows])
     required = {"id", "dateTimeUtc", "border_PL_ALT", "border_PL_SDAC_NP"}
     if not required.issubset(polish) or len(day.market_time_units()) <= 25:
-        return result
+        return AttributionContext.validate(result)
     polish = polish.assign(hour=pd.to_datetime(polish.dateTimeUtc, utc=True))
     polish = polish.sort_values("id")
     counts = polish.groupby("hour").id.transform("size")
@@ -65,7 +74,7 @@ def context(day: MarketDay, alpha_rows: list[dict], cap_rows: list[dict],
                            on="interval", how="left", validate="one_to_one")
     valid = (matched.polish_position - matched.border_PL_SDAC_NP).abs().le(0.051)
     result["polish_alt"] = matched.border_PL_ALT.where(valid)
-    return result
+    return AttributionContext.validate(result)
 
 
 class PriceSpread(NamedTuple):

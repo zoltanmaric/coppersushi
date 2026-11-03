@@ -15,6 +15,7 @@ from dash.exceptions import PreventUpdate
 
 from coppersushi import cnec_geometry, cnec_page, map_style, power_flow
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
+from coppersushi.data_model.cnec_attribution import AttributionContext, AttributionPayload
 from coppersushi.data_sources import opf_bundle, zone_shapes, credentials, virtual_attribution, cnec_attribution as attribution_source, electricity_maps, jao, mapbox_styles, networks, osm_locator
 from coppersushi.market_day import MARKET_TZ, MarketDay
 
@@ -264,11 +265,10 @@ def render_cnec(day: str, interval_index: int, selected: str | None, attribution
     try:
         inputs = timed("day_inputs", cnec_day, day)
         if attribution and attribution.get("rows") is not None:
-            context = pd.DataFrame(attribution["rows"])
-            # JSON nulls in entirely missing numeric columns otherwise remain None.
-            context = context.astype({c: float for c in context if c != "interval"})
+            payload = AttributionPayload.model_validate(attribution)
+            context = pd.DataFrame([row.model_dump() for row in payload.rows or []])
             context["interval"] = pd.to_datetime(context.interval, utc=True)
-            inputs = replace(inputs, context=context)
+            inputs = replace(inputs, context=AttributionContext.validate(context))
         intervals = inputs.market_day.market_time_units()
         interval = intervals[min(max(interval_index or 0, 0), len(intervals) - 1)]
         chosen = inputs.external_constraints[
@@ -414,8 +414,11 @@ def load_cnec_attribution(viewed, day, retries):
         raise PreventUpdate
     try:
         frame = timed('attribution', attribution_source.load_day, day)
-        return {**token, 'rows': json.loads(frame.to_json(orient='records', date_format='iso')),
-                'complete': bool(frame.notna().all().all())}
+        payload = AttributionPayload.model_validate({
+            **token, 'rows': json.loads(frame.to_json(orient='records', date_format='iso')),
+            'complete': bool(frame.notna().all().all()),
+        })
+        return payload.model_dump(mode='json')
     except Exception:
         logging.exception('Loading CNEC attribution for %s failed', day)
         return {**token, 'complete': False}
