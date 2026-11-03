@@ -31,6 +31,8 @@ navigation.
 
 ## The CNEC page
 
+The base map loads before country-cap and price-contribution inputs. A status message identifies pending enrichment; hour navigation remains independent of that request. Enrichment is scoped to the day and retry, and late map results are discarded when the viewed hour or selection changes. Server logs report data-loading, geometry, attribution and figure-building durations.
+
 Click a country-cap outline, transformer/PST marker, constrained line or schematic interface to select a binding row. The dropdown stays synchronized; when several rows share a target, it preserves the selected row or chooses the largest published dual. Poland alone has a supported aggregate cap. Individual virtual-hub bounds never highlight a whole country's border. Previous/next buttons move one market time unit; minor ticks and timezone labels distinguish daylight-saving hours. Remaining numerical coverage is tracked in the [constraint-selection spec](specs/cnec-constraint-selection.md).
 
 `/cnec/<day>` puts the Core day-ahead market's published outcome beside its published binding constraints: every bidding zone coloured and labelled by its cleared price, and the [critical network elements with contingencies (CNECs)](core-day-ahead-capacity-calculation.md#cnec) that bound in that market time unit in purple. Purple means market-binding under the named contingency, not physically overloaded. A slider steps through the day's intervals; historical days load when their source data is available, and the next day once the prices and the Joint Allocation Office's (JAO's) active constraints are published.
