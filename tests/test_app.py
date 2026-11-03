@@ -225,12 +225,12 @@ def test_enrichment_waits_for_base_map_and_is_scoped_to_retry(monkeypatch):
 
 def test_enrichment_preserves_current_interval_and_selection(monkeypatch):
     token = {'day': '2024-08-29', 'request': 2}
-    attribution = {**token, 'rows': json.loads(inputs().context.to_json(orient='records', date_format='iso'))}
+    attribution = app.attribution_to_browser(inputs().context, token['day'], 2).model_dump(mode='json')
     seen = []
     view = cnec_page.render(inputs(), mapped_elements(), 0, None)
     monkeypatch.setattr(app, 'render_cnec', lambda *args: seen.append(args) or app.CnecRender(view))
     result = app.enrich_cnec(attribution, token['day'], 2, 7, '42', token)
-    assert seen == [(token['day'], 7, '42', attribution)]
+    assert seen == [(token['day'], 7, '42', app.AttributionPayload.model_validate(attribution))]
     assert result['figure'] is view.figure
     assert result['options'] == view.constraint_options
     assert (result['interval'], result['selected']) == (7, '42')
@@ -247,7 +247,7 @@ def test_enrichment_failure_leaves_base_map_usable_and_retryable(monkeypatch):
         raise OSError('offline')
     monkeypatch.setattr(app.attribution_source, 'load_day', offline)
     failed = app.load_cnec_attribution(token, token['day'], 0)
-    assert failed == {**token, 'complete': False, 'error': 'Attribution failed: offline'}
+    assert failed == {**token, 'error': 'Attribution failed: offline'}
     with pytest.raises(PreventUpdate):
         app.enrich_cnec(failed, token['day'], 0, 0, None, token)
     monkeypatch.setattr(app, 'ctx', SimpleNamespace(triggered_id='cnec-next'))
@@ -275,7 +275,7 @@ def test_browser_enrichment_roundtrip_preserves_contributions(monkeypatch, conte
     monkeypatch.setattr(app, 'cnec_geometries', lambda *_: mapped_elements())
     monkeypatch.setattr(app, 'mapbox_token', lambda: None)
     monkeypatch.setattr(app, 'basemap', lambda: 'white-bg')
-    result = app.render_cnec('2024-08-29', 0, '1', attribution)
+    result = app.render_cnec('2024-08-29', 0, '1', app.AttributionPayload.model_validate(attribution))
     expected = cnec_page.render(day, mapped_elements(), 0, '1', basemap='white-bg')
     assert result.error == ""
     assert result.view.figure.to_json() == expected.figure.to_json()
@@ -283,7 +283,7 @@ def test_browser_enrichment_roundtrip_preserves_contributions(monkeypatch, conte
 
 def test_enrichment_render_error_reaches_browser_with_selection_scope(monkeypatch):
     token = {'day': '2024-08-29', 'request': 0}
-    payload = app.attribution_to_browser(inputs().context, token['day'], 0)
+    payload = app.attribution_to_browser(inputs().context, token['day'], 0).model_dump(mode='json')
     monkeypatch.setattr(app, 'render_cnec', lambda *args: app.CnecRender(None, 'render failed'))
     assert app.enrich_cnec(payload, token['day'], 0, 3, '42', token) == {
         **token, 'interval': 3, 'selected': '42', 'error': 'render failed',

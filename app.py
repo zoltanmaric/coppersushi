@@ -14,7 +14,7 @@ from dash.exceptions import PreventUpdate
 
 from coppersushi import cnec_geometry, cnec_page, map_style, power_flow
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
-from coppersushi.data_model.cnec_attribution import AttributionPayload, attribution_to_browser, attribution_from_browser
+from coppersushi.data_model.cnec_attribution import AttributionPayload, AttributionFailure, attribution_to_browser, attribution_from_browser
 from coppersushi.data_sources import opf_bundle, zone_shapes, credentials, virtual_attribution, cnec_attribution as attribution_source, electricity_maps, jao, mapbox_styles, networks, osm_locator
 from coppersushi.market_day import MARKET_TZ, MarketDay
 
@@ -259,11 +259,11 @@ class CnecRender(NamedTuple):
     error: str = ''
 
 
-def render_cnec(day: str, interval_index: int, selected: str | None, attribution: dict | None = None) -> CnecRender:
+def render_cnec(day: str, interval_index: int, selected: str | None, attribution: AttributionPayload | None = None) -> CnecRender:
     """The CNEC page's map and controls for one day; a failed load becomes the banner."""
     try:
         inputs = timed("day_inputs", cnec_day, day)
-        if attribution and attribution.get("rows") is not None:
+        if attribution is not None:
             inputs = replace(inputs, context=attribution_from_browser(attribution))
         intervals = inputs.market_day.market_time_units()
         interval = intervals[min(max(interval_index or 0, 0), len(intervals) - 1)]
@@ -395,7 +395,8 @@ def update_cnec(click, previous, next_, interval_index, selected, attribution,
         interval_index = cnec_page.advance_interval(MarketDay.on(day), interval_index or 0, -1)
     elif ctx.triggered_id == 'cnec-next':
         interval_index = cnec_page.advance_interval(MarketDay.on(day), interval_index or 0, 1)
-    return cnec_outputs(render_cnec(day, interval_index, selected, enrichment))
+    payload = AttributionPayload.model_validate(enrichment) if enrichment and enrichment.get('rows') is not None else None
+    return cnec_outputs(render_cnec(day, interval_index, selected, payload))
 
 
 @app.callback(
@@ -410,11 +411,11 @@ def load_cnec_attribution(viewed, day, retries):
         raise PreventUpdate
     try:
         frame = timed('attribution', attribution_source.load_day, day)
-        return attribution_to_browser(frame, day, retries)
+        return attribution_to_browser(frame, day, retries).model_dump(mode="json")
     except Exception as error:
         logging.exception('Loading CNEC attribution for %s failed', day)
-        return AttributionPayload(day=day, request=retries, complete=False,
-                                  error=f'Attribution failed: {error}').model_dump(mode='json', exclude_none=True)
+        return AttributionFailure(day=day, request=retries,
+                                  error=f'Attribution failed: {error}').model_dump(mode='json')
 
 
 @app.callback(
@@ -432,7 +433,7 @@ def enrich_cnec(attribution, day, retries, interval_index, selected, viewed):
     if (viewed != token or not attribution or attribution.get('rows') is None
             or any(attribution.get(k) != v for k, v in token.items())):
         raise PreventUpdate
-    result = render_cnec(day, interval_index, selected, attribution)
+    result = render_cnec(day, interval_index, selected, AttributionPayload.model_validate(attribution))
     view = result.view
     if view is None:
         return {**token, 'interval': interval_index, 'selected': selected,

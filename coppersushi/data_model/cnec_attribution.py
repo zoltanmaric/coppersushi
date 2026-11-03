@@ -6,7 +6,6 @@ scaling and Polish import/export limits, net positions and alternative prices.
 See wiki/flow-based-market-coupling.md#attribution for an example and interpretation.
 """
 
-from typing import Any
 
 import pandas as pd
 import pandera.pandas as pa
@@ -71,14 +70,22 @@ class AttributionRow(BaseModel):
 
 
 class AttributionPayload(BaseModel):
-    """A day of price-attribution inputs or a load error, tied to its browser request."""
+    """Successfully loaded price-attribution inputs for one browser request."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
     day: str
     request: int | None
     complete: bool
-    rows: list[AttributionRow] | None = None
-    error: str | None = None
+    rows: list[AttributionRow]
+
+
+class AttributionFailure(BaseModel):
+    """A failed attribution load, tied to its browser request; contains no data."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    day: str
+    request: int | None
+    error: str
 
 
 class AttributionContext(pa.DataFrameModel):
@@ -97,21 +104,17 @@ class AttributionContext(pa.DataFrameModel):
 
 
 def attribution_to_browser(frame: DataFrame[AttributionContext], day: str,
-                           request: int | None) -> dict[str, Any]:
-    """Encode a day's table as validated browser JSON, preserving missing numbers as null."""
-    payload = AttributionPayload.model_validate({
+                           request: int | None) -> AttributionPayload:
+    """Build a typed browser payload from a day's table, preserving missing inputs as None."""
+    return AttributionPayload.model_validate({
         'day': day, 'request': request,
         'rows': frame.astype(object).where(frame.notna(), None).to_dict(orient='records'),
         'complete': bool(frame.notna().all().all()),
     })
-    return payload.model_dump(mode='json')
 
 
-def attribution_from_browser(data: dict[str, Any]) -> DataFrame[AttributionContext]:
-    """Validate browser inputs and restore UTC timestamps and numeric missing values."""
-    payload = AttributionPayload.model_validate(data)
-    if payload.rows is None:
-        raise ValueError('Attribution payload has no rows')
+def attribution_from_browser(payload: AttributionPayload) -> DataFrame[AttributionContext]:
+    """Restore UTC timestamps and numeric missing values from a validated browser payload."""
     frame = pd.DataFrame([row.model_dump() for row in payload.rows])
     frame['interval'] = pd.to_datetime(frame.interval, utc=True)
     return AttributionContext.validate(frame)

@@ -8,7 +8,7 @@ from pandera.errors import SchemaError
 from pydantic import ValidationError
 
 from coppersushi import REPO
-from coppersushi.data_model.cnec_attribution import AlphaFactor, AttributionContext, AttributionPayload
+from coppersushi.data_model.cnec_attribution import AlphaFactor, AttributionContext, AttributionPayload, AttributionFailure, attribution_to_browser, attribution_from_browser
 from coppersushi.data_sources import cnec_attribution as source
 
 FIXTURE = REPO / "tests/fixtures/cnec-attribution"
@@ -52,9 +52,8 @@ def test_browser_nulls_become_numeric_missing_values():
         "day": "2024-08-29", "request": 0, "complete": False,
         "rows": json.loads(frame.to_json(orient="records")),
     })
-    restored = pd.DataFrame([row.model_dump() for row in payload.rows])
-    restored["interval"] = pd.to_datetime(restored.interval, utc=True)
-    restored = AttributionContext.validate(restored)
+    restored = attribution_from_browser(payload)
+    assert attribution_to_browser(restored, payload.day, payload.request) == payload
     assert restored.drop(columns="interval").dtypes.eq("float64").all()
     assert restored.drop(columns="interval").isna().all().all()
     with pytest.raises(ValidationError):
@@ -86,3 +85,11 @@ def test_loader_does_not_hide_failures(monkeypatch, tmp_path, stage):
         monkeypatch.setattr(source.cnec_attribution, "context", broken)
     with pytest.raises(RuntimeError, match="unexpected failure"):
         source.load_day("2026-09-12", refresh=True)
+
+
+def test_attribution_success_and_failure_cannot_be_combined():
+    failure = AttributionFailure(day="2026-11-03", request=0, error="unavailable")
+    with pytest.raises(ValidationError):
+        AttributionFailure.model_validate({**failure.model_dump(), "complete": True})
+    with pytest.raises(ValidationError):
+        AttributionPayload.model_validate({**failure.model_dump(), "complete": True, "rows": []})
