@@ -24,6 +24,8 @@
 
 ## Entities
 
+- [jao-availability.md](jao-availability.md) — observed JAO outage, existing S3 cache and future response-retention requirements
+
 - [sushi-2.md](sushi-2.md) — Copper Sushi 2: optimal power flow on the 2025 OSM grid via PyPSA-Eur as of 2026; architecture
 - [electricity-maps-api.md](electricity-maps-api.md) — Electricity Maps' v4 grid and market signals, this project's Core-wide price-forecast access, and why the data is not a bid curve
 - [backtest-2024-08-29.md](backtest-2024-08-29.md) — one solved day scored against JAO's binding CNECs and settled prices: what each config change bought, and what to fix next
