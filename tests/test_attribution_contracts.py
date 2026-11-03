@@ -50,15 +50,15 @@ def test_empty_feeds_are_supported_missing_data(monkeypatch, tmp_path):
 def test_browser_nulls_become_numeric_missing_values():
     frame = pd.read_csv(FIXTURE / "missing-context.csv")
     payload = AttributionPayload.model_validate({
-        "day": "2024-08-29", "request": 0, "complete": False,
+        "day": "2024-08-29", "complete": False,
         "rows": json.loads(frame.to_json(orient="records")),
     })
     restored = attribution_from_browser(payload)
-    assert attribution_to_browser(restored, MarketDay.on(payload.day), payload.request) == payload
+    assert attribution_to_browser(restored, MarketDay.on(payload.day)) == payload
     assert restored.drop(columns="interval").dtypes.eq("float64").all()
     assert restored.drop(columns="interval").isna().all().all()
     with pytest.raises(ValidationError):
-        AttributionPayload.model_validate({**payload.model_dump(), "request": "0"})
+        AttributionPayload.model_validate({**payload.model_dump(), "unexpected": "0"})
     with pytest.raises(SchemaError):
         AttributionContext.validate(pd.concat([restored, restored]))
 
@@ -89,7 +89,7 @@ def test_loader_does_not_hide_failures(monkeypatch, tmp_path, stage):
 
 
 def test_attribution_success_and_failure_cannot_be_combined():
-    failure = AttributionFailure(day=MarketDay.on("2026-11-03").date, request=0, error="unavailable")
+    failure = AttributionFailure(day=MarketDay.on("2026-11-03").date, error="unavailable")
     with pytest.raises(ValidationError):
         AttributionFailure.model_validate({**failure.model_dump(), "complete": True})
     with pytest.raises(ValidationError):
@@ -99,7 +99,7 @@ def test_attribution_success_and_failure_cannot_be_combined():
 def test_browser_delivery_date_is_typed_and_serializes_as_iso():
     from datetime import date
     failure = AttributionFailure.model_validate({
-        "day": "2026-11-03", "request": 0, "error": "unavailable",
+        "day": "2026-11-03", "error": "unavailable",
     })
     assert failure.day == date(2026, 11, 3)
     assert failure.model_dump(mode="json")["day"] == "2026-11-03"

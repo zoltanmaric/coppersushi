@@ -129,22 +129,21 @@ def test_loading_failure_reaches_the_banner_without_fetching_prices(monkeypatch)
 
     monkeypatch.setattr(jao, "load_active_day", unavailable)
     monkeypatch.setattr(app.electricity_maps, "load_day", lambda day: pytest.fail("price fetch after failure"))
-    active = app.load_cnec_constraints("2024-08-29", 1)
+    active = app.load_cnec_constraints("2024-08-29")
     ready = app.load_cnec_prices(active, "2024-08-29")
-    result = app.open_cnec(ready, "2024-08-29", 1)
+    result = app.open_cnec(ready, "2024-08-29")
     message, is_open = result[6:8]
     assert is_open and "constraints unavailable" in message
-    assert ready["request"] == 1
 
 
 def test_a_previous_days_completion_cannot_load_or_draw_the_selected_day(monkeypatch):
     monkeypatch.setattr(app.electricity_maps, "load_day", lambda day: pytest.fail("stale price fetch"))
     monkeypatch.setattr(app, "render_cnec", lambda *args: pytest.fail("stale map"))
-    stale = {"day": "2024-08-29", "request": 0}
+    stale = {"day": "2024-08-29"}
     with pytest.raises(PreventUpdate):
         app.load_cnec_prices(stale, "2024-08-30")
     with pytest.raises(PreventUpdate):
-        app.open_cnec(stale, "2024-08-30", 0)
+        app.open_cnec(stale, "2024-08-30")
 
 
 @pytest.mark.parametrize("mode", ['embed', 'full'])
@@ -205,59 +204,56 @@ def test_base_day_does_not_fetch_attribution(monkeypatch):
     assert app.cnec_day(MarketDay.on('2024-08-29')).context is None
 
 
-def test_enrichment_waits_for_base_map_and_is_scoped_to_retry(monkeypatch):
+def test_enrichment_waits_for_base_map_and_is_scoped_to_day(monkeypatch):
     day = '2024-08-29'
-    token = {'day': day, 'request': 0}
+    token = {'day': day}
     calls = []
     monkeypatch.setattr(app.attribution_source, 'load_day', lambda d: calls.append(d) or inputs().context)
     with pytest.raises(PreventUpdate):
-        app.load_cnec_attribution(None, day, 0)
+        app.load_cnec_attribution(None, day)
     with pytest.raises(PreventUpdate):
-        app.load_cnec_attribution(token, day, 1)
+        app.load_cnec_attribution(token, '2024-08-30')
     assert not calls
-    result = app.load_cnec_attribution(token, day, 0)
+    result = app.load_cnec_attribution(token, day)
     assert result['rows'] and calls == [MarketDay.on(day)]
     # Returning to the same day must enrich its newly opened base map again.
-    assert app.load_cnec_attribution(token, day, 0)["rows"] == result["rows"]
-    next_token = {'day': day, 'request': 1}
-    assert app.load_cnec_attribution(next_token, day, 1)['request'] == 1
-    assert len(calls) == 3
+    assert app.load_cnec_attribution(token, day)["rows"] == result["rows"]
+    assert len(calls) == 2
 
 
 def test_enrichment_preserves_current_interval_and_selection(monkeypatch):
-    token = {'day': '2024-08-29', 'request': 2}
-    attribution = app.attribution_to_browser(inputs().context, MarketDay.on(token['day']), 2).model_dump(mode='json')
+    token = {'day': '2024-08-29'}
+    attribution = app.attribution_to_browser(inputs().context, MarketDay.on(token['day'])).model_dump(mode='json')
     seen = []
     view = cnec_page.render(inputs(), mapped_elements(), 0, None)
     monkeypatch.setattr(app, 'render_cnec', lambda *args: seen.append(args) or app.CnecRender(view))
-    result = app.enrich_cnec(attribution, token['day'], 2, 7, '42', token)
+    result = app.enrich_cnec(attribution, token['day'], 7, '42', token)
     assert seen == [(MarketDay.on(token['day']), 7, '42', app.AttributionPayload.model_validate(attribution))]
     assert result['figure'] is view.figure
     assert result['options'] == view.constraint_options
     assert (result['interval'], result['selected']) == (7, '42')
-    for stale in [{**attribution, 'day': '2024-08-30'}, {**attribution, 'request': 1}]:
-        with pytest.raises(PreventUpdate):
-            app.enrich_cnec(stale, token['day'], 2, 7, '42', token)
+    with pytest.raises(PreventUpdate):
+        app.enrich_cnec({**attribution, 'day': '2024-08-30'}, token['day'], 7, '42', token)
     assert len(seen) == 1
 
 
 def test_enrichment_failure_leaves_base_map_usable_and_retryable(monkeypatch):
     from types import SimpleNamespace
-    token = {'day': '2024-08-29', 'request': 0}
+    token = {'day': '2024-08-29'}
     def offline(_):
         raise OSError('offline')
     monkeypatch.setattr(app.attribution_source, 'load_day', offline)
-    failed = app.load_cnec_attribution(token, token['day'], 0)
+    failed = app.load_cnec_attribution(token, token['day'])
     assert failed == {**token, 'error': 'Attribution failed: offline'}
     with pytest.raises(PreventUpdate):
-        app.enrich_cnec(failed, token['day'], 0, 0, None, token)
+        app.enrich_cnec(failed, token['day'], 0, None, token)
     monkeypatch.setattr(app, 'ctx', SimpleNamespace(triggered_id='cnec-next'))
     seen = []
     monkeypatch.setattr(app, 'render_cnec', lambda *args: seen.append(args) or app.CnecRender(None, 'unavailable'))
-    app.update_cnec(None, 0, 1, 0, None, failed, token['day'], token, [], token, 0)
+    app.update_cnec(None, 0, 1, 0, None, failed, token['day'], token, [], token)
     assert seen[0][1] == 1
     monkeypatch.setattr(app.attribution_source, 'load_day', lambda _: inputs().context)
-    assert 'rows' in app.load_cnec_attribution({**token, 'request': 1}, token['day'], 1)
+    assert 'rows' in app.load_cnec_attribution(token, token['day'])
 
 
 @pytest.mark.parametrize("context_file", ["historical-context.csv", "missing-context.csv"])
@@ -270,7 +266,7 @@ def test_browser_enrichment_roundtrip_preserves_contributions(monkeypatch, conte
     polish_price = pd.read_csv(fixtures / 'polish-price.csv').assign(
         interval=lambda f: pd.to_datetime(f.interval, utc=True))
     day = replace(day, context=context, prices=pd.concat([day.prices, polish_price]))
-    attribution = {'day': '2024-08-29', 'request': 0, 'complete': False,
+    attribution = {'day': '2024-08-29', 'complete': False,
                    'rows': json.loads(day.context.to_json(orient='records', date_format='iso'))}
     monkeypatch.setattr(app, 'cnec_day', lambda _: replace(day, context=None))
     monkeypatch.setattr(app, 'cnec_geometries', lambda *_: mapped_elements())
@@ -283,10 +279,10 @@ def test_browser_enrichment_roundtrip_preserves_contributions(monkeypatch, conte
 
 
 def test_enrichment_render_error_reaches_browser_with_selection_scope(monkeypatch):
-    token = {'day': '2024-08-29', 'request': 0}
-    payload = app.attribution_to_browser(inputs().context, MarketDay.on(token['day']), 0).model_dump(mode='json')
+    token = {'day': '2024-08-29'}
+    payload = app.attribution_to_browser(inputs().context, MarketDay.on(token['day'])).model_dump(mode='json')
     monkeypatch.setattr(app, 'render_cnec', lambda *args: app.CnecRender(None, 'render failed'))
-    assert app.enrich_cnec(payload, token['day'], 0, 3, '42', token) == {
+    assert app.enrich_cnec(payload, token['day'], 3, '42', token) == {
         **token, 'interval': 3, 'selected': '42', 'error': 'render failed',
     }
 
@@ -295,18 +291,18 @@ def test_browser_enrichment_displays_only_current_render_errors():
     import re
     import subprocess
     source = (REPO / 'app.py').read_text()
-    callback = re.search(r'"""(function\(view, day, retries, interval, selected\).*?)"""', source, re.S).group(1)
+    callback = re.search(r'"""(function\(view, day, interval, selected\).*?)"""', source, re.S).group(1)
     script = 'const apply = ' + callback + ';\n' + '''
         const assert = require('node:assert/strict');
         global.window = {dash_clientside: {no_update: 'unchanged'}};
-        const view = {day: '2024-08-29', request: 1, interval: 3, selected: '42', error: 'render failed'};
-        assert.deepEqual(apply(view, view.day, 1, 3, '42'),
+        const view = {day: '2024-08-29', interval: 3, selected: '42', error: 'render failed'};
+        assert.deepEqual(apply(view, view.day, 3, '42'),
                          ['unchanged', 'unchanged', 'unchanged', 'render failed', true]);
-        for (const args of [['2024-08-30', 1, 3, '42'], [view.day, 2, 3, '42'],
-                            [view.day, 1, 4, '42'], [view.day, 1, 3, '43']]) {
+        for (const args of [['2024-08-30', 3, '42'],
+                            [view.day, 4, '42'], [view.day, 3, '43']]) {
             assert.deepEqual(apply(view, ...args), Array(5).fill('unchanged'));
         }
         const success = {...view, error: undefined, figure: {}, options: [], reference: 'Reference: DE'};
-        assert.deepEqual(apply(success, view.day, 1, 3, '42'), [{}, [], 'Reference: DE', '', false]);
+        assert.deepEqual(apply(success, view.day, 3, '42'), [{}, [], 'Reference: DE', '', false]);
     '''
     subprocess.run(['node', '-e', script], check=True, capture_output=True, text=True)

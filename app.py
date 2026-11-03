@@ -297,16 +297,15 @@ def cnec_outputs(result: CnecRender) -> tuple:
 
 @app.callback(
     Output('cnec-active-ready', 'data'),
-    Input('cnec-date', 'value'),
-    Input('cnec-retry', 'n_clicks'))
-def load_cnec_constraints(day: str, retries: int) -> dict:
+    Input('cnec-date', 'value'))
+def load_cnec_constraints(day: str) -> dict:
     try:
         _cnec_days.pop(MarketDay.on(day), None)
         timed("constraints_load", jao.load_active_day, day)
-        return {'day': day, 'request': retries}
+        return {'day': day}
     except Exception as error:
         logging.exception('Loading CNEC constraints for %s failed', day)
-        return {'day': day, 'request': retries, 'error': str(error)}
+        return {'day': day, 'error': str(error)}
 
 
 @app.callback(
@@ -327,16 +326,15 @@ def load_cnec_prices(active: dict | None, day: str) -> dict:
 
 
 app.clientside_callback(
-    """function(day, active, prices, retries) {
-        if (!active || active.day !== day || active.request !== retries) return 'Loading binding constraints…';
-        if (!prices || prices.day !== day || prices.request !== retries) return 'Loading prices for the 12 Core zones…';
+    """function(day, active, prices) {
+        if (!active || active.day !== day) return 'Loading binding constraints…';
+        if (!prices || prices.day !== day) return 'Loading prices for the 12 Core zones…';
         return 'Locating binding lines and drawing the map…';
     }""",
     Output('cnec-progress', 'children'),
     Input('cnec-date', 'value'),
     Input('cnec-active-ready', 'data'),
-    Input('cnec-prices-ready', 'data'),
-    Input('cnec-retry', 'n_clicks'))
+    Input('cnec-prices-ready', 'data'))
 
 
 CNEC_OUTPUTS = [
@@ -352,11 +350,10 @@ CNEC_OUTPUTS = [
     [Output(*output) for output in CNEC_OUTPUTS] + [Output('cnec-view-day', 'data'),
                                                         Output('cnec-attribution-status', 'children')],
     Input('cnec-prices-ready', 'data'),
-    State('cnec-date', 'value'),
-    State('cnec-retry', 'n_clicks'))
-def open_cnec(ready, day, retries):
-    token = {'day': day, 'request': retries}
-    if not ready or any(ready.get(k) != v for k, v in token.items()):
+    State('cnec-date', 'value'))
+def open_cnec(ready, day):
+    token = {'day': day}
+    if not ready or ready.get('day') != day:
         raise PreventUpdate
     if 'error' in ready:
         return (*cnec_outputs(CnecRender(None, f"Could not load {day}: {ready['error']}")), no_update, no_update)
@@ -378,16 +375,15 @@ def open_cnec(ready, day, retries):
     State('cnec-prices-ready', 'data'),
     State('cnec-constraint', 'options'),
     State('cnec-view-day', 'data'),
-    State('cnec-retry', 'n_clicks'),
     prevent_initial_call=True)
 def update_cnec(click, previous, next_, interval_index, selected, attribution,
-                day, ready, options, viewed_day, retries):
-    token = {'day': day, 'request': retries}
+                day, ready, options, viewed_day):
+    token = {'day': day}
     if (viewed_day != token or not ready or 'error' in ready
-            or any(ready.get(k) != v for k, v in token.items())):
+            or ready.get('day') != day):
         raise PreventUpdate
     delivery = MarketDay.on(day)
-    enrichment = attribution if attribution and all(attribution.get(k) == v for k, v in token.items()) else None
+    enrichment = attribution if attribution and attribution.get('day') == day else None
     if ctx.triggered_id == 'cnec-map':
         if not click:
             raise PreventUpdate
@@ -403,37 +399,34 @@ def update_cnec(click, previous, next_, interval_index, selected, attribution,
 @app.callback(
     Output('cnec-attribution-ready', 'data'),
     Input('cnec-view-day', 'data'),
-    State('cnec-date', 'value'),
-    State('cnec-retry', 'n_clicks'))
-def load_cnec_attribution(viewed, day, retries):
+    State('cnec-date', 'value'))
+def load_cnec_attribution(viewed, day):
     """Start enrichment only after the base map has reached the browser."""
-    token = {'day': day, 'request': retries}
+    token = {'day': day}
     if viewed != token:
         raise PreventUpdate
     delivery = MarketDay.on(day)
     try:
         frame = timed('attribution', attribution_source.load_day, delivery)
-        return attribution_to_browser(frame, delivery, retries).model_dump(mode="json")
+        return attribution_to_browser(frame, delivery).model_dump(mode="json")
     except Exception as error:
         logging.exception('Loading CNEC attribution for %s failed', day)
-        return AttributionFailure(day=delivery.date, request=retries,
-                                  error=f'Attribution failed: {error}').model_dump(mode='json')
+        return AttributionFailure(day=delivery.date, error=f'Attribution failed: {error}').model_dump(mode='json')
 
 
 @app.callback(
     Output('cnec-enriched-view', 'data'),
     Input('cnec-attribution-ready', 'data'),
     State('cnec-date', 'value'),
-    State('cnec-retry', 'n_clicks'),
     State('cnec-interval', 'value'),
     State('cnec-constraint', 'value'),
     State('cnec-view-day', 'data'),
     prevent_initial_call=True)
-def enrich_cnec(attribution, day, retries, interval_index, selected, viewed):
+def enrich_cnec(attribution, day, interval_index, selected, viewed):
     """Keep navigation independent of the pending attribution request."""
-    token = {'day': day, 'request': retries}
+    token = {'day': day}
     if (viewed != token or not attribution or attribution.get('rows') is None
-            or any(attribution.get(k) != v for k, v in token.items())):
+            or attribution.get('day') != day):
         raise PreventUpdate
     result = render_cnec(MarketDay.on(day), interval_index, selected, AttributionPayload.model_validate(attribution))
     view = result.view
@@ -446,11 +439,11 @@ def enrich_cnec(attribution, day, retries, interval_index, selected, viewed):
 
 
 app.clientside_callback(
-    """function(view, day, retries, interval, selected) {
+    """function(view, day, interval, selected) {
         const unchanged = [window.dash_clientside.no_update, window.dash_clientside.no_update,
                            window.dash_clientside.no_update, window.dash_clientside.no_update,
                            window.dash_clientside.no_update];
-        if (!view || view.day !== day || view.request !== retries ||
+        if (!view || view.day !== day ||
             view.interval !== interval || view.selected !== selected) return unchanged;
         if (view.error) return [...unchanged.slice(0, 3), view.error, true];
         return [view.figure, view.options, view.reference, '', false];
@@ -462,15 +455,14 @@ app.clientside_callback(
     Output('cnec-status', 'is_open', allow_duplicate=True),
     Input('cnec-enriched-view', 'data'),
     State('cnec-date', 'value'),
-    State('cnec-retry', 'n_clicks'),
     State('cnec-interval', 'value'),
     State('cnec-constraint', 'value'),
     prevent_initial_call=True)
 
 
 app.clientside_callback(
-    """function(attribution, day, retries) {
-        if (!attribution || attribution.day !== day || attribution.request !== retries)
+    """function(attribution, day) {
+        if (!attribution || attribution.day !== day)
             return window.dash_clientside.no_update;
         if (attribution.error) return attribution.error;
         return attribution.complete ? '' : 'Source data is missing for some intervals; affected contributions are unavailable.';
@@ -478,7 +470,6 @@ app.clientside_callback(
     Output('cnec-attribution-status', 'children', allow_duplicate=True),
     Input('cnec-attribution-ready', 'data'),
     State('cnec-date', 'value'),
-    State('cnec-retry', 'n_clicks'),
     prevent_initial_call=True)
 
 
