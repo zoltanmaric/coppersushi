@@ -5,9 +5,17 @@ This directory manages the Lambda deployment and CloudFront hostname at
 
 ## Deploy an update
 
-Run commands from the repository root. Use the existing ignored
-`infra/lambda/terraform.tfvars.json` and Terraform state for this deployment.
-Keep the previous `image_uri` digest for rollback.
+Run commands from the repository root. Tracked `infra/lambda/` holds the Terraform
+source; the existing production working directory is ignored
+`.secrets/aws-production/`. Its `terraform.tfstate` is authoritative and
+`terraform.tfvars.json` holds the deployment inputs. Read its `README.local.txt`
+before use. Keep the previous `image_uri` digest for rollback.
+
+Ignored deployment files do not follow Git worktrees. If this directory is absent,
+locate the primary checkout with `git worktree list` and check there before asking
+for configuration. Do not initialize replacement state for an existing deployment.
+Refresh the working directory's `main.tf`, `hostname.tf` and `.terraform.lock.hcl`
+from the merged `infra/lambda/` sources before planning; preserve its state and inputs.
 
 1. Run `git lfs pull` and prepare the JAO endpoint seed and OSM locator using the
    [market-data commands](../../README.md#market-data). The Docker build validates
@@ -22,16 +30,18 @@ Keep the previous `image_uri` digest for rollback.
    URI**, then review and apply a saved plan:
 
    ```sh
-   terraform -chdir=infra/lambda init
-   terraform -chdir=infra/lambda plan -out=deploy.tfplan
-   terraform -chdir=infra/lambda apply deploy.tfplan
+   terraform -chdir=.secrets/aws-production init
+   terraform -chdir=.secrets/aws-production plan -out=deploy.tfplan
+   terraform -chdir=.secrets/aws-production apply deploy.tfplan
    ```
 
 5. If static assets or Dash dependencies changed, invalidate `/assets/*` and
    `/_dash-component-suites/*` on the CloudFront distribution. Quote both paths
-   when passing them to the AWS CLI.
-6. Verify `/opf-2024`, `/embed/opf-2024` and a dated `/cnec/<day>` page through the
-   public hostname. Exercise the hourly controls and constraint selection; a
+   when passing them to the AWS CLI. Wait for invalidation to complete before
+   reloading the site for verification; old component assets can break the new UI.
+6. Confirm Lambda reports a successful update and its resolved image digest matches
+   the pushed digest. Verify `/opf-2024`, `/embed/opf-2024` and a dated `/cnec/<day>`
+   page through the public hostname. Exercise the hourly controls and constraint selection; a
    successful HTML response alone does not verify Dash callbacks.
 
 To roll back, restore the previous image digest, review and apply another plan,
@@ -104,9 +114,9 @@ tables publish together and endpoint discoveries merge without lost concurrent
 writes. Failed fetches remain retryable.
 
 The image precomputes zone outlines and 24 hourly OPF figures without credentials.
-Runtime reads the selected hour and adds the Mapbox token. Local checkouts without
-bundles render on demand. Lambda initialization and first-use data loading are
-separate costs. Buffered synchronous responses must fit Lambda's 6 MB limit.
+Runtime reads the selected hour and adds the Mapbox token. Local OPF views without
+bundles render on demand; country outlines require `pixi run --locked build-zone-shapes`.
+Lambda initialization and first-use data loading are separate costs. Buffered synchronous responses must fit Lambda's 6 MB limit.
 Scale-to-zero avoids idle compute charges; storage, logs and requests still cost.
 
 ## Delivery
