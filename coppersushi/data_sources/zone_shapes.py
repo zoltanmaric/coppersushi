@@ -29,12 +29,18 @@ def read(path: Path) -> DataFrame[BiddingZoneShapes]:
 
 
 def load() -> DataFrame[BiddingZoneShapes]:
-    if BUNDLE.exists():
+    try:
         return read(BUNDLE)
-    # Local checkouts need no additional setup; deploys always build the bundle.
-    return bidding_zones.core_zone_shapes(networks.load(networks.solved("2024-08-29")).shapes)
+    except FileNotFoundError as error:
+        raise FileNotFoundError(
+            "Country-outline bundle is missing. Run `pixi run --locked build-zone-shapes`."
+        ) from error
 
 
 def build() -> None:
     """Derive the outline bundle from the solved network, replacing any old bundle."""
     write(bidding_zones.core_zone_shapes(networks.load(networks.solved("2024-08-29")).shapes), BUNDLE)
+
+
+if __name__ == "__main__":
+    build()

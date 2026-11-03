@@ -68,6 +68,7 @@ runtime = { features = [], solve-group = "default" }
 [tool.pixi.tasks]
 setup = { cmd = "python -c \"import sys; print('Python interpreter:', sys.executable)\"", depends-on = ["theme-install", "hosting-setup"] }
 dev = "python app.py"
+build-zone-shapes = "python -m coppersushi.data_sources.zone_shapes"
 test-app = "python -m pytest -q"
 test-forecast = "python -m unittest discover -s forecasts/tests -v"
 typecheck = "python -m mypy --config-file mypy.ini"

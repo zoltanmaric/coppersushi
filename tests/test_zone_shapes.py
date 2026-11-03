@@ -2,6 +2,7 @@ import json
 
 import geopandas as gpd
 import pandas as pd
+import pytest
 
 from coppersushi import REPO, bidding_zones
 from coppersushi.data_sources import zone_shapes
@@ -16,3 +17,11 @@ def test_bundled_outlines_preserve_the_same_zone_polygons(tmp_path):
     actual = zone_shapes.read(path)
     pd.testing.assert_frame_equal(actual, expected)
     assert actual[actual.zone.eq('DE')].geometry.iloc[0].bounds == (5.7, 49.4, 15.0, 55.0)
+
+
+def test_missing_bundle_requires_setup_without_loading_network(tmp_path, monkeypatch):
+    monkeypatch.setattr(zone_shapes, "BUNDLE", tmp_path / "missing.geojson")
+    monkeypatch.setattr(zone_shapes.networks, "load",
+                        lambda *_: pytest.fail("Page requests must not load the solved network"))
+    with pytest.raises(FileNotFoundError, match="pixi run --locked build-zone-shapes"):
+        zone_shapes.load()
