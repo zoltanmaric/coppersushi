@@ -94,6 +94,9 @@ def layout(day: str | None = None, mapbox_token: str | None = None) -> html.Div:
                 },
             ),
             dbc.Alert(id="cnec-status", color="danger", is_open=False, style={"margin": "0 1em"}),
+            dcc.Store(id="cnec-attribution-ready"),
+            dcc.Store(id="cnec-enriched-view"),
+            html.Div(id="cnec-attribution-status", role="status", style={"padding": "0 1em"}),
             dcc.Loading(
                 [
                     dcc.Store(id="cnec-active-ready"),

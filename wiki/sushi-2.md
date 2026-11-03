@@ -26,6 +26,7 @@ flowchart LR
     jao_active_constraints["jao_active_constraints<br/>post-auction binding constraints, shadow prices and zonal PTDFs by market time unit"]
     adjacent_attribution["adjacent_attribution<br/>selected interface: Nordic opposite-hub PTDFs and duals, adjacent published price"]
     jao_attribution["jao_attribution<br/>α, Polish allocation limits and net positions, guarded PL alternative prices"]
+    cnec_attribution_context["cnec_attribution_context<br/>browser store scoped to day and retry; loaded after the base map"]
     jao_domain["jao_domain<br/>final flow-based domain: monitored elements with their substation names, PTDFs and RAM"]
     jao_endpoint_cache["jao_endpoint_cache<br/>validated seed bundled in the image; viewed-hour misses fetched and cached locally"]
     osm_locator["osm_locator<br/>core-tso-data's OSM-locator substation coordinates, unlicensed, fetched locally"]
@@ -56,7 +57,8 @@ flowchart LR
     cnec_geometry --> cnec_price_figure
     mapbox_basemap --> cnec_price_figure
     adjacent_attribution --> cnec_market_snapshot
-    jao_attribution --> cnec_market_snapshot
+    jao_attribution --> cnec_attribution_context
+    cnec_attribution_context -->|enrich after initial render| cnec_market_snapshot
     cnec_geometry --> cnec_market_snapshot
     zone_shapes --> cnec_market_snapshot
     jao_active_constraints --> cnec_market_snapshot
