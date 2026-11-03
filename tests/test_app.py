@@ -7,7 +7,7 @@ from dash.exceptions import PreventUpdate
 import app
 from coppersushi import REPO, cnec_page, cnecs
 from coppersushi.data_sources import jao, osm_locator
-from tests.test_cnec_page import inputs
+from tests.test_cnec_page import inputs, mapped_elements
 
 
 def test_failed_load_becomes_banner(monkeypatch):
@@ -49,7 +49,7 @@ def test_a_failed_cnec_day_becomes_banner(monkeypatch):
         raise RuntimeError("no JAO domain day cached")
 
     monkeypatch.setattr(app, "cnec_day", broken)
-    result = app.render_cnec("2024-08-29", 0, None)
+    result = app.cnec_outputs(app.render_cnec("2024-08-29", 0, None))
     outputs, (message, is_open) = result[:6], result[6:8]
     assert all(output is no_update for output in outputs)
     assert is_open and "no JAO domain day cached" in message
@@ -69,8 +69,8 @@ def test_cnec_retry_draws_new_endpoints_without_reloading_the_day(tmp_path, monk
         raise OSError("offline")
 
     monkeypatch.setattr(jao, "_get", offline)
-    message, is_open = app.render_cnec("2024-08-29", 0, None)[6:8]
-    assert is_open and "Please retry" in message
+    result = app.render_cnec("2024-08-29", 0, None)
+    assert result.view is None and "Please retry" in result.error
     fc = json.loads((REPO / "tests/fixtures/synthetic-jao/final-computation-hour.json").read_text())["data"]
     calls = []
 
@@ -80,8 +80,8 @@ def test_cnec_retry_draws_new_endpoints_without_reloading_the_day(tmp_path, monk
 
     monkeypatch.setattr(jao, "_get", fetch)
     result = app.render_cnec("2024-08-29", 0, None)
-    figure, (message, is_open) = result[0], result[6:8]
-    assert not is_open and message == ""
+    figure = result.view.figure
+    assert result.error == ""
     assert "2 of 2 active rows mapped" in figure.layout.annotations[0].text
     assert len(calls) == 1
     app.render_cnec("2024-08-29", 0, "1")
@@ -210,30 +210,29 @@ def test_enrichment_waits_for_base_map_and_is_scoped_to_retry(monkeypatch):
     calls = []
     monkeypatch.setattr(app.attribution_source, 'load_day', lambda d: calls.append(d) or inputs().context)
     with pytest.raises(PreventUpdate):
-        app.load_cnec_attribution(None, day, 0, None)
+        app.load_cnec_attribution(None, day, 0)
     with pytest.raises(PreventUpdate):
-        app.load_cnec_attribution(token, day, 1, None)
+        app.load_cnec_attribution(token, day, 1)
     assert not calls
-    result = app.load_cnec_attribution(token, day, 0, None)
+    result = app.load_cnec_attribution(token, day, 0)
     assert result['rows'] and calls == [day]
-    with pytest.raises(PreventUpdate):
-        app.load_cnec_attribution(token, day, 0, result)
+    # Returning to the same day must enrich its newly opened base map again.
+    assert app.load_cnec_attribution(token, day, 0)["rows"] == result["rows"]
     next_token = {'day': day, 'request': 1}
-    assert app.load_cnec_attribution(next_token, day, 1, result)['request'] == 1
-    assert len(calls) == 2
+    assert app.load_cnec_attribution(next_token, day, 1)['request'] == 1
+    assert len(calls) == 3
 
 
-def test_enrichment_preserves_current_interval_and_selection_across_workers(monkeypatch):
-    from types import SimpleNamespace
+def test_enrichment_preserves_current_interval_and_selection(monkeypatch):
     token = {'day': '2024-08-29', 'request': 2}
     attribution = {**token, 'rows': json.loads(inputs().context.to_json(orient='records', date_format='iso'))}
     seen = []
-    monkeypatch.setattr(app, '_cnec_days', {})
-    monkeypatch.setattr(app, 'ctx', SimpleNamespace(triggered_id='cnec-attribution-ready'))
-    monkeypatch.setattr(app, 'render_cnec', lambda *args: seen.append(args) or tuple(range(13)))
+    view = cnec_page.render(inputs(), mapped_elements(), 0, None)
+    monkeypatch.setattr(app, 'render_cnec', lambda *args: seen.append(args) or app.CnecRender(view))
     result = app.enrich_cnec(attribution, token['day'], 2, 7, '42', token)
     assert seen == [(token['day'], 7, '42', attribution)]
-    assert (result['figure'], result['options'], result['reference']) == (0, 4, 8)
+    assert result['figure'] is view.figure
+    assert result['options'] == view.constraint_options
     assert (result['interval'], result['selected']) == (7, '42')
     for stale in [{**attribution, 'day': '2024-08-30'}, {**attribution, 'request': 1}]:
         with pytest.raises(PreventUpdate):
@@ -247,23 +246,21 @@ def test_enrichment_failure_leaves_base_map_usable_and_retryable(monkeypatch):
     def offline(_):
         raise OSError('offline')
     monkeypatch.setattr(app.attribution_source, 'load_day', offline)
-    failed = app.load_cnec_attribution(token, token['day'], 0, None)
+    failed = app.load_cnec_attribution(token, token['day'], 0)
     assert failed == {**token, 'complete': False}
-    monkeypatch.setattr(app, 'ctx', SimpleNamespace(triggered_id='cnec-attribution-ready'))
     with pytest.raises(PreventUpdate):
         app.enrich_cnec(failed, token['day'], 0, 0, None, token)
     monkeypatch.setattr(app, 'ctx', SimpleNamespace(triggered_id='cnec-next'))
     seen = []
-    monkeypatch.setattr(app, 'render_cnec', lambda *args: seen.append(args) or (None,) * 13)
+    monkeypatch.setattr(app, 'render_cnec', lambda *args: seen.append(args) or app.CnecRender(None, 'unavailable'))
     app.update_cnec(None, 0, 1, 0, None, failed, token['day'], token, [], token, 0)
     assert seen[0][1] == 1
     monkeypatch.setattr(app.attribution_source, 'load_day', lambda _: inputs().context)
-    assert 'rows' in app.load_cnec_attribution({**token, 'request': 1}, token['day'], 1, failed)
+    assert 'rows' in app.load_cnec_attribution({**token, 'request': 1}, token['day'], 1)
 
 
 def test_browser_enrichment_roundtrip_preserves_contributions(monkeypatch):
     from dataclasses import replace
-    from tests.test_cnec_page import mapped_elements
     day = inputs()
     attribution = {'rows': json.loads(day.context.to_json(orient='records', date_format='iso'))}
     monkeypatch.setattr(app, 'cnec_day', lambda _: replace(day, context=None))
@@ -272,5 +269,5 @@ def test_browser_enrichment_roundtrip_preserves_contributions(monkeypatch):
     monkeypatch.setattr(app, 'basemap', lambda: 'white-bg')
     result = app.render_cnec('2024-08-29', 0, '1', attribution)
     expected = cnec_page.render(day, mapped_elements(), 0, '1', basemap='white-bg')
-    assert not result[7]
-    assert result[0].to_json() == expected.figure.to_json()
+    assert result.error == ""
+    assert result.view.figure.to_json() == expected.figure.to_json()

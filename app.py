@@ -2,6 +2,7 @@ from dataclasses import replace
 import logging
 import json
 from time import perf_counter
+from typing import NamedTuple
 import os
 from pathlib import Path
 
@@ -253,7 +254,12 @@ def update_figure(pathname: str, snapshot_index: int):
     return render(pathname, snapshot_index, ctx.triggered_id == 'snapshot-slider')
 
 
-def render_cnec(day: str, interval_index: int, selected: str | None, attribution: dict | None = None) -> tuple:
+class CnecRender(NamedTuple):
+    view: cnec_page.Rendered | None
+    error: str = ''
+
+
+def render_cnec(day: str, interval_index: int, selected: str | None, attribution: dict | None = None) -> CnecRender:
     """The CNEC page's map and controls for one day; a failed load becomes the banner."""
     try:
         inputs = timed("day_inputs", cnec_day, day)
@@ -274,21 +280,20 @@ def render_cnec(day: str, interval_index: int, selected: str | None, attribution
         )
     except Exception as e:  # noqa: BLE001 — every loader failure must reach the page
         logging.exception('Loading the CNEC day %s failed', day)
-        return (no_update,) * 6 + (f'Could not load {day}: {e}', True) + (no_update,) * 5
+        return CnecRender(None, f'Could not load {day}: {e}')
+    return CnecRender(rendered)
+
+
+def cnec_outputs(result: CnecRender) -> tuple:
+    """Convert a render result to the map/control outputs at the Dash boundary."""
+    view = result.view
+    if view is None:
+        return (no_update,) * 6 + (result.error, True) + (no_update,) * 4
     return (
-        rendered.figure,
-        rendered.interval_max,
-        rendered.interval_marks,
-        rendered.interval_value,
-        rendered.constraint_options,
-        rendered.constraint_value,
-        '',
-        False,
-        f'Reference: {rendered.reference or "unavailable"}',
-        rendered.interval_value == 0,
-        rendered.interval_value == rendered.interval_max,
-        None,
-        day,
+        view.figure, view.interval_max, view.interval_marks, view.interval_value,
+        view.constraint_options, view.constraint_value, '', False,
+        f'Reference: {view.reference or "unavailable"}',
+        view.interval_value == 0, view.interval_value == view.interval_max, None,
     )
 
 
@@ -356,10 +361,10 @@ def open_cnec(ready, day, retries):
     if not ready or any(ready.get(k) != v for k, v in token.items()):
         raise PreventUpdate
     if 'error' in ready:
-        return (no_update,) * 6 + (f"Could not load {day}: {ready['error']}", True) + (no_update,) * 6
+        return (*cnec_outputs(CnecRender(None, f"Could not load {day}: {ready['error']}")), no_update, no_update)
     result = render_cnec(day, 0, None)
-    loaded = result[-1] is not no_update
-    return (*result[:-1], token if loaded else no_update,
+    loaded = result.view is not None
+    return (*cnec_outputs(result), token if loaded else no_update,
             'Loading country caps and price contributions…' if loaded else no_update)
 
 
@@ -392,19 +397,18 @@ def update_cnec(click, previous, next_, interval_index, selected, attribution,
         interval_index = cnec_page.advance_interval(MarketDay.on(day), interval_index or 0, -1)
     elif ctx.triggered_id == 'cnec-next':
         interval_index = cnec_page.advance_interval(MarketDay.on(day), interval_index or 0, 1)
-    return render_cnec(day, interval_index, selected, enrichment)[:-1]
+    return cnec_outputs(render_cnec(day, interval_index, selected, enrichment))
 
 
 @app.callback(
     Output('cnec-attribution-ready', 'data'),
     Input('cnec-view-day', 'data'),
     State('cnec-date', 'value'),
-    State('cnec-retry', 'n_clicks'),
-    State('cnec-attribution-ready', 'data'))
-def load_cnec_attribution(viewed, day, retries, previous):
+    State('cnec-retry', 'n_clicks'))
+def load_cnec_attribution(viewed, day, retries):
     """Start enrichment only after the base map has reached the browser."""
     token = {'day': day, 'request': retries}
-    if viewed != token or (previous and all(previous.get(k) == v for k, v in token.items())):
+    if viewed != token:
         raise PreventUpdate
     try:
         frame = timed('attribution', attribution_source.load_day, day)
@@ -431,10 +435,12 @@ def enrich_cnec(attribution, day, retries, interval_index, selected, viewed):
             or any(attribution.get(k) != v for k, v in token.items())):
         raise PreventUpdate
     result = render_cnec(day, interval_index, selected, attribution)
-    if result[0] is no_update:
+    view = result.view
+    if view is None:
         raise PreventUpdate
     return {**token, 'interval': interval_index, 'selected': selected,
-            'figure': result[0], 'options': result[4], 'reference': result[8]}
+            'figure': view.figure, 'options': view.constraint_options,
+            'reference': f'Reference: {view.reference or "unavailable"}'}
 
 
 app.clientside_callback(
