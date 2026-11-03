@@ -95,3 +95,5 @@ and externally managed DNS; see [hosting](../infra/lambda/README.md#delivery).
 
 CloudFront caches only static asset routes. Page selection, layouts and data callbacks
 continue to use the existing server-side flow; see [hosting](../infra/lambda/README.md#delivery).
+
+For external-input resilience, see [JAO availability and response retention](jao-availability.md).

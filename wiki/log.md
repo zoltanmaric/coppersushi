@@ -337,3 +337,9 @@ The JAO-to-PyPSA branch matcher, original-voltage build and rating true-up are n
 longer planned. Published-constraint mapping continues to use substation names;
 the implemented JAO readers remain. The voltage-simplification findings live in
 [pypsa-eur-sibling](pypsa-eur-sibling.md#voltage-simplification).
+
+## [2026-11-03] ingest | JAO availability and response retention
+
+Recorded the observed 503/recovery bounds, the limits of public outage monitors,
+and the distinction between existing validated S3 bundles and proposed raw-response
+retention in [JAO availability](jao-availability.md).
