@@ -283,7 +283,7 @@ def test_browser_enrichment_roundtrip_preserves_contributions(monkeypatch, conte
 
 def test_enrichment_render_error_reaches_browser_with_selection_scope(monkeypatch):
     token = {'day': '2024-08-29', 'request': 0}
-    payload = {**token, 'rows': json.loads(inputs().context.to_json(orient='records', date_format='iso'))}
+    payload = app.attribution_to_browser(inputs().context, token['day'], 0)
     monkeypatch.setattr(app, 'render_cnec', lambda *args: app.CnecRender(None, 'render failed'))
     assert app.enrich_cnec(payload, token['day'], 0, 3, '42', token) == {
         **token, 'interval': 3, 'selected': '42', 'error': 'render failed',
