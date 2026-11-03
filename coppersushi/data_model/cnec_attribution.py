@@ -54,6 +54,8 @@ class AttributionRow(BaseModel):
     contributes to that price difference, in EUR/MWh. This row holds the scaling
     factor and Polish cap inputs for one market interval, encoded as browser JSON.
     Null means an input is unavailable.
+
+    See wiki/flow-based-market-coupling.md#attribution for an example and limits.
     """
 
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
