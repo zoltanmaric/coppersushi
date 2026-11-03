@@ -16,7 +16,7 @@ CASES = json.loads((FIXTURE / "alpha-records.json").read_text())
 
 
 @pytest.mark.parametrize("case", CASES, ids=[case["name"] for case in CASES])
-def test_api_fields_are_required_but_nullable(case):
+def test_api_fields_are_required_numbers(case):
     if case["valid"]:
         assert AlphaFactor.model_validate(case["record"]).alphaFactor == case["record"]["alphaFactor"]
     else:
@@ -25,7 +25,7 @@ def test_api_fields_are_required_but_nullable(case):
 
 
 @pytest.mark.parametrize("case", [c for c in CASES if not c["valid"]], ids=lambda c: c["name"])
-def test_invalid_feed_preserves_other_inputs(monkeypatch, tmp_path, caplog, case):
+def test_invalid_feed_raises(monkeypatch, tmp_path, case):
     feeds = json.loads((FIXTURE / "inputs.json").read_text())["feeds"]
     responses = dict(zip(["alphaFactor", "allocationConstraint", "netPos", "DA_PL_AC"], feeds.values()))
     responses["alphaFactor"] = [case["record"]]
@@ -33,10 +33,8 @@ def test_invalid_feed_preserves_other_inputs(monkeypatch, tmp_path, caplog, case
     monkeypatch.setattr(source.jao, "_get", lambda endpoint, *args, **kwargs: responses[endpoint])
     monkeypatch.setattr(source.time, "sleep", lambda _: None)
     monkeypatch.setattr(source.cache, "publish", lambda *args: pytest.fail("incomplete cache published"))
-    frame = source.load_day("2026-09-12", refresh=True)
-    assert frame.alpha.isna().all()
-    assert frame.polish_alt.iloc[:4].tolist() == [120] * 4
-    assert "alphaFactor" in caplog.text
+    with pytest.raises(ValidationError):
+        source.load_day("2026-09-12", refresh=True)
 
 
 def test_empty_feeds_are_supported_missing_data(monkeypatch, tmp_path):
@@ -65,14 +63,26 @@ def test_browser_nulls_become_numeric_missing_values():
         AttributionContext.validate(pd.concat([restored, restored]))
 
 
-def test_invalid_cached_table_is_refetched(monkeypatch, tmp_path, caplog):
+def test_invalid_cached_table_raises(monkeypatch, tmp_path):
     frame = pd.read_csv(FIXTURE / "missing-context.csv").drop(columns="alpha")
     frame.to_csv(tmp_path / "attribution.csv", index=False)
     calls = []
     monkeypatch.setattr(source.jao, "day_dir", lambda _: tmp_path)
     monkeypatch.setattr(source.jao, "_get", lambda endpoint, *args, **kwargs: calls.append(endpoint) or [])
     monkeypatch.setattr(source.time, "sleep", lambda _: None)
-    restored = source.load_day("2026-09-12")
-    assert len(calls) == 4
-    assert len(restored) == 96
-    assert "Ignoring unusable attribution cache" in caplog.text
+    with pytest.raises(SchemaError):
+        source.load_day("2026-09-12")
+    assert not calls
+
+
+@pytest.mark.parametrize("stage", ["request", "transformation"])
+def test_loader_does_not_hide_failures(monkeypatch, tmp_path, stage):
+    def broken(*args, **kwargs):
+        raise RuntimeError("unexpected failure")
+    monkeypatch.setattr(source.jao, "day_dir", lambda _: tmp_path)
+    monkeypatch.setattr(source.jao, "_get", broken if stage == "request" else lambda *args, **kwargs: [])
+    monkeypatch.setattr(source.time, "sleep", lambda _: None)
+    if stage == "transformation":
+        monkeypatch.setattr(source.cnec_attribution, "context", broken)
+    with pytest.raises(RuntimeError, match="unexpected failure"):
+        source.load_day("2026-09-12", refresh=True)

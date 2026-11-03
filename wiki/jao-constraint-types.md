@@ -78,7 +78,7 @@ These shares overlap across interfaces and use the whole year as denominator. Th
 
 The 4,448 unresolved physical rows cover 22 EICs and 25 names. Most are `PST MEE 2` (3,692 rows), but the name alone does not verify its subtype. All retain their IDs and EICs; none is silently forced into a line/transformer category. There are no rows lacking a usable asset identifier in this annual active sample. That does not remove the wider metadata gaps in the full-domain sample.
 
-Local ignored evidence: `data/research/country-caps/annual-constraint-classification.csv` records each classification; `annual-json/` retains every raw response, including null allocation fields and zero LTA facets. `paced_annual_audit.py` requests sequentially at no more than 40 starts/minute, caches responses and backs off on HTTP 429. `verify_annual_audit.py` checks allocation coverage, duplication, FB published totals and classification totals; its results are in `annual-verification.json`. [Arithmetic checks](flow-based-market-coupling.md#attribution-validation) test selected price outcomes separately.
+Local ignored evidence: `data/research/country-caps/annual-constraint-classification.csv` records each classification; `annual-json/` retains every raw response, including null allocation fields and zero LTA facets. `paced_annual_audit.py` caches responses and follows the [JAO query pacing guidance](jao-availability.md#rate-limits). `verify_annual_audit.py` checks allocation coverage, duplication, FB published totals and classification totals; its results are in `annual-verification.json`. [Arithmetic checks](flow-based-market-coupling.md#attribution-validation) test selected price outcomes separately.
 
 ### Limits
 

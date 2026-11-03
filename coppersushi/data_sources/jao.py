@@ -102,6 +102,9 @@ def _get(
     window = {"FromUtc": _stamp(start), "ToUtc": _stamp(end), "Take": 100_000_000}
     url = f"{base_url}/{endpoint}?{urllib.parse.urlencode(window)}"
     logger.info("jao: GET %s %s..%s", endpoint, window["FromUtc"], window["ToUtc"])
+    # PuTo limit: 100 requests/minute per user or IP, shared across callers.
+    # For bulk queries, pace starts at <=40/minute (1.5 s apart), not per worker.
+    # This helper does not throttle; see wiki/jao-availability.md#rate-limits.
     with urllib.request.urlopen(url, timeout=timeout) as response:
         payload = json.load(response)
     rows = payload["data"]

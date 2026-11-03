@@ -419,9 +419,10 @@ def load_cnec_attribution(viewed, day, retries):
             'complete': bool(frame.notna().all().all()),
         })
         return payload.model_dump(mode='json')
-    except Exception:
+    except Exception as error:
         logging.exception('Loading CNEC attribution for %s failed', day)
-        return {**token, 'complete': False}
+        return AttributionPayload(day=day, request=retries, complete=False,
+                                  error=f'Attribution failed: {error}').model_dump(mode='json', exclude_none=True)
 
 
 @app.callback(
@@ -476,7 +477,8 @@ app.clientside_callback(
     """function(attribution, day, retries) {
         if (!attribution || attribution.day !== day || attribution.request !== retries)
             return window.dash_clientside.no_update;
-        return attribution.complete ? '' : 'Some country caps or price contributions are unavailable. Retry to load them again.';
+        if (attribution.error) return attribution.error;
+        return attribution.complete ? '' : 'Source data is missing for some intervals; affected contributions are unavailable.';
     }""",
     Output('cnec-attribution-status', 'children', allow_duplicate=True),
     Input('cnec-attribution-ready', 'data'),

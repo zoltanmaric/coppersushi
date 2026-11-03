@@ -5,7 +5,7 @@
       "dateTimeUtc": "2026-09-11T22:00:00Z",
       "alphaFactor": null
     },
-    "valid": true
+    "valid": false
   },
   {
     "name": "extra",

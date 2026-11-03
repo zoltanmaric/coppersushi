@@ -247,7 +247,7 @@ def test_enrichment_failure_leaves_base_map_usable_and_retryable(monkeypatch):
         raise OSError('offline')
     monkeypatch.setattr(app.attribution_source, 'load_day', offline)
     failed = app.load_cnec_attribution(token, token['day'], 0)
-    assert failed == {**token, 'complete': False}
+    assert failed == {**token, 'complete': False, 'error': 'Attribution failed: offline'}
     with pytest.raises(PreventUpdate):
         app.enrich_cnec(failed, token['day'], 0, 0, None, token)
     monkeypatch.setattr(app, 'ctx', SimpleNamespace(triggered_id='cnec-next'))

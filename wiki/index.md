@@ -3,7 +3,7 @@
 ## Concepts
 - [virtual-hub-interconnectors.md](virtual-hub-interconnectors.md) — explicit interface mapping, endpoint-price decomposition, validated ALEGrO contributions, adjacent-region arithmetic checks, losses and ramping gaps
 - [jao-constraint-types.md](jao-constraint-types.md) — row classification across physical assets, country caps, virtual hubs, equality and LTA constraints, with verified metadata gaps
-- [country-import-export-caps.md](country-import-export-caps.md) — all-Core country-cap coverage, price effects and the validated Polish alternative-price source
+- [country-import-export-caps.md](country-import-export-caps.md) — all-Core country-cap coverage, price effects, Polish alternative-price evidence and publication gaps
 - [copper-plate-problem.md](copper-plate-problem.md) — the EU market-design argument motivating this project (copper plate, redispatch, co-optimisation, locational pricing)
 - [flow-based-market-coupling.md](flow-based-market-coupling.md) — how cross-zonal capacity reaches the day-ahead market: NTC pipes versus Core's flow-based CNEC constraints, PTDF, RAM, shadow prices, and what a nodal OPF does and does not reproduce
 - [core-day-ahead-capacity-calculation.md](core-day-ahead-capacity-calculation.md) — how the August 2024 Core process turned grid models into auction constraints: actor map, vocabulary, one binding row carried through to its shadow price and zonal spread, the eleven-step chain and decision rights
@@ -24,7 +24,7 @@
 
 ## Entities
 
-- [jao-availability.md](jao-availability.md) — observed JAO outage, existing S3 cache and future response-retention requirements
+- [jao-availability.md](jao-availability.md) — observed JAO outage, official rate limit and query pacing, existing S3 cache and response-retention requirements
 
 - [sushi-2.md](sushi-2.md) — Copper Sushi 2: optimal power flow on the 2025 OSM grid via PyPSA-Eur as of 2026; architecture
 - [electricity-maps-api.md](electricity-maps-api.md) — Electricity Maps' v4 grid and market signals, this project's Core-wide price-forecast access, and why the data is not a bid curve

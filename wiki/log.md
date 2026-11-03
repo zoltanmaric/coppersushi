@@ -343,3 +343,11 @@ the implemented JAO readers remain. The voltage-simplification findings live in
 Recorded the observed 503/recovery bounds, the limits of public outage monitors,
 and the distinction between existing validated S3 bundles and proposed raw-response
 retention in [JAO availability](jao-availability.md).
+
+## [2026-11-03] query | Polish attribution publication coverage
+
+[PSE's May 6 Cross-CCR launch](country-import-export-caps.md#publication-coverage) explains the sampled historical cutoff; direct checks agree on either side. No official endpoint release deadline or empty-response semantics were found. A full 25-hour query for October 25 exposes a missing Polish hour while Core net positions include all 100 quarters; the application request window is correct.
+
+## [2026-11-03] query | JAO request-rate contract
+
+Found JAO's October 2025 notice establishing 100 requests/minute per user or IP. Added the source and the previously successful aggregate 40/minute bulk-query pace to [JAO availability](jao-availability.md#rate-limits). The Polish sweep's 429 headers were not retained, so Retry-After behavior remains unknown.

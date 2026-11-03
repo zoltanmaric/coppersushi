@@ -15,22 +15,22 @@ class JaoRecord(BaseModel):
 
 
 class AlphaFactor(JaoRecord):
-    alphaFactor: StrictFloat | None
+    alphaFactor: StrictFloat
 
 
 class AllocationConstraint(JaoRecord):
-    limitDown_PL: StrictFloat | None
-    limitUp_PL: StrictFloat | None
+    limitDown_PL: StrictFloat
+    limitUp_PL: StrictFloat
 
 
 class NetPosition(JaoRecord):
-    hub_PL: StrictFloat | None
+    hub_PL: StrictFloat
 
 
 class PolishAlternative(JaoRecord):
     id: StrictInt
-    border_PL_ALT: StrictFloat | None
-    border_PL_SDAC_NP: StrictFloat | None
+    border_PL_ALT: StrictFloat
+    border_PL_SDAC_NP: StrictFloat
 
 
 class AttributionRow(BaseModel):
@@ -53,6 +53,7 @@ class AttributionPayload(BaseModel):
     request: int | None
     complete: bool
     rows: list[AttributionRow] | None = None
+    error: str | None = None
 
 
 class AttributionContext(pa.DataFrameModel):
