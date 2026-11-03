@@ -7,12 +7,15 @@ See wiki/flow-based-market-coupling.md#attribution for an example and interpreta
 """
 
 
+from datetime import date
+
 import pandas as pd
 import pandera.pandas as pa
 from pandera.typing import DataFrame, Series
-from pydantic import AwareDatetime, BaseModel, ConfigDict, StrictFloat, StrictInt
+from pydantic import AwareDatetime, BaseModel, ConfigDict, StrictFloat, StrictInt, field_validator
 
 from coppersushi.data_model.jao import UtcTimestamp
+from coppersushi.market_day import MarketDay
 
 
 class JaoRecord(BaseModel):
@@ -69,22 +72,30 @@ class AttributionRow(BaseModel):
     polish_alt: StrictFloat | None
 
 
-class AttributionPayload(BaseModel):
-    """Successfully loaded price-attribution inputs for one browser request."""
+class AttributionRequest(BaseModel):
+    """Delivery date and retry identifier shared by attribution browser responses."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
-    day: str
+    day: date
     request: int | None
+
+    @field_validator('day', mode='before')
+    @classmethod
+    def parse_delivery_date(cls, value: object) -> object:
+        """Parse the browser's ISO date; strict validation rejects other representations."""
+        return date.fromisoformat(value) if isinstance(value, str) else value
+
+
+class AttributionPayload(AttributionRequest):
+    """Successfully loaded price-attribution inputs for one browser request."""
+
     complete: bool
     rows: list[AttributionRow]
 
 
-class AttributionFailure(BaseModel):
+class AttributionFailure(AttributionRequest):
     """A failed attribution load, tied to its browser request; contains no data."""
 
-    model_config = ConfigDict(extra="forbid", strict=True)
-    day: str
-    request: int | None
     error: str
 
 
@@ -103,11 +114,11 @@ class AttributionContext(pa.DataFrameModel):
         coerce = True
 
 
-def attribution_to_browser(frame: DataFrame[AttributionContext], day: str,
+def attribution_to_browser(frame: DataFrame[AttributionContext], day: MarketDay,
                            request: int | None) -> AttributionPayload:
     """Build a typed browser payload from a day's table, preserving missing inputs as None."""
     return AttributionPayload.model_validate({
-        'day': day, 'request': request,
+        'day': day.date, 'request': request,
         'rows': frame.astype(object).where(frame.notna(), None).to_dict(orient='records'),
         'complete': bool(frame.notna().all().all()),
     })

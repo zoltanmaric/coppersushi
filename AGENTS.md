@@ -37,6 +37,8 @@
 
 - **worktrees** — Isolate conflicting concurrent work. Multiple agents commonly work in this repository at once. Create worktrees under the gitignored `worktrees/` directory. If another agent's changes conflict with yours, offer to move your work to a worktree rather than overwrite or discard either set of changes.
 
+- **typed-boundaries** — Parse and validate external values at entry points. Inside the application, pass domain types and validated models rather than raw strings or dictionaries. Serialize only at exit points. Reuse existing types; do not introduce wrappers for primitives that have no distinct domain meaning.
+
 - **model-docstrings** — Give data models concise docstrings explaining what they represent, unless the model is trivial and its name already makes that clear.
 
 - **information-home** — Put a fact where it is locally useful, once, and link rather than repeat it. Docstrings and comments: what the code does, and why it is non-obvious — not its callers, not its history. `README.md`: current responsibilities and how to install and run; describe what is, never history, migration plans or pending cutovers. `wiki/`: domain knowledge, design decisions and specs (`wiki/specs/`), stating what is; `wiki/log.md`: what changed. Commit message and PR description: why *this* change — evidence, bugs found, dependencies, rejected alternatives. `AGENTS.md` and `.agents/skills/`: durable instruction to agents, nothing else.

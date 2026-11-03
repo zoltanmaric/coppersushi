@@ -7,6 +7,7 @@ import pytest
 from pandera.errors import SchemaError
 from pydantic import ValidationError
 
+from coppersushi.market_day import MarketDay
 from coppersushi import REPO
 from coppersushi.data_model.cnec_attribution import AlphaFactor, AttributionContext, AttributionPayload, AttributionFailure, attribution_to_browser, attribution_from_browser
 from coppersushi.data_sources import cnec_attribution as source
@@ -34,14 +35,14 @@ def test_invalid_feed_raises(monkeypatch, tmp_path, case):
     monkeypatch.setattr(source.time, "sleep", lambda _: None)
     monkeypatch.setattr(source.cache, "publish", lambda *args: pytest.fail("incomplete cache published"))
     with pytest.raises(ValidationError):
-        source.load_day("2026-09-12", refresh=True)
+        source.load_day(MarketDay.on("2026-09-12"), refresh=True)
 
 
 def test_empty_feeds_are_supported_missing_data(monkeypatch, tmp_path):
     monkeypatch.setattr(source.jao, "day_dir", lambda _: tmp_path)
     monkeypatch.setattr(source.jao, "_get", lambda *args, **kwargs: [])
     monkeypatch.setattr(source.time, "sleep", lambda _: None)
-    frame = source.load_day("2026-09-12", refresh=True)
+    frame = source.load_day(MarketDay.on("2026-09-12"), refresh=True)
     assert len(frame) == 96
     assert frame.drop(columns="interval").isna().all().all()
 
@@ -53,7 +54,7 @@ def test_browser_nulls_become_numeric_missing_values():
         "rows": json.loads(frame.to_json(orient="records")),
     })
     restored = attribution_from_browser(payload)
-    assert attribution_to_browser(restored, payload.day, payload.request) == payload
+    assert attribution_to_browser(restored, MarketDay.on(payload.day), payload.request) == payload
     assert restored.drop(columns="interval").dtypes.eq("float64").all()
     assert restored.drop(columns="interval").isna().all().all()
     with pytest.raises(ValidationError):
@@ -70,7 +71,7 @@ def test_invalid_cached_table_raises(monkeypatch, tmp_path):
     monkeypatch.setattr(source.jao, "_get", lambda endpoint, *args, **kwargs: calls.append(endpoint) or [])
     monkeypatch.setattr(source.time, "sleep", lambda _: None)
     with pytest.raises(SchemaError):
-        source.load_day("2026-09-12")
+        source.load_day(MarketDay.on("2026-09-12"))
     assert not calls
 
 
@@ -84,12 +85,38 @@ def test_loader_does_not_hide_failures(monkeypatch, tmp_path, stage):
     if stage == "transformation":
         monkeypatch.setattr(source.cnec_attribution, "context", broken)
     with pytest.raises(RuntimeError, match="unexpected failure"):
-        source.load_day("2026-09-12", refresh=True)
+        source.load_day(MarketDay.on("2026-09-12"), refresh=True)
 
 
 def test_attribution_success_and_failure_cannot_be_combined():
-    failure = AttributionFailure(day="2026-11-03", request=0, error="unavailable")
+    failure = AttributionFailure(day=MarketDay.on("2026-11-03").date, request=0, error="unavailable")
     with pytest.raises(ValidationError):
         AttributionFailure.model_validate({**failure.model_dump(), "complete": True})
     with pytest.raises(ValidationError):
         AttributionPayload.model_validate({**failure.model_dump(), "complete": True, "rows": []})
+
+
+def test_browser_delivery_date_is_typed_and_serializes_as_iso():
+    from datetime import date
+    failure = AttributionFailure.model_validate({
+        "day": "2026-11-03", "request": 0, "error": "unavailable",
+    })
+    assert failure.day == date(2026, 11, 3)
+    assert failure.model_dump(mode="json")["day"] == "2026-11-03"
+    with pytest.raises(ValidationError):
+        AttributionFailure.model_validate({**failure.model_dump(), "day": "2026-02-30"})
+
+
+def test_loader_uses_market_day_boundaries_on_clock_change(monkeypatch, tmp_path):
+    day = MarketDay.on("2026-10-25")
+    windows = []
+    def fetch(endpoint, start, end, **kwargs):
+        windows.append((start, end))
+        return []
+    monkeypatch.setattr(source.jao, "day_dir", lambda _: tmp_path)
+    monkeypatch.setattr(source.jao, "_get", fetch)
+    monkeypatch.setattr(source.time, "sleep", lambda _: None)
+    frame = source.load_day(day, refresh=True)
+    assert len(frame) == 100
+    assert windows == [(day.start_time_utc, day.end_time_utc)] * 4
+    assert (windows[0][1] - windows[0][0]).total_seconds() == 25 * 3600

@@ -56,7 +56,7 @@ if ROOT_VIEW not in {'embed', 'full'}:
 CNEC_ROUTE = 'cnec'  # /cnec, or /cnec/<delivery day> to open on one day
 _cache: dict[str, tuple[go.Figure, pd.Index]] = {}
 _zones: dict[str, pd.DataFrame] = {}
-_cnec_days: dict[str, cnec_page.Day] = {}
+_cnec_days: dict[MarketDay, cnec_page.Day] = {}
 _basemap: dict[str, dict] = {}
 
 
@@ -101,17 +101,17 @@ def cnec_geometries(day: cnec_page.Day, interval_index: int) -> MappedCnecElemen
     )
 
 
-def cnec_day(day: str) -> cnec_page.Day:
+def cnec_day(day: MarketDay) -> cnec_page.Day:
     """One delivery day's inputs, fetching the day's own feeds on first use."""
     if day not in _cnec_days:
-        active = timed("constraints", jao.load_active_day, day)
+        active = timed("constraints", jao.load_active_day, day.date.isoformat())
         _cnec_days[day] = cnec_page.Day(
-            market_day=MarketDay.on(day),
+            market_day=day,
             zones=timed("zone_shapes", core_zones),
             constraints=active.constraints,
             ptdfs=active.ptdfs,
             external_constraints=active.external_constraints,
-            prices=timed("prices", electricity_maps.load_day, day),
+            prices=timed("prices", electricity_maps.load_day, day.date.isoformat()),
         )
     return _cnec_days[day]
 
@@ -259,7 +259,7 @@ class CnecRender(NamedTuple):
     error: str = ''
 
 
-def render_cnec(day: str, interval_index: int, selected: str | None, attribution: AttributionPayload | None = None) -> CnecRender:
+def render_cnec(day: MarketDay, interval_index: int, selected: str | None, attribution: AttributionPayload | None = None) -> CnecRender:
     """The CNEC page's map and controls for one day; a failed load becomes the banner."""
     try:
         inputs = timed("day_inputs", cnec_day, day)
@@ -271,14 +271,14 @@ def render_cnec(day: str, interval_index: int, selected: str | None, attribution
             inputs.external_constraints.source_id.astype(str).eq(str(selected))
             & inputs.external_constraints.interval.eq(interval)]
         if len(chosen) == 1:
-            inputs = replace(inputs, adjacent=timed("adjacent_attribution", virtual_attribution.load_interval, day, interval, chosen.hub.iloc[0]))
+            inputs = replace(inputs, adjacent=timed("adjacent_attribution", virtual_attribution.load_interval, day.date.isoformat(), interval, chosen.hub.iloc[0]))
         rendered = timed("figure", cnec_page.render,
             inputs, cnec_geometries(inputs, interval_index or 0),
             interval_index or 0, selected, mapbox_token=mapbox_token(), basemap=timed("basemap", basemap)
         )
     except Exception as e:  # noqa: BLE001 — every loader failure must reach the page
         logging.exception('Loading the CNEC day %s failed', day)
-        return CnecRender(None, f'Could not load {day}: {e}')
+        return CnecRender(None, f'Could not load {day.date.isoformat()}: {e}')
     return CnecRender(rendered)
 
 
@@ -301,7 +301,7 @@ def cnec_outputs(result: CnecRender) -> tuple:
     Input('cnec-retry', 'n_clicks'))
 def load_cnec_constraints(day: str, retries: int) -> dict:
     try:
-        _cnec_days.pop(day, None)
+        _cnec_days.pop(MarketDay.on(day), None)
         timed("constraints_load", jao.load_active_day, day)
         return {'day': day, 'request': retries}
     except Exception as error:
@@ -360,7 +360,7 @@ def open_cnec(ready, day, retries):
         raise PreventUpdate
     if 'error' in ready:
         return (*cnec_outputs(CnecRender(None, f"Could not load {day}: {ready['error']}")), no_update, no_update)
-    result = render_cnec(day, 0, None)
+    result = render_cnec(MarketDay.on(day), 0, None)
     loaded = result.view is not None
     return (*cnec_outputs(result), token if loaded else no_update,
             'Loading country caps and price contributions…' if loaded else no_update)
@@ -386,17 +386,18 @@ def update_cnec(click, previous, next_, interval_index, selected, attribution,
     if (viewed_day != token or not ready or 'error' in ready
             or any(ready.get(k) != v for k, v in token.items())):
         raise PreventUpdate
+    delivery = MarketDay.on(day)
     enrichment = attribution if attribution and all(attribution.get(k) == v for k, v in token.items()) else None
     if ctx.triggered_id == 'cnec-map':
         if not click:
             raise PreventUpdate
         selected = cnec_page.clicked_selection(click, options or [], selected)
     elif ctx.triggered_id == 'cnec-previous':
-        interval_index = cnec_page.advance_interval(MarketDay.on(day), interval_index or 0, -1)
+        interval_index = cnec_page.advance_interval(delivery, interval_index or 0, -1)
     elif ctx.triggered_id == 'cnec-next':
-        interval_index = cnec_page.advance_interval(MarketDay.on(day), interval_index or 0, 1)
+        interval_index = cnec_page.advance_interval(delivery, interval_index or 0, 1)
     payload = AttributionPayload.model_validate(enrichment) if enrichment and enrichment.get('rows') is not None else None
-    return cnec_outputs(render_cnec(day, interval_index, selected, payload))
+    return cnec_outputs(render_cnec(delivery, interval_index, selected, payload))
 
 
 @app.callback(
@@ -409,12 +410,13 @@ def load_cnec_attribution(viewed, day, retries):
     token = {'day': day, 'request': retries}
     if viewed != token:
         raise PreventUpdate
+    delivery = MarketDay.on(day)
     try:
-        frame = timed('attribution', attribution_source.load_day, day)
-        return attribution_to_browser(frame, day, retries).model_dump(mode="json")
+        frame = timed('attribution', attribution_source.load_day, delivery)
+        return attribution_to_browser(frame, delivery, retries).model_dump(mode="json")
     except Exception as error:
         logging.exception('Loading CNEC attribution for %s failed', day)
-        return AttributionFailure(day=day, request=retries,
+        return AttributionFailure(day=delivery.date, request=retries,
                                   error=f'Attribution failed: {error}').model_dump(mode='json')
 
 
@@ -433,7 +435,7 @@ def enrich_cnec(attribution, day, retries, interval_index, selected, viewed):
     if (viewed != token or not attribution or attribution.get('rows') is None
             or any(attribution.get(k) != v for k, v in token.items())):
         raise PreventUpdate
-    result = render_cnec(day, interval_index, selected, AttributionPayload.model_validate(attribution))
+    result = render_cnec(MarketDay.on(day), interval_index, selected, AttributionPayload.model_validate(attribution))
     view = result.view
     if view is None:
         return {**token, 'interval': interval_index, 'selected': selected,
