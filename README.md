@@ -74,7 +74,15 @@ A Mapbox access token is required to run the app. Tokenless startup is unsupport
 Register for a free token at [mapbox.com](https://www.mapbox.com/), then paste it into
 `.secrets/.mapbox_token`, or export it as `MAPBOX_TOKEN`.
 
-Then you can start the server by running
+Build the country outlines once before starting the app. This requires the solved
+2024-08-29 network from Git LFS; Docker builds the outlines during image creation.
+Page requests read only the resulting small GeoJSON bundle.
+
+```bash
+pixi run --locked build-zone-shapes
+```
+
+Then start the server by running
 ```bash
 pixi run --locked dev
 ```
