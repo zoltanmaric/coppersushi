@@ -119,6 +119,21 @@ bundles render on demand; country outlines require `pixi run --locked build-zone
 Lambda initialization and first-use data loading are separate costs. Buffered synchronous responses must fit Lambda's 6 MB limit.
 Scale-to-zero avoids idle compute charges; storage, logs and requests still cost.
 
+## Tracing
+
+Active X-Ray service tracing samples Lambda requests and separates AWS environment
+preparation from function execution. The execution role permits trace ingestion;
+no application SDK is installed. Inspect traces in eu-west-1 alongside the matching
+CloudWatch request IDs. See [AWS's trace structure](https://docs.aws.amazon.com/lambda/latest/dg/services-xray.html).
+
+`AWS_LWA_ASYNC_INIT=true` lets application startup continue into the first invocation
+after the adapter's roughly 9.8-second initialization limit. Lambda's `Init Duration`
+therefore need not cover all application startup. Service traces do not profile
+individual Python imports.
+
+Lambda Insights is not installed: its agent officially supports Amazon Linux 2/2023,
+whereas this image uses Ubuntu. See [container support](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Lambda-Insights-Getting-Started-docker.html).
+
 ## Delivery
 
 CloudFront forwards cookies, query strings and headers except Host, which names
