@@ -120,9 +120,12 @@ def country_caps[Prices: ZonalPrices](inputs: DataFrame[AttributionContext] | No
     if not np.isfinite(delta) or abs(delta) <= 1e-9:
         return CountryCaps.validate(pd.DataFrame(columns=columns).assign(
             interval=pd.Series([], dtype="datetime64[ns, UTC]")))
-    if delta < 0 and abs(row.polish_position - row.export_limit) <= 0.051:
+    # Published positions can differ from a binding limit by 0.1 MW.
+    # Empirical bound: wiki/country-import-export-caps.md#poland-validation.
+    position_tolerance_mw = 0.11
+    if delta < 0 and abs(row.polish_position - row.export_limit) <= position_tolerance_mw:
         identity, sense, capacity = -2, "export", row.export_limit
-    elif delta > 0 and abs(row.polish_position + row.import_limit) <= 0.051:
+    elif delta > 0 and abs(row.polish_position + row.import_limit) <= position_tolerance_mw:
         identity, sense, capacity = -1, "import", row.import_limit
     else:
         return CountryCaps.validate(pd.DataFrame(columns=columns).assign(

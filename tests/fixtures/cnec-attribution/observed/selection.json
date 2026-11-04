@@ -1,0 +1,60 @@
+{
+  "2026-09-24T05:00:00Z": [
+    "LTA_positive_facet",
+    "country_cap_allocation",
+    "hub:{\"ALBE\": 1.0}",
+    "hub:{\"DE_DK2_BigHub\": -1.0}",
+    "hub:{\"DE_NO2_BigHub\": -1.0}",
+    "hub:{\"DE_SE4_Baltic\": -1.0}",
+    "hub:{\"NL_DK1_COBRA\": 1.0}",
+    "hub:{\"NL_NO2_NorNed\": 1.0}",
+    "hub:{\"PL_LT_BigHub\": 1.0}",
+    "hub:{\"PL_SE4_SwePol\": -1.0}",
+    "physical_Line",
+    "physical_PST",
+    "physical_TieLine",
+    "physical_subtype_unresolved"
+  ],
+  "2026-09-25T10:45:00Z": [
+    "hub:{\"ALDE\": -1.0}",
+    "hub:{\"DE_DK1_VH\": -1.0}",
+    "hub:{\"NL_DK1_COBRA\": -1.0}",
+    "hub:{\"NL_NO2_NorNed\": -1.0}",
+    "hub:{\"PL_LT_BigHub\": -1.0}",
+    "hub:{\"RO_BG_VH\": -1.0}"
+  ],
+  "2026-09-25T16:15:00Z": [
+    "hub:{\"ALBE\": -1.0}",
+    "hub:{\"DE_DK1_VH\": 1.0}",
+    "hub:{\"DE_NO2_BigHub\": 1.0}"
+  ],
+  "2026-09-17T01:30:00Z": [
+    "hub:{\"ALDE\": 1.0}",
+    "physical_Transformer"
+  ],
+  "2026-09-17T13:45:00Z": [
+    "hub:{\"DE_DK2_BigHub\": 1.0}",
+    "hub:{\"RO_BG_VH\": 1.0}"
+  ],
+  "2026-09-17T14:15:00Z": [
+    "hub:{\"DE_SE4_Baltic\": 1.0}"
+  ],
+  "2026-09-17T16:00:00Z": [
+    "hub:{\"PL_SE4_SwePol\": 1.0}"
+  ],
+  "2026-09-12T00:30:00Z": [
+    "export cap, no physical constraints"
+  ],
+  "2026-09-12T07:45:00Z": [
+    "import cap"
+  ],
+  "2026-10-08T06:15:00Z": [
+    "LTA scaling audit day"
+  ],
+  "2026-11-02T23:00:00Z": [
+    "worked example"
+  ],
+  "2026-11-03T04:45:00Z": [
+    "0.1 MW export-cap regression"
+  ]
+}
