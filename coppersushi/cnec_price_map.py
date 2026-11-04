@@ -255,11 +255,12 @@ def _line_hit_targets(rows: pd.DataFrame) -> go.Scattermapbox:
     for _, group in rows.groupby(["x0", "y0", "x1", "y1"], dropna=True):
         row = group.iloc[0]
         ids = ",".join(group.source_id.astype(str))
+        text = "<br><br>".join(_hover(group))
         for t in np.linspace(0, 1, 41):
             lon.append(row.x0 + t * (row.x1 - row.x0))
             lat.append(row.y0 + t * (row.y1 - row.y0))
             data.append([ids])
-            hover.append("<br><br>".join(_hover(group)))
+            hover.append(text)
     return go.Scattermapbox(name="select line", lon=lon, lat=lat, mode="markers",
         marker=dict(size=16, color="rgba(128,80,255,0.01)"), customdata=data,
         text=hover, hoverinfo="text", showlegend=False)
