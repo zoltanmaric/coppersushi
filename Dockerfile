@@ -6,6 +6,9 @@ FROM source AS environment
 RUN pixi install --locked -e runtime && \
     pixi shell-hook --locked -e runtime -s bash > /opt/entrypoint.sh && \
     printf '\nexec "$@"\n' >> /opt/entrypoint.sh
+# Lambda cannot retain bytecode compiled into its read-only image on first use.
+RUN /bin/bash /opt/entrypoint.sh python -m compileall -q \
+    .pixi/envs/runtime/lib/python3.14 app.py coppersushi
 
 FROM source AS bundle-builder
 RUN pixi install --locked -e build

@@ -166,5 +166,5 @@ extra adds PyPSA for bundle generation, and `dev` adds development tools. Pixi's
 uses only the base. All environments share version resolution in `pixi.lock`.
 
 Docker prepares data in the `bundle-builder` stage and installs the serving
-packages in `environment`. The final Lambda image receives the runtime environment
+packages and precompiles Python bytecode in `environment`. The final Lambda image receives the runtime environment
 and generated data, without the build environment or its solver dependencies.
