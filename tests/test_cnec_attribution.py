@@ -70,6 +70,21 @@ def test_binding_export_cap_contributes_to_all_spreads_relative_to_poland():
     assert attribution.country_caps(context(), no_dual, interval).empty
 
 
+@pytest.mark.parametrize('offset', [-0.1, 0, 0.1, -0.2, 0.2])
+@pytest.mark.parametrize('side', ['import', 'export'])
+def test_country_cap_saturation_allows_publication_precision(side, offset):
+    *_, prices = tables()
+    data = context().assign(
+        polish_position=(-200 if side == 'import' else 0) + offset,
+        polish_alt=80 if side == 'import' else 120,
+    )
+    caps = attribution.country_caps(data, prices, prices.interval.iloc[0])
+    assert caps.empty == (abs(offset) > 0.11)
+    if not caps.empty:
+        assert caps.direction.iloc[0] == side
+        assert caps.delta.iloc[0] == (20 if side == 'import' else -20)
+
+
 def test_import_cap_sign_and_capacity():
     *_, prices = tables()
     data = context().assign(polish_position=-200, polish_alt=80)

@@ -1,0 +1,38 @@
+{
+  "AT": {
+    "url": "https://api.energy-charts.info/price?bzn=AT&start=2026-09-12&end=2026-11-03",
+    "license_info": "CC BY 4.0 (creativecommons.org/licenses/by/4.0) from Bundesnetzagentur | SMARD.de"
+  },
+  "BE": {
+    "url": "https://api.energy-charts.info/price?bzn=BE&start=2026-09-12&end=2026-11-03",
+    "license_info": "CC BY 4.0 (creativecommons.org/licenses/by/4.0) from Bundesnetzagentur | SMARD.de"
+  },
+  "CZ": {
+    "url": "https://api.energy-charts.info/price?bzn=CZ&start=2026-09-12&end=2026-11-03",
+    "license_info": "CC BY 4.0 (creativecommons.org/licenses/by/4.0) from Bundesnetzagentur | SMARD.de"
+  },
+  "DE": {
+    "url": "https://api.energy-charts.info/price?bzn=DE-LU&start=2026-09-12&end=2026-11-03",
+    "license_info": "CC BY 4.0 (creativecommons.org/licenses/by/4.0) from Bundesnetzagentur | SMARD.de"
+  },
+  "FR": {
+    "url": "https://api.energy-charts.info/price?bzn=FR&start=2026-09-12&end=2026-11-03",
+    "license_info": "CC BY 4.0 (creativecommons.org/licenses/by/4.0) from Bundesnetzagentur | SMARD.de"
+  },
+  "HU": {
+    "url": "https://api.energy-charts.info/price?bzn=HU&start=2026-09-12&end=2026-11-03",
+    "license_info": "CC BY 4.0 (creativecommons.org/licenses/by/4.0) from Bundesnetzagentur | SMARD.de"
+  },
+  "NL": {
+    "url": "https://api.energy-charts.info/price?bzn=NL&start=2026-09-12&end=2026-11-03",
+    "license_info": "CC BY 4.0 (creativecommons.org/licenses/by/4.0) from Bundesnetzagentur | SMARD.de"
+  },
+  "PL": {
+    "url": "https://api.energy-charts.info/price?bzn=PL&start=2026-09-12&end=2026-11-03",
+    "license_info": "CC BY 4.0 (creativecommons.org/licenses/by/4.0) from Bundesnetzagentur | SMARD.de"
+  },
+  "SI": {
+    "url": "https://api.energy-charts.info/price?bzn=SI&start=2026-09-12&end=2026-11-03",
+    "license_info": "CC BY 4.0 (creativecommons.org/licenses/by/4.0) from Bundesnetzagentur | SMARD.de"
+  }
+}
