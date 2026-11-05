@@ -51,7 +51,9 @@ def test_binding_rows_are_sorted_by_shadow_price_and_keep_their_source_id():
 
 def test_selecting_a_row_adds_its_reference_based_influence():
     rendered = cnec_page.render(inputs(), mapped_elements(), 0, "1")
-    assert any(trace.name == "contribution relative to AT" for trace in rendered.figure.data)
+    ray = next(trace for trace in rendered.figure.data if trace.name == "BE ray")
+    assert ray.hovertext.startswith("<b>Spread: BE − AT</b>")
+    assert "This constraint’s contribution:" in ray.hovertext
 
 
 def test_a_selection_from_another_interval_is_cleared():

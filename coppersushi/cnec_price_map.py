@@ -136,9 +136,9 @@ def _price_traces(
         lon=labels_at.x,
         lat=labels_at.y,
         mode="text",
-        hoverinfo="text",
+        hoverinfo="skip",
         text=names + "<br>" + labels_at.price.map(lambda value: f"€{value:,.2f}"),
-        hovertext=names + " · " + labels_at.price.map(lambda value: f"{value:,.2f} €/MWh"),
+        marker=dict(symbol="circle"),
         textfont=dict(color="white", size=14),
         showlegend=False,
     )
@@ -219,6 +219,7 @@ def _constraint_traces(
             lat=targets.target_y,
             mode="markers",
             hoverinfo="text",
+            hoverlabel=map_style.BINDING_HOVERLABEL,
             text=targets.hover,
             customdata=targets[["source_ids"]].to_numpy(),
             marker=go.scattermapbox.Marker(
@@ -258,7 +259,7 @@ def _line_hit_targets(rows: pd.DataFrame) -> go.Scattermapbox:
             hover.append(text)
     return go.Scattermapbox(name="select line", lon=lon, lat=lat, mode="markers",
         marker=dict(size=16, color="rgba(128,80,255,0.01)"), customdata=data,
-        text=hover, hoverinfo="text", showlegend=False)
+        text=hover, hoverinfo="text", hoverlabel=map_style.BINDING_HOVERLABEL, showlegend=False)
 
 
 def _cap_traces(zones: DataFrame[BiddingZoneShapes], caps: DataFrame[CountryCaps], selected_id: int | None) -> list:
@@ -287,7 +288,7 @@ def _cap_traces(zones: DataFrame[BiddingZoneShapes], caps: DataFrame[CountryCaps
     traces += map_style.haloed(outline)
     traces.append(go.Scattermapbox(name="select country cap", lon=outline.lon, lat=outline.lat,
         mode="markers", marker=dict(size=14, color="rgba(128,80,255,0.01)"),
-        customdata=[[str(row.source_id)]] * len(lon), text=[hover] * len(lon), hoverinfo="text"))
+        customdata=[[str(row.source_id)]] * len(lon), text=[hover] * len(lon), hoverinfo="text", hoverlabel=map_style.BINDING_HOVERLABEL))
     for trace in traces:
         trace.meta = "country-cap"
     return traces
@@ -324,19 +325,13 @@ def figure(
     priced_zones = _priced_zones(zones, view.prices)
     placed = _placed(view.constraints, geometries)
     fill, labels = _price_traces(priced_zones, _fill_anchor(basemap), view.price_range)
-    selected = _selected(placed, view.selected_id)
     centres = _zone_centres(priced_zones)
-    if view.selected_id in view.caps.source_id.values:
-        anchor = centres[centres.zone.eq("PL")]
-        if len(anchor) == 1:
-            point = anchor.iloc[0]
-            selected = pd.Series(dict(x0=point.x, y0=point.y, x1=point.x, y1=point.y, match_status=MATCHED))
     physical_selection = _selected(placed, view.selected_id)
     traces = [fill, *_constraint_traces(placed, physical_selection),
               *_cap_traces(zones, view.caps, view.selected_id)]
-    if selected is not None and view.contribution is not None:
+    if view.contribution is not None:
         assert view.reference is not None
-        influence = cnec_influence.overlay(selected, centres, view.contribution)
+        influence = cnec_influence.overlay(centres, view.contribution)
         traces += influence.traces
     traces.append(labels)  # Last, so no dot or ray lands on a price
     fig = go.Figure(traces)
