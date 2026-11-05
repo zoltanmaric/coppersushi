@@ -1,4 +1,4 @@
-from dash import dcc, no_update
+from dash import dcc, html, no_update
 import json
 import pandas as pd
 import pytest
@@ -36,10 +36,10 @@ def test_a_cnec_path_opens_the_price_page_on_its_day():
 def test_the_cnec_link_names_no_day_so_the_page_opens_on_today(monkeypatch):
     monkeypatch.setattr(app, "mapbox_token", lambda: "token")
     monkeypatch.setattr(app, "basemap", lambda: {"version": 8, "sources": {}, "layers": []})
-    links = (c for c in _components(app.show_page("/opf-2024")) if isinstance(c, dcc.Link))
+    links = (c for c in _components(app.show_page("/opf-2024")) if isinstance(c, html.A))
     assert next(link for link in links if link.children == "Prices and binding CNECs").href == "/cnec"
     controls = {component.id: component for component in _ids(app.show_page("/cnec"))}
-    assert controls["cnec-view"].day == cnec_page.local_today()
+    assert controls["cnec-view"].default_day == cnec_page.local_today()
 
 
 def test_each_route_gets_only_its_own_controls(monkeypatch):
@@ -136,7 +136,7 @@ def test_root_rollout_keeps_permanent_urls_stable(mode, monkeypatch):
     assert app.network_key_from_path('/') == app.network_key_from_path('/embed/opf-2024') == 'opf-2024'
     for path in ['/', '/embed/opf-2024', '/opf-2024']:
         page = app.show_page(path, root_view=mode)
-        links = [c.href for c in _components(page) if isinstance(c, dcc.Link)]
+        links = [c.href for c in _components(page) if isinstance(c, html.A)]
         assert links == ([] if app.is_embed_path(path, mode) else ['/opf-2024', '/cnec'])
         assert {'map', 'snapshot-slider', 'opf-time'} <= {c.id for c in _ids(page)}
 
@@ -233,7 +233,7 @@ def test_cnec_mount_uses_react_component_and_has_no_loading_callback_chain(monke
     view = next(c for c in _components(page) if getattr(c, 'id', None) == 'cnec-view')
     assert view.to_plotly_json() == {
         'namespace': 'coppersushi_cnec', 'type': 'CnecView',
-        'props': {'id': 'cnec-view', 'day': '2025-11-05', 'min_day': '2025-11-05', 'token': 'token', 'basemap': {'version': 8, 'sources': {}, 'layers': []}},
+        'props': {'id': 'cnec-view', 'default_day': cnec_page.local_today(), 'min_day': '2025-11-05', 'token': 'token', 'basemap': {'version': 8, 'sources': {}, 'layers': []}},
     }
     dependencies = app.server.test_client().get('/_dash-dependencies').json
     assert all('cnec-' not in callback['output'] for callback in dependencies)
@@ -248,3 +248,8 @@ def test_unsupported_cnec_dates_redirect_to_undated_view():
     redirect_component = app.show_page('/cnec/2025-11-04').children
     assert redirect_component.href == '/cnec'
     assert not app.unsupported_cnec_path('/opf-2024')
+
+
+def test_cnec_date_navigation_keeps_the_react_page_mounted():
+    assert app.route_page('/cnec/2026-11-03', 'cnec') == (app.no_update, app.no_update)
+    assert app.route_page('/cnec/2026-11-04', 'cnec') == (app.no_update, app.no_update)

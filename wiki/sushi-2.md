@@ -85,7 +85,7 @@ flowchart LR
     day_ahead_prices --> cnec_market_snapshot
     cnec_market_snapshot --> cnec_price_figure
     cnec_http["CNEC HTTP API<br/>price and constraint layers; enrichment figures and attribution status"]
-    react_cnec["React CNEC view hosted by Dash<br/>selection reducer and TanStack Query; view-bound settled figures"]
+    react_cnec["React CNEC view hosted by Dash<br/>React Router date routes; selection reducer and TanStack Query; view-bound settled figures"]
     day_ahead_prices -->|price layer| cnec_http
     cnec_geometry -->|constraint layer| cnec_http
     cnec_price_figure -->|enriched view| cnec_http

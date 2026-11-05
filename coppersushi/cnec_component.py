@@ -10,9 +10,9 @@ class CnecView(Component):
     _type = "CnecView"
     _children_props: list[str] = []
 
-    def __init__(self, *, id: str, day: str, min_day: str, token: str, basemap: dict):
-        self._prop_names = ["id", "day", "min_day", "token", "basemap"]
+    def __init__(self, *, id: str, default_day: str, min_day: str, token: str, basemap: dict):
+        self._prop_names = ["id", "default_day", "min_day", "token", "basemap"]
         self._valid_wildcard_attributes = []
         self.available_properties = self._prop_names
         self.available_wildcard_properties = []
-        super().__init__(id=id, day=day, min_day=min_day, token=token, basemap=basemap)
+        super().__init__(id=id, default_day=default_day, min_day=min_day, token=token, basemap=basemap)

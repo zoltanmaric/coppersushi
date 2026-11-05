@@ -2,15 +2,21 @@
 import React from 'react';
 import {act, cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
-import {CnecView} from './index';
+import {CnecPage} from './index';
 import responses from './fixtures/responses.json';
 import type {PlotlyFigure} from './contracts';
+
+function CnecView(props: Omit<React.ComponentProps<typeof CnecPage>, 'navigate'>) {
+  const [day, navigate] = React.useState(props.day);
+  return <CnecPage {...props} day={day} navigate={navigate}/>;
+}
 
 interface Pending {path: string; body?: {day: string; interval: number; selected: number | null}; resolve: (value: Response) => void}
 let pending: Pending[];
 let graph: PlotlyFigure;
 let clickGraph: (change: {clickData: {points: {customdata: string[]}[]}}) => void;
 beforeEach(() => {
+  window.history.replaceState(null, "", "/cnec/2024-08-29");
   pending = [];
   vi.stubGlobal('fetch', vi.fn((url: string, options: RequestInit) => new Promise<Response>(resolve => {
     pending.push({path: url, body: options.body ? JSON.parse(String(options.body)) : undefined, resolve});
@@ -223,5 +229,14 @@ test('delivery picker rejects dates before the supported window', async () => {
   expect(picker.min).toBe('2025-11-05');
   fireEvent.change(picker, {target: {value: '2025-11-04'}});
   expect(picker.value).toBe('2025-11-05');
+});
 
+test('date selection delegates to the host without touching browser history', async () => {
+  await open();
+  window.history.replaceState(null, '', '/cnec/2024-08-29?view=map#detail');
+  fireEvent.change(screen.getByLabelText('Delivery day'), {target: {value: '2024-08-30'}});
+  expect((screen.getByLabelText('Delivery day') as HTMLInputElement).value).toBe('2024-08-30');
+  expect(window.location.pathname).toBe('/cnec/2024-08-29');
+  expect(window.location.search).toBe('?view=map');
+  expect(window.location.hash).toBe('#detail');
 });
