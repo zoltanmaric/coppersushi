@@ -51,7 +51,7 @@ function RoutedCnecPage({default_day, ...props}: HostProps) {
     const next = reduceSelection(selection, action);
     if (next === selection) return;
     navigate({pathname: `/cnec/${next.day}`, search: viewSearch(next, location.search), hash: location.hash},
-      {replace: action.type === 'interval' || (action.type === 'select' && action.selected === null)});
+      {replace: true});
   };
   return <CnecPage {...props} selection={selection} onAction={onAction}/>;
 }
