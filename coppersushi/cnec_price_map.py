@@ -303,10 +303,10 @@ def _cap_traces(zones: DataFrame[BiddingZoneShapes], caps: DataFrame[CountryCaps
     lon, lat = [], []
     for ring in _country_rings(geometry):
         # Include gaps between islands so no connecting border or click target is invented.
-        n = max(20, int(ring.length * 20))
-        points = [ring.interpolate(t, normalized=True) for t in np.linspace(0, 1, n)]
-        lon.extend([p.x for p in points] + [None])
-        lat.extend([p.y for p in points] + [None])
+        # Preserve every coastline corner; densify long edges only for reachable click targets.
+        points = list(ring.segmentize(0.05).coords)
+        lon.extend([x for x, _ in points] + [None])
+        lat.extend([y for _, y in points] + [None])
     row = caps.iloc[0]
     hover = (f"{row['name']}<br>Net {row.direction} limit: {row.capacity:,.0f} MW<br>"
              f"Cap shadow price: {row.shadow_price:,.2f} €/MWh")
