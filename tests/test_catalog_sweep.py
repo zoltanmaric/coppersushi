@@ -148,3 +148,42 @@ def test_assessment_cannot_overwrite_a_resolved_published_pair(tmp_path):
         writer.writerow(dict(tso=row['tso'],eic=row['eic'],name=row['name'],site_a='Eastfield',site_b='Westhaven',direct_orientation='a_to_b',assignment_evidence='contradictory synthetic guess',orientation_evidence='synthetic'))
     with pytest.raises(ValueError,match='contradicts a resolved terminal'):
         sweep(source/'cache',source/'backfill',tmp_path/'output',source/'config')
+
+
+def test_orientation_assessment_applies_without_replacing_resolved_sites():
+    from coppersushi.data_sources.catalog_sweep import ElementAssessment, apply_assessments
+    import pytest
+    sites = {'s1': {'site_id': 's1', 'display_name': 'Alpha'},
+             's2': {'site_id': 's2', 'display_name': 'Beta'}}
+    element = dict(element_id='e', eic='E', tso='T', name='Line', element_type='Line',
+                   direct_orientation='unknown', orientation_basis='unknown', orientation_evidence='missing')
+    endpoints = {('e', 'a'): dict(site_id='s1', status='resolved', evidence='source A'),
+                 ('e', 'b'): dict(site_id='s2', status='resolved', evidence='source B')}
+    assessment = ElementAssessment(tso='T', eic='E', name='Line', site_a='Alpha', site_b='Beta',
+        direct_orientation='b_to_a', assignment_evidence='site guess', orientation_evidence='direction guess')
+    apply_assessments({('E', 'T', 'Line'): assessment}, sites, [element], endpoints, {'e': 'source'})
+    assert element['direct_orientation'] == 'b_to_a'
+    assert element['orientation_basis'] == 'inferred'
+    assert endpoints['e', 'a']['evidence'] == 'source A'
+    element.update(direct_orientation='a_to_b', orientation_basis='published')
+    with pytest.raises(ValueError, match='contradicts published orientation'):
+        apply_assessments({('E', 'T', 'Line'): assessment}, sites, [element], endpoints, {'e': 'source'})
+
+
+def test_audit_credits_the_endpoint_evidence_actually_used(tmp_path):
+    import csv
+    import shutil
+    from coppersushi.data_sources.catalog_sweep import sweep
+    root=FIXTURE.parent/'catalog-sweep'
+    shutil.copytree(root,tmp_path/'input')
+    source=tmp_path/'input'
+    config=source/'config/element-assessments.csv'
+    with config.open('w') as stream:
+        writer=csv.DictWriter(stream,fieldnames=['tso','eic','name','site_a','site_b','direct_orientation','assignment_evidence','orientation_evidence'])
+        writer.writeheader()
+        writer.writerow(dict(tso='TEST',eic='99T-SYNTHETIC',name='Westhaven-Eastfield',site_a='Westhaven',site_b='Eastfield',direct_orientation='a_to_b',assignment_evidence='unused guess',orientation_evidence='unused guess'))
+    sweep(source/'cache',source/'backfill',tmp_path/'output',source/'config')
+    with (tmp_path/'output/audit.csv').open() as stream:
+        row=next(row for row in csv.DictReader(stream) if row['eic']=='99T-SYNTHETIC')
+    assert 'unused guess' not in row['endpoint_evidence']
+    assert 'name lookup' in row['endpoint_evidence']
