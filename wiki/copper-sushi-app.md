@@ -44,6 +44,8 @@ A single map with independently managed price, constraint and attribution layers
 
 ## The CNEC page
 
+Country prices share one colour scale across all Core zones and intervals of the selected day. A compact legend shows the day’s minimum and maximum; interval changes keep those bounds fixed.
+
 [WelfMaxxing](https://welfmaxxing.lovable.app/) is the hackathon prototype; voice transcription may render its name as “Wealth Maxing.” Its map interaction is a visual reference for Copper Sushi.
 
 The label-free base map loads first. On the first interval, the price, physical-constraint and country-cap layers appear together after their requests settle. On a later interval, the previous figure and its timestamp remain visible until the replacement is ready; the controls show the requested interval and loading status. Errors remain visible and retryable. Late results do not replace the requested view. Server logs report data-loading, geometry, attribution and figure-building durations.
