@@ -45,6 +45,15 @@ function combine(token: string, basemap: Props['basemap'], prices?: LayerRespons
 function View({id, day: routeDay, min_day, token, basemap}: Props) {
   const [selection, dispatch] = useReducer(reduceSelection, {day: routeDay, interval: 0, selected: null, source: "constraints"});
   useEffect(() => {dispatch({type: 'day', day: routeDay});}, [routeDay]);
+  useEffect(() => {
+    const onPopState = () => {
+      const match = /^\/cnec\/(\d{4}-\d{2}-\d{2})\/?$/.exec(window.location.pathname);
+      const restoredDay = match?.[1] ?? (/^\/cnec\/?$/.test(window.location.pathname) ? routeDay : null);
+      if (restoredDay) dispatch({type: 'day', day: restoredDay});
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [routeDay]);
   const {day, interval, selected, source} = selection;
   const view = {day, interval, selected};
   const calendar = useQuery({queryKey: ['calendar', day], queryFn: ({signal}) => fetchCnec('day', `day/${day}`, signal)});
@@ -125,7 +134,12 @@ function View({id, day: routeDay, min_day, token, basemap}: Props) {
   return <section id={id} className="cnec-react">
     <div className="cnec-controls">
       <input aria-label="Delivery day" type="date" min={min_day} value={day} onChange={e => {
-        if (e.target.value >= min_day) dispatch({type: 'day', day: e.target.value});
+        if (e.target.value >= min_day && e.target.value !== day) {
+          const url = new URL(window.location.href);
+          url.pathname = `/cnec/${e.target.value}`;
+          window.history.pushState(window.history.state, '', url);
+          dispatch({type: 'day', day: e.target.value});
+        }
       }}/>
       <select aria-label="Binding constraint" value={selected === null ? '' : String(selected)}
         disabled={!constraints.data} onChange={e => select(e.target.value)}>

@@ -11,6 +11,7 @@ let pending: Pending[];
 let graph: PlotlyFigure;
 let clickGraph: (change: {clickData: {points: {customdata: string[]}[]}}) => void;
 beforeEach(() => {
+  window.history.replaceState(null, "", "/cnec/2024-08-29");
   pending = [];
   vi.stubGlobal('fetch', vi.fn((url: string, options: RequestInit) => new Promise<Response>(resolve => {
     pending.push({path: url, body: options.body ? JSON.parse(String(options.body)) : undefined, resolve});
@@ -223,5 +224,13 @@ test('delivery picker rejects dates before the supported window', async () => {
   expect(picker.min).toBe('2025-11-05');
   fireEvent.change(picker, {target: {value: '2025-11-04'}});
   expect(picker.value).toBe('2025-11-05');
+});
 
+test('date selection updates the URL and history restores the date', async () => {
+  await open();
+  fireEvent.change(screen.getByLabelText('Delivery day'), {target: {value: '2024-08-30'}});
+  expect(window.location.pathname).toBe('/cnec/2024-08-30');
+  window.history.replaceState(null, '', '/cnec/2024-08-29');
+  act(() => window.dispatchEvent(new PopStateEvent('popstate')));
+  expect((screen.getByLabelText('Delivery day') as HTMLInputElement).value).toBe('2024-08-29');
 });
