@@ -16,7 +16,7 @@ def test_real_polish_riverbanks_do_not_become_an_inland_cap_border():
     inland = box(18.1, 52.6, 19.4, 54.0)
     assert land.boundary.intersects(inland)  # This source reproduced the visible false border.
     assert all(not ring.intersects(inland) for ring in _country_rings(land))
-    fill, _ = _price_traces(pd.DataFrame([{'zone': 'PL', 'geometry': land, 'price': 100.0}]), None, (0, 100))
+    fill, _ = _price_traces(pd.DataFrame([{'zone': 'PL', 'geometry': land, 'price': 100.0}]), None)
     displayed = shape(fill.geojson['features'][0]['geometry'])
     assert not displayed.boundary.intersects(inland)
 
