@@ -7,10 +7,14 @@ import {reduceSelection} from './state';
 import {mapSelection} from './map-selection';
 import type {PlotlyFigure, LayerResponse} from './contracts';
 import {PriceLegend} from './price-legend';
+
+import {ConstraintOverlay} from './constraint-overlay';
+import {overlayModel, updateCamera} from './overlay-model';
+import type {Camera} from './overlay-model';
 import './style.css';
 
 interface Props {id: string; day: string; min_day: string; token: string; basemap: PlotlyFigure['layout']['mapbox']['style']}
-interface GraphChange {clickData?: unknown}
+interface GraphChange {clickData?: unknown; relayoutData?: Record<string, unknown>}
 interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void}
 // Reuse Dash's Graph component and its Plotly loader instead of shipping Plotly twice.
 const Graph = (props: GraphProps) => {
@@ -45,11 +49,14 @@ export function CnecPage(props: Props & {navigate: (day: string) => void}) {
   const [client] = useState(() => new QueryClient({defaultOptions: {queries: {
     retry: false, staleTime: 300_000, refetchOnWindowFocus: false, refetchOnReconnect: false, refetchOnMount: false,
   }}}));
-  return <QueryClientProvider client={client}><View {...props}/></QueryClientProvider>;
+  // Mapbox requires absolute sprite URLs, including for same-origin assets.
+  const basemap = useMemo(() => props.basemap !== null && typeof props.basemap === 'object' && 'sprite' in props.basemap && typeof props.basemap.sprite === 'string'
+    ? {...props.basemap, sprite: new URL(props.basemap.sprite, window.location.href).href} : props.basemap, [props.basemap]);
+  return <QueryClientProvider client={client}><View {...props} basemap={basemap}/></QueryClientProvider>;
 }
 
 function shell(token: string, basemap: Props['basemap']): PlotlyFigure {
-  return {data: [{type: 'scattermapbox', lon: [], lat: []}], layout: {
+  return {data: [{type: 'scattermapbox', mode: 'lines', lon: [], lat: []}], layout: {
     mapbox: {style: basemap, accesstoken: token, center: {lat: 50, lon: 10}, zoom: 3.5},
     clickanywhere: true, uirevision: 'cnec-camera', margin: {t: 0, b: 0, l: 0, r: 0}, showlegend: false,
     paper_bgcolor: '#1b1b1b',
@@ -60,7 +67,7 @@ function combine(token: string, basemap: Props['basemap'], prices?: LayerRespons
   const initial = shell(token, basemap);
   if (!prices && !constraints) return initial;
   const priceData = prices?.figure.data ?? [];
-  return {data: [...priceData.slice(0, 1), ...(constraints?.figure.data ?? []), ...(caps?.figure.data.filter(t => t.meta === 'country-cap') ?? []), ...priceData.slice(1)],
+  return {data: [...priceData.slice(0, 1), ...(constraints?.figure.data ?? []), ...(caps?.figure.data.filter(t => t.meta !== null && typeof t.meta === 'object' && 'role' in t.meta && t.meta.role === 'country-cap') ?? []), ...priceData.slice(1)],
     layout: {...(constraints?.figure.layout ?? prices?.figure.layout ?? initial.layout), uirevision: 'cnec-camera'}};
 }
 
@@ -71,6 +78,21 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
   const view = {day, interval, selected};
   const [scrubbing, setScrubbing] = useState(false);
   const inputSettled = !scrubbing;
+
+  const [camera, setCamera] = useState<Camera>({lat: 50, lon: 10, zoom: 3.5, bearing: 0, pitch: 0});
+  const [moving, setMoving] = useState(false);
+  const pointerStart = useRef<{x: number; y: number} | null>(null);
+  useEffect(() => {
+    // Releasing a drag does not stop Mapbox inertia. Only relayout publishes its final camera.
+    const endDrag = () => {pointerStart.current = null;};
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+    return () => {
+      window.removeEventListener('pointerup', endDrag);
+      window.removeEventListener('pointercancel', endDrag);
+    };
+  }, []);
+
   const calendar = useQuery({queryKey: ['calendar', day], queryFn: ({signal}) => fetchCnec('day', `day/${day}`, signal)});
   const validInterval = !!calendar.data && interval < calendar.data.labels.length;
   const prices = useQuery({queryKey: ['prices', day, interval], enabled: validInterval && inputSettled,
@@ -139,6 +161,12 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
     if (option) dispatch({type: 'select', selected: value === '' ? null : Number(value), source: option.source});
   }
   function mapClick(change: GraphChange) {
+    if (change.relayoutData) {
+      const update = change.relayoutData;
+      setCamera(previous => updateCamera(previous, update));
+      setMoving(false);
+    }
+
     const action = mapSelection(change.clickData, options, selected, mapCurrent);
     if (action) dispatch(action);
   }
@@ -156,7 +184,12 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
       </select>
       <span>{selected === null ? '' : `Reference: ${enriched.isSuccess ? enriched.data.reference ?? 'unavailable' : enriched.isError || prices.isError || attribution.isError ? 'unavailable' : 'pending'}`}</span>
     </div>
-    <div className="cnec-map-container">
+    <div className="cnec-map-container" onPointerDownCapture={event => {
+      pointerStart.current = {x: event.clientX, y: event.clientY};
+    }} onPointerMoveCapture={event => {
+      const start = pointerStart.current;
+      if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 3) setMoving(true);
+    }} onWheelCapture={() => setMoving(true)}>
       <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick}
         config={{responsive: true, displayModeBar: false, scrollZoom: true}} style={{height: '100%'}}/>
       <small className="cnec-sources">
@@ -165,6 +198,8 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
         <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>
       </small>
       <PriceLegend figure={graphFigure}/>
+
+      <ConstraintOverlay model={overlayModel(graphFigure)} camera={camera} hidden={moving || !mapCurrent}/>
       <aside className="cnec-progress" aria-live="polite">
         {loading && <div role="status" aria-label="Map loading">{loading}</div>}
         {full?.notes.map(note => <div role="status" key={note}>{note}</div>)}

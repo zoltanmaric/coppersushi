@@ -89,6 +89,7 @@ def test_one_element_is_drawn_once_and_one_target_carries_each_binding_row(input
     rows = trace(fig, "binding rows")
     assert len(rows.lon) == 1
     assert rows.marker.symbol == "triangle"
+    assert isinstance(rows.to_plotly_json()["marker"]["angle"], list)
     assert "Grayspire" in rows.text[0]
     assert "Base case (no contingency)" in rows.text[0]
     assert "not physically overloaded" not in rows.text[0]
@@ -167,3 +168,25 @@ def test_daily_scale_includes_other_intervals_and_negative_prices(inputs):
     enriched = cnec_price_map.figure(zones, geometries, view._replace(price_range=bounds))
     fill = trace(enriched, 'published day-ahead price')
     assert (fill.zmin, fill.zmax) == bounds
+
+def test_transformer_geometry_keeps_a_click_target_and_identifies_its_selection_shape(inputs):
+    zones, geometries, view = selected_inputs(inputs)
+    geometries = geometries.assign(element_type="PST")
+    fig = cnec_price_map.figure(zones, geometries, view)
+    selected = trace(fig, "selected CNEC")
+    target = trace(fig, "binding transformers and PSTs")
+    assert selected.meta == {"role": "binding-symbol", "effect": "transformer"}
+    assert selected.marker.symbol == "transformer-selected"
+    assert target.marker.opacity == 1
+    assert target.marker.symbol == "transformer"
+    assert target.marker.allowoverlap
+    assert target.marker.size == 10
+    assert target.customdata[0][0] == "1,2"
+    fallback = cnec_price_map.constraint_figure(zones, view.constraints, geometries,
+        view.interval, view.selected_id, "token", "dark")
+    assert fallback.data[-1].marker.symbol == "transformer-selected"
+    # The decoration adapter consumes plain coordinates, not Plotly's binary ndarray encoding.
+    assert isinstance(target.to_plotly_json()["lon"], list)
+    assert isinstance(target.to_plotly_json()["lat"], list)
+
+

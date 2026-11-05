@@ -42,3 +42,6 @@ dist/
 # Generated React component assets.
 /assets/cnec-view.js
 /assets/cnec-view.css
+
+/assets/cnec-markers*.png
+/assets/cnec-markers*.json

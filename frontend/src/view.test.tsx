@@ -17,6 +17,8 @@ let graph: PlotlyFigure;
 let clickGraph: (change: {clickData: {points: {customdata: string[]}[]}}) => void;
 beforeEach(() => {
   window.history.replaceState(null, "", "/cnec/2024-08-29");
+
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
   pending = [];
   vi.stubGlobal('fetch', vi.fn((url: string, options: RequestInit) => new Promise<Response>(resolve => {
     pending.push({path: url, body: options.body ? JSON.parse(String(options.body)) : undefined, resolve});

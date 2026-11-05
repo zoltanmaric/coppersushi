@@ -27,11 +27,10 @@ POINT_TYPES = ("Transformer", "PST")
 FRAME_ZOOM = 1.0  # Chosen against the rendered page, not derived: viewport aspect varies
 LINE_WIDTH = 2.5
 SELECTED_WIDTH = 4  # The selected row's branch, under the same halo as the rest
-GLOW_FACTOR = 4.4  # Wider than map_style's default: a 2.5-px line wants an 11-px halo to read at all
 END_SIZE = 6  # Mapbox caps Plotly's lines flat; a dot at each end rounds them. Only
 # circles take the trace colour: every other symbol is the sprite's own grey icon.
 TARGET_SIZE = 8
-POINT_SIZE = 9
+POINT_SIZE = 10  # Owned sprite pixels at native size (Plotly scales icons by size / 10).
 
 
 def _priced_zones(zones: DataFrame[BiddingZoneShapes], prices: DataFrame[ZonalPrices]) -> pd.DataFrame:
@@ -185,7 +184,7 @@ def _constraint_traces(
     not distinct lines on the map, so the line and its marker have different grains.
 
     A line's hover target is a triangle pointing the way its rows bind; a transformer's or
-    PST's is a square.
+    PST's is a map-owned pair of rings, independent of decorative selection effects.
     """
     mapped = placed[placed.match_status.eq(MATCHED)]
     line_rows = mapped[~mapped.element_type.isin(POINT_TYPES)]
@@ -195,19 +194,26 @@ def _constraint_traces(
     def line(name: str, width: float, lon: np.ndarray | list[float], lat: np.ndarray | list[float]) -> list[go.Scattermapbox]:
         core = go.Scattermapbox(
             name=name,
-            lon=lon,
-            lat=lat,
+            lon=list(lon),
+            lat=list(lat),
             mode="lines",
             hoverinfo="none",
             line=dict(color=map_style.BINDING, width=width),
         )
-        return map_style.haloed(core, factor=GLOW_FACTOR)
+        return [core]
 
     highlighted = []
     if selected is not None and selected.match_status == MATCHED:
         highlighted = line(
             "selected CNEC", SELECTED_WIDTH, [selected.x0, selected.x1], [selected.y0, selected.y1]
         )
+        if selected.element_type in POINT_TYPES:
+            highlighted = [go.Scattermapbox(name="selected CNEC", mode="markers",
+                lon=[(selected.x0 + selected.x1) / 2], lat=[(selected.y0 + selected.y1) / 2],
+                marker=dict(symbol="transformer-selected", size=POINT_SIZE, angle=0, allowoverlap=True),
+                hoverinfo="skip", meta={"role": "binding-symbol", "effect": "transformer"})]
+        else:
+            highlighted[0].meta = {"effect": "line"}
 
     ends = go.Scattermapbox(
         name="binding line ends",
@@ -222,26 +228,31 @@ def _constraint_traces(
         targets = _hover_targets(rows, directed)
         return go.Scattermapbox(
             name=name,
-            lon=targets.target_x,
-            lat=targets.target_y,
+            meta={"role": "binding-symbol"},
+            lon=targets.target_x.to_list(),
+            lat=targets.target_y.to_list(),
             mode="markers",
             hoverinfo="text",
             hoverlabel=map_style.BINDING_HOVERLABEL,
             text=targets.hover,
             customdata=targets[["source_ids"]].to_numpy(),
             marker=go.scattermapbox.Marker(
-                color=map_style.BINDING, size=size, symbol=symbol, angle=targets.angle
+                color=map_style.BINDING, size=size, symbol=symbol, angle=targets.angle.to_list() if directed else 0,
+                opacity=1, allowoverlap=True
             ),
         )
 
     point_rows = mapped[mapped.element_type.isin(POINT_TYPES)]
+    branches = map_style.haloed(line("market-binding CNECs", LINE_WIDTH, lon, lat)[0])
+    branches[0].line.color = map_style.BINDING_LIGHT
+    branches[-1].meta = {"ambient": True}
     return [
-        *line("market-binding CNECs", LINE_WIDTH, lon, lat),
-        *highlighted,
+        *branches,
         ends,
         _line_hit_targets(line_rows),
         markers(line_rows, "binding rows", "triangle", TARGET_SIZE, directed=True),
-        markers(point_rows, "binding transformers and PSTs", "square", POINT_SIZE, directed=False),
+        markers(point_rows, "binding transformers and PSTs", "transformer", POINT_SIZE, directed=False),
+        *highlighted,
     ]
 
 
@@ -318,7 +329,7 @@ def _cap_traces(zones: DataFrame[BiddingZoneShapes], caps: DataFrame[CountryCaps
         mode="markers", marker=dict(size=14, color="rgba(128,80,255,0.01)"),
         customdata=[[str(row.source_id)]] * len(lon), text=[hover] * len(lon), hoverinfo="text", hoverlabel=map_style.BINDING_HOVERLABEL))
     for trace in traces:
-        trace.meta = "country-cap"
+        trace.meta = {"role": "country-cap", "ambient": trace is outline}
     return traces
 
 
@@ -361,6 +372,9 @@ def figure(
         assert view.reference is not None
         influence = cnec_influence.overlay(centres, view.contribution)
         traces += influence.traces
+    symbols = [t for t in traces if isinstance(t.meta, dict) and t.meta.get("role") == "binding-symbol"]
+    traces = [t for t in traces if not (isinstance(t.meta, dict) and t.meta.get("role") == "binding-symbol")]
+    traces.extend(sorted(symbols, key=lambda t: bool(t.meta.get("effect"))))
     traces.append(labels)  # Last, so no dot or ray lands on a price
     fig = go.Figure(traces)
     fig.layout = map_layout(zones, view.interval, mapbox_token, basemap)

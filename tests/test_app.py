@@ -233,7 +233,7 @@ def test_cnec_mount_uses_react_component_and_has_no_loading_callback_chain(monke
     view = next(c for c in _components(page) if getattr(c, 'id', None) == 'cnec-view')
     assert view.to_plotly_json() == {
         'namespace': 'coppersushi_cnec', 'type': 'CnecView',
-        'props': {'id': 'cnec-view', 'default_day': cnec_page.local_today(), 'min_day': '2025-11-05', 'token': 'token', 'basemap': {'version': 8, 'sources': {}, 'layers': []}},
+        'props': {'id': 'cnec-view', 'default_day': cnec_page.local_today(), 'min_day': '2025-11-05', 'token': 'token', 'basemap': {'version': 8, 'sources': {}, 'layers': [], 'sprite': '/assets/cnec-markers'}},
     }
     dependencies = app.server.test_client().get('/_dash-dependencies').json
     assert all('cnec-' not in callback['output'] for callback in dependencies)

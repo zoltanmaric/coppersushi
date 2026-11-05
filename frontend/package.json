@@ -23,6 +23,7 @@
     "jsdom": "^26.1.0",
     "json-schema-to-typescript": "^15.0.4",
     "typescript": "^5.9.0",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "@resvg/resvg-js": "2.6.2"
   }
 }
