@@ -8,7 +8,7 @@ remain part of its identity because one EIC can identify several Y-line legs.
 `element_catalog.load` validates the complete snapshot in an in-memory SQLite
 transaction before exposing it. The CLI, CI and map projection use this loader.
 It rejects wrong headers, duplicate keys, dangling references, invalid coordinates,
-invalid resolution states and missing from/to rows. Integrity does not prove that a
+invalid resolution states and missing A/B terminal rows. Integrity does not prove that a
 chosen site is geographically correct. The audit retains unresolved and conflicting
 source records instead of inventing connections.
 
@@ -54,9 +54,13 @@ The four tables describe a snapshot, not a history of topology. Conflicting endp
 publications remain unresolved across that snapshot. Source renames create distinct
 element publications; they do not silently rename a physical site or merge Y-line legs.
 Overrides include the full element publication name and endpoint label.
+The audit reports `orientation_unknown` when both sites are resolved but DIRECT is
+unknown. Such rows count as unmapped because the directed map cannot draw them.
+
 Static-grid terminal pairs do not by themselves establish a runtime publication's
-DIRECT orientation. Never transplant an endpoint pair using EIC alone: renamed
-Y-line legs and out-of-service records can share that identifier.
+DIRECT orientation. Automatic joins must never transfer endpoints using EIC alone.
+Reviewed hypotheses may select a pair for an exact publication, with the discrepancy
+and evidence recorded explicitly in `element-assessments.csv`.
 
 ## Serve
 
@@ -67,3 +71,33 @@ fetch and live locator. Recorded conflicts, ambiguous sites and unresolved site 
 remain authoritative. Discovery does not overwrite the reviewed snapshot; rebuild it
 to audit and incorporate new observations. A missing or invalid catalog is an error.
 The image build validates it before shipping.
+
+## Assessments
+
+Terminals A/B identify the two ends without implying DIRECT. `assignment_basis`
+records whether each site assignment is published, inferred or unknown, independently
+of its resolution status. A unique resolved site can still be an inferred assignment.
+`published_name` retains the original source label and stays empty when none was
+published; a hypothesis never fabricates a publisher label.
+
+Each element has `direct_orientation` (`a_to_b`, `b_to_a`, `unknown`),
+`orientation_basis` and separate evidence. Unknown orientation is not projected into
+the existing directed map contract. Chosen inferred mappings render normally; these
+fields are internal provenance and do not add map labels or styling. DIRECT/OPPOSITE
+on an active constraint remains the publisher's observation.
+
+`assessed-sites.csv` adds reviewed coordinates for physical terminals absent from the
+locator, including real junctions; these are not virtual trading hubs.
+`element-assessments.csv` selects sites by unique display name for an exact TSO/EIC/name
+publication. All selections in that file are explicitly inferred. Source conflicts
+and contradictory complete published mappings fail the build for review. Ordinary
+name-to-site lookup is also classified as inferred; published orientation comes from
+unambiguous source from/to labels. Assessments preserve the original source labels
+and retain observation provenance. Neither source order nor a numeric similarity is
+a calibrated confidence probability.
+
+Existing from/to snapshots are read through an explicit legacy-header conversion,
+validated against the current relational schema, and rebuilt with A/B columns. Site
+and element IDs remain stable. These four tables still describe a snapshot, not
+historical validity: evidence dates do not establish validity for every historical
+hour. The seven provisional assessments document that limitation in their evidence.

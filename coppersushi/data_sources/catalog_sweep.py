@@ -15,7 +15,8 @@ from pathlib import Path
 import uuid
 
 import pandas as pd
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal
 
 
 class LocatorRecord(BaseModel):
@@ -26,6 +27,28 @@ class LocatorRecord(BaseModel):
     osm_id: int | None
     template: str
     osm_type: str | None = None
+
+
+class SiteAssessment(BaseModel):
+    """A reviewed physical location, including junctions absent from the locator."""
+    model_config = ConfigDict(extra='forbid')
+    name: str = Field(min_length=1)
+    longitude: float = Field(ge=-180, le=180)
+    latitude: float = Field(ge=-90, le=90)
+    evidence: str = Field(min_length=1)
+
+
+class ElementAssessment(BaseModel):
+    """A reviewed hypothesis for one exact source publication, separate from observations."""
+    model_config = ConfigDict(extra='forbid')
+    tso: str = Field(min_length=1)
+    eic: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    site_a: str = Field(min_length=1)
+    site_b: str = Field(min_length=1)
+    direct_orientation: Literal['a_to_b','b_to_a','unknown']
+    assignment_evidence: str = Field(min_length=1)
+    orientation_evidence: str = Field(min_length=1)
 
 
 from coppersushi import REPO, cnec_geometry as geometry
@@ -49,6 +72,46 @@ def write(path: Path, columns: list[str], rows: list[dict]) -> None:
         writer = csv.DictWriter(stream, fieldnames=columns)
         writer.writeheader()
         writer.writerows(rows)
+
+
+def apply_assessments(assessments: dict[tuple[str, str, str], ElementAssessment],
+                      sites: dict[str, dict], elements: list[dict],
+                      endpoints: dict[tuple[str, str], dict], source_evidence: dict[str, str]) -> None:
+    """Fill unresolved terminals from reviewed hypotheses without replacing source facts."""
+    site_ids = defaultdict(list)
+    for site in sites.values():
+        site_ids[site['display_name']].append(site['site_id'])
+    publications = {(row['eic'], row['tso'], row['name']): row for row in elements}
+    for key, assessment in assessments.items():
+        if key not in publications:
+            raise ValueError(f'Unobserved element assessment: {key}')
+        element = publications[key]
+        pair = [endpoints[element['element_id'], terminal] for terminal in ('a', 'b')]
+        if any(endpoint['status']=='conflict' for endpoint in pair):
+            raise ValueError(f'Assessment conflicts with published terminals: {key}')
+        selected = []
+        for target in (assessment.site_a, assessment.site_b):
+            matches = site_ids[target]
+            if len(matches)!=1:
+                raise ValueError(f'Assessment requires one site for {target}: {key}')
+            selected.append(matches[0])
+        if any(endpoint['site_id'] is not None and endpoint['site_id']!=site_id
+               for endpoint, site_id in zip(pair, selected)):
+            raise ValueError(f'Assessment contradicts a resolved terminal: {key}')
+        if not all(endpoint['status']=='resolved' for endpoint in pair):
+            for endpoint, site_id in zip(pair, selected):
+                if endpoint['status'] != 'resolved':
+                    endpoint.update(site_id=site_id, status='resolved', assignment_basis='inferred',
+                                    evidence=assessment.assignment_evidence+'; original observation: '
+                                             +source_evidence[element['element_id']])
+            element['element_type'] = element['element_type'] or 'Line'
+        if (element['orientation_basis']=='published' and assessment.direct_orientation!='unknown'
+                and element['direct_orientation']!=assessment.direct_orientation):
+            raise ValueError(f'Assessment contradicts published orientation: {key}')
+        if element['orientation_basis']=='unknown':
+            element.update(direct_orientation=assessment.direct_orientation,
+                orientation_basis='unknown' if assessment.direct_orientation=='unknown' else 'inferred',
+                orientation_evidence=assessment.orientation_evidence)
 
 
 def sweep(cache_root: Path, backfill: Path, output: Path,
@@ -131,6 +194,26 @@ def sweep(cache_root: Path, backfill: Path, output: Path,
                                  evidence=(f'https://www.openstreetmap.org/{r.osm_type}/{r.osm_id}; verified OSM site coordinates' if r.template=='OSM' else f'osm-locator@{osm_locator.COMMIT}; {anchor}; template={r.template}'))
         point_sites[(float(r.x), float(r.y))] = site_id
         names.add(('osm' if r.template=='OSM' else 'osm-locator', r.name, site_id))
+    assessed_sites = configuration/'assessed-sites.csv'
+    if assessed_sites.exists():
+        with assessed_sites.open(newline='') as stream:
+            for raw in csv.DictReader(stream):
+                site_assessment = SiteAssessment.model_validate(raw)
+                site_id = identity(('site','assessment',site_assessment.name))
+                if any(r['display_name']==site_assessment.name for r in sites.values()):
+                    raise ValueError(f'Duplicate assessed site: {site_assessment.name}')
+                sites[site_id] = dict(site_id=site_id, display_name=site_assessment.name,
+                    longitude=site_assessment.longitude, latitude=site_assessment.latitude, evidence=site_assessment.evidence)
+                names.add(('assessment',site_assessment.name,site_id))
+    assessments = {}
+    assessment_path = configuration/'element-assessments.csv'
+    if assessment_path.exists():
+        with assessment_path.open(newline='') as stream:
+            for raw in csv.DictReader(stream):
+                parsed_assessment = ElementAssessment.model_validate(raw)
+                key = (parsed_assessment.eic,parsed_assessment.tso,parsed_assessment.name)
+                if key in assessments: raise ValueError(f'Duplicate element assessment: {key}')
+                assessments[key] = parsed_assessment
     index = geometry.substation_index(LocatedSubstations.validate(locations))
     aliases = osm_locator.load_aliases()
     normalized = {geometry._folded(k):v for k,v in aliases.items()}
@@ -198,20 +281,27 @@ def sweep(cache_root: Path, backfill: Path, output: Path,
         counts[(eic,tso,name)]+=1
         if branch and branch!='NA':contingency_counts[branch]+=1
     keys=set(observations)|set(counts)
-    elements=[]; endpoints=[]; audit=[]
+    elements: list[dict] = []
+    endpoints: dict[tuple[str, str], dict] = {}
+    source_evidence: dict[str, str] = {}
     for eic,tso,name in sorted(keys):
         if not eic or not tso or not name:continue
         key=(eic,tso,name);element_id=identity(('jao',*key))
         rows=observations.get(key) or legacy.get((eic,tso),[])
         types={r.get('element_type','') for r in rows}-{''}
-        elements.append(dict(element_id=element_id,source='jao',tso=tso,eic=eic,name=name,
-                             element_type=next(iter(types)) if len(types)==1 else None))
+        element: dict = dict(element_id=element_id,source='jao',tso=tso,eic=eic,name=name,
+                       element_type=next(iter(types)) if len(types)==1 else None,
+                       direct_orientation='unknown', orientation_basis='unknown',
+                       orientation_evidence='No unambiguous published reference terminals')
+        elements.append(element)
         values={side:{r.get(f'substation_{side}','') for r in rows}-{''} for side in ('from','to')}
         published={side:next(iter(v)) if len(v)==1 else None for side,v in values.items()}
         corrected={side:(scoped.get((eic,tso,name,n),n) if n is not None else None) for side,n in published.items()}
         placement=geometry._placement(corrected['from'],corrected['to'],index,normalized)
         evidence='; '.join(sorted({r['evidence'] for r in rows})) or 'No cached endpoint metadata'
-        statuses=[]
+        if all(published.values()):
+            element.update(direct_orientation='a_to_b', orientation_basis='published', orientation_evidence=evidence)
+        source_evidence[element_id] = evidence
         for side,number in [('from',0),('to',1)]:
             n=published[side];hit=geometry._candidates(corrected[side],index,normalized)
             site_id=None
@@ -226,16 +316,26 @@ def sweep(cache_root: Path, backfill: Path, output: Path,
             if binding and len(values[side])==1:
                 site_id=binding['site_id'];status='resolved'
             method='site binding: '+binding['evidence'] if binding else 'scoped correction' if corrected[side]!=n else ('name lookup / nearest pair' if status=='resolved' else status)
-            endpoints.append(dict(element_id=element_id,side=side,published_name=n,site_id=site_id,status=status,
-                                  evidence=f'{method}; {evidence}' + (f'; conflicting names={sorted(values[side])}' if status=='conflict' else '')))
-            statuses.append(status)
+            terminal = 'a' if side=='from' else 'b'
+            endpoints[element_id,terminal] = dict(element_id=element_id,terminal=terminal,published_name=n,site_id=site_id,status=status,
+                                  assignment_basis='inferred' if status=='resolved' else 'unknown',
+                                  evidence=f'{method}; {evidence}' + (f'; conflicting names={sorted(values[side])}' if status=='conflict' else ''))
             # Only unambiguous names become reusable aliases. Scoped/nearest-pair choices do not.
             if site_id and n is not None and not binding and hit and len(hit[1])==1 and corrected[side]==n:names.add(('jao',n,site_id))
-        audit.append(dict(element_id=element_id,eic=eic,tso=tso,name=name,appearances=counts[key],
-                          status='resolved' if statuses==['resolved','resolved'] else '/'.join(statuses),
+    apply_assessments(assessments, sites, elements, endpoints, source_evidence)
+    audit=[]
+    for element in elements:
+        element_id=element['element_id']
+        key=(element['eic'],element['tso'],element['name'])
+        statuses=[endpoints[element_id,terminal]['status'] for terminal in ('a','b')]
+        evidence='; '.join(dict.fromkeys(endpoints[element_id,terminal]['evidence'] for terminal in ('a','b')))
+        status = ('orientation_unknown' if element['direct_orientation']=='unknown' else 'resolved') if statuses==['resolved','resolved'] else '/'.join(statuses)
+        audit.append(dict(element_id=element_id,eic=element['eic'],tso=element['tso'],name=element['name'],appearances=counts[key],
+                          status=status,
+                          orientation_basis=element['orientation_basis'],
                           endpoint_evidence=evidence))
     records={'sites':list(sites.values()),'site_names':[dict(source=s,published_name=n,site_id=i) for s,n,i in sorted(names)],
-             'elements':elements,'element_endpoints':endpoints}
+             'elements':elements,'element_endpoints':list(endpoints.values())}
     # Stage and validate before replacing the previously validated catalog.
     staging=output/'.generations'/uuid.uuid4().hex;staging.mkdir(parents=True)
     import sqlite3
@@ -249,8 +349,10 @@ def sweep(cache_root: Path, backfill: Path, output: Path,
     write(staging/'contingencies.csv',['eic','appearances','has_monitored_record'],[
         dict(eic=k,appearances=v,has_monitored_record=k in {x[0] for x in keys}) for k,v in contingency_counts.most_common()])
     summary=dict(sites=len(sites),elements=len(elements),physical_constraint_observations=len(constraints),
-                 excluded_nonphysical_observations=len(external),endpoint_statuses=dict(Counter(r['status'] for r in endpoints)),
+                 excluded_nonphysical_observations=len(external),endpoint_statuses=dict(Counter(r['status'] for r in endpoints.values())),
                  fully_resolved_elements=sum(r['status']=='resolved' for r in audit),
+                 reviewed_assessments=len(assessments),
+                 inferred_orientation_elements=sum(r['orientation_basis']=='inferred' for r in elements),
                  unresolved_active_appearances=sum(int(r['appearances']) for r in audit if r['status']!='resolved'))
     (staging/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
     (staging/'sources.json').write_text(json.dumps(manifest,indent=2)+'\n')

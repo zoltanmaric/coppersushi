@@ -19,17 +19,24 @@ CREATE TABLE elements (
     eic TEXT NOT NULL CHECK(length(trim(eic)) > 0),
     name TEXT NOT NULL CHECK(length(trim(name)) > 0),
     element_type TEXT,
+    direct_orientation TEXT NOT NULL CHECK(direct_orientation IN ('a_to_b','b_to_a','unknown')),
+    orientation_basis TEXT NOT NULL CHECK(orientation_basis IN ('published','inferred','unknown')),
+    orientation_evidence TEXT NOT NULL CHECK(length(trim(orientation_evidence)) > 0),
+    CHECK((direct_orientation='unknown') = (orientation_basis='unknown')),
     UNIQUE(source, tso, eic, name)
 ) STRICT;
 CREATE TABLE element_endpoints (
     element_id TEXT NOT NULL REFERENCES elements(element_id),
-    side TEXT NOT NULL CHECK(side IN ('from', 'to')),
+    terminal TEXT NOT NULL CHECK(terminal IN ('a', 'b')),
     published_name TEXT CHECK(published_name IS NULL OR length(trim(published_name)) > 0),
     site_id TEXT REFERENCES sites(site_id),
     status TEXT NOT NULL CHECK(status IN ('resolved', 'missing', 'unresolved', 'ambiguous', 'conflict')),
     evidence TEXT NOT NULL CHECK(length(trim(evidence)) > 0),
-    PRIMARY KEY(element_id, side),
-    CHECK((status = 'resolved' AND site_id IS NOT NULL AND published_name IS NOT NULL)
+    assignment_basis TEXT NOT NULL CHECK(assignment_basis IN ('published','inferred','unknown')),
+    PRIMARY KEY(element_id, terminal),
+    CHECK((status='resolved') = (assignment_basis<>'unknown')),
+    CHECK((status = 'resolved' AND site_id IS NOT NULL)
        OR (status <> 'resolved' AND site_id IS NULL)),
+    CHECK(assignment_basis <> 'published' OR published_name IS NOT NULL),
     CHECK(status <> 'missing' OR published_name IS NULL)
 ) STRICT;
