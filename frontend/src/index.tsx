@@ -53,6 +53,8 @@ function View({id, day: routeDay, min_day, token, basemap}: Props) {
   const [camera, setCamera] = useState<Camera>({lat: 50, lon: 10, zoom: 3.5, bearing: 0});
   const [moving, setMoving] = useState(false);
   const pointerStart = useRef<{x: number; y: number} | null>(null);
+  const dragged = useRef(false);
+  const constraintHit = useRef(false);
   const wheelTimer = useRef<number | undefined>(undefined);
   useEffect(() => {
     // Releasing a drag does not stop Mapbox inertia. Only relayout publishes its final camera.
@@ -148,9 +150,11 @@ function View({id, day: routeDay, min_day, token, basemap}: Props) {
     const values = change.clickData?.points[0]?.customdata;
     if (!Array.isArray(values) || typeof values[0] !== 'string') return;
     const candidates = values[0].split(',');
-    if (selected !== null && candidates.includes(String(selected))) return;
     const option = options.find((o: ConstraintOption) => o.value && candidates.includes(o.value));
-    if (option) select(option.value);
+    if (!option) return;
+    constraintHit.current = true;
+    if (selected !== null && candidates.includes(String(selected))) return;
+    select(option.value);
   }
   return <section id={id} className="cnec-react">
     <div className="cnec-controls">
@@ -172,9 +176,20 @@ function View({id, day: routeDay, min_day, token, basemap}: Props) {
     </div>
     <div className="cnec-map-container" onPointerDownCapture={event => {
       pointerStart.current = {x: event.clientX, y: event.clientY};
+      dragged.current = false;
+      constraintHit.current = false;
     }} onPointerMoveCapture={event => {
       const start = pointerStart.current;
-      if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 3) setMoving(true);
+      if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 3) {
+        dragged.current = true;
+        setMoving(true);
+      }
+    }} onClick={event => {
+      if (!(event.target instanceof HTMLCanvasElement) || !mapCurrent || selected === null || dragged.current) return;
+      // Let Plotly resolve any constraint hit from this native click before treating it as background.
+      window.setTimeout(() => {
+        if (!constraintHit.current) dispatch({type: 'select', selected: null, source: 'constraints'});
+      }, 0);
     }}
       onWheelCapture={() => {
         setMoving(true);
