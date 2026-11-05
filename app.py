@@ -15,6 +15,7 @@ from dash import Dash, dcc, html, Input, Output, State, Patch, ctx, no_update
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 
+from coppersushi.data_model.jao import ActiveConstraints
 from coppersushi import cnec_geometry, cnec_page, map_style, power_flow
 from coppersushi.data_model.network_views import BiddingZoneShapes
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
@@ -99,10 +100,7 @@ def cnec_geometries(day: cnec_page.Day, interval_index: int) -> DataFrame[Mapped
     intervals = day.market_day.market_time_units()
     interval = intervals[min(max(interval_index, 0), len(intervals) - 1)]
     required = day.constraints[day.constraints.interval.eq(interval)]
-    ends = timed("endpoints", jao.load_element_ends, interval, required)
-    return timed("locate", cnec_geometry.locate_elements,
-        ends, timed("locator_read", osm_locator.read_csvs), osm_locator.load_aliases(),
-    )
+    return locate_constraints(interval, required)
 
 
 def cnec_day(day: MarketDay) -> cnec_page.Day:
@@ -129,6 +127,14 @@ def network_key_from_path(pathname: str) -> str | None:
 def is_embed_path(pathname: str, root_view: str = ROOT_VIEW) -> bool:
     key = (pathname or '').strip('/')
     return key == 'embed/opf-2024' or (not key and root_view == 'embed')
+
+
+def locate_constraints(interval: pd.Timestamp, required: DataFrame[ActiveConstraints]) -> DataFrame[MappedCnecElements]:
+    """Resolve one interval without waiting for prices or attribution."""
+    ends = timed("endpoints", jao.load_element_ends, interval, required)
+    return timed("locate", cnec_geometry.locate_elements,
+        ends, timed("locator_read", osm_locator.read_csvs), osm_locator.load_aliases(),
+    )
 
 
 def navigation() -> html.Nav:
@@ -482,6 +488,23 @@ app.clientside_callback(
     Input('cnec-attribution-ready', 'data'),
     State('cnec-date', 'value'),
     prevent_initial_call=True)
+
+
+# Independent HTTP layers share the existing application services.
+import cnec_http
+from coppersushi.data_model.cnec_api import EnrichedRequest
+
+
+def enriched_view(view: EnrichedRequest) -> cnec_page.Rendered:
+    result = render_cnec(MarketDay.on(view.day), view.interval,
+                        None if view.selected is None else str(view.selected), view.attribution)
+    if isinstance(result, CnecRenderFailure):
+        raise RuntimeError(result.error)
+    return result.view
+
+
+cnec_http.register(server, cnec_http.Services(core_zones, mapbox_token, basemap,
+                                            locate_constraints, enriched_view))
 
 
 if __name__ == '__main__':

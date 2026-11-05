@@ -44,7 +44,7 @@ def _zone_centres(priced_zones: pd.DataFrame) -> pd.DataFrame:
             "zone": priced_zones.zone.to_numpy(),
             "x": [point.x for point in points],
             "y": [point.y for point in points],
-            "price": priced_zones.price.to_numpy(),
+            **({"price": priced_zones.price.to_numpy()} if "price" in priced_zones else {}),
         }
     )
 
@@ -293,6 +293,8 @@ def _cap_traces(zones: DataFrame[BiddingZoneShapes], caps: DataFrame[CountryCaps
     traces.append(go.Scattermapbox(name="select country cap", lon=outline.lon, lat=outline.lat,
         mode="markers", marker=dict(size=14, color="rgba(128,80,255,0.01)"),
         customdata=[[str(row.source_id)]] * len(lon), text=[hover] * len(lon), hoverinfo="text"))
+    for trace in traces:
+        trace.meta = "country-cap"
     return traces
 
 
@@ -357,42 +359,52 @@ def figure(
         annotation += "<br>" + influence.note
     traces.append(labels)  # Last, so no dot or ray lands on a price
     fig = go.Figure(traces)
-    fig.update_layout(
+    fig.layout = map_layout(zones, view.interval, mapbox_token, basemap, annotation)
+    return fig
+
+
+def price_figure(zones: DataFrame[BiddingZoneShapes], prices: DataFrame[ZonalPrices],
+                 interval: pd.Timestamp, token: str, basemap: str | dict) -> go.Figure:
+    """Price layer independent of constraint and attribution availability."""
+    priced = _priced_zones(zones, prices)
+    return go.Figure(_price_traces(priced, _fill_anchor(basemap)),
+                     layout=map_layout(zones, interval, token, basemap, ""))
+
+
+def constraint_figure(zones: DataFrame[BiddingZoneShapes], constraints: DataFrame[ActiveConstraints],
+                      geometries: DataFrame[MappedCnecElements],
+                      interval: pd.Timestamp, selected_id: int | None, token: str,
+                      basemap: str | dict) -> go.Figure:
+    """Binding lines and interfaces, available without prices or attribution inputs."""
+    placed = _placed(constraints, geometries)
+    annotation = (f"<b>{placed.match_status.eq(MATCHED).sum()} of {len(placed)} active rows mapped</b><br>"
+                  "Purple means market-binding under contingency, not physically overloaded.")
+    traces = _constraint_traces(placed, _selected(placed, selected_id))
+    return go.Figure(traces, layout=map_layout(zones, interval, token, basemap, annotation))
+
+
+def map_layout(zones: DataFrame[BiddingZoneShapes], interval: pd.Timestamp, token: str | None,
+               basemap: str | dict, annotation: str) -> go.Layout:
+    """Shared stable camera and labels for independently arriving map layers."""
+    return go.Layout(
         hovermode="closest",
         margin=dict(r=0, t=0, l=0, b=0),
         mapbox_style=basemap,
-        mapbox_accesstoken=mapbox_token,
-        mapbox=_view(priced_zones),
-        uirevision="Core",
+        mapbox_accesstoken=token,
+        mapbox=_view(zones),
+        uirevision="cnec-camera",
         showlegend=False,
         annotations=[
             go.layout.Annotation(
-                text=annotation,
-                xref="paper",
-                yref="paper",
-                x=0.99,
-                y=0.01,
-                xanchor="right",
-                yanchor="bottom",
-                align="right",
-                showarrow=False,
-                bgcolor="rgba(0,0,0,0.65)",
-                bordercolor=map_style.BINDING,
-                borderpad=7,
+                text=annotation, xref="paper", yref="paper", x=0.99, y=0.01,
+                xanchor="right", yanchor="bottom", align="right", showarrow=False,
+                bgcolor="rgba(0,0,0,0.65)", bordercolor=map_style.BINDING, borderpad=7,
             ),
             go.layout.Annotation(
-                text=f"<b>{view.interval.tz_convert(MARKET_TZ).strftime('%a %d %b %Y · %H:%M %Z')}</b>",
-                xref="paper",
-                yref="paper",
-                x=0.01,
-                y=0.99,
-                xanchor="left",
-                yanchor="top",
-                showarrow=False,
-                font=dict(size=15, color="white"),
-                bgcolor="rgba(0,0,0,0.65)",
-                borderpad=6,
+                text=f"<b>{interval.tz_convert(MARKET_TZ).strftime('%a %d %b %Y · %H:%M %Z')}</b>",
+                xref="paper", yref="paper", x=0.01, y=0.99, xanchor="left", yanchor="top",
+                showarrow=False, font=dict(size=15, color="white"),
+                bgcolor="rgba(0,0,0,0.65)", borderpad=6,
             ),
         ],
     )
-    return fig
