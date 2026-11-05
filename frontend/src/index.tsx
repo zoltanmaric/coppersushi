@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {QueryClient, QueryClientProvider, useQuery} from '@tanstack/react-query';
 import {BrowserRouter, Route, Routes, useLocation, useNavigate, useParams} from 'react-router-dom';
 import {fetchCnec} from './api';
@@ -6,6 +6,8 @@ import {Timeline} from './timeline';
 import {CORE_ZONES} from './reference';
 import {DateTimeControls} from './date-time-controls';
 import {reduceSelection} from './state';
+import type {Selection, Action} from './state';
+import {viewFromUrl, viewSearch} from './view-url';
 import {mapSelection} from './map-selection';
 import {MapDecoration} from './map-decoration';
 import type {PlotlyFigure, LayerResponse} from './contracts';
@@ -44,14 +46,19 @@ function RoutedCnecPage({default_day, ...props}: HostProps) {
   const {day} = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const changeDay = useCallback((day: string) => navigate({
-    pathname: `/cnec/${day}`, search: location.search, hash: location.hash,
-  }), [navigate, location.search, location.hash]);
-  return <CnecPage {...props} day={day ?? default_day} navigate={changeDay}/>;
+  const selection = viewFromUrl(day ?? default_day, location.search);
+  const onAction = (action: Action) => {
+    const next = reduceSelection(selection, action);
+    if (next === selection) return;
+    navigate({pathname: `/cnec/${next.day}`, search: viewSearch(next, location.search), hash: location.hash},
+      {replace: action.type === 'interval' || (action.type === 'select' && action.selected === null)});
+  };
+  return <CnecPage {...props} selection={selection} onAction={onAction}/>;
 }
 
 /** React page; the host owns routing and supplies the delivery-day navigation action. */
-export function CnecPage(props: Props & {navigate: (day: string) => void}) {
+type PageProps = Omit<Props, 'day'> & {selection: Selection; onAction: (action: Action) => void};
+export function CnecPage(props: PageProps) {
   const [client] = useState(() => new QueryClient({defaultOptions: {queries: {
     retry: false, staleTime: 300_000, refetchOnWindowFocus: false, refetchOnReconnect: false, refetchOnMount: false,
   }}}));
@@ -77,9 +84,7 @@ function combine(token: string, basemap: Props['basemap'], prices?: LayerRespons
     layout: {...(constraints?.figure.layout ?? prices?.figure.layout ?? initial.layout), uirevision: 'cnec-camera'}};
 }
 
-function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {navigate: (day: string) => void}) {
-  const [selection, dispatch] = useReducer(reduceSelection, {reference: 'DE', day: routeDay, interval: 0, selected: null, source: "constraints"});
-  useEffect(() => {dispatch({type: 'day', day: routeDay});}, [routeDay]);
+function View({id, min_day, token, basemap, selection, onAction: dispatch}: PageProps) {
   const {day, interval, selected, source, reference} = selection;
   const view = {day, interval, selected, reference};
   const [scrubbing, setScrubbing] = useState(false);
@@ -175,6 +180,9 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
       </div>
 
       <aside className="cnec-progress" aria-live="polite">
+        {calendar.data && !validInterval && <div role="alert">This interval is outside the selected day.{' '}
+          <button onClick={() => dispatch({type: 'interval', interval: 0})}>Go to first interval</button>
+        </div>}
         {loading && <div role="status" aria-label="Map loading">{loading}
           {!mapCurrent && displayed?.day === day && calendar.data && <div>
             Showing {calendar.data.labels[displayed.interval].split(' · ')[1]}
@@ -190,7 +198,7 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
       <DateTimeControls day={day} minDay={min_day} time={calendar.data?.labels[interval]?.split(' · ')[1] ?? ''}
         previousDisabled={!validInterval || interval === 0}
         nextDisabled={!validInterval || interval === (calendar.data?.labels.length ?? 0) - 1}
-        onDay={navigate} onPrevious={() => dispatch({type: 'interval', interval: interval - 1})}
+        onDay={day => dispatch({type: 'day', day})} onPrevious={() => dispatch({type: 'interval', interval: interval - 1})}
         onNext={() => dispatch({type: 'interval', interval: interval + 1})}/>
       <div className="cnec-slider-panel cnec-panel">
       <Timeline labels={calendar.data?.labels ?? []} interval={interval} disabled={!validInterval}
