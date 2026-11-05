@@ -226,11 +226,11 @@ test('delivery picker rejects dates before the supported window', async () => {
   expect(picker.value).toBe('2025-11-05');
 });
 
-test('date selection updates the URL and history restores the date', async () => {
+test('date selection updates the URL while preserving query and fragment', async () => {
   await open();
+  window.history.replaceState(null, '', '/cnec/2024-08-29?view=map#detail');
   fireEvent.change(screen.getByLabelText('Delivery day'), {target: {value: '2024-08-30'}});
   expect(window.location.pathname).toBe('/cnec/2024-08-30');
-  window.history.replaceState(null, '', '/cnec/2024-08-29');
-  act(() => window.dispatchEvent(new PopStateEvent('popstate')));
-  expect((screen.getByLabelText('Delivery day') as HTMLInputElement).value).toBe('2024-08-29');
+  expect(window.location.search).toBe('?view=map');
+  expect(window.location.hash).toBe('#detail');
 });

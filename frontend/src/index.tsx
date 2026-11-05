@@ -45,15 +45,6 @@ function combine(token: string, basemap: Props['basemap'], prices?: LayerRespons
 function View({id, day: routeDay, min_day, token, basemap}: Props) {
   const [selection, dispatch] = useReducer(reduceSelection, {day: routeDay, interval: 0, selected: null, source: "constraints"});
   useEffect(() => {dispatch({type: 'day', day: routeDay});}, [routeDay]);
-  useEffect(() => {
-    const onPopState = () => {
-      const match = /^\/cnec\/(\d{4}-\d{2}-\d{2})\/?$/.exec(window.location.pathname);
-      const restoredDay = match?.[1] ?? (/^\/cnec\/?$/.test(window.location.pathname) ? routeDay : null);
-      if (restoredDay) dispatch({type: 'day', day: restoredDay});
-    };
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, [routeDay]);
   const {day, interval, selected, source} = selection;
   const view = {day, interval, selected};
   const calendar = useQuery({queryKey: ['calendar', day], queryFn: ({signal}) => fetchCnec('day', `day/${day}`, signal)});
