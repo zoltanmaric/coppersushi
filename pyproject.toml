@@ -74,7 +74,9 @@ build-zone-shapes = "python -m coppersushi.data_sources.zone_shapes"
 test-app = "python -m pytest -q -n 4 --dist loadfile --durations=20"
 test-forecast = "python -m unittest discover -s forecasts/tests -v"
 typecheck = "python -m mypy --config-file mypy.ini"
-test-core = { depends-on = ["test-app", "test-forecast", "typecheck", "frontend-test"] }
+test-python = { depends-on = ["test-app", "test-forecast"] }
+test-quality = { depends-on = ["typecheck", "frontend-test"] }
+test-core = { depends-on = ["test-python", "test-quality"] }
 test = { depends-on = ["test-core", "theme-test", "hosting-test"] }
 solve = "python -m coppersushi.data_sources.pypsa_eur solve"
 theme-install = { cmd = "yarn install --frozen-lockfile --ignore-optional", cwd = "121gigawatts" }

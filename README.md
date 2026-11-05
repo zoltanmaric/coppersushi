@@ -149,11 +149,13 @@ Terraform providers retain their `.terraform.lock.hcl` files.
 The tests run against small checked-in fixtures under `tests/fixtures/`, never against the
 networks. Tests require no Mapbox token; they build figures without fetching map tiles.
 
-GitHub Actions runs app, forecast, type and frontend checks in separate parallel jobs
-on non-draft pull requests. Ghost theme and hosting checks get their own parallel jobs
+GitHub Actions runs Python tests and quality checks in parallel jobs on non-draft
+pull requests. App and forecast tests share one environment; type and frontend checks
+share another. Ghost theme and hosting checks get their own parallel jobs
 when `121gigawatts/`, `pyproject.toml`, `pixi.lock` or workflow files change. Manual runs
 include all checks. An independent container job checks the serving environment and
-native libraries, with cached Docker layers. Draft updates skip the checks.
+native libraries. Only the Python test job writes the
+shared Pixi cache. Draft updates skip the checks.
 App tests use four pytest workers, keeping each test file on one worker to reuse
 fixtures. Output lists the 20 slowest test phases. To run the container check locally:
 `docker buildx build --target runtime-check --build-context fixtures=tests/fixtures .`.

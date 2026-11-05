@@ -36,9 +36,9 @@ jobs:
             ghost=true
           fi
           if [[ "$ghost" == true ]]; then
-            echo 'tasks=["test-app","test-forecast","typecheck","frontend-test","theme-test","hosting-test"]' >> "$GITHUB_OUTPUT"
+            echo 'tasks=["test-python","test-quality","theme-test","hosting-test"]' >> "$GITHUB_OUTPUT"
           else
-            echo 'tasks=["test-app","test-forecast","typecheck","frontend-test"]' >> "$GITHUB_OUTPUT"
+            echo 'tasks=["test-python","test-quality"]' >> "$GITHUB_OUTPUT"
           fi
 
   test:
@@ -55,12 +55,13 @@ jobs:
         with:
           pixi-version: v0.77.1
           cache: true
+          cache-write: ${{ matrix.task == 'test-python' }}
           locked: true
       - name: Build frontend assets for application tests
-        if: matrix.task == 'test-app'
+        if: matrix.task == 'test-python'
         run: pixi run --locked frontend-build
       - name: Install frontend dependencies
-        if: matrix.task == 'frontend-test'
+        if: matrix.task == 'test-quality'
         run: pixi run --locked frontend-install
       - name: Install Ghost dependencies
         if: matrix.task == 'theme-test'
@@ -89,5 +90,3 @@ jobs:
           platforms: linux/amd64
           outputs: type=cacheonly
           provenance: false
-          cache-from: type=gha,scope=runtime
-          cache-to: type=gha,scope=runtime,mode=max
