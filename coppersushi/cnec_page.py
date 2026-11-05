@@ -33,33 +33,16 @@ class Day:
 
 
 class Rendered(NamedTuple):
-    """Map and control state emitted together so no control can drift from its interval."""
+    """Rendered map, available constraint choices and selected reference for one interval."""
 
     figure: go.Figure
-    interval_max: int
-    interval_marks: dict[int, dict]
-    interval_value: int
     constraint_options: list[dict]
-    constraint_value: str | None  # Bootstrap select values are strings
     reference: str | None
 
 
 def local_today() -> str:
     """Today's Core market-day label in its named timezone."""
     return datetime.now(tz=MARKET_TZ).date().isoformat()
-
-
-def interval_marks(day: MarketDay) -> dict[int, dict]:
-    """A label every two hours on either hourly or quarter-hourly controls, in market time."""
-    intervals = day.market_time_units()
-    stride = 2 if len(intervals) <= 25 else 8
-    return {
-        index: {
-            "label": interval.tz_convert(MARKET_TZ).strftime("%H:%M %Z") if index % stride == 0 else " ",
-            "style": {"color": "white"},
-        }
-        for index, interval in enumerate(intervals)
-    }
 
 
 NO_SELECTION = {"label": "No constraint selected", "value": "", "source": "constraints"}
@@ -133,10 +116,6 @@ def render(
         figure=cnec_price_map.figure(
             day.zones, mapped_elements, snapshot, mapbox_token, basemap
         ),
-        interval_max=len(intervals) - 1,
-        interval_marks=interval_marks(day.market_day),
-        interval_value=index,
         constraint_options=options,
-        constraint_value=selected_value,
         reference=snapshot.reference,
     )

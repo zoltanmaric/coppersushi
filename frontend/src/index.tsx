@@ -1,6 +1,7 @@
 import React, {useEffect, useMemo, useReducer, useState} from 'react';
 import {QueryClient, QueryClientProvider, useQuery} from '@tanstack/react-query';
 import {fetchCnec} from './api';
+import {Timeline} from './timeline';
 import {reduceSelection} from './state';
 import type {PlotlyFigure, LayerResponse, ConstraintOption} from './contracts';
 import './style.css';
@@ -126,8 +127,8 @@ function View({id, day: routeDay, token}: Props) {
       <button disabled={!validInterval || interval === (calendar.data?.labels.length ?? 0) - 1}
         onClick={() => dispatch({type: 'interval', interval: interval + 1})}>Next</button>
       <output>{calendar.data?.labels[interval]}</output>
-      <input aria-label="Market interval" type="range" min={0} max={(calendar.data?.labels.length ?? 1) - 1}
-        value={interval} disabled={!validInterval} onChange={e => dispatch({type: 'interval', interval: Number(e.target.value)})}/>
+      <Timeline labels={calendar.data?.labels ?? []} interval={interval} disabled={!validInterval}
+        onChange={interval => dispatch({type: 'interval', interval})}/>
     </div>
   </section>;
 }

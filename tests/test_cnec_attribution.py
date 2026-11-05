@@ -123,15 +123,6 @@ def test_reference_follows_publisher_direction_and_missing_geometry_stays_unavai
 
 
 
-@pytest.mark.parametrize('day,count', [('2024-10-27',25), ('2026-03-29',92), ('2026-10-25',100)])
-def test_timeline_includes_minor_ticks_and_disambiguates_repeated_hours(day, count):
-    marks = cnec_page.interval_marks(MarketDay.on(day))
-    assert len(marks) == count
-    labels = [v['label'] for v in marks.values() if v['label'].strip()]
-    assert len(labels) == len(set(labels))
-    assert all('CEST' in v or 'CET' in v for v in labels)
-
-
 def page_inputs():
     from shapely.geometry import shape
     phys, ptdfs, prices = tables()
@@ -172,7 +163,6 @@ def test_line_interior_hits_keep_row_identity_and_missing_alpha_keeps_selection(
     assert set(v[0] for v in hit.customdata) == {'10'}
     missing = cnec_page.Day(**{**day.__dict__, 'context': None})
     unavailable = cnec_page.render(missing, mapped, 0, 10)
-    assert unavailable.constraint_value == '10'
     assert any(t.name == 'selected CNEC' for t in unavailable.figure.data)
     assert not any(t.name.startswith('contribution relative') for t in unavailable.figure.data)
     assert 'missing or zero' in unavailable.figure.layout.annotations[0].text
@@ -182,7 +172,6 @@ def test_line_interior_hits_keep_row_identity_and_missing_alpha_keeps_selection(
 def test_virtual_bounds_are_hidden_and_stale_selections_are_cleared(selected):
     day, mapped = page_inputs()
     rendered = cnec_page.render(day, mapped, 0, selected)
-    assert rendered.constraint_value is None
     assert not {'12', '13'} & {option['value'] for option in rendered.constraint_options}
     assert not any('interface' in (t.name or '') or 'ALEGrO' in (t.name or '') for t in rendered.figure.data)
     assert rendered.reference is None

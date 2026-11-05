@@ -42,13 +42,6 @@ def mapped_elements():
     return pd.read_csv(MAP / "mapped-elements.csv").pipe(MappedCnecElements.validate)
 
 
-def test_a_historical_day_has_every_hour_and_timezone_disambiguated_marks():
-    rendered = cnec_page.render(inputs(), mapped_elements(), 0, None)
-    assert rendered.interval_max == 23
-    assert rendered.interval_marks[0]["label"] == "00:00 CEST"
-    assert rendered.interval_marks[22]["label"] == "22:00 CEST" and rendered.interval_marks[23]["label"] == " "
-
-
 def test_binding_rows_are_sorted_by_shadow_price_and_keep_their_source_id():
     rendered = cnec_page.render(inputs(), mapped_elements(), 0, None)
     assert [option["value"] for option in rendered.constraint_options] == ["", "1", "2"]
@@ -58,7 +51,6 @@ def test_binding_rows_are_sorted_by_shadow_price_and_keep_their_source_id():
 
 def test_selecting_a_row_adds_its_reference_based_influence():
     rendered = cnec_page.render(inputs(), mapped_elements(), 0, "1")
-    assert rendered.constraint_value == "1"
     assert any(trace.name == "contribution relative to AT" for trace in rendered.figure.data)
 
 
@@ -67,5 +59,5 @@ def test_a_selection_from_another_interval_is_cleared():
     later_prices = day.prices.assign(interval=pd.Timestamp("2024-08-28T23:00:00Z"))
     later = cnec_page.Day(**{**day.__dict__, "prices": later_prices})
     rendered = cnec_page.render(later, mapped_elements(), 1, "1")
-    assert rendered.constraint_value is None
+    assert rendered.reference is None
     assert rendered.constraint_options == [cnec_page.NO_SELECTION]
