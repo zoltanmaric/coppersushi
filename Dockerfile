@@ -24,6 +24,11 @@ RUN pixi install --locked -e runtime && \
 RUN /bin/bash /opt/entrypoint.sh python -m compileall -q app.py cnec_http.py coppersushi
 COPY --from=frontend-builder /opt/webapp/assets/ /opt/webapp/assets/
 
+# CI supplies fixtures separately so they never enter the serving image.
+FROM environment AS runtime-check
+RUN --mount=type=bind,from=fixtures,target=/fixtures \
+    /bin/bash /opt/entrypoint.sh python infra/lambda/check-runtime.py /fixtures
+
 FROM dependencies AS bundle-builder
 RUN pixi install --locked -e build --skip coppersushi
 COPY . .

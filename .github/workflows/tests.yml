@@ -58,19 +58,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
-      - name: Build the locked container environment
+      - name: Check the locked container environment
         uses: docker/build-push-action@v7
         with:
           context: .
-          target: environment
+          target: runtime-check
+          build-contexts: fixtures=./tests/fixtures
           platforms: linux/amd64
-          load: true
-          tags: coppersushi-environment
+          outputs: type=cacheonly
           provenance: false
           cache-from: type=gha,scope=runtime
           cache-to: type=gha,scope=runtime,mode=max
-      - name: Check container activation and native libraries
-        run: >-
-          docker run --rm -v "$PWD/tests/fixtures:/fixtures:ro"
-          --entrypoint /bin/bash coppersushi-environment /opt/entrypoint.sh
-          python infra/lambda/check-runtime.py /fixtures

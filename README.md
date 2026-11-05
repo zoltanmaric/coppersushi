@@ -154,7 +154,8 @@ pull requests, including when a draft is marked ready. Ghost checks also run whe
 `121gigawatts/`, `pyproject.toml`, `pixi.lock` or workflow files change. Manual runs
 include all checks. A parallel container job checks the serving environment and
 native libraries, with cached Docker layers. Draft updates skip both jobs.
-Python test output lists the 20 slowest test phases.
+Python test output lists the 20 slowest test phases. To run the container check locally:
+`docker buildx build --target runtime-check --build-context fixtures=tests/fixtures .`.
 
 ## Solving a day with PyPSA-Eur
 The networks in `networks/` are produced by [PyPSA-Eur](https://github.com/PyPSA/pypsa-eur),
