@@ -125,13 +125,6 @@ def test_hover_carries_contingency_direction_ram_and_shadow_price(inputs):
     assert "Shadow price: 100.00 €/MWh" in hover
 
 
-def test_map_states_coverage_and_what_purple_does_not_mean(inputs):
-    fig = cnec_price_map.figure(*inputs)
-    note = fig.layout.annotations[0].text
-    assert "2 of 2 active rows mapped" in note
-    assert "not physically overloaded" in note
-
-
 def selected_inputs(inputs, reference="AT"):
     zones, geometries, base = inputs
     selected = cnec_market.key_of(base.constraints.iloc[0])
@@ -154,7 +147,6 @@ def test_selected_constraint_overlays_its_influence_and_highlights_its_branch(in
     assert list(trace(fig, "published day-ahead price").z) == [50.0, 70.0]
     assert any("BE · +2.87 €/MWh" in text for text in trace(fig, "contribution relative to AT").text)
     assert (trace(fig, "BE ray").lon[-1], trace(fig, "BE ray").lat[-1]) == pytest.approx((4.5, 50.8))
-    assert "not a power-flow path" in fig.layout.annotations[0].text
     selected = trace(fig, "selected CNEC")
     assert list(selected.lon) == [14.4, 15.1]
     assert selected.line.width > trace(fig, "market-binding CNECs").line.width

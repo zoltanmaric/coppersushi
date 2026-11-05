@@ -37,4 +37,4 @@ Regional PTDFs and shadow prices determine the outer terms. The interconnector r
 
 The map deliberately excludes virtual hubs and their interface-bound rows from selection, rendering and attribution. It reconciles within-Core country spreads using physical CNECs’ country PTDFs and country allocation caps. Virtual-bound terms belong to the [endpoint decomposition](#price-decomposition); adding them to that country sum would mix two decompositions of the same spread. Cable restrictions still affect the jointly cleared solution, including the physical shadow prices used by the map.
 
-The active-data adapter retains only physical rows and country PTDF columns. Cross-region endpoint attribution is outside this scope. The [HTML explainer](../assets/market-clearing.html) works through both decompositions for Belgium–Germany.
+The active-data adapter retains only physical rows and country PTDF columns. Cross-region endpoint attribution is outside this scope. The [HTML explainer](market-clearing.html) works through both decompositions for Belgium–Germany.

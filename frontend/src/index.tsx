@@ -110,7 +110,6 @@ function View({id, day: routeDay, token}: Props) {
       </select>
       <span>{selected === null ? '' : `Reference: ${enriched.isSuccess ? enriched.data.reference ?? 'unavailable' : enriched.isError || prices.isError || attribution.isError ? 'unavailable' : 'pending'}`}</span>
     </div>
-    <div className="cnec-scope">Spread attribution: physical CNECs and country caps. <a href="/assets/market-clearing.html">How spread attribution works</a></div>
     <div className="cnec-map-container">
       <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick}
         config={{responsive: true, displayModeBar: false, scrollZoom: true}} style={{height: '100%'}}/>

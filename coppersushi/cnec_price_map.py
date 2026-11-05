@@ -127,13 +127,7 @@ def _price_traces(
         marker_line_width=map_style.ZONE_BORDER_WIDTH,
         below=fill_anchor,
         hoverinfo="skip",  # The label already says what a hover would
-        colorbar=go.choroplethmapbox.ColorBar(
-            title=dict(text="Day-ahead price [€/MWh]", side="top"),
-            orientation="h",
-            y=-0.02,
-            yanchor="top",
-            thickness=14,
-        ),
+        showscale=False,
     )
     names = labels_at.zone.map(market.ZONE_NAMES).fillna(labels_at.zone)
     labels = go.Scattermapbox(
@@ -328,11 +322,6 @@ def figure(
     """
     priced_zones = _priced_zones(zones, view.prices)
     placed = _placed(view.constraints, geometries)
-    mapped = placed.match_status.eq(MATCHED).sum()
-    annotation = (
-        f"<b>{mapped} of {len(placed)} active rows mapped</b><br>"
-        "Purple means market-binding under contingency, not physically overloaded."
-    )
     fill, labels = _price_traces(priced_zones, _fill_anchor(basemap))
     selected = _selected(placed, view.selected_id)
     centres = _zone_centres(priced_zones)
@@ -344,22 +333,13 @@ def figure(
     physical_selection = _selected(placed, view.selected_id)
     traces = [fill, *_constraint_traces(placed, physical_selection),
               *_cap_traces(zones, view.caps, view.selected_id)]
-    annotation += "<br>Country-spread attribution: physical CNECs and country caps."
-    if view.selected_id is not None:
-        annotation += f"<br>Selected row {view.selected_id} · Reference: {view.reference or 'unavailable'}"
-    if view.note:
-        annotation += "<br>" + view.note
     if selected is not None and view.contribution is not None:
         assert view.reference is not None
-        effects = view.contribution[view.contribution.zone.ne(view.reference)]
-        if view.selected_id in view.caps.source_id.values:
-            annotation += f"<br><b>Other Core zones: {effects.contribution.iloc[0]:+,.2f} €/MWh relative to PL</b>"
         influence = cnec_influence.overlay(selected, centres, view.contribution)
         traces += influence.traces
-        annotation += "<br>" + influence.note
     traces.append(labels)  # Last, so no dot or ray lands on a price
     fig = go.Figure(traces)
-    fig.layout = map_layout(zones, view.interval, mapbox_token, basemap, annotation)
+    fig.layout = map_layout(zones, view.interval, mapbox_token, basemap)
     return fig
 
 
@@ -368,7 +348,7 @@ def price_figure(zones: DataFrame[BiddingZoneShapes], prices: DataFrame[ZonalPri
     """Price layer independent of constraint and attribution availability."""
     priced = _priced_zones(zones, prices)
     return go.Figure(_price_traces(priced, _fill_anchor(basemap)),
-                     layout=map_layout(zones, interval, token, basemap, ""))
+                     layout=map_layout(zones, interval, token, basemap))
 
 
 def constraint_figure(zones: DataFrame[BiddingZoneShapes], constraints: DataFrame[ActiveConstraints],
@@ -377,14 +357,12 @@ def constraint_figure(zones: DataFrame[BiddingZoneShapes], constraints: DataFram
                       basemap: str | dict) -> go.Figure:
     """Binding lines and interfaces, available without prices or attribution inputs."""
     placed = _placed(constraints, geometries)
-    annotation = (f"<b>{placed.match_status.eq(MATCHED).sum()} of {len(placed)} active rows mapped</b><br>"
-                  "Purple means market-binding under contingency, not physically overloaded.")
     traces = _constraint_traces(placed, _selected(placed, selected_id))
-    return go.Figure(traces, layout=map_layout(zones, interval, token, basemap, annotation))
+    return go.Figure(traces, layout=map_layout(zones, interval, token, basemap))
 
 
 def map_layout(zones: DataFrame[BiddingZoneShapes], interval: pd.Timestamp, token: str | None,
-               basemap: str | dict, annotation: str) -> go.Layout:
+               basemap: str | dict) -> go.Layout:
     """Shared stable camera and labels for independently arriving map layers."""
     return go.Layout(
         hovermode="closest",
@@ -395,11 +373,6 @@ def map_layout(zones: DataFrame[BiddingZoneShapes], interval: pd.Timestamp, toke
         uirevision="cnec-camera",
         showlegend=False,
         annotations=[
-            go.layout.Annotation(
-                text=annotation, xref="paper", yref="paper", x=0.99, y=0.01,
-                xanchor="right", yanchor="bottom", align="right", showarrow=False,
-                bgcolor="rgba(0,0,0,0.65)", bordercolor=map_style.BINDING, borderpad=7,
-            ),
             go.layout.Annotation(
                 text=f"<b>{interval.tz_convert(MARKET_TZ).strftime('%a %d %b %Y · %H:%M %Z')}</b>",
                 xref="paper", yref="paper", x=0.01, y=0.99, xanchor="left", yanchor="top",

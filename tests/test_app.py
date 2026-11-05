@@ -78,7 +78,6 @@ def test_cnec_retry_draws_new_endpoints_without_reloading_the_day(tmp_path, monk
     monkeypatch.setattr(jao, "_get", fetch)
     result = app.render_cnec(MarketDay.on("2024-08-29"), 0, None)
     figure = result.figure
-    assert "2 of 2 active rows mapped" in figure.layout.annotations[0].text
     assert len(calls) == 1
     app.render_cnec(MarketDay.on("2024-08-29"), 0, "1")
     assert len(calls) == 1
