@@ -61,8 +61,8 @@ def test_cnec_retry_draws_new_endpoints_without_reloading_the_day(tmp_path, monk
         raise OSError("offline")
 
     monkeypatch.setattr(jao, "_get", offline)
-    result = app.render_cnec(MarketDay.on("2024-08-29"), 0, None)
-    assert isinstance(result, app.CnecRenderFailure) and "Please retry" in result.error
+    with pytest.raises(RuntimeError, match="Please retry"):
+        app.render_cnec(MarketDay.on("2024-08-29"), 0, None)
     fc = json.loads((REPO / "tests/fixtures/synthetic-jao/final-computation-hour.json").read_text())["data"]
     calls = []
 
@@ -72,8 +72,7 @@ def test_cnec_retry_draws_new_endpoints_without_reloading_the_day(tmp_path, monk
 
     monkeypatch.setattr(jao, "_get", fetch)
     result = app.render_cnec(MarketDay.on("2024-08-29"), 0, None)
-    figure = result.view.figure
-    assert isinstance(result, app.CnecRendered)
+    figure = result.figure
     assert "2 of 2 active rows mapped" in figure.layout.annotations[0].text
     assert len(calls) == 1
     app.render_cnec(MarketDay.on("2024-08-29"), 0, "1")
@@ -203,8 +202,7 @@ def test_browser_enrichment_roundtrip_preserves_contributions(monkeypatch, conte
     monkeypatch.setattr(app, 'basemap', lambda: 'white-bg')
     result = app.render_cnec(MarketDay.on('2024-08-29'), 0, '1', app.AttributionPayload.model_validate(attribution))
     expected = cnec_page.render(day, mapped_elements(), 0, '1', basemap='white-bg')
-    assert isinstance(result, app.CnecRendered)
-    assert result.view.figure.to_json() == expected.figure.to_json()
+    assert result.figure.to_json() == expected.figure.to_json()
 
 
 
@@ -214,9 +212,8 @@ def test_browser_enrichment_roundtrip_preserves_contributions(monkeypatch, conte
 
 def test_missing_render_interval_does_not_default_to_midnight(monkeypatch):
     monkeypatch.setattr(app, "cnec_day", lambda _: inputs())
-    result = app.render_cnec(MarketDay.on("2024-08-29"), None, None)
-    assert isinstance(result, app.CnecRenderFailure)
-    assert result.error
+    with pytest.raises(TypeError):
+        app.render_cnec(MarketDay.on("2024-08-29"), None, None)
 
 
 def test_cnec_mount_uses_react_component_and_has_no_loading_callback_chain(monkeypatch):

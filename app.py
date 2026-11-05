@@ -1,7 +1,6 @@
 from dataclasses import replace
 import logging
 from time import perf_counter
-from typing import NamedTuple
 from collections.abc import Callable
 from functools import partial
 import os
@@ -264,35 +263,15 @@ def update_figure(pathname: str, snapshot_index: int) -> tuple:
     return render(pathname, snapshot_index, ctx.triggered_id == 'snapshot-slider')
 
 
-class CnecRendered(NamedTuple):
-    """A successfully rendered map and its matching controls."""
-
-    view: cnec_page.Rendered
-
-
-class CnecRenderFailure(NamedTuple):
-    """A render failure to display without replacing the previous map."""
-
-    error: str
-
-
-type CnecRender = CnecRendered | CnecRenderFailure
-
-
-def render_cnec(day: MarketDay, interval_index: int, selected: str | None, attribution: AttributionPayload | None = None) -> CnecRender:
-    """The CNEC page's map and controls for one day; a failed load becomes the banner."""
-    try:
-        inputs = timed("day_inputs", cnec_day, day)
-        if attribution is not None:
-            inputs = replace(inputs, context=attribution_from_browser(attribution))
-        rendered = timed("figure", cnec_page.render,
-            inputs, cnec_geometries(inputs, interval_index),
-            interval_index, selected, mapbox_token=mapbox_token(), basemap=timed("basemap", basemap)
-        )
-    except Exception as e:  # noqa: BLE001 — every loader failure must reach the page
-        logging.exception('Loading the CNEC day %s failed', day)
-        return CnecRenderFailure(f'Could not load {day.date.isoformat()}: {e}')
-    return CnecRendered(rendered)
+def render_cnec(day: MarketDay, interval_index: int, selected: str | None, attribution: AttributionPayload | None = None) -> cnec_page.Rendered:
+    """Load and render one CNEC view; the HTTP boundary handles failures."""
+    inputs = timed("day_inputs", cnec_day, day)
+    if attribution is not None:
+        inputs = replace(inputs, context=attribution_from_browser(attribution))
+    return timed("figure", cnec_page.render,
+        inputs, cnec_geometries(inputs, interval_index),
+        interval_index, selected, mapbox_token=mapbox_token(), basemap=timed("basemap", basemap)
+    )
 
 
 # HTTP requests and React own CNEC coordination; Dash still owns OPF callbacks.
@@ -301,11 +280,8 @@ from coppersushi.data_model.cnec_api import EnrichedRequest
 
 
 def enriched_view(view: EnrichedRequest) -> cnec_page.Rendered:
-    result = render_cnec(MarketDay.on(view.day), view.interval,
+    return render_cnec(MarketDay.on(view.day), view.interval,
                         None if view.selected is None else str(view.selected), view.attribution)
-    if isinstance(result, CnecRenderFailure):
-        raise RuntimeError(result.error)
-    return result.view
 
 
 cnec_http.register(server, cnec_http.Services(core_zones, mapbox_token, basemap,
