@@ -30,7 +30,6 @@ def active_written(directory) -> jao.ActiveDay:
         directory,
         cnecs.active_constraints(active),
         cnecs.constraint_ptdfs(active),
-        cnecs.active_external_constraints(active),
     )
     return jao.read_active_day(directory)
 
@@ -121,8 +120,7 @@ def test_active_fb_tables_round_trip_at_quarter_hour_grain(tmp_path):
     active = active_written(tmp_path)
     assert len(active.constraints) == 2
     assert len(active.ptdfs) == 24
-    assert len(active.external_constraints) == 1
-    assert [str(frame.interval.dt.tz) for frame in active] == ["UTC"] * 3
+    assert [str(frame.interval.dt.tz) for frame in active] == ["UTC"] * 2
 
 
 def test_a_cache_from_an_older_adapter_is_fetched_again(tmp_path, monkeypatch):

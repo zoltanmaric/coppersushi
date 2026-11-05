@@ -25,7 +25,6 @@ def inputs():
     return (
         cnecs.active_constraints(rows),
         cnecs.constraint_ptdfs(rows),
-        cnecs.active_external_constraints(rows),
         market.day_ahead_prices(price_payloads()),
     )
 
@@ -33,7 +32,6 @@ def inputs():
 def test_an_interval_with_no_binding_row_still_has_its_published_prices():
     view = cnec_market.snapshot(*inputs(), pd.Timestamp("2024-08-28T23:00:00Z"))
     assert view.constraints.empty
-    assert view.external_constraints.empty
     assert view.prices.set_index("zone").price.to_dict() == {"AT": 41.0}
     assert view.contribution is None
 

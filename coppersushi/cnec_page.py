@@ -16,11 +16,9 @@ from coppersushi import cnec_attribution, cnec_market, cnec_price_map, map_style
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
 from coppersushi.data_model.jao import (
     ActiveConstraints,
-    ActiveExternalConstraints,
     ConstraintPtdfs,
 )
 from coppersushi.data_model.market import DayAheadPrices
-from coppersushi.data_model.cnec_attribution import AdjacentAttribution, AdjacentUnavailable
 from coppersushi.data_model.network_views import BiddingZoneShapes
 from coppersushi.market_day import MARKET_TZ, MarketDay
 
@@ -33,10 +31,8 @@ class Day:
     zones: DataFrame[BiddingZoneShapes]
     constraints: DataFrame[ActiveConstraints]
     ptdfs: DataFrame[ConstraintPtdfs]
-    external_constraints: DataFrame[ActiveExternalConstraints]
     prices: DataFrame[DayAheadPrices]
     context: DataFrame[AttributionContext] | None = None
-    adjacent: DataFrame[AdjacentAttribution] | AdjacentUnavailable | None = None
 
 
 class Rendered(NamedTuple):
@@ -96,6 +92,9 @@ def layout(day: str | None = None, mapbox_token: str | None = None) -> html.Div:
                     "padding": "0.4em 1em",
                 },
             ),
+            html.Div(["Spread attribution: physical CNECs and country caps. ",
+                      html.A("How spread attribution works", href="/assets/market-clearing.html")],
+                     style={"padding": "0 1em", "fontSize": "0.9em"}),
             dbc.Alert(id="cnec-status", color="danger", is_open=False, style={"margin": "0 1em"}),
             dcc.Store(id="cnec-attribution-ready"),
             dcc.Store(id="cnec-enriched-view"),
@@ -180,11 +179,7 @@ def render(
     interval = intervals[index]
     active = day.constraints[day.constraints.interval.eq(interval)]
     caps = cnec_attribution.country_caps(day.context, day.prices, interval)
-    external = day.external_constraints[day.external_constraints.interval.eq(interval)]
-    interfaces = external[external.hub.isin(cnec_attribution.INTERFACES)
-                          & external.coefficient.isin([-1, 1])
-                          & external.name.str.startswith("External Constraint")]
-    option_tables: list[pd.DataFrame] = [active, caps, interfaces]
+    option_tables: list[pd.DataFrame] = [active, caps]
     options = _constraint_options(pd.concat(option_tables, ignore_index=True))
     option_values = {option["value"] for option in options} - {NO_SELECTION["value"]}
     chosen = "" if selected_source_id is None else str(selected_source_id)
@@ -206,13 +201,13 @@ def render(
             note = "Contribution unavailable: sending endpoint has no unambiguous Core bidding zone."
     if note:
         assert selected is not None
-        snapshot = cnec_market.snapshot(day.constraints, day.ptdfs, day.external_constraints,
+        snapshot = cnec_market.snapshot(day.constraints, day.ptdfs,
                                        day.prices, interval, context=day.context)
         snapshot = snapshot._replace(selected_id=selected.source_id, note=note)
     else:
         snapshot = cnec_market.snapshot(
-            day.constraints, day.ptdfs, day.external_constraints, day.prices, interval,
-            selected, reference_zone, context=day.context, alpha=alpha, adjacent=day.adjacent,
+            day.constraints, day.ptdfs, day.prices, interval,
+            selected, reference_zone, context=day.context, alpha=alpha,
         )
     return Rendered(
         figure=cnec_price_map.figure(

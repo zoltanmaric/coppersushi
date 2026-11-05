@@ -27,10 +27,10 @@ import pandera.pandas as pa
 from pandera.typing import DataFrame
 
 from coppersushi import cnecs
+from coppersushi.market import CORE_ZONES
 from coppersushi.data_sources import cache
 from coppersushi.data_model.jao import (
     ActiveConstraints,
-    ActiveExternalConstraints,
     Contingencies,
     ConstraintPtdfs,
     ElementEnds,
@@ -63,11 +63,10 @@ class Day(NamedTuple):
 
 
 class ActiveDay(NamedTuple):
-    """Post-auction flow-based constraints: physical rows, PTDFs and non-spatial rows."""
+    """Post-auction flow-based constraints: physical rows and country PTDFs."""
 
     constraints: DataFrame[ActiveConstraints]
     ptdfs: DataFrame[ConstraintPtdfs]
-    external_constraints: DataFrame[ActiveExternalConstraints]
 
 
 def day_dir(day: str) -> Path:
@@ -168,7 +167,6 @@ def fetch_active_day(day: str) -> Path:
         day_dir(day),
         cnecs.active_constraints(rows),
         cnecs.constraint_ptdfs(rows),
-        cnecs.active_external_constraints(rows),
     )
 
 
@@ -195,11 +193,10 @@ def write_active_day(
     directory: Path,
     constraints: DataFrame[ActiveConstraints],
     ptdfs: DataFrame[ConstraintPtdfs],
-    external_constraints: DataFrame[ActiveExternalConstraints],
 ) -> Path:
     """Cache normalized active flow-based tables locally; their directory is gitignored."""
     directory.mkdir(parents=True, exist_ok=True)
-    frames: tuple[pd.DataFrame, ...] = (constraints, ptdfs, external_constraints)
+    frames: tuple[pd.DataFrame, ...] = (constraints, ptdfs)
     for name, frame in zip(ActiveDay._fields, frames):
         frame.to_csv(_path(directory, f"active_{name}"), index=False)
     logger.info("jao: wrote active flow-based tables to %s", directory)
@@ -229,10 +226,12 @@ def read_day(directory: Path) -> Day:
 
 
 def read_active_day(directory: Path) -> ActiveDay:
+    ptdfs = _read_table(directory, "active_ptdfs", ConstraintPtdfs, "interval")
+    # Older normalized caches contain columns outside the country-spread model.
+    ptdfs = ptdfs[ptdfs.zone.isin(CORE_ZONES)].reset_index(drop=True)
     return ActiveDay(
         _read_table(directory, "active_constraints", ActiveConstraints, "interval"),
-        _read_table(directory, "active_ptdfs", ConstraintPtdfs, "interval"),
-        _read_table(directory, "active_external_constraints", ActiveExternalConstraints, "interval"),
+        ptdfs,
     )
 
 

@@ -24,7 +24,6 @@ flowchart LR
     pypsa_eur_run["pypsa_eur_run<br/>coppersushi.data_sources.pypsa_eur → Snakemake in ../pypsa-eur (HiGHS)"]
     solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
     jao_active_constraints["jao_active_constraints<br/>post-auction binding constraints, shadow prices and zonal PTDFs by market time unit"]
-    adjacent_attribution["adjacent_attribution<br/>selected interface: Nordic opposite-hub PTDFs and duals, adjacent published price"]
     jao_attribution["jao_attribution<br/>α, Polish allocation limits and net positions, guarded PL alternative prices"]
     cnec_attribution_context["cnec_attribution_context<br/>browser store scoped to day and retry; loaded after the base map"]
     jao_domain["jao_domain<br/>final flow-based domain: monitored elements with their substation names, PTDFs and RAM"]
@@ -59,7 +58,6 @@ flowchart LR
     osm_locator --> cnec_geometry
     cnec_geometry --> cnec_price_figure
     mapbox_basemap --> cnec_price_figure
-    adjacent_attribution --> cnec_market_snapshot
     jao_attribution --> cnec_attribution_context
     cnec_attribution_context -->|enrich after initial render| cnec_market_snapshot
     cnec_geometry --> cnec_market_snapshot

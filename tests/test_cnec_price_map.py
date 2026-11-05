@@ -33,11 +33,10 @@ def inputs():
     rows = json.loads(FIXTURE.read_text())["data"]
     constraints = cnecs.active_constraints(rows)
     ptdfs = cnecs.constraint_ptdfs(rows)
-    external = cnecs.active_external_constraints(rows)
     prices = market.day_ahead_prices([ElectricityMapsPriceResponse.model_validate(payload)
             for payload in json.loads(PRICE_FIXTURE.read_text())["responses"]])
     view = cnec_market.snapshot(
-        constraints, ptdfs, external, prices, pd.Timestamp("2024-08-28T22:00:00Z")
+        constraints, ptdfs, prices, pd.Timestamp("2024-08-28T22:00:00Z")
     )
     zones = read_zones()
     geometries = pd.read_csv(MAP_FIXTURES / "mapped-elements.csv").pipe(
@@ -140,7 +139,6 @@ def selected_inputs(inputs, reference="AT"):
     view = cnec_market.snapshot(
         cnecs.active_constraints(rows),
         cnecs.constraint_ptdfs(rows),
-        cnecs.active_external_constraints(rows),
         base.prices,
         base.interval,
         selected,

@@ -9,7 +9,6 @@ See wiki/flow-based-market-coupling.md#attribution for an example and interpreta
 
 import datetime
 from datetime import date
-from dataclasses import dataclass
 
 import pandas as pd
 import pandera.pandas as pa
@@ -130,27 +129,6 @@ class CountryCaps(pa.DataFrameModel):
         strict = True
         coerce = True
         unique = ["interval", "source_id"]
-
-
-class AdjacentAttribution(pa.DataFrameModel):
-    """Observed adjacent-zone price and its independent market term for one virtual interface."""
-
-    interval: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC})
-    hub: Series[str]
-    adjacent_term: Series[float]
-    adjacent_price: Series[float]
-
-    class Config:
-        strict = True
-        coerce = True
-        unique = ["interval", "hub"]
-
-
-@dataclass(frozen=True)
-class AdjacentUnavailable:
-    """Expected absence of usable adjacent-market evidence, with a displayable reason."""
-
-    reason: str
 
 
 def attribution_to_browser(frame: DataFrame[AttributionContext], day: MarketDay) -> AttributionPayload:

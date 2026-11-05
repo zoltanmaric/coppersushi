@@ -34,7 +34,6 @@ from pandera.typing import DataFrame
 
 from coppersushi.data_model.jao import (
     ActiveConstraints,
-    ActiveExternalConstraints,
     Contingencies,
     ConstraintContributions,
     ConstraintPtdfs,
@@ -248,9 +247,9 @@ def active_constraints(rows: list[dict]) -> DataFrame[ActiveConstraints]:
 
 
 def constraint_ptdfs(rows: list[dict]) -> DataFrame[ConstraintPtdfs]:
-    """Every physical active row’s Core and virtual-hub PTDF vector in long form."""
+    """Every physical active row’s country PTDF vector in long form."""
     frame = _physical(_frame(rows)).rename(columns={"hour": "interval"})
-    hub_columns = {column: column[4:] for column in frame.columns if isinstance(column, str) and column.startswith("hub_") and column not in {"hub_from", "hub_to"}}
+    hub_columns = {column: column[4:] for column in frame.columns if isinstance(column, str) and column in {f"hub_{zone}" for zone in CORE_ZONES}}
     missing = sorted({f"hub_{zone}" for zone in CORE_ZONES} - set(frame.columns))
     if missing:
         raise ValueError(f"active flow-based response is missing Core PTDF columns: {missing}")
@@ -262,22 +261,6 @@ def constraint_ptdfs(rows: list[dict]) -> DataFrame[ConstraintPtdfs]:
     )
     ptdfs = ptdfs.assign(zone=ptdfs.hub_column.map(hub_columns)).drop(columns="hub_column")
     return ptdfs.sort_values(["interval", "source_id", "zone"], ignore_index=True).pipe(ConstraintPtdfs.validate)
-
-
-def active_external_constraints(rows: list[dict]) -> DataFrame[ActiveExternalConstraints]:
-    """Active flow-based rows with no physical element, retained for a completeness count."""
-    frame = _frame(rows)
-    frame = frame[_is_non_physical(frame)].rename(columns={"hour": "interval"})
-    frame = frame.assign(tso=normalise_tso(frame.tso))
-    hub_columns = [c for c in frame.columns if isinstance(c, str) and c.startswith("hub_") and c not in {"hub_from", "hub_to"}]
-    vectors = frame[hub_columns].fillna(0)
-    single = vectors.ne(0).sum(axis=1).eq(1)
-    hub = vectors.abs().idxmax(axis=1).astype(str).str.removeprefix("hub_")
-    coefficient = vectors.sum(axis=1)
-    frame = frame.assign(hub=hub.where(single, ""), coefficient=coefficient.where(single),
-                         capacity=frame.get("fmax", float("nan")))
-    columns = ["source_id", "interval", "name", "tso", "direction", "shadow_price", "ram", "ram_mcp", "hub", "coefficient", "capacity"]
-    return frame[columns].reset_index(drop=True).pipe(ActiveExternalConstraints.validate)
 
 
 def price_contributions(

@@ -8,10 +8,10 @@ from pandera.typing import DataFrame
 from coppersushi.data_model.cnec_attribution import CountryCaps
 from coppersushi.data_model.network_views import BiddingZoneShapes
 from coppersushi.data_model.market import ZonalPrices
-from coppersushi.data_model.jao import ActiveConstraints, ActiveExternalConstraints
+from coppersushi.data_model.jao import ActiveConstraints
 import plotly.graph_objects as go
 
-from coppersushi import cnec_attribution, cnec_influence, map_style, market
+from coppersushi import cnec_influence, map_style, market
 from coppersushi.cnec_market import Snapshot
 from coppersushi.data_model.cnec_price_map import MATCHED, MappedCnecElements
 from coppersushi.market_day import MARKET_TZ
@@ -296,47 +296,7 @@ def _cap_traces(zones: DataFrame[BiddingZoneShapes], caps: DataFrame[CountryCaps
     return traces
 
 
-def _interfaces(external: DataFrame[ActiveExternalConstraints], centres: pd.DataFrame) -> pd.DataFrame:
-    """Schematic endpoint anchors; never represent a combined interface as one cable route."""
-    anchors = {r.zone: (r.x, r.y) for r in centres.itertuples()}
-    anchors.update(cnec_attribution.ADJACENT_ANCHORS)
-    records = []
-    for row in external.to_dict("records"):
-        mapping = cnec_attribution.INTERFACES.get(row["hub"])
-        if mapping is None or row["coefficient"] not in (-1, 1) or not row["name"].startswith("External Constraint") or not all(z in anchors for z in mapping[:2]):
-            continue
-        owner, other, asset = mapping
-        x0, y0 = anchors[owner]
-        x1, y1 = anchors[other]
-        records.append({**row, "x0": x0, "y0": y0, "x1": x1, "y1": y1,
-                        "asset": asset, "owner": owner, "other": other, "match_status": MATCHED})
-    return pd.DataFrame(records, columns=[*external.columns, "x0", "y0", "x1", "y1", "asset", "owner", "other", "match_status"])
-
-
-def _interface_traces(interfaces: pd.DataFrame, selected_id: int | None) -> list:
-    traces: list[go.Scattermapbox] = []
-    for asset, group in interfaces.groupby("asset"):
-        row = group.iloc[0]
-        ids = ",".join(group.source_id.astype(str))
-        text = "<br><br>".join(
-            f"{r['name']}<br>Schematic {asset}: {r.owner}–{r.other}<br>"
-            f"Sending end: {cnec_attribution.virtual_reference(r) or 'unavailable'}<br>"
-            f"Capacity: {r.capacity:,.0f} MW · Shadow price: {r.shadow_price:,.2f} €/MWh"
-            for _, r in group.iterrows())
-        n = 41
-        traces.append(go.Scattermapbox(name=f"{asset} interface", lon=np.linspace(row.x0, row.x1, n),
-            lat=np.linspace(row.y0, row.y1, n), mode="lines+markers",
-            line=dict(color=map_style.BINDING, width=SELECTED_WIDTH if selected_id in group.source_id.values else 1.5),
-            marker=dict(size=14, color="rgba(128,80,255,0.03)"),
-            customdata=[[ids]] * n, text=[text] * n, hoverinfo="text"))
-        traces.append(go.Scattermapbox(name=f"{asset} label", lon=[(row.x0+row.x1)/2],
-            lat=[(row.y0+row.y1)/2], mode="markers+text", text=[asset], textposition="top center",
-            textfont=dict(color="white", size=11), marker=dict(size=9, color=map_style.BINDING),
-            customdata=[[ids]], hovertext=[text], hoverinfo="text"))
-    return traces
-
-
-def _view(priced_zones: pd.DataFrame, adjacent: pd.DataFrame | None = None) -> dict:
+def _view(priced_zones: pd.DataFrame) -> dict:
     """Centre and zoom that frame the zones being drawn.
 
     A mapbox subplot does not fit itself to its traces, so without this the map opens on
@@ -344,14 +304,12 @@ def _view(priced_zones: pd.DataFrame, adjacent: pd.DataFrame | None = None) -> d
     constant that fills a wide viewport with Core rather than with the Atlantic.
     """
     bounds = [zone.bounds for zone in priced_zones.geometry]
-    if adjacent is not None and not adjacent.empty:
-        bounds += [(r.x, r.y, r.x, r.y) for r in adjacent.itertuples()]
     west, south = min(b[0] for b in bounds), min(b[1] for b in bounds)
     east, north = max(b[2] for b in bounds), max(b[3] for b in bounds)
     span = max(east - west, north - south)
     return dict(
         center=go.layout.mapbox.Center(lat=(south + north) / 2, lon=(west + east) / 2),
-        zoom=min(math.log2(360 / span) + FRAME_ZOOM, 3.5) if adjacent is not None and not adjacent.empty else math.log2(360 / span) + FRAME_ZOOM,
+        zoom=math.log2(360 / span) + FRAME_ZOOM,
     )
 
 
@@ -376,15 +334,6 @@ def figure(
     fill, labels = _price_traces(priced_zones, _fill_anchor(basemap))
     selected = _selected(placed, view.selected_id)
     centres = _zone_centres(priced_zones)
-    adjacent = view.prices[view.prices.zone.isin(cnec_attribution.ADJACENT_ANCHORS)].copy()
-    if not adjacent.empty:
-        adjacent['x'] = adjacent.zone.map(lambda z: cnec_attribution.ADJACENT_ANCHORS[z][0])
-        adjacent['y'] = adjacent.zone.map(lambda z: cnec_attribution.ADJACENT_ANCHORS[z][1])
-        centres = pd.concat([centres, adjacent[['zone', 'x', 'y', 'price']]], ignore_index=True)
-    interfaces = _interfaces(view.external_constraints, centres)
-    virtual = _selected(interfaces, view.selected_id)
-    if virtual is not None:
-        selected = virtual
     if view.selected_id in view.caps.source_id.values:
         anchor = centres[centres.zone.eq("PL")]
         if len(anchor) == 1:
@@ -392,9 +341,8 @@ def figure(
             selected = pd.Series(dict(x0=point.x, y0=point.y, x1=point.x, y1=point.y, match_status=MATCHED))
     physical_selection = _selected(placed, view.selected_id)
     traces = [fill, *_constraint_traces(placed, physical_selection),
-              *_cap_traces(zones, view.caps, view.selected_id),
-              *_interface_traces(interfaces, view.selected_id)]
-    annotation += "<br>Schematic interfaces connect bidding zones, not physical routes."
+              *_cap_traces(zones, view.caps, view.selected_id)]
+    annotation += "<br>Country-spread attribution: physical CNECs and country caps."
     if view.selected_id is not None:
         annotation += f"<br>Selected row {view.selected_id} · Reference: {view.reference or 'unavailable'}"
     if view.note:
@@ -402,20 +350,11 @@ def figure(
     if selected is not None and view.contribution is not None:
         assert view.reference is not None
         effects = view.contribution[view.contribution.zone.ne(view.reference)]
-        if virtual is not None:
-            effect = effects.iloc[0]
-            annotation += f"<br><b>{effect.zone}: {effect.contribution:+,.2f} €/MWh relative to {view.reference}</b>"
-        elif view.selected_id in view.caps.source_id.values:
+        if view.selected_id in view.caps.source_id.values:
             annotation += f"<br><b>Other Core zones: {effects.contribution.iloc[0]:+,.2f} €/MWh relative to PL</b>"
         influence = cnec_influence.overlay(selected, centres, view.contribution)
         traces += influence.traces
         annotation += "<br>" + influence.note
-    if not adjacent.empty:
-        traces.append(go.Scattermapbox(name='adjacent zone price', lon=adjacent.x, lat=adjacent.y,
-            mode='text', text=adjacent.zone + '<br>' + adjacent.price.map(lambda p: f'€{p:,.2f}'),
-            textfont=dict(color='white', size=14), hoverinfo='text',
-            hovertext=adjacent.zone + ' · ' + adjacent.price.map(lambda p: f'{p:,.2f} €/MWh'),
-            showlegend=False))
     traces.append(labels)  # Last, so no dot or ray lands on a price
     fig = go.Figure(traces)
     fig.update_layout(
@@ -423,8 +362,8 @@ def figure(
         margin=dict(r=0, t=0, l=0, b=0),
         mapbox_style=basemap,
         mapbox_accesstoken=mapbox_token,
-        mapbox=_view(priced_zones, adjacent),
-        uirevision=str(adjacent.zone.iloc[0]) if not adjacent.empty else "Core",
+        mapbox=_view(priced_zones),
+        uirevision="Core",
         showlegend=False,
         annotations=[
             go.layout.Annotation(

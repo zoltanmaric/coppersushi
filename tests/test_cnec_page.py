@@ -31,7 +31,6 @@ def inputs() -> cnec_page.Day:
         zones=read_zones(),
         constraints=cnecs.active_constraints(rows),
         ptdfs=cnecs.constraint_ptdfs(rows),
-        external_constraints=cnecs.active_external_constraints(rows),
         prices=market.day_ahead_prices([ElectricityMapsPriceResponse.model_validate(payload)
             for payload in json.loads(PRICES.read_text())["responses"]]),
         context=pd.read_csv(REPO / "tests/fixtures/cnec-attribution/historical-context.csv").assign(
