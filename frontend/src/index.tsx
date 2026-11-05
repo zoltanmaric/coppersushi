@@ -87,12 +87,13 @@ function View({id, day: routeDay, token, basemap}: Props) {
   const settled = validInterval && !prices.isPending && !constraints.isPending &&
     (prices.isError || constraints.isError || attribution.isError || (attribution.isSuccess && !caps.isPending)) &&
     (selected === null || prices.isError || constraints.isError || attribution.isError || enriched.isSuccess || enriched.isError);
-  const [displayed, setDisplayed] = useState<{day: string; figure: PlotlyFigure} | null>(null);
+  const [displayed, setDisplayed] = useState<{day: string; interval: number; selected: number | null; figure: PlotlyFigure} | null>(null);
   useEffect(() => {
-    if (settled) setDisplayed({day, figure: candidate});
-  }, [settled, day, candidate]);
+    if (settled) setDisplayed({day, interval, selected, figure: candidate});
+  }, [settled, day, interval, selected, candidate]);
   const emptyFigure = useMemo(() => shell(token, basemap), [token, basemap]);
   const graphFigure = displayed?.day === day ? displayed.figure : settled ? candidate : emptyFigure;
+  const mapCurrent = displayed?.day === day && displayed.interval === interval && displayed.selected === selected;
   const options = full?.options ?? caps.data?.options ?? constraints.data?.options ?? [];
   useEffect(() => {
     const readyOptions = source === 'constraints' ? constraints.data?.options : caps.data?.options;
@@ -113,6 +114,7 @@ function View({id, day: routeDay, token, basemap}: Props) {
     if (option) dispatch({type: 'select', selected: value === '' ? null : Number(value), source: option.source});
   }
   function mapClick(change: GraphChange) {
+    if (!mapCurrent) return;
     const values = change.clickData?.points[0]?.customdata;
     if (!Array.isArray(values) || typeof values[0] !== 'string') return;
     const candidates = values[0].split(',');
@@ -138,7 +140,8 @@ function View({id, day: routeDay, token, basemap}: Props) {
         config={{responsive: true, displayModeBar: false, scrollZoom: true}} style={{height: '100%'}}/>
       <aside className="cnec-progress" aria-live="polite">
         {loading && <div role="status" aria-label="Map loading">{loading}</div>}
-        {attribution.data && !attribution.data.complete && <div>Some attribution inputs are unavailable.</div>}
+        {full?.note && <div role="status">{full.note}</div>}
+        {!full && attribution.data && !attribution.data.complete && <div>Some attribution inputs are unavailable.</div>}
         {failures.map(([name, query]) => query.error && <div role="alert" key={name}>
           {name}: {query.error.message} <button onClick={() => void query.refetch()}>Retry</button>
         </div>)}

@@ -29,7 +29,8 @@
       }
     },
     "options": [],
-    "reference": null
+    "reference": null,
+    "note": ""
   },
   "constraints": {
     "request": {
@@ -66,7 +67,8 @@
         "source": "constraints"
       }
     ],
-    "reference": null
+    "reference": null,
+    "note": ""
   },
   "attribution": {
     "day": "2024-08-29",
@@ -117,7 +119,8 @@
         "source": "attribution"
       }
     ],
-    "reference": "DE"
+    "reference": "DE",
+    "note": ""
   },
   "caps": {
     "request": {
@@ -155,6 +158,7 @@
         "source": "attribution"
       }
     ],
-    "reference": null
+    "reference": null,
+    "note": ""
   }
 }

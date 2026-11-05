@@ -149,7 +149,10 @@ test('map hits select allowed rows and preserve a selected contingency', async (
   await open();
   await reply('constraints', {...responses.constraints, options: [...responses.constraints.options,
     {...responses.constraints.options[1], label: 'Second contingency', value: '2'}]});
-  await waitFor(() => expect(screen.getByText('Second contingency')).toBeTruthy());
+  await reply('prices', responses.prices);
+  await reply('attribution/2024-08-29', responses.attribution);
+  await reply('enriched', {...responses.caps, options: [...responses.caps.options, {...responses.constraints.options[1], label: 'Second contingency', value: '2'}]}, null);
+  await waitFor(() => expect(graph.data.some(t => t.name === 'country cap')).toBe(true));
   act(() => clickGraph({clickData: {points: [{customdata: ['1,2']}]}}));
   expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('1');
   fireEvent.change(screen.getByLabelText('Binding constraint'), {target: {value: '2'}});
@@ -181,6 +184,8 @@ test('a loaded interval remains unchanged until the next interval layers settle'
   expect(graph).toBe(displayed);
   await reply('constraints', {...responses.constraints, request: {...responses.constraints.request, interval: 1}}, null);
   expect(graph).toBe(displayed);
+  act(() => clickGraph({clickData: {points: [{customdata: ['1']}]}}));
+  expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('');
   await reply('enriched', {...responses.caps, request: {...responses.caps.request, interval: 1}}, null);
   await waitFor(() => expect(graph).not.toBe(displayed));
   expect(graph.data.map(t => t.uid)).toEqual(displayed.data.map(t => t.uid));
@@ -191,13 +196,20 @@ test('the initially bound graph callback selects constraints loaded later', asyn
   await open();
   const initialClick = clickGraph;
   await reply('constraints', responses.constraints);
-  await waitFor(() => expect(screen.getByText('Test line')).toBeTruthy());
-  act(() => initialClick({clickData: {points: [{customdata: ['1']}]}}));
-  expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('1');
   await reply('prices', responses.prices);
   await reply('attribution/2024-08-29', responses.attribution);
   await reply('enriched', responses.caps, null);
-  await waitFor(() => expect(screen.getByText('Polish cap')).toBeTruthy());
+  await waitFor(() => expect(graph.data.some(t => t.name === 'country cap')).toBe(true));
   act(() => initialClick({clickData: {points: [{customdata: ['-1']}]}}));
   expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('-1');
+});
+
+
+test('shows a specific unavailable attribution reason', async () => {
+  await open();
+  await reply('prices', responses.prices);
+  await reply('constraints', responses.constraints);
+  await reply('attribution/2024-08-29', responses.attribution);
+  await reply('enriched', {...responses.caps, note: 'Poland cap attribution unavailable for this interval.'}, null);
+  await waitFor(() => expect(screen.getByText('Poland cap attribution unavailable for this interval.')).toBeTruthy());
 });

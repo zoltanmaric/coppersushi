@@ -38,6 +38,7 @@ class Rendered(NamedTuple):
     figure: go.Figure
     constraint_options: list[dict]
     reference: str | None
+    note: str
 
 
 def local_today() -> str:
@@ -118,4 +119,5 @@ def render(
         ),
         constraint_options=options,
         reference=snapshot.reference,
+        note=snapshot.note,
     )

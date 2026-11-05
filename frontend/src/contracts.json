@@ -199,13 +199,18 @@
             }
           ],
           "title": "Reference"
+        },
+        "note": {
+          "title": "Note",
+          "type": "string"
         }
       },
       "required": [
         "request",
         "figure",
         "options",
-        "reference"
+        "reference",
+        "note"
       ],
       "title": "LayerResponse",
       "type": "object"

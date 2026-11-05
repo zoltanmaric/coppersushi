@@ -164,6 +164,7 @@ def test_line_interior_hits_keep_row_identity_and_missing_alpha_keeps_selection(
     unavailable = cnec_page.render(missing, mapped, 0, 10)
     assert any(t.name == 'selected CNEC' for t in unavailable.figure.data)
     assert not any(t.name.startswith('contribution relative') for t in unavailable.figure.data)
+    assert 'missing or zero' in unavailable.note
 
 
 @pytest.mark.parametrize('selected', [None, 12, 13])
