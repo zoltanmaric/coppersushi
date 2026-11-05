@@ -6,7 +6,7 @@ import {reduceSelection} from './state';
 import type {PlotlyFigure, LayerResponse, ConstraintOption} from './contracts';
 import './style.css';
 
-interface Props {id: string; day: string; token: string}
+interface Props {id: string; day: string; token: string; basemap: PlotlyFigure['layout']['mapbox']['style']}
 interface GraphChange {clickData?: {points: {customdata?: unknown}[]} | null}
 interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void}
 // Reuse Dash's Graph component and its Plotly loader instead of shipping Plotly twice.
@@ -22,23 +22,23 @@ export function CnecView(props: Props) {
   return <QueryClientProvider client={client}><View {...props}/></QueryClientProvider>;
 }
 
-function shell(token: string): PlotlyFigure {
+function shell(token: string, basemap: Props['basemap']): PlotlyFigure {
   return {data: [{type: 'scattermapbox', lon: [], lat: []}], layout: {
-    mapbox: {style: 'dark', accesstoken: token, center: {lat: 50, lon: 10}, zoom: 3.5},
+    mapbox: {style: basemap, accesstoken: token, center: {lat: 50, lon: 10}, zoom: 3.5},
     uirevision: 'cnec-camera', margin: {t: 0, b: 0, l: 0, r: 0}, showlegend: false,
     paper_bgcolor: '#1b1b1b',
   }};
 }
 
-function combine(token: string, prices?: LayerResponse, constraints?: LayerResponse, caps?: LayerResponse): PlotlyFigure {
-  const initial = shell(token);
+function combine(token: string, basemap: Props['basemap'], prices?: LayerResponse, constraints?: LayerResponse, caps?: LayerResponse): PlotlyFigure {
+  const initial = shell(token, basemap);
   if (!prices && !constraints) return initial;
   const priceData = prices?.figure.data ?? [];
   return {data: [...priceData.slice(0, 1), ...(constraints?.figure.data ?? []), ...(caps?.figure.data.filter(t => t.meta === 'country-cap') ?? []), ...priceData.slice(1)],
     layout: {...(constraints?.figure.layout ?? prices?.figure.layout ?? initial.layout), uirevision: 'cnec-camera'}};
 }
 
-function View({id, day: routeDay, token}: Props) {
+function View({id, day: routeDay, token, basemap}: Props) {
   const [selection, dispatch] = useReducer(reduceSelection, {day: routeDay, interval: 0, selected: null, source: "constraints"});
   useEffect(() => {dispatch({type: 'day', day: routeDay});}, [routeDay]);
   const {day, interval, selected, source} = selection;
@@ -61,15 +61,16 @@ function View({id, day: routeDay, token}: Props) {
     enabled: selected !== null && prices.isSuccess && constraints.isSuccess && attribution.isSuccess,
     queryFn: ({signal}) => fetchCnec('layer', 'enriched', signal, {...view, attribution: attribution.data})});
   const full = selected === null ? caps.data : enriched.data;
-  const figure = useMemo(() => full?.figure ?? combine(token, prices.data, highlight.data ?? constraints.data, caps.data),
-    [token, full, prices.data, highlight.data, constraints.data, caps.data]);
+  const figure = useMemo(() => full?.figure ?? combine(token, basemap, prices.data, highlight.data ?? constraints.data, caps.data),
+    [token, basemap, full, prices.data, highlight.data, constraints.data, caps.data]);
   const graphFigure = useMemo(() => {
     const copy = structuredClone(figure);
     // Keep camera inputs stable even when a newly arrived layer suggests different bounds.
+    copy.layout.mapbox.style = basemap;
     copy.layout.mapbox.center = {lat: 50, lon: 10};
     copy.layout.mapbox.zoom = 3.5;
     return copy;
-  }, [figure]);
+  }, [figure, basemap]);
   const options = full?.options ?? caps.data?.options ?? constraints.data?.options ?? [];
   useEffect(() => {
     const readyOptions = source === 'constraints' ? constraints.data?.options : caps.data?.options;

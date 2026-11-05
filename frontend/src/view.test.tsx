@@ -29,7 +29,7 @@ async function reply(path: string, data: object, selected?: number | null, statu
   await act(async () => {pending.splice(index, 1)[0].resolve(new Response(JSON.stringify(data), {status}));});
 }
 async function open() {
-  render(<CnecView id="cnec" day="2024-08-29" token="token"/>);
+  render(<CnecView id="cnec" day="2024-08-29" token="token" basemap={{version: 8, sources: {}, layers: []}}/>);
   await reply('day/2024-08-29', responses.day);
 }
 

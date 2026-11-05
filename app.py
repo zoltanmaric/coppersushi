@@ -195,7 +195,7 @@ app.layout = html.Div([
 @app.callback(Output('page', 'children'), Input('url', 'pathname'))
 def show_page(pathname: str, root_view: str = ROOT_VIEW) -> html.Div:
     if is_cnec_path(pathname):
-        return html.Div([navigation(), CnecView(id='cnec-view', day=cnec_day_from_path(pathname) or cnec_page.local_today(), token=mapbox_token())])
+        return html.Div([navigation(), CnecView(id='cnec-view', day=cnec_day_from_path(pathname) or cnec_page.local_today(), token=mapbox_token(), basemap=basemap())])
     if network_key_from_path(pathname) is None:
         return html.Div([html.H1('Page not found'), dcc.Link('2024 OPF', href='/opf-2024')])
     return html.Div([
