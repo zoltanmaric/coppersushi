@@ -90,7 +90,7 @@ test('an interval change clears old layers and late contributions cannot restore
   await reply('constraints', responses.constraints);
   await reply('attribution/2024-08-29', responses.attribution);
   await waitFor(() => expect(pending.some(p => p.path.endsWith('enriched'))).toBe(true));
-  fireEvent.click(screen.getByText('Next'));
+  fireEvent.click(screen.getByRole('button', {name: 'Next interval'}));
   await reply('enriched', responses.enriched, null);
   expect(screen.getByLabelText('Map').textContent).not.toContain('contributions');
   expect((screen.getByLabelText('Market interval') as HTMLInputElement).value).toBe('1');
@@ -129,7 +129,7 @@ test('interval navigation preserves a row still present in current constraints',
   await reply('constraints', responses.constraints);
   await waitFor(() => expect(screen.getByText('Test line')).toBeTruthy());
   fireEvent.change(screen.getByLabelText('Binding constraint'), {target: {value: '1'}});
-  fireEvent.click(screen.getByText('Next'));
+  fireEvent.click(screen.getByRole('button', {name: 'Next interval'}));
   expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('1');
   await reply('prices', {...responses.prices, request: {...responses.prices.request, interval: 1}});
   await reply('constraints', {...responses.constraints, request: {...responses.constraints.request, interval: 1}}, null);
@@ -145,7 +145,7 @@ test('an absent physical row clears even while attribution is unavailable', asyn
   await reply('constraints', responses.constraints);
   await waitFor(() => expect(screen.getByText('Test line')).toBeTruthy());
   fireEvent.change(screen.getByLabelText('Binding constraint'), {target: {value: '1'}});
-  fireEvent.click(screen.getByText('Next'));
+  fireEvent.click(screen.getByRole('button', {name: 'Next interval'}));
   await reply('constraints', {...responses.constraints, options: [responses.constraints.options[0]],
     request: {...responses.constraints.request, interval: 1}}, null);
   await waitFor(() => expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe(''));
@@ -185,7 +185,7 @@ test('a loaded interval remains unchanged until the next interval layers settle'
   await reply('enriched', responses.caps, null);
   await waitFor(() => expect(graph.data.some(t => t.name === 'country cap')).toBe(true));
   const displayed = graph;
-  fireEvent.click(screen.getByText('Next'));
+  fireEvent.click(screen.getByRole('button', {name: 'Next interval'}));
   expect(graph).toBe(displayed);
   await reply('prices', {...responses.prices, request: {...responses.prices.request, interval: 1}});
   expect(graph).toBe(displayed);
