@@ -58,7 +58,6 @@ def test_cnec_retry_draws_new_endpoints_without_reloading_the_day(tmp_path, monk
     day = inputs()
     monkeypatch.setattr(app, "cnec_day", lambda _: day)
     monkeypatch.setattr(app, "mapbox_token", lambda: "token")
-    monkeypatch.setattr(app, "basemap", lambda: {"version": 8, "sources": {}, "layers": []})
     monkeypatch.setattr(app, "basemap", lambda: "dark")
     monkeypatch.setattr(jao, "JAO_DIR", tmp_path)
     located = pd.read_csv(REPO / "tests/fixtures/cnec-price-map/located-substations.csv")
@@ -70,7 +69,7 @@ def test_cnec_retry_draws_new_endpoints_without_reloading_the_day(tmp_path, monk
 
     monkeypatch.setattr(jao, "_get", offline)
     unavailable = app.render_cnec(MarketDay.on("2024-08-29"), 0, None)
-    assert "0 of 2 active rows mapped" in unavailable.figure.layout.annotations[0].text
+    assert len(next(t for t in unavailable.figure.data if t.name == "binding line ends").lon) == 0
     assert [option["value"] for option in unavailable.constraint_options] == ["", "1", "2"]
     fc = json.loads((REPO / "tests/fixtures/synthetic-jao/final-computation-hour.json").read_text())["data"]
     calls = []
@@ -81,7 +80,7 @@ def test_cnec_retry_draws_new_endpoints_without_reloading_the_day(tmp_path, monk
 
     monkeypatch.setattr(jao, "_get", fetch)
     result = app.render_cnec(MarketDay.on("2024-08-29"), 0, None)
-    figure = result.figure
+    assert len(next(t for t in result.figure.data if t.name == "binding line ends").lon) > 0
     assert len(calls) == 1
     app.render_cnec(MarketDay.on("2024-08-29"), 0, "1")
     assert len(calls) == 1

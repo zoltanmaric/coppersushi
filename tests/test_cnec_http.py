@@ -121,5 +121,5 @@ def test_location_fetch_failure_keeps_known_line_and_constraint_choices(tmp_path
     result = server.test_client().post('/api/cnec/constraints', json=VIEW)
     assert result.status_code == 200
     assert [o['value'] for o in result.json['options']] == ['', '1', '2']
-    assert '1 of 2 active rows mapped' in result.json['figure']['layout']['annotations'][0]['text']
+    assert len(next(t for t in result.json['figure']['data'] if t['name'] == 'binding line ends')['lon']) == 2
     assert any(t['name'] == 'market-binding CNECs' for t in result.json['figure']['data'])
