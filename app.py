@@ -16,11 +16,11 @@ from dash.exceptions import PreventUpdate
 
 from coppersushi.cnec_component import CnecView
 from coppersushi.data_model.jao import ActiveConstraints
-from coppersushi import cnec_geometry, cnec_page, map_style, power_flow
+from coppersushi import REPO, cnec_page, map_style, power_flow
 from coppersushi.data_model.network_views import BiddingZoneShapes
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
 from coppersushi.data_model.cnec_attribution import AttributionPayload, attribution_from_browser
-from coppersushi.data_sources import opf_bundle, zone_shapes, credentials, electricity_maps, jao, mapbox_styles, networks, osm_locator
+from coppersushi.data_sources import element_catalog, opf_bundle, zone_shapes, credentials, electricity_maps, jao, mapbox_styles, networks
 from coppersushi.market_day import MARKET_TZ, MarketDay
 
 # Every page's controls live in one tree that the router swaps, so a callback whose
@@ -105,10 +105,8 @@ def cnec_geometries(day: cnec_page.Day, interval_index: int) -> DataFrame[Mapped
 
 def locate_constraints(interval: pd.Timestamp, required: DataFrame[ActiveConstraints]) -> DataFrame[MappedCnecElements]:
     """Resolve one interval without waiting for prices or attribution."""
-    ends = timed("endpoints", jao.load_element_ends, interval, required)
-    return timed("locate", cnec_geometry.locate_elements,
-        ends, timed("locator_read", osm_locator.read_csvs), osm_locator.load_aliases(),
-    )
+    catalog = Path(os.environ.get("COPPERSUSHI_ELEMENT_CATALOG", str(REPO / "data/element-catalog")))
+    return timed("catalog", element_catalog.resolve, interval, required, catalog)
 
 
 def cnec_day(day: MarketDay) -> cnec_page.Day:

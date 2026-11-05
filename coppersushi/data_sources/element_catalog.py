@@ -98,6 +98,42 @@ def mapped_elements(directory: Path) -> DataFrame[MappedCnecElements]:
     return pd.DataFrame(records, columns=list(MappedCnecElements.to_schema().columns)).pipe(MappedCnecElements.validate)
 
 
+def resolve(interval: pd.Timestamp, required: DataFrame[ActiveConstraints], directory: Path) -> DataFrame[MappedCnecElements]:
+    """Use reviewed publications first; discover only identities absent from the snapshot.
+
+    A catalog conflict or known unresolved site is authoritative: fetching a new hour must not
+    silently bypass a recorded conflict or an ambiguous endpoint. Publications
+    missing endpoint metadata remain eligible for discovery.
+    """
+    import pandas as pd
+    from coppersushi import cnec_geometry
+    from coppersushi.data_sources import jao, osm_locator
+
+    directory = snapshot(directory)
+    mapped = mapped_elements(directory)
+    with load(directory) as db:
+        pending = {tuple(row) for row in db.execute("""
+            SELECT e.eic, e.tso, e.name FROM elements e
+            JOIN element_endpoints p USING(element_id)
+            GROUP BY e.element_id
+            HAVING sum(p.status='missing') > 0
+               AND sum(p.status NOT IN ('missing','resolved')) = 0
+        """)}
+    identity = ['eic', 'tso', 'name']
+    authoritative = mapped.loc[[tuple(row) not in pending for row in mapped[identity].itertuples(index=False, name=None)]]
+    known = pd.MultiIndex.from_frame(authoritative[identity])
+    missing = required.loc[~pd.MultiIndex.from_frame(required[identity]).isin(known)]
+    if missing.empty:
+        return mapped
+    ends = jao.load_element_ends(interval, missing)
+    ends = ends.loc[pd.MultiIndex.from_frame(ends[identity]).isin(pd.MultiIndex.from_frame(missing[identity]))]
+    discovered = cnec_geometry.locate_elements(ends, osm_locator.read_csvs(),
+                    osm_locator.load_aliases(), osm_locator.load_element_aliases())
+    replaced = pd.MultiIndex.from_frame(discovered[identity])
+    mapped = mapped.loc[~pd.MultiIndex.from_frame(mapped[identity]).isin(replaced)]
+    return pd.concat([mapped, discovered], ignore_index=True).pipe(MappedCnecElements.validate)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('directory', type=Path)

@@ -53,8 +53,12 @@ publications remain unresolved across that snapshot. Source renames create disti
 element publications; they do not silently rename a physical site or merge Y-line legs.
 Overrides include the full element publication name and endpoint label.
 
-## Projection
+## Serve
 
-`element_catalog.mapped_elements` projects the validated catalog into oriented map
-geometry through exact site-ID joins. Unresolved rows retain their identity without
-invented coordinates.
+The app defaults to `data/element-catalog`; set `COPPERSUSHI_ELEMENT_CATALOG` to
+select another snapshot. Known publications use validated site connections.
+New identities and publications missing endpoint metadata use the viewed-hour JAO
+fetch and live locator. Recorded conflicts, ambiguous sites and unresolved site names
+remain authoritative. Discovery does not overwrite the reviewed snapshot; rebuild it
+to audit and incorporate new observations. A missing or invalid catalog is an error.
+The image build validates it before shipping.

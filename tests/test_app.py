@@ -11,6 +11,11 @@ from coppersushi.data_sources import jao, osm_locator
 from tests.test_cnec_page import inputs, mapped_elements
 
 
+@pytest.fixture(autouse=True)
+def synthetic_catalog(monkeypatch):
+    monkeypatch.setenv('COPPERSUSHI_ELEMENT_CATALOG', str(REPO/'tests/fixtures/element-catalog'))
+
+
 def test_failed_load_becomes_banner(monkeypatch):
     def broken():
         raise RuntimeError("networks/x.nc is a Git LFS pointer; run `git lfs pull`")
@@ -94,8 +99,10 @@ def test_only_the_viewed_intervals_missing_elements_are_fetched(monkeypatch):
     ))
     monkeypatch.setattr(osm_locator, "load_aliases", lambda: {})
     app.cnec_geometries(day, 1)
-    assert seen[0][0] == pd.Timestamp("2024-08-28T23:00:00Z")
-    assert seen[0][1].empty  # The day's binding rows belong to the preceding hour.
+    assert not seen  # An interval with no binding rows needs no endpoint discovery.
+    app.cnec_geometries(day, 0)
+    assert seen[0][0] == pd.Timestamp("2024-08-28T22:00:00Z")
+    assert not seen[0][1].empty
 
 
 def _components(component):

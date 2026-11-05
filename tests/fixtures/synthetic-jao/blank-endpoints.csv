@@ -1,0 +1,9 @@
+eic,tso,name,element_type,substation_from,substation_to
+99T1001C--00101B,MERIDIA,Cindervale - Dunmoor,TieLine,,
+99T1001C--00101B,VOLTRA,Dunmoor - Cindervale,TieLine,,
+99T-AA-BB-00003P,AVALON,Elmridge - Fernhollow 247,TieLine,,
+91T0-0000-0986-7,NORDEK,Y-Holloway (-Ironmoor - Juniper) 234/230,TieLine,,
+92T000000001304A,ORELIA,Larkfield - Marrowgate,Line,,
+93T-NETT400AT--1,CASTELL,TR Nettleford 400/220 1,Transformer,,
+91T0-0000-0013-F,LUMEN,PST Quarrenden 441,PST,,
+94T-38220-RK041O,AVALON,Rookhaven 1 - Rookhaven 2 RKHU41,Transformer,,
