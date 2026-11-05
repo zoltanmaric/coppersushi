@@ -25,6 +25,7 @@ class LocatorRecord(BaseModel):
     y: float
     osm_id: int | None
     template: str
+    osm_type: str | None = None
 
 
 from coppersushi import REPO, cnec_geometry as geometry
@@ -58,14 +59,47 @@ def sweep(cache_root: Path, backfill: Path, output: Path,
     buses = pd.read_csv(cache_root/'osm-prebuilt-v0.7/buses.csv')
     extra = []
     for supplement in supplements.to_dict('records'):
-        matched = buses[buses.tags.eq(f"way/{supplement['osm_way']}")][['x','y']].drop_duplicates()
-        if matched.empty or (matched.max()-matched.min()).gt(.01).any():
-            raise ValueError(f"Expected one cached OSM location for way/{supplement['osm_way']}")
-        tags = json.loads((backfill/f"osm-way-{supplement['osm_way']}.json").read_text())['elements'][0]['tags']
-        if tags.get('power') != 'substation':
-            raise ValueError(f"OSM way/{supplement['osm_way']} is not a substation")
-        extra.append(dict(name=supplement['published_name'], x=float(matched.x.mean()), y=float(matched.y.mean()),
-                          osm_id=supplement['osm_way'], template='OSM'))
+        osm_id = int(supplement['osm_id'])
+        kind = supplement['osm_type']
+        if kind not in ('way','relation'):
+            raise ValueError(f"Unsupported OSM object type: {kind}")
+        label = f'{kind}/{osm_id}'
+        document = json.loads((backfill/f"osm-{kind}-{osm_id}.json").read_text())
+        matches = [e for e in document['elements'] if e.get('type')==kind and e.get('id')==osm_id]
+        if len(matches)!=1 or matches[0].get('tags',{}).get('power')!='substation':
+            raise ValueError(f"OSM {label} is not the expected substation")
+        matched = buses[buses.tags.eq(label)][['x','y']].drop_duplicates()
+        if matched.empty:
+            from shapely.geometry import Polygon
+            from shapely.ops import unary_union
+            nodes = {e['id']:(e['lon'],e['lat']) for e in document['elements'] if e.get('type')=='node'}
+            ways = {e['id']:e for e in document['elements'] if e.get('type')=='way'}
+            if kind=='way':
+                boundaries = matches
+            else:
+                site=matches[0]
+                members=site.get('members',[])
+                if site.get('tags',{}).get('type')!='site' or not members or any(
+                    m['type']!='way' or m.get('role','') not in ('','outer') or m['ref'] not in ways for m in members):
+                    raise ValueError(f"OSM {label} requires complete substation site boundaries")
+                boundaries=[ways[m['ref']] for m in members]
+            polygons=[]
+            for boundary in boundaries:
+                refs = boundary.get('nodes',[])
+                if len(refs)<4 or refs[0]!=refs[-1] or any(n not in nodes for n in refs):
+                    raise ValueError(f"OSM {label} requires a complete closed substation polygon")
+                polygon = Polygon([nodes[n] for n in refs])
+                if not polygon.is_valid or polygon.is_empty:
+                    raise ValueError(f"OSM {label} has invalid substation geometry")
+                polygons.append(polygon)
+            centroid = unary_union(polygons).centroid
+            x,y = centroid.x,centroid.y
+        else:
+            if (matched.max()-matched.min()).gt(.01).any():
+                raise ValueError(f"Expected one cached OSM location for {label}")
+            x,y = float(matched.x.mean()),float(matched.y.mean())
+        extra.append(dict(name=supplement['published_name'], x=x, y=y,
+                          osm_id=osm_id, osm_type=kind, template='OSM'))
     locations = pd.concat([locations,pd.DataFrame(extra)],ignore_index=True)
     # Existing IDs survive coordinate corrections and changes in representative spelling.
     old_sites = {}
@@ -81,8 +115,10 @@ def sweep(cache_root: Path, backfill: Path, output: Path,
     anchors: dict[str,str] = {}
     for location in locations.sort_values(['template', 'name']).to_dict('records'):
         if pd.isna(location['osm_id']): location['osm_id'] = None
+        if pd.isna(location.get('osm_type')): location['osm_type'] = None
         r = LocatorRecord.model_validate(location)
         anchor = f'osm-locator:{int(r.osm_id)}' if r.osm_id is not None else f'locator:{r.template}:{r.name}'
+        if r.osm_type=='relation': anchor=f'osm-locator:relation:{r.osm_id}'
         prior = [s for s in old_names[r.name] if abs(old_sites[s]['longitude']-r.x)<.01 and abs(old_sites[s]['latitude']-r.y)<.01]
         site_id = anchors.get(anchor) or (prior[0] if len(prior)==1 else identity(('site', anchor)))
         anchors[anchor] = site_id
@@ -92,7 +128,7 @@ def sweep(cache_root: Path, backfill: Path, output: Path,
                 raise ValueError(f'Conflicting coordinates for {anchor}; review locator identity')
         else:
             sites[site_id] = dict(site_id=site_id, display_name=r.name, longitude=r.x, latitude=r.y,
-                                 evidence=(f'https://www.openstreetmap.org/way/{r.osm_id}; cached osm-prebuilt-v0.7 coordinates' if r.template=='OSM' else f'osm-locator@{osm_locator.COMMIT}; {anchor}; template={r.template}'))
+                                 evidence=(f'https://www.openstreetmap.org/{r.osm_type}/{r.osm_id}; verified OSM site coordinates' if r.template=='OSM' else f'osm-locator@{osm_locator.COMMIT}; {anchor}; template={r.template}'))
         point_sites[(float(r.x), float(r.y))] = site_id
         names.add(('osm' if r.template=='OSM' else 'osm-locator', r.name, site_id))
     index = geometry.substation_index(LocatedSubstations.validate(locations))
@@ -121,7 +157,7 @@ def sweep(cache_root: Path, backfill: Path, output: Path,
               cache_root/'osm-prebuilt-v0.7/buses.csv',
               *sorted(configuration.glob('*.csv')), element_catalog.SCHEMA,
               osm_locator.ALIASES_FILE, osm_locator.ELEMENT_ALIASES_FILE,
-              *sorted(backfill.glob('osm-way-*.json')),
+              *sorted(backfill.glob('osm-*.json')),
               *sorted(backfill.glob('raw-*.json.gz'))]
     if (output/'sites.csv').exists():
         inputs += [element_catalog.snapshot(output)/f'{table}.csv' for table in element_catalog.TABLES]

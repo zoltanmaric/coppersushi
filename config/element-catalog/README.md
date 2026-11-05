@@ -33,8 +33,10 @@ not catalog entities. Contingency references do not become guessed physical elem
 
 Real JAO-derived CSVs remain ignored, as do locator-derived coordinates. CI validates
 synthetic fixtures through the same schema. `osm-sites.csv` identifies reviewed OSM
-supplements; their tags must be retained and their coordinates present in the cached
-OSM bus data. OSM data is © OpenStreetMap contributors, available under
+supplements by object type and ID; their tags must be retained. Coordinates come from the cached OSM bus data,
+or from the centroid of a retained complete, valid substation polygon when that
+older cache lacks the site. A substation site relation uses the union of its
+complete, closed member boundaries. Way and relation IDs occupy separate namespaces. Partial geometry and non-substation objects are rejected. OSM data is © OpenStreetMap contributors, available under
 [ODbL](https://www.openstreetmap.org/copyright). `endpoint-bindings.csv` records
 reviewed element-specific site selections; the compiler rejects absent target sites.
 
@@ -52,6 +54,9 @@ The four tables describe a snapshot, not a history of topology. Conflicting endp
 publications remain unresolved across that snapshot. Source renames create distinct
 element publications; they do not silently rename a physical site or merge Y-line legs.
 Overrides include the full element publication name and endpoint label.
+Static-grid terminal pairs do not by themselves establish a runtime publication's
+DIRECT orientation. Never transplant an endpoint pair using EIC alone: renamed
+Y-line legs and out-of-service records can share that identifier.
 
 ## Serve
 
