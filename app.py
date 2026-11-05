@@ -19,7 +19,7 @@ from coppersushi import cnec_geometry, cnec_page, map_style, power_flow
 from coppersushi.data_model.network_views import BiddingZoneShapes
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
 from coppersushi.data_model.cnec_attribution import AttributionPayload, AttributionFailure, attribution_to_browser, attribution_from_browser
-from coppersushi.data_sources import opf_bundle, zone_shapes, credentials, virtual_attribution, cnec_attribution as attribution_source, electricity_maps, jao, mapbox_styles, networks, osm_locator
+from coppersushi.data_sources import opf_bundle, zone_shapes, credentials, cnec_attribution as attribution_source, electricity_maps, jao, mapbox_styles, networks, osm_locator
 from coppersushi.market_day import MARKET_TZ, MarketDay
 
 # Every page's controls live in one tree that the router swaps, so a callback whose
@@ -114,7 +114,6 @@ def cnec_day(day: MarketDay) -> cnec_page.Day:
             zones=timed("zone_shapes", core_zones),
             constraints=active.constraints,
             ptdfs=active.ptdfs,
-            external_constraints=active.external_constraints,
             prices=timed("prices", electricity_maps.load_day, day.date.isoformat()),
         )
     return _cnec_days[day]
@@ -279,13 +278,6 @@ def render_cnec(day: MarketDay, interval_index: int, selected: str | None, attri
         inputs = timed("day_inputs", cnec_day, day)
         if attribution is not None:
             inputs = replace(inputs, context=attribution_from_browser(attribution))
-        intervals = inputs.market_day.market_time_units()
-        interval = intervals[min(max(interval_index, 0), len(intervals) - 1)]
-        chosen = inputs.external_constraints[
-            inputs.external_constraints.source_id.astype(str).eq(str(selected))
-            & inputs.external_constraints.interval.eq(interval)]
-        if len(chosen) == 1:
-            inputs = replace(inputs, adjacent=timed("adjacent_attribution", virtual_attribution.load_interval, day, interval, chosen.hub.iloc[0]))
         rendered = timed("figure", cnec_page.render,
             inputs, cnec_geometries(inputs, interval_index),
             interval_index, selected, mapbox_token=mapbox_token(), basemap=timed("basemap", basemap)

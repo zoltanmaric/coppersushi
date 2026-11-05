@@ -108,4 +108,4 @@ When the import bound is active, the positive difference gives its inferred shad
 
 ### Map-contract
 
-Highlight a country only with evidence for the intended aggregate cap. Selecting it should show its signed contribution as above, capacity in MW and the exact delivery interval. Missing duals mean unavailable attribution, never a fallback to the observed spread. Virtual-hub constraints require their own identity and geography. For physical constraints, see [price contribution and scaling](flow-based-market-coupling.md#price-contribution). Implementation work is tracked in the [constraint-selection spec](specs/cnec-constraint-selection.md).
+Highlight a country only with evidence for the intended aggregate cap. Selecting it should show its signed contribution as above, capacity in MW and the exact delivery interval. Missing duals mean unavailable attribution, never a fallback to the observed spread. Virtual-hub constraints are outside the map’s scope. For physical constraints, see [price contribution and scaling](flow-based-market-coupling.md#price-contribution). Current behavior is described in [the app page](copper-sushi-app.md#the-cnec-page).

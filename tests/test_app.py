@@ -198,7 +198,7 @@ def test_base_day_does_not_fetch_attribution(monkeypatch):
     monkeypatch.setattr(app, '_cnec_days', {})
     monkeypatch.setattr(app, 'core_zones', lambda: day.zones)
     monkeypatch.setattr(jao, 'load_active_day', lambda _: SimpleNamespace(
-        constraints=day.constraints, ptdfs=day.ptdfs, external_constraints=day.external_constraints))
+        constraints=day.constraints, ptdfs=day.ptdfs))
     monkeypatch.setattr(app.electricity_maps, 'load_day', lambda _: day.prices)
     monkeypatch.setattr(app.attribution_source, 'load_day', lambda _: pytest.fail('blocking enrichment'))
     assert app.cnec_day(MarketDay.on('2024-08-29')).context is None

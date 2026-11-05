@@ -244,12 +244,6 @@ def test_contribution_requires_an_explicit_core_reference_zone():
         cnecs.price_contributions(active, cnecs.constraint_ptdfs(active_fb()), "GB", 1.0)
 
 
-def test_active_non_spatial_rows_are_retained_separately():
-    external = cnecs.active_external_constraints(active_fb())
-    assert list(external.name) == ["External Constraint ALPHA_export"]
-    assert external.shadow_price.iloc[0] == 12.0
-
-
 def test_a_repeated_active_row_identifier_is_refused():
     duplicate = active_fb() + [dict(active_fb()[0])]
     with pytest.raises(ValueError, match="repeated active"):

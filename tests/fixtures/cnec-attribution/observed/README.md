@@ -4,7 +4,7 @@ Twelve quarter-hours selected from six audited days in 2026. `selection.json`
 records why each interval was retained; selection was based on constraint coverage
 and known failures, not on whether prices reconcile.
 
-JAO physical rows, PTDFs and external rows come from the Core
+JAO physical rows and country PTDFs come from the Core
 `activeFbConstraints` publication. Context combines Core `alphaFactor`,
 `allocationConstraint`, `netPos`, and Cross-CCR `DA_PL_AC`. Cached responses were
 filtered and converted using the application's adapters, without changing values.
@@ -29,9 +29,8 @@ https://www.bundesnetzagentur.de/1067894 . JAO's data also remain subject to its
 source terms; these observations are not relicensed under the repository's code licence.
 
 The tests sum normalized physical contributions and the validated Polish cap.
-External interface rows document coverage but are not extra terms in this
-Core-country decomposition. Adjacent-region stationarity and LTA decomposition
-are not tested here. Poland's observed price enters its inferred cap term, so
+Interface bounds are excluded from this Core-country decomposition.
+LTA decomposition is not tested here. Poland's observed price enters its inferred cap term, so
 its comparison is not fully independent. The empirical tolerance is EUR 0.02/MWh.
 
 A separate local audit covered all 66 Core country pairs in all 576 quarter-hours

@@ -9,7 +9,7 @@ import pytest
 
 from coppersushi import cnec_market
 from coppersushi.data_model.cnec_attribution import AttributionContext
-from coppersushi.data_model.jao import ActiveConstraints, ActiveExternalConstraints, ConstraintPtdfs
+from coppersushi.data_model.jao import ActiveConstraints, ConstraintPtdfs
 from coppersushi.data_model.market import ZonalPrices
 from coppersushi.market import CORE_ZONES
 
@@ -29,7 +29,6 @@ def published():
     return (
         read_table('physical', ActiveConstraints),
         read_table('ptdfs', ConstraintPtdfs),
-        read_table('external', ActiveExternalConstraints),
         read_table('prices', ZonalPrices),
         read_table('context', AttributionContext),
     )
@@ -38,12 +37,12 @@ def published():
 @pytest.mark.parametrize('interval', INTERVALS)
 @pytest.mark.parametrize('reference', CORE_ZONES)
 def test_published_country_spreads_reconcile(published, interval, reference):
-    physical, ptdfs, external, prices, context = published
+    physical, ptdfs, prices, context = published
     interval = pd.Timestamp(interval)
     inputs = context[context.interval.eq(interval)]
     assert len(inputs) == 1
     options = dict(context=context, alpha=inputs.alpha.iloc[0])
-    args = (physical, ptdfs, external, prices, interval)
+    args = (physical, ptdfs, prices, interval)
     current = cnec_market.snapshot(*args, **options)
     observed = current.prices.set_index('zone').price
     assert set(observed.index) == PRICE_ZONES
@@ -60,13 +59,3 @@ def test_published_country_spreads_reconcile(published, interval, reference):
         assert total[destination] - total[origin] == pytest.approx(
             observed[destination] - observed[origin], abs=.02, rel=0,
         ), (interval, origin, destination, reference)
-
-
-def test_selected_intervals_cover_all_observed_virtual_bound_directions(published):
-    external = published[2]
-    hubs = {'ALBE', 'ALDE', 'DE_DK1_VH', 'DE_DK2_BigHub', 'DE_NO2_BigHub',
-            'DE_SE4_Baltic', 'NL_DK1_COBRA', 'NL_NO2_NorNed', 'PL_LT_BigHub',
-            'PL_SE4_SwePol', 'RO_BG_VH'}
-    assert set(zip(external.hub, external.coefficient)) == {
-        (hub, sign) for hub in hubs for sign in [-1, 1]
-    }

@@ -35,7 +35,7 @@ class ElectricityMapsPriceResponse(BaseModel):
 
 
 class ZonalPrices(pa.DataFrameModel):
-    """Observed price per zone and interval, including adjacent-zone quotes for rendering."""
+    """Observed price per zone and interval."""
 
     interval: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC})
     zone: Series[str]

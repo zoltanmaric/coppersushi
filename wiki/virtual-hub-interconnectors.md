@@ -33,47 +33,8 @@ P_B − P_A = (P_VA − P_A) + (P_VB − P_VA) + (P_B − P_VB)
 
 Regional PTDFs and shadow prices determine the outer terms. The interconnector restriction determines the middle term. A zero Core-country coefficient therefore gives zero direct term in that basis, not proof of zero interconnector contribution in this endpoint decomposition.
 
-### ALEGrO-validation
+### Map scope
 
-As of 2026-10-09, the adapter validates each selected interval against independent virtual-hub stationarity and the observed BE–DE price spread. With normalized physical potentials `F_h = −Σ μ_k PTDF_k,h / α`, the middle term is:
+The map does not implement virtual-interface rendering or attribution. It reconciles within-Core country spreads using physical CNECs and country allocation caps. Its active-data adapter retains only physical rows and country PTDF columns; there is no adjacent-region loader or endpoint-validation path.
 
-```
-F_ALDE − F_ALBE = Σ_ALDE μ_k c_k / α − Σ_ALBE μ_k c_k / α
-```
-
-Here `c_k` is the published ±1 hub coefficient. The outer terms are `F_ALBE − F_BE` and `F_DE − F_ALDE`. Their sum with the middle term must match `P_DE − P_BE` within €0.02/MWh. Both checks passed in all 114 binding intervals on 2026-09-12 and 2026-10-08, including α<1. A failed check or α=0 leaves attribution unavailable.
-
-Positive virtual injection enters Core. A +1 bound uses the other endpoint as reference; a −1 bound uses its owning Core zone. The selected bound's contribution to `P_owner − P_other` is `c_k μ_k / α`. ALBE and ALDE share one drawn asset but retain distinct published row IDs and dual terms; never discard a term merely because it names the same cable.
-
-### Adjacent-validation
-
-As of 2026-10-13, the candidate owner-minus-adjacent reconstruction is:
-
-```
-P_owner − P_other = (F_owner − F_Core_hub) + Σ_hub c μ / α
-                   + (G_adjacent_hub − G_other) + δ_owner
-```
-
-`F` uses normalized Core physical duals; `G` uses Nordic duals without Core α. `δ_owner` is Poland's cap component, zero for other Core owners. For the two non-Nordic AC interfaces, the candidate adjacent outer term is zero. Each interval must independently match observed endpoint prices within €0.02/MWh. The selected row contributes only its own signed `c μ / α`; the check uses all active bounds on that hub.
-
-The [Nordic handbook](https://publicationtool.jao.eu/PublicationHandbook/Nordic_PublicationTool_Handbook_v1.5.pdf), §§3 and 6.3, maps opposite endpoints: `DK1_CO`, `NO2_ND`, `NO2_NK`, `SE4_SP`, `SE4_BC`, `DK1_DE`, `DK2_KO`. Its `fbDomainShadowPrice` feed publishes Nordic coefficients and duals. Compare each hub with its owning Nordic zone; Nordic synchronous groups do not share one balance-price constant.
-
-A paced audit checked first/last binding cases for each sign on September 12 and October 8, 2026, using complete one-interval Nordic responses and quarter-hour endpoint prices. All nine interfaces are represented; 19 of 40 lossless candidate reconstructions pass:
-
-| Interface | Samples passing €0.02 check / sampled | Largest residual, €/MWh |
-|---|---:|---:|
-| DE–DK1 AC | 2 / 2 | 0.008 |
-| LitPol AC | 6 / 6 | 0.007 |
-| RO–BG AC | 2 / 2 | <0.001 |
-| COBRA | 6 / 8 | 0.257 |
-| Kontek / Kriegers Flak | 3 / 4 | 0.100 |
-| NorNed | 0 / 6 | 21.297 |
-| NordLink | 0 / 6 | 44.907 |
-| SwePol | 0 / 5 | 143.066 |
-| Baltic Cable | 0 / 1 | 3.006 |
-
-These are empirical checks, not a universal decomposition. Both coefficient signs and α<1 occur in the sample. Missing coefficients, prices, Polish adjusted price, or zero α suppress contributions. Fetch adjacent prices and Nordic rows only for the selected interface/interval; an outage leaves selection available.
-
-[Nord Pool documents implicit losses](https://www.nordpoolgroup.com/en/trading/Day-ahead-trading/loss-functionality/) on NorNed, NordLink and Baltic Cable, so their selected-dual scaling stays unsupported even if a lossless equation happens to match. [Ramping restrictions](https://www.nordpoolgroup.com/en/trading/Day-ahead-trading/Ramping/) include joint NorNed/NordLink limits and hourly flow fixing on SwePol. These mechanisms can add price terms; the audit does not attribute each residual to a specific mechanism. Never widen tolerance to hide them, infer missing duals from the observed spread, or treat a full spread as the selected constraint's contribution.
-
-Loss-aware selected-dual scaling and unreconciled ramping cases remain in [the spec](specs/cnec-constraint-selection.md). The [FB/LTA audit](flow-based-market-coupling.md#attribution-validation) owns the existing Core scaling evidence.
+The [HTML explainer](../assets/market-clearing.html) describes the shared clearing equations and why a cable-bound term must not be added to the country decomposition. Cable restrictions can affect the jointly determined solution and cross-region spreads; their omission is a product scope decision, not an assertion of economic irrelevance.

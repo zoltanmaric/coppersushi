@@ -25,7 +25,7 @@ def tables():
     rows = data['active']
     prices = pd.DataFrame(data['prices'])
     prices['interval'] = pd.to_datetime(prices.interval, utc=True)
-    return cnecs.active_constraints(rows), cnecs.constraint_ptdfs(rows), cnecs.active_external_constraints(rows), prices
+    return cnecs.active_constraints(rows), cnecs.constraint_ptdfs(rows), prices
 
 
 def context(feeds=None):
@@ -52,12 +52,12 @@ def test_polish_quarters_require_four_unique_ids_and_matching_positions():
 
 
 def test_binding_export_cap_contributes_to_all_spreads_relative_to_poland():
-    phys, ptdfs, external, prices = tables()
+    phys, ptdfs, prices = tables()
     interval = prices.interval.iloc[0]
     caps = attribution.country_caps(context(), prices, interval)
     assert caps.source_id.tolist() == [-2]
     assert caps.delta.iloc[0] == -20
-    view = cnec_market.snapshot(phys, ptdfs, external, prices, interval,
+    view = cnec_market.snapshot(phys, ptdfs, prices, interval,
                                cnec_market.ConstraintKey(-2), context=context(), alpha=.5)
     contribution = view.contribution.set_index('zone').contribution
     assert view.reference == 'PL'
@@ -110,24 +110,6 @@ def test_normalized_physical_contribution_scales_and_changes_reference_without_c
         assert be[z] - be.DE == pytest.approx(de[z])
 
 
-def test_alegro_paired_bounds_and_observed_spread_validate_independent_terms():
-    phys, ptdfs, external, prices = tables()
-    assert attribution.alegro_validated(ptdfs, phys, external, prices, .5)
-    assert set(external.source_id) == {12, 13}
-    for identity, expected in [(12, 5), (13, 3)]:
-        view = cnec_market.snapshot(phys, ptdfs, external, prices, prices.interval.iloc[0],
-                                   cnec_market.ConstraintKey(identity), alpha=.5)
-        assert view.reference == 'BE'
-        assert view.contribution.set_index('zone').contribution.DE == expected
-    flipped = external.copy()
-    flipped.loc[flipped.source_id.eq(13), 'coefficient'] = 1
-    assert not attribution.alegro_validated(ptdfs, phys, flipped, prices, .5)
-    bad_prices = prices.copy()
-    bad_prices.loc[bad_prices.zone.eq('DE'), 'price'] += 1
-    assert not attribution.alegro_validated(ptdfs, phys, external, bad_prices, .5)
-    assert not attribution.alegro_validated(ptdfs, phys, external, prices, 0)
-
-
 def test_reference_follows_publisher_direction_and_missing_geometry_stays_unavailable():
     phys, *_ = tables()
     mapped = pd.read_csv(FIXTURE / 'mapped.csv')
@@ -159,11 +141,11 @@ def test_timeline_includes_minor_ticks_and_disambiguates_repeated_hours(day, cou
 
 def page_inputs():
     from shapely.geometry import shape
-    phys, ptdfs, external, prices = tables()
+    phys, ptdfs, prices = tables()
     features = json.loads((FIXTURE / 'zones.geojson').read_text())['features']
     zones = pd.DataFrame({'zone': [f['properties']['idx'] for f in features],
                           'geometry': [shape(f['geometry']) for f in features]})
-    day = cnec_page.Day(MarketDay.on('2026-09-12'), zones, phys, ptdfs, external, prices, context())
+    day = cnec_page.Day(MarketDay.on('2026-09-12'), zones, phys, ptdfs, prices, context())
     return day, pd.read_csv(FIXTURE / 'mapped.csv')
 
 
@@ -203,26 +185,15 @@ def test_line_interior_hits_keep_row_identity_and_missing_alpha_keeps_selection(
     assert 'missing or zero' in unavailable.figure.layout.annotations[0].text
 
 
-def test_unknown_adjacent_attribution_retains_interface_selection_without_spread_fallback():
+@pytest.mark.parametrize('selected', [None, 12, 13])
+def test_virtual_bounds_are_hidden_and_stale_selections_are_cleared(selected):
     day, mapped = page_inputs()
-    external = day.external_constraints.copy()
-    external.loc[external.source_id.eq(12), 'hub'] = 'DE_NO2_BigHub'
-    changed = cnec_page.Day(**{**day.__dict__, 'external_constraints': external})
-    rendered = cnec_page.render(changed, mapped, 0, 12)
-    assert rendered.constraint_value == '12'
-    assert rendered.reference == 'NO2'
-    assert any(t.name == 'NordLink interface' for t in rendered.figure.data)
-    assert 'Endpoint contribution unavailable' in rendered.figure.layout.annotations[0].text
-    assert not any(t.name.startswith('contribution relative') for t in rendered.figure.data)
-
-
-def test_shared_alegro_asset_has_both_ids_but_draws_one_interface():
-    day, mapped = page_inputs()
-    rendered = cnec_page.render(day, mapped, 0, 12)
-    traces = [t for t in rendered.figure.data if t.name == 'ALEGrO interface']
-    assert len(traces) == 1
-    assert set(traces[0].customdata[0][0].split(',')) == {'12', '13'}
-    assert 'DE: +5.00 €/MWh relative to BE' in rendered.figure.layout.annotations[0].text
+    rendered = cnec_page.render(day, mapped, 0, selected)
+    assert rendered.constraint_value is None
+    assert not {'12', '13'} & {option['value'] for option in rendered.constraint_options}
+    assert not any('interface' in (t.name or '') or 'ALEGrO' in (t.name or '') for t in rendered.figure.data)
+    assert rendered.reference is None
+    assert not any((t.name or '').startswith('contribution relative') for t in rendered.figure.data)
 
 
 @pytest.mark.parametrize('date', ['2024-03-31', '2024-10-27', '2026-09-12', '2026-10-25'])

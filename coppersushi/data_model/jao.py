@@ -185,7 +185,7 @@ class ActiveConstraints(pa.DataFrameModel):
 
 
 class ConstraintPtdfs(pa.DataFrameModel):
-    """A binding physical row’s Core and virtual-hub PTDFs, one hub per row."""
+    """A binding physical row’s country PTDFs, one hub per row."""
 
     source_id: Series[int]
     interval: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC})
@@ -218,27 +218,6 @@ class ConstraintContributions(ConstraintPtdfs, PriceContributions):
     """One selected row's relative zonal price contribution under an explicit reference."""
 
     ptdf_difference: Series[float]  # contribution = -shadow_price * ptdf_difference / alpha
-
-    class Config:
-        strict = False
-        coerce = True
-
-
-class ActiveExternalConstraints(pa.DataFrameModel):
-    """A binding non-spatial row, retaining its signed hub vector and stable identity."""
-
-    source_id: Series[int] = pa.Field(unique=True)
-    hub: Series[str]
-    coefficient: Series[float] = pa.Field(nullable=True)
-    capacity: Series[float] = pa.Field(nullable=True)
-
-    interval: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC})
-    name: Series[str]
-    tso: Series[str]
-    direction: Series[str]
-    shadow_price: Series[float] = pa.Field(gt=0)
-    ram: Series[float] = pa.Field(nullable=True)
-    ram_mcp: Series[float] = pa.Field(nullable=True)
 
     class Config:
         strict = False

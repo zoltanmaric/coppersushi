@@ -1,4 +1,4 @@
-"""Validated normalized-FB attribution inputs and explicit virtual-interface mapping."""
+"""Validated normalized-FB attribution inputs."""
 
 from typing import NamedTuple
 from collections.abc import Sequence
@@ -13,29 +13,10 @@ from coppersushi.data_model.cnec_attribution import (
 )
 
 from coppersushi.data_model.market import ZonalPrices
-from coppersushi.data_model.jao import ConstraintPtdfs, ActiveConstraints, ActiveExternalConstraints
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
 from coppersushi.data_model.network_views import BiddingZoneShapes
 from coppersushi.market import CORE_ZONES
 from coppersushi.market_day import MarketDay
-
-# Owning Core end, adjacent bidding zone, asset. ALBE/ALDE share one physical asset.
-INTERFACES = {
-    "ALBE": ("BE", "DE", "ALEGrO"), "ALDE": ("DE", "BE", "ALEGrO"),
-    "NL_DK1_COBRA": ("NL", "DK1", "COBRA"),
-    "NL_NO2_NorNed": ("NL", "NO2", "NorNed"),
-    "DE_NO2_BigHub": ("DE", "NO2", "NordLink"),
-    "PL_SE4_SwePol": ("PL", "SE4", "SwePol"),
-    "DE_SE4_Baltic": ("DE", "SE4", "Baltic Cable"),
-    "PL_LT_BigHub": ("PL", "LT", "LitPol AC interface"),
-    "DE_DK1_VH": ("DE", "DK1", "DE–DK1 AC interface"),
-    "DE_DK2_BigHub": ("DE", "DK2", "Kontek / Kriegers Flak interface"),
-    "RO_BG_VH": ("RO", "BG", "RO–BG AC interface"),
-}
-# Label anchors only: schematic interfaces do not claim a cable route or converter location.
-ADJACENT_ANCHORS = {"DK1": (9.1, 56.1), "DK2": (12.0, 55.6), "NO2": (7.4, 58.6),
-                    "SE4": (14.2, 56.2), "LT": (24.0, 55.2), "BG": (25.3, 42.7)}
-
 
 def context(day: MarketDay, alpha_rows: list[AlphaFactor], cap_rows: list[AllocationConstraint],
             position_rows: list[NetPosition], polish_rows: list[PolishAlternative]) -> DataFrame[AttributionContext]:
@@ -147,134 +128,3 @@ def physical_reference(row: pd.Series, geometries: DataFrame[MappedCnecElements]
     point = Point(mapped[f"x{end}"], mapped[f"y{end}"])
     candidates = [zone for zone, geometry in zip(zones.zone, zones.geometry) if geometry.covers(point)]
     return candidates[0] if len(candidates) == 1 and candidates[0] in CORE_ZONES else None
-
-
-def virtual_reference(row: pd.Series) -> str | None:
-    """Positive virtual injection enters Core; a negative bound limits export from Core."""
-    mapping = INTERFACES.get(row.hub)
-    if mapping is None or row.coefficient not in (-1, 1):
-        return None
-    owner, other, _ = mapping
-    return other if row.coefficient == 1 else owner
-
-
-def alegro_validated[Prices: ZonalPrices](ptdfs: DataFrame[ConstraintPtdfs], physical: DataFrame[ActiveConstraints], external: DataFrame[ActiveExternalConstraints],
-                     prices: DataFrame[Prices], alpha: float) -> bool:
-    """Independent virtual-hub stationarity and observed endpoint-spread checks.
-
-    Keep distinct source duals at both ALEGrO ends. They are terms of one cap's total
-    effect, not duplicate rows just because they refer to the same cable.
-    """
-    if not 0 < alpha <= 1:
-        return False
-    terms = ptdfs.merge(physical[["source_id", "shadow_price"]], on="source_id", validate="many_to_one")
-    potentials = (-terms.ptdf * terms.shadow_price / alpha).groupby(terms.zone).sum()
-    if not {"ALBE", "ALDE", "BE", "DE"}.issubset(potentials.index):
-        return False
-    bounds = external[external.hub.isin(["ALBE", "ALDE"])]
-    if not bounds.coefficient.isin([-1, 1]).all():
-        return False
-    signed = bounds.shadow_price * bounds.coefficient / alpha
-    middle = signed[bounds.hub.eq("ALDE")].sum() - signed[bounds.hub.eq("ALBE")].sum()
-    stationarity = potentials.ALDE - potentials.ALBE - middle
-    quotes = prices.set_index("zone").price
-    if not {"BE", "DE"}.issubset(quotes.index):
-        return False
-    observed = quotes.DE - quotes.BE
-    reconstructed = (potentials.ALBE - potentials.BE) + middle + (potentials.DE - potentials.ALDE)
-    return abs(stationarity) <= 0.02 and abs(observed - reconstructed) <= 0.02
-
-
-# Opposite Nordic endpoints in the published market topology.
-NORDIC_HUBS = {
-    "NL_DK1_COBRA": "DK1_CO", "NL_NO2_NorNed": "NO2_ND",
-    "DE_NO2_BigHub": "NO2_NK", "PL_SE4_SwePol": "SE4_SP",
-    "DE_SE4_Baltic": "SE4_BC", "DE_DK1_VH": "DK1_DE", "DE_DK2_BigHub": "DK2_KO",
-}
-
-
-def nordic_outer_term(rows: list[dict], hub: str, interval: pd.Timestamp) -> float | None:
-    """Published Nordic virtual-minus-country potential, with no Core α scaling.
-
-    Compare endpoints within the same synchronous group; Nordic groups do not share
-    one balance-price constant. Empty feeds or unpublished shadow prices are unavailable; invalid records raise.
-    """
-    virtual = NORDIC_HUBS[hub]
-    if not rows:
-        return None
-    other = INTERFACES[hub][1]
-    frame = pd.DataFrame(rows)
-    required = {"id", "dateTimeUtc", "shadowPrice", f"ptdf_{virtual}", f"ptdf_{other}"}
-    missing = required - set(frame.columns)
-    if missing:
-        raise ValueError(f"Nordic response missing columns: {sorted(missing)}")
-    if frame.id.duplicated().any():
-        raise ValueError("Nordic response has duplicate row IDs")
-    if not pd.to_datetime(frame.dateTimeUtc, utc=True).eq(interval).all():
-        raise ValueError("Nordic response does not match the requested interval")
-    duals = pd.to_numeric(frame.shadowPrice, errors="raise")
-    if duals.isna().any():
-        return None
-    if (duals < 0).any() or not np.isfinite(duals).all():
-        raise ValueError("Nordic shadow prices must be finite and nonnegative")
-    active = frame[duals.gt(0)]
-    coefficients = active[[f"ptdf_{virtual}", f"ptdf_{other}"]].apply(pd.to_numeric, errors="raise")
-    if not np.isfinite(coefficients.to_numpy()).all():
-        raise ValueError("Active Nordic PTDF coefficients must be finite")
-    difference = coefficients[f"ptdf_{virtual}"] - coefficients[f"ptdf_{other}"]
-    return float(-(duals.loc[active.index] * difference).sum())
-
-
-def interface_spread(core_outer: float, bound_term: float, adjacent_outer: float,
-                     country_cap: float = 0.0) -> float:
-    """Owner-minus-adjacent spread; every argument is an independent signed €/MWh term."""
-    return core_outer + bound_term + adjacent_outer + country_cap
-
-
-# Nord Pool documents implicit-loss pricing on these links. A lossless match alone
-# cannot validate how a selected dual scales between sending and receiving MWh.
-LOSS_HUBS = {'NL_NO2_NorNed', 'DE_NO2_BigHub', 'DE_SE4_Baltic'}
-
-
-def virtual_validated[Prices: ZonalPrices](hub: str, ptdfs: DataFrame[ConstraintPtdfs], physical: DataFrame[ActiveConstraints],
-                      external: DataFrame[ActiveExternalConstraints], prices: DataFrame[Prices], inputs: DataFrame[AttributionContext] | None,
-                      alpha: float, adjacent: pd.Series) -> bool:
-    """Require the complete candidate endpoint decomposition to match published prices.
-
-    Loss/ramping terms are not inferred from the residual. An unexplained residual rejects
-    attribution for this interval while retaining selection and the published bound dual.
-    """
-    if hub not in INTERFACES or hub in {"ALBE", "ALDE"} or hub in LOSS_HUBS or not 0 < alpha <= 1:
-        return False
-    owner, _, _ = INTERFACES[hub]
-    quoted = prices[prices.zone.eq(owner)]
-    if len(quoted) != 1:
-        return False
-    values = [quoted.price.iloc[0], adjacent.adjacent_price, adjacent.adjacent_term]
-    if not np.isfinite(values).all():
-        return False
-    required = ptdfs[ptdfs.source_id.isin(physical.source_id) & ptdfs.zone.isin([owner, hub])]
-    if required.duplicated(['source_id', 'zone']).any() or len(required) != 2 * len(physical):
-        return False
-    terms = required.merge(physical[['source_id', 'shadow_price']], on='source_id', validate='many_to_one')
-    if not np.isfinite(terms[['ptdf', 'shadow_price']].to_numpy()).all():
-        return False
-    signed = terms.ptdf * np.where(terms.zone.eq(owner), -1, 1)
-    core = float((signed * terms.shadow_price / alpha).sum())
-    bounds = external[external.hub.eq(hub)]
-    if bounds.empty or not bounds.coefficient.isin([-1, 1]).all() or not np.isfinite(bounds.shadow_price).all():
-        return False
-    middle = float((bounds.coefficient * bounds.shadow_price / alpha).sum())
-    cap = 0.0
-    if owner == 'PL':
-        if inputs is None or len(inputs) != 1 or not np.isfinite(inputs.polish_alt.iloc[0]):
-            return False
-        cap = country_cap_effect(float(quoted.price.iloc[0]), float(inputs.polish_alt.iloc[0]))
-        if abs(cap) > 1e-9:
-            if not {'interval', 'polish_position', 'import_limit', 'export_limit'}.issubset(inputs):
-                return False
-            if country_caps(inputs, prices, inputs.interval.iloc[0]).empty:
-                return False
-    predicted = interface_spread(core, middle, float(adjacent.adjacent_term), cap)
-    observed = float(quoted.price.iloc[0] - adjacent.adjacent_price)
-    return abs(predicted - observed) <= 0.02
