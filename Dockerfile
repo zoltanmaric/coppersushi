@@ -36,8 +36,6 @@ COPY . .
 # Refuse pointers and missing data before precomputing maps.
 RUN if grep -rlq '^version https://git-lfs' networks/; then \
       echo 'networks/ holds Git LFS pointers; run git lfs pull before building' >&2; exit 1; fi
-RUN if [ ! -f data/jao/element-ends.csv ] || [ ! -d data/osm-locator ]; then \
-      echo 'Prepare the endpoint seed and OSM locator (infra/lambda/README.md)' >&2; exit 1; fi
 RUN pixi run --locked -e build python -m coppersushi.data_sources.image_data
 RUN chmod -R a+rX data
 

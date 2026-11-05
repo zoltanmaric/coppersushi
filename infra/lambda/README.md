@@ -17,11 +17,11 @@ for configuration. Do not initialize replacement state for an existing deploymen
 Refresh the working directory's `main.tf`, `hostname.tf` and `.terraform.lock.hcl`
 from the merged `infra/lambda/` sources before planning; preserve its state and inputs.
 
-1. Run `git lfs pull` and prepare the JAO endpoint seed and OSM locator using the
-   [market-data commands](../../README.md#market-data). The Docker build validates
-   these inputs and precomputes the hourly OPF maps. Prepare the validated
-   [element catalog](../../config/element-catalog/README.md#build-and-validate)
-   in `data/element-catalog` as well; the image build rejects a missing or invalid snapshot.
+1. Run `pixi run --locked setup-app` in this checkout to prepare the validated
+   endpoint seed, locator, element catalog and country outlines. This is the same
+   setup used for local development and needs no data from another worktree.
+   Downloads remain outside Docker; the image build validates its bundled inputs
+   and precomputes hourly OPF maps. See the [catalog workflow](../../config/element-catalog/README.md).
 2. Build the Lambda target with a new image tag:
    `docker build --platform linux/amd64 --provenance=false --target lambda -t <image> .`
    For a GHCR token error, see [GHCR authentication](#ghcr-authentication).

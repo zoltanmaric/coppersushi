@@ -1,13 +1,12 @@
 """Substation coordinates for JAO Static Grid Model names, borrowed from core-tso-data.
 
 JAO publishes grid elements with substation *names* and no coordinates. `github.com/fneum/
-core-tso-data` (MIT, by the PyPSA developers) carries hand-corrected geocoding of those
+core-tso-data` (code: MIT, data: no stated licence) carries hand-corrected geocoding of those
 names: one CSV per TSO template under its `OSM-locator/` directory, each row a Static Grid
 Model substation name matched to an OSM object's centroid.
 
-**Nothing extracted here is committed.** The CSVs' first column is JAO Static Grid Model
-Content, whose terms forbid redistribution, so the cache lives in a gitignored `data/`
-exactly as `jao.py` and `jao_static_grid.py` do; anyone reproducing this work runs `fetch`.
+The locator data has no stated licence (MIT covers its code only). Downloaded
+CSVs remain in ignored `data/`; reviewed project mappings live in `config/`.
 
 The repository is pinned to a commit rather than tracked on `main`: the corrections are
 hand-made and edited in place, so a moving branch would silently move a substation.
@@ -46,7 +45,10 @@ ELEMENT_ALIASES_FILE = REPO / "config" / "element-substation-aliases.csv"
 TIMEOUT_SECONDS = 300
 
 MEMBER_PATTERN = re.compile(r"^[^/]+/OSM-locator/[^/]+\.csv$")
-EXPECTED_CSVS = 18  # Measured at COMMIT: 17 TSO templates plus OTHERCOUNTRIES.
+EXPECTED_TEMPLATES = frozenset({
+    'AT', 'BE', 'CZ', 'D2', 'D4', 'D7', 'D8', 'FR225kv', 'FR', 'HR',
+    'HU', 'LU', 'NL', 'OTHERCOUNTRIES', 'PL', 'RO', 'SI', 'SK',
+})
 TEMPLATE_PATTERN = re.compile(r"Static Grid Model_(?:template_)?([^_]+)")
 
 # Continental Europe, generously: a corrupt or column-shifted download lands outside it.
@@ -74,6 +76,13 @@ def download() -> bytes:
     return payload
 
 
+def check_templates(filenames: list[str]) -> None:
+    """Require exactly one CSV for every template in the pinned locator release."""
+    templates = [template_token(name) for name in filenames]
+    if set(templates) != EXPECTED_TEMPLATES or len(templates) != len(EXPECTED_TEMPLATES):
+        raise RuntimeError(f'Incomplete locator templates: got {sorted(templates)}, expected {sorted(EXPECTED_TEMPLATES)}')
+
+
 def locator_members(archive: tarfile.TarFile) -> list[tarfile.TarInfo]:
     """The `OSM-locator/*.csv` members, refusing any name that could escape the cache."""
     members = []
@@ -83,8 +92,7 @@ def locator_members(archive: tarfile.TarFile) -> list[tarfile.TarInfo]:
         if Path(member.name).is_absolute() or ".." in Path(member.name).parts:
             raise RuntimeError(f"{member.name}: unsafe member name")
         members.append(member)
-    if len(members) != EXPECTED_CSVS:
-        raise RuntimeError(f"{len(members)} OSM-locator CSVs, expected {EXPECTED_CSVS}")
+    check_templates([Path(member.name).name for member in members])
     return members
 
 
@@ -104,9 +112,10 @@ def write_csvs(directory: Path, payload: bytes) -> Path:
             if extracted is None:
                 raise RuntimeError(f"{member.name}: not a regular file")
             (staging / Path(member.name).name).write_bytes(extracted.read())
+    read_csvs(staging)
     shutil.rmtree(directory, ignore_errors=True)
     staging.rename(directory)
-    logger.info("osm locator: wrote %d CSVs to %s", EXPECTED_CSVS, directory)
+    logger.info("osm locator: wrote %d CSVs to %s", len(EXPECTED_TEMPLATES), directory)
     return directory
 
 
@@ -140,6 +149,7 @@ def read_csvs(directory: Path = CACHE_DIR) -> DataFrame[LocatedSubstations]:
     paths = sorted(directory.glob("*.csv"))
     if not paths:
         raise RuntimeError(f"no locator CSVs in {directory}; run `python -m {__spec__.name} fetch`")
+    check_templates([path.name for path in paths])
     frame = pd.concat([read_csv(path) for path in paths], ignore_index=True)
     frame = frame.rename(columns={"OSM_id": "osm_id"}).dropna(subset=["x", "y"])
     check_located(frame)

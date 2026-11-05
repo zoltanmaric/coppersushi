@@ -17,8 +17,8 @@ import urllib.request
 import pandas as pd
 
 from coppersushi import REPO, cnecs
-from coppersushi.data_sources import jao
-from coppersushi.data_sources.catalog_sweep import stamp
+from coppersushi.data_sources import cache, jao
+from coppersushi.data_sources.catalog_sweep import stamp, substation_centroid
 
 
 def endpoints(rows: list[dict]) -> pd.DataFrame:
@@ -116,7 +116,7 @@ def backfill(cache_root: Path, output: Path, max_requests: int) -> dict:
     return summary
 
 
-def fetch_site_evidence(output: Path) -> None:
+def fetch_site_evidence(output: Path, refresh: bool = False) -> None:
     """Retain primary OSM tags and geometry for curated supplemental objects."""
     output.mkdir(parents=True,exist_ok=True)
     with (REPO/'config/element-catalog/osm-sites.csv').open(newline='') as stream:
@@ -125,13 +125,16 @@ def fetch_site_evidence(output: Path) -> None:
             if kind not in ('way','relation'):raise ValueError(f'Unsupported OSM object type: {kind}')
             osm_id=int(row['osm_id'])
             path=output/f'osm-{kind}-{osm_id}.json'
-            if path.exists(): continue
+            if not refresh:
+                try:
+                    substation_centroid(json.loads(path.read_text()), kind, osm_id)
+                    continue
+                except (OSError, ValueError):
+                    pass
             with urllib.request.urlopen(f'https://api.openstreetmap.org/api/0.6/{kind}/{osm_id}/full.json',timeout=20) as response:
                 document=json.load(response)
-            item=next(e for e in document['elements'] if e.get('type')==kind and e.get('id')==osm_id)
-            if item['id']!=osm_id or item['type']!=kind or item.get('tags',{}).get('power')!='substation':
-                raise ValueError(f'OSM {kind}/{osm_id} is not the expected substation')
-            path.write_text(json.dumps(document,indent=2)+'\n')
+            substation_centroid(document, kind, osm_id)
+            cache.atomic_text(path, json.dumps(document, indent=2)+'\n')
 
 
 def main() -> None:

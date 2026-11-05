@@ -14,6 +14,11 @@ from coppersushi.data_sources import osm_locator
 FIXTURES = REPO / "tests" / "fixtures" / "synthetic-osm-locator"
 
 
+@pytest.fixture(autouse=True)
+def synthetic_templates(monkeypatch):
+    monkeypatch.setattr(osm_locator, 'EXPECTED_TEMPLATES', frozenset({'ZA', 'ZA225kv', 'ZB'}))
+
+
 @pytest.mark.parametrize(
     "filename,expected",
     [
@@ -59,3 +64,32 @@ def test_a_coordinate_outside_europe_is_refused_where_it_is_loaded():
         osm_locator.check_located(frame.assign(x=frame.x + 200.0))
     with pytest.raises(RuntimeError, match=r"rows with y outside"):
         osm_locator.check_located(frame.assign(y=pd.NA))
+
+
+def test_incomplete_locator_is_rejected(tmp_path):
+    import shutil
+    shutil.copytree(FIXTURES, tmp_path/'locator')
+    next((tmp_path/'locator').glob('*ZA225kv*')).unlink()
+    with pytest.raises(RuntimeError, match='Incomplete locator templates'):
+        osm_locator.read_csvs(tmp_path/'locator')
+
+
+def test_duplicate_template_cannot_replace_a_missing_template(tmp_path):
+    import shutil
+    shutil.copytree(FIXTURES, tmp_path/'locator')
+    next((tmp_path/'locator').glob('*ZA225kv*')).unlink()
+    source = next((tmp_path/'locator').glob('*template_ZA_*'))
+    shutil.copyfile(source, source.with_name(source.stem+'-duplicate.csv'))
+    with pytest.raises(RuntimeError, match='Incomplete locator templates'):
+        osm_locator.read_csvs(tmp_path/'locator')
+
+
+def test_download_is_validated_before_replacing_cached_locator(tmp_path):
+    import shutil
+    shutil.copytree(FIXTURES, tmp_path/'locator')
+    before = {p.name: p.read_bytes() for p in (tmp_path/'locator').glob('*.csv')}
+    payload = (FIXTURES.parent/'synthetic-osm-locator-invalid.tar.gz').read_bytes()
+    with pytest.raises(pd.errors.ParserError):
+        osm_locator.write_csvs(tmp_path/'locator', payload)
+    assert before == {p.name: p.read_bytes() for p in (tmp_path/'locator').glob('*.csv')}
+    assert not osm_locator.read_csvs(tmp_path/'locator').empty

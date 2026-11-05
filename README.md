@@ -84,13 +84,24 @@ A Mapbox access token is required to run the app. Tokenless startup is unsupport
 Register for a free token at [mapbox.com](https://www.mapbox.com/), then paste it into
 `.secrets/.mapbox_token`, or export it as `MAPBOX_TOKEN`.
 
-Build the country outlines once before starting the app. This requires the solved
-2024-08-29 network from Git LFS; Docker builds the outlines during image creation.
-Page requests read only the resulting small GeoJSON bundle.
+Prepare all application data before starting the app:
 
 ```bash
-pixi run --locked build-zone-shapes
+pixi run --locked setup-app
 ```
+
+This runs dependency setup, pulls the solved network from Git LFS, downloads the
+pinned locator and OSM buses, fetches a fixed JAO domain seed, and builds the four
+catalog tables and country outlines. Downloads are cached in ignored `data/`;
+rerunning the command reuses them and recompiles the catalog from reviewed mappings.
+No earlier worktree or annual research cache is required. The first run needs network
+access; credentials are only needed when viewing maps and prices. Tests still use
+the lightweight `setup` command above.
+
+`pixi run --locked check-data` validates required tables without network access.
+Startup stops with the setup command when tables are missing or invalid. To refresh
+downloaded inputs, run `pixi run --locked setup-data --refresh`. For an additional
+domain seed day, use `pixi run --locked setup-data --day YYYY-MM-DD --refresh`.
 
 Then start the server by running
 ```bash
@@ -122,6 +133,7 @@ pixi run --locked python -m coppersushi.data_sources.jao seed 2026-09-11
 ```
 
 The seed command validates the fetched domain day and writes `data/jao/element-ends.csv`.
+`setup-app` prepares this seed automatically; these commands are for explicit data refreshes.
 
 The physical-element catalog keeps sites, source names, published elements and oriented
 endpoints in four CSVs under ignored `data/element-catalog/`. See
