@@ -100,9 +100,10 @@ def apply_assessments(assessments: dict[tuple[str, str, str], ElementAssessment]
             raise ValueError(f'Assessment contradicts a resolved terminal: {key}')
         if not all(endpoint['status']=='resolved' for endpoint in pair):
             for endpoint, site_id in zip(pair, selected):
-                endpoint.update(site_id=site_id, status='resolved', assignment_basis='inferred',
-                                evidence=assessment.assignment_evidence+'; original observation: '
-                                         +source_evidence[element['element_id']])
+                if endpoint['status'] != 'resolved':
+                    endpoint.update(site_id=site_id, status='resolved', assignment_basis='inferred',
+                                    evidence=assessment.assignment_evidence+'; original observation: '
+                                             +source_evidence[element['element_id']])
             element['element_type'] = element['element_type'] or 'Line'
         if (element['orientation_basis']=='published' and assessment.direct_orientation!='unknown'
                 and element['direct_orientation']!=assessment.direct_orientation):
@@ -328,8 +329,9 @@ def sweep(cache_root: Path, backfill: Path, output: Path,
         key=(element['eic'],element['tso'],element['name'])
         statuses=[endpoints[element_id,terminal]['status'] for terminal in ('a','b')]
         evidence='; '.join(dict.fromkeys(endpoints[element_id,terminal]['evidence'] for terminal in ('a','b')))
+        status = ('orientation_unknown' if element['direct_orientation']=='unknown' else 'resolved') if statuses==['resolved','resolved'] else '/'.join(statuses)
         audit.append(dict(element_id=element_id,eic=element['eic'],tso=element['tso'],name=element['name'],appearances=counts[key],
-                          status='resolved' if statuses==['resolved','resolved'] else '/'.join(statuses),
+                          status=status,
                           orientation_basis=element['orientation_basis'],
                           endpoint_evidence=evidence))
     records={'sites':list(sites.values()),'site_names':[dict(source=s,published_name=n,site_id=i) for s,n,i in sorted(names)],

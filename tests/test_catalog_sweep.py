@@ -187,3 +187,48 @@ def test_audit_credits_the_endpoint_evidence_actually_used(tmp_path):
         row=next(row for row in csv.DictReader(stream) if row['eic']=='99T-SYNTHETIC')
     assert 'unused guess' not in row['endpoint_evidence']
     assert 'name lookup' in row['endpoint_evidence']
+
+
+def test_assessment_preserves_evidence_for_the_already_resolved_terminal(tmp_path):
+    import csv
+    import shutil
+    from coppersushi.data_sources.catalog_sweep import sweep
+    from coppersushi.data_sources.element_catalog import load
+    root=FIXTURE.parent/'catalog-sweep'
+    shutil.copytree(root,tmp_path/'input')
+    source=tmp_path/'input'
+    (source/'backfill/ends-conflict.csv').unlink()
+    with (source/'config/element-assessments.csv').open('w') as stream:
+        writer=csv.DictWriter(stream,fieldnames=['tso','eic','name','site_a','site_b','direct_orientation','assignment_evidence','orientation_evidence'])
+        writer.writeheader()
+        writer.writerow(dict(tso='TEST',eic='99T-UNKNOWN',name='Westhaven-Unknown',site_a='Westhaven',site_b='Eastfield',direct_orientation='a_to_b',assignment_evidence='reviewed guess',orientation_evidence='direction guess'))
+    sweep(source/'cache',source/'backfill',tmp_path/'output',source/'config')
+    with load(tmp_path/'output') as db:
+        rows=db.execute("SELECT p.* FROM element_endpoints p JOIN elements e USING(element_id) WHERE e.eic='99T-UNKNOWN' ORDER BY p.terminal").fetchall()
+        assert 'name lookup' in rows[0]['evidence']
+        assert 'reviewed guess' not in rows[0]['evidence']
+        assert 'reviewed guess' in rows[1]['evidence']
+
+
+def test_audit_counts_unknown_orientation_as_unmapped(tmp_path):
+    import csv
+    import gzip
+    import shutil
+    from coppersushi.data_sources.catalog_sweep import sweep
+    root=FIXTURE.parent/'catalog-sweep'
+    shutil.copytree(root,tmp_path/'input')
+    source=tmp_path/'input'
+    annual=source/'cache/research/country-caps/annual-json'
+    annual.mkdir(parents=True)
+    with gzip.open(annual/'activeFbConstraints-synthetic.gz','wb') as stream:
+        stream.write((root/'annual.json').read_bytes())
+    with (source/'config/element-assessments.csv').open('w') as stream:
+        writer=csv.DictWriter(stream,fieldnames=['tso','eic','name','site_a','site_b','direct_orientation','assignment_evidence','orientation_evidence'])
+        writer.writeheader()
+        writer.writerow(dict(tso='TEST',eic='99T-ABSENT',name='Missing pair',site_a='Westhaven',site_b='Eastfield',direct_orientation='unknown',assignment_evidence='reviewed guess',orientation_evidence='unknown direction'))
+    summary=sweep(source/'cache',source/'backfill',tmp_path/'output',source/'config')
+    with (tmp_path/'output/audit.csv').open() as stream:
+        row=next(row for row in csv.DictReader(stream) if row['eic']=='99T-ABSENT')
+    assert row['status'] == 'orientation_unknown'
+    assert summary['unresolved_active_appearances'] == 2
+    assert summary['fully_resolved_elements'] == 1

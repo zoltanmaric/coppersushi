@@ -54,6 +54,9 @@ The four tables describe a snapshot, not a history of topology. Conflicting endp
 publications remain unresolved across that snapshot. Source renames create distinct
 element publications; they do not silently rename a physical site or merge Y-line legs.
 Overrides include the full element publication name and endpoint label.
+The audit reports `orientation_unknown` when both sites are resolved but DIRECT is
+unknown. Such rows count as unmapped because the directed map cannot draw them.
+
 Static-grid terminal pairs do not by themselves establish a runtime publication's
 DIRECT orientation. Automatic joins must never transfer endpoints using EIC alone.
 Reviewed hypotheses may select a pair for an exact publication, with the discrepancy
