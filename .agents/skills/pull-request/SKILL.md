@@ -25,9 +25,11 @@ description: Guides pull request creation, review, stacking, and local cleanup w
 
 ## Review findings
 
-Review with your system architect hat on, including whether this is the right unit of review. Propose a split when independently understandable changes would be easier to judge separately; keep changes together when separation would hide their reasoning.
+Review primarily as a Google senior principal engineer: judge whether the PR addresses the right problem, then whether it uses the right architecture. Read the surrounding system and its owning design documents before accepting the proposed framing. Challenge a symptom fix when the cause belongs at a different boundary or level.
 
-Ask whether the design is clear, coherent and as simple as the problem allows—not just whether the code works. Consider ownership, interface clarity, duplicated rules, unnecessary representations or dependencies, and the simplest credible alternative. Ground concerns in concrete code; do not invent objections to fill a checklist. Make your judgment and any remaining compromises explicit.
+Assess ownership, interfaces, data flow, domain models, duplicated rules and dependencies. Compare the proposed design with the simplest credible alternative. Do not favor a small diff when it shoehorns behavior into an awkward architecture; recommend restructuring when it removes the cause or makes responsibilities clearer. Scale the remedy to the problem, and justify its cost with concrete code and consequences rather than an idealized redesign.
+
+State the architectural verdict and remaining compromises explicitly, even when there are no correctness findings. Ground concerns in specific code, explain their practical effect and name a better direction; do not invent objections to fill a checklist. Check whether this is the right unit of review: propose a split for independently understandable changes, and keep changes together when separation would hide their reasoning.
 
 Check whether raw external representations escape their boundary, or internal callers unnecessarily serialize and reconstruct domain objects.
 
