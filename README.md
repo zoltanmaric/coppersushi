@@ -149,16 +149,8 @@ Terraform providers retain their `.terraform.lock.hcl` files.
 The tests run against small checked-in fixtures under `tests/fixtures/`, never against the
 networks. Tests require no Mapbox token; they build figures without fetching map tiles.
 
-GitHub Actions runs Python tests and quality checks in parallel jobs on non-draft
-pull requests. App and forecast tests share one environment; type and frontend checks
-share another. Ghost theme and hosting checks get their own parallel jobs
-when `121gigawatts/`, `pyproject.toml`, `pixi.lock` or workflow files change. Manual runs
-include all checks. An independent container job checks the serving environment and
-native libraries. Only the Python test job writes the
-shared Pixi cache. Draft updates skip the checks.
-App tests use four pytest workers, keeping each test file on one worker to reuse
-fixtures. Output lists the 20 slowest test phases. To run the container check locally:
-`docker buildx build --target runtime-check --build-context fixtures=tests/fixtures .`.
+See the [CI design](.github/workflows/README.md) for GitHub Actions check groups,
+parallelism, cache choices and the local container check.
 
 ## Solving a day with PyPSA-Eur
 The networks in `networks/` are produced by [PyPSA-Eur](https://github.com/PyPSA/pypsa-eur),
