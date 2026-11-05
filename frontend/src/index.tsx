@@ -4,12 +4,13 @@ import {BrowserRouter, Route, Routes, useLocation, useNavigate, useParams} from 
 import {fetchCnec} from './api';
 import {Timeline} from './timeline';
 import {reduceSelection} from './state';
-import type {PlotlyFigure, LayerResponse, ConstraintOption} from './contracts';
+import {mapSelection} from './map-selection';
+import type {PlotlyFigure, LayerResponse} from './contracts';
 import {PriceLegend} from './price-legend';
 import './style.css';
 
 interface Props {id: string; day: string; min_day: string; token: string; basemap: PlotlyFigure['layout']['mapbox']['style']}
-interface GraphChange {clickData?: {points: {customdata?: unknown}[]} | null}
+interface GraphChange {clickData?: unknown}
 interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void}
 // Reuse Dash's Graph component and its Plotly loader instead of shipping Plotly twice.
 const Graph = (props: GraphProps) => {
@@ -50,7 +51,7 @@ export function CnecPage(props: Props & {navigate: (day: string) => void}) {
 function shell(token: string, basemap: Props['basemap']): PlotlyFigure {
   return {data: [{type: 'scattermapbox', lon: [], lat: []}], layout: {
     mapbox: {style: basemap, accesstoken: token, center: {lat: 50, lon: 10}, zoom: 3.5},
-    uirevision: 'cnec-camera', margin: {t: 0, b: 0, l: 0, r: 0}, showlegend: false,
+    clickanywhere: true, uirevision: 'cnec-camera', margin: {t: 0, b: 0, l: 0, r: 0}, showlegend: false,
     paper_bgcolor: '#1b1b1b',
   }};
 }
@@ -100,6 +101,7 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
       counts.set(name, ordinal + 1);
       trace.uid = `t${Array.from(name, c => c.codePointAt(0)!.toString(16)).join("-")}-${ordinal}`;
     }
+    copy.layout.clickanywhere = true;
     copy.layout.mapbox.style = basemap;
     copy.layout.mapbox.center = {lat: 50, lon: 10};
     copy.layout.mapbox.zoom = 3.5;
@@ -137,14 +139,10 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
     if (option) dispatch({type: 'select', selected: value === '' ? null : Number(value), source: option.source});
   }
   function mapClick(change: GraphChange) {
-    if (!mapCurrent) return;
-    const values = change.clickData?.points[0]?.customdata;
-    if (!Array.isArray(values) || typeof values[0] !== 'string') return;
-    const candidates = values[0].split(',');
-    if (selected !== null && candidates.includes(String(selected))) return;
-    const option = options.find((o: ConstraintOption) => o.value && candidates.includes(o.value));
-    if (option) select(option.value);
+    const action = mapSelection(change.clickData, options, selected, mapCurrent);
+    if (action) dispatch(action);
   }
+
   return <section id={id} className="cnec-react">
     <div className="cnec-controls">
       <input aria-label="Delivery day" type="date" min={min_day} value={day} onChange={e => {
