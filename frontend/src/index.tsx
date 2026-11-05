@@ -15,15 +15,40 @@ import './style.css';
 
 interface Props {id: string; day: string; min_day: string; token: string; basemap: PlotlyFigure['layout']['mapbox']['style']}
 interface GraphChange {clickData?: unknown; relayoutData?: Record<string, unknown>}
-interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void}
+interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void; onCameraMove: () => void}
 // Reuse Dash's Graph component and its Plotly loader instead of shipping Plotly twice.
-const Graph = (props: GraphProps) => {
-  const Component = (window as unknown as {dash_core_components: {Graph: React.ComponentType<GraphProps>}}).dash_core_components.Graph;
-  // Dash binds event listeners once; forward them to the current React handler.
-  const handler = useRef(props.setProps);
-  useLayoutEffect(() => {handler.current = props.setProps;}, [props.setProps]);
-  const setProps = useCallback((change: GraphChange) => handler.current(change), []);
-  return <Component {...props} setProps={setProps}/>;
+interface PlotElement extends HTMLElement {
+  on: (event: 'plotly_relayouting', handler: () => void) => void;
+  removeListener?: (event: 'plotly_relayouting', handler: () => void) => void;
+}
+
+const Graph = ({onCameraMove, ...props}: GraphProps) => {
+  const Component = (window as unknown as {dash_core_components: {Graph: React.ComponentType<Omit<GraphProps, 'onCameraMove'>>}}).dash_core_components.Graph;
+  const host = useRef<HTMLDivElement>(null);
+  // Dash binds event listeners once; forward them to the current React handlers.
+  const handlers = useRef({setProps: props.setProps, onCameraMove});
+  useLayoutEffect(() => {handlers.current = {setProps: props.setProps, onCameraMove};}, [props.setProps, onCameraMove]);
+  const setProps = useCallback((change: GraphChange) => handlers.current.setProps(change), []);
+  useEffect(() => {
+    let plot: PlotElement | null = null;
+    const moving = () => handlers.current.onCameraMove();
+    // Dash loads Plotly asynchronously. Subscribe when its public event emitter is mounted.
+    const attach = () => {
+      const node = host.current?.querySelector<PlotElement>('.js-plotly-plot');
+      if (!node || typeof node.on !== 'function') return;
+      plot = node;
+      plot.on('plotly_relayouting', moving);
+      observer.disconnect();
+    };
+    const observer = new MutationObserver(attach);
+    observer.observe(host.current!, {childList: true, subtree: true});
+    attach();
+    return () => {
+      observer.disconnect();
+      plot?.removeListener?.('plotly_relayouting', moving);
+    };
+  }, []);
+  return <div ref={host} style={props.style}><Component {...props} style={{height: '100%'}} setProps={setProps}/></div>;
 };
 
 type HostProps = Omit<Props, 'day'> & {default_day: string};
@@ -81,18 +106,6 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
 
   const [camera, setCamera] = useState<Camera>({lat: 50, lon: 10, zoom: 3.5, bearing: 0, pitch: 0});
   const [moving, setMoving] = useState(false);
-  const pointerStart = useRef<{x: number; y: number} | null>(null);
-  useEffect(() => {
-    // Releasing a drag does not stop Mapbox inertia. Only relayout publishes its final camera.
-    const endDrag = () => {pointerStart.current = null;};
-    window.addEventListener('pointerup', endDrag);
-    window.addEventListener('pointercancel', endDrag);
-    return () => {
-      window.removeEventListener('pointerup', endDrag);
-      window.removeEventListener('pointercancel', endDrag);
-    };
-  }, []);
-
   const calendar = useQuery({queryKey: ['calendar', day], queryFn: ({signal}) => fetchCnec('day', `day/${day}`, signal)});
   const validInterval = !!calendar.data && interval < calendar.data.labels.length;
   const prices = useQuery({queryKey: ['prices', day, interval], enabled: validInterval && inputSettled,
@@ -184,13 +197,8 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
       </select>
       <span>{selected === null ? '' : `Reference: ${enriched.isSuccess ? enriched.data.reference ?? 'unavailable' : enriched.isError || prices.isError || attribution.isError ? 'unavailable' : 'pending'}`}</span>
     </div>
-    <div className="cnec-map-container" onPointerDownCapture={event => {
-      pointerStart.current = {x: event.clientX, y: event.clientY};
-    }} onPointerMoveCapture={event => {
-      const start = pointerStart.current;
-      if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 3) setMoving(true);
-    }} onWheelCapture={() => setMoving(true)}>
-      <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick}
+    <div className="cnec-map-container">
+      <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick} onCameraMove={() => setMoving(true)}
         config={{responsive: true, displayModeBar: false, scrollZoom: true}} style={{height: '100%'}}/>
       <small className="cnec-sources">
         Data: <a href="https://publicationtool.jao.eu/core/">JAO</a> · {' '}

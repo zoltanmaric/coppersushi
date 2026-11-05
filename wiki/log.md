@@ -5,7 +5,7 @@ Entry format: `## [YYYY-MM-DD] <operation> | <title>`
 
 ## [2026-11-05] query | CNEC map renderer and progressive updates
 
-The CNEC controls already use React, while Plotly and Mapbox own map rendering. Independent API responses still refresh Plotly symbol layers; batching reduces redraws but delays progressive display. [Map rendering direction](copper-sushi-app.md#map-rendering-direction) records the observed interaction and rendering constraints for evaluating a replacement.
+The CNEC controls already use React, while Plotly and Mapbox own map rendering. Independent API responses still refresh Plotly symbol layers; batching reduces redraws but delays progressive display. [Map rendering direction](copper-sushi-app.md) records the observed interaction and rendering constraints for evaluating a replacement.
 
 ## [2026-09-10] query | Which way a published row binds
 
@@ -374,4 +374,4 @@ Verify supported APIs in the pinned dependency version and state behavior tradeo
 
 ## [2026-11-05] decision | Map ownership for animated effects
 
-Recorded [the shared camera/layer ownership limitation](copper-sushi-app.md#map-rendering-direction) behind the custom selection overlay and independent-layer redraw problems. Native static strokes are simpler but lose the electric filaments; the animated appearance remains the chosen tradeoff.
+Recorded [the shared camera/layer ownership limitation](copper-sushi-app.md) behind the custom selection overlay and independent-layer redraw problems. Native static strokes are simpler but lose the electric filaments; the animated appearance remains the chosen tradeoff.
