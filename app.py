@@ -216,7 +216,15 @@ def show_page(pathname: str, root_view: str = ROOT_VIEW) -> html.Div:
     if unsupported_cnec_path(pathname):
         return html.Div(dcc.Location(id='cnec-redirect', href='/cnec', refresh=True))
     if is_cnec_path(pathname):
-        return html.Div([navigation(), CnecView(id='cnec-view', day=cnec_day_from_path(pathname) or cnec_page.local_today(), min_day=CNEC_FIRST_DAY.isoformat(), token=mapbox_token(), basemap=basemap())])
+        return html.Div([navigation(),
+            html.Small([
+                'Data: ', html.A('JAO', href='https://publicationtool.jao.eu/core/'), ' · ',
+                html.A('Electricity Maps', href='https://www.electricitymaps.com/'), ' · ',
+                html.A('© OpenStreetMap contributors', href='https://www.openstreetmap.org/copyright'),
+                '. Price contributions calculated by Copper Sushi.',
+            ], style={'display': 'block', 'padding': '0 1rem .25rem'}),
+            CnecView(id='cnec-view', day=cnec_day_from_path(pathname) or cnec_page.local_today(), min_day=CNEC_FIRST_DAY.isoformat(), token=mapbox_token(), basemap=basemap()),
+        ])
     if network_key_from_path(pathname) is None:
         return html.Div([html.H1('Page not found'), dcc.Link('2024 OPF', href='/opf-2024')])
     return html.Div([
@@ -308,4 +316,6 @@ cnec_http.register(server, cnec_http.Services(core_zones, mapbox_token, basemap,
 
 
 if __name__ == '__main__':
+    from coppersushi.data_sources.runtime_data import check
+    check()
     app.run(debug=True)

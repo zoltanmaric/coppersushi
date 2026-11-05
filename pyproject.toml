@@ -69,7 +69,10 @@ build = { features = ["build"], solve-group = "default" }
 
 [tool.pixi.tasks]
 setup = { cmd = "python -c \"import sys; print('Python interpreter:', sys.executable)\"", depends-on = ["theme-install", "hosting-setup", "frontend-build"] }
-dev = { cmd = "python app.py", depends-on = ["frontend-build"] }
+setup-app = { depends-on = ["setup", "setup-data"] }
+setup-data = "git lfs pull && python -m coppersushi.data_sources.runtime_data prepare"
+check-data = "python -m coppersushi.data_sources.runtime_data check"
+dev = { cmd = "python app.py", depends-on = ["check-data", "frontend-build"] }
 build-zone-shapes = "python -m coppersushi.data_sources.zone_shapes"
 test-app = "python -m pytest -q -n 4 --dist loadfile --durations=20"
 test-forecast = "python -m unittest discover -s forecasts/tests -v"

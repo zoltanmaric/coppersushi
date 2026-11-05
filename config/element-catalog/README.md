@@ -14,6 +14,12 @@ source records instead of inventing connections.
 
 ## Build and validate
 
+For a new developer checkout or deployment build context, run
+`pixi run --locked setup-app` from the repository root. It installs the environment
+and prepares all required tables. Reuse cached inputs with `pixi run --locked setup-data`;
+check readiness offline with `pixi run --locked check-data`. The commands below extend
+the catalog with research observations; they are not prerequisites for local startup.
+
 The input cache contains the OSM locator, `osm-prebuilt-v0.7/buses.csv`, JAO endpoint
 and domain CSVs, and retained annual `activeFbConstraints` responses. Backfill reads
 all physical domain rows, including non-presolved rows. It requests at most one
@@ -31,7 +37,11 @@ Constraint appearances are deduplicated by UTC timestamp and source row ID. Coun
 limits and other nonphysical constraints are counted separately; virtual hubs are
 not catalog entities. Contingency references do not become guessed physical elements.
 
-Real JAO-derived CSVs remain ignored, as do locator-derived coordinates. CI validates
+Bulk JAO endpoint tables and generated catalog snapshots remain ignored, as do
+locator-derived coordinates. Reviewed project mappings in this directory and the
+substation alias files are tracked inputs. Reviewed element assessments seed their
+own identities even when the bootstrap day did not publish them; their inferred
+basis and evidence remain explicit. CI validates
 synthetic fixtures through the same schema. `osm-sites.csv` identifies reviewed OSM
 supplements by object type and ID; their tags must be retained. Coordinates come from the cached OSM bus data,
 or from the centroid of a retained complete, valid substation polygon when that
@@ -104,3 +114,18 @@ validated against the current relational schema, and rebuilt with A/B columns. S
 and element IDs remain stable. These four tables still describe a snapshot, not
 historical validity: evidence dates do not establish validity for every historical
 hour. The seven provisional assessments document that limitation in their evidence.
+
+## Sources and educational use
+
+Copper Sushi uses JAO observations and its reviewed mappings to explain electricity
+market constraints in a free, noncommercial educational project. This is the
+project’s interpretation of Legitimate Use under [JAO’s terms](https://www.jao.eu/terms-conditions),
+not written authorization or an open licence for JAO data. Source values and inferred
+assignments retain separate provenance. Bulk observations are rebuilt locally.
+
+The downloaded [core-tso-data](https://github.com/fneum/core-tso-data#license) locator
+has MIT-licensed code but no stated data licence; it remains ignored. Replacing it
+with directly sourced OSM data is deferred. The pinned
+[PyPSA-Eur OSM buses v0.7](https://zenodo.org/records/18619025) and direct OSM
+geometry are © OpenStreetMap contributors under ODbL. These upstream terms also
+apply to derived data; the project does not relicense upstream content.

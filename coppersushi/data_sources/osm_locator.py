@@ -1,13 +1,12 @@
 """Substation coordinates for JAO Static Grid Model names, borrowed from core-tso-data.
 
 JAO publishes grid elements with substation *names* and no coordinates. `github.com/fneum/
-core-tso-data` (MIT, by the PyPSA developers) carries hand-corrected geocoding of those
+core-tso-data` (code: MIT, data: no stated licence) carries hand-corrected geocoding of those
 names: one CSV per TSO template under its `OSM-locator/` directory, each row a Static Grid
 Model substation name matched to an OSM object's centroid.
 
-**Nothing extracted here is committed.** The CSVs' first column is JAO Static Grid Model
-Content, whose terms forbid redistribution, so the cache lives in a gitignored `data/`
-exactly as `jao.py` and `jao_static_grid.py` do; anyone reproducing this work runs `fetch`.
+The locator data has no stated licence (MIT covers its code only). Downloaded
+CSVs remain in ignored `data/`; reviewed project mappings live in `config/`.
 
 The repository is pinned to a commit rather than tracked on `main`: the corrections are
 hand-made and edited in place, so a moving branch would silently move a substation.

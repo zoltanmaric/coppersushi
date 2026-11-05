@@ -280,7 +280,8 @@ def sweep(cache_root: Path, backfill: Path, output: Path,
     for eic,tso,name,branch in constraints.values():
         counts[(eic,tso,name)]+=1
         if branch and branch!='NA':contingency_counts[branch]+=1
-    keys=set(observations)|set(counts)
+    # Reviewed project mappings are inputs even when the bootstrap day did not observe them.
+    keys=set(observations)|set(counts)|set(assessments)
     elements: list[dict] = []
     endpoints: dict[tuple[str, str], dict] = {}
     source_evidence: dict[str, str] = {}

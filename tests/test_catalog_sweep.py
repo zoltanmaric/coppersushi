@@ -232,3 +232,20 @@ def test_audit_counts_unknown_orientation_as_unmapped(tmp_path):
     assert row['status'] == 'orientation_unknown'
     assert summary['unresolved_active_appearances'] == 2
     assert summary['fully_resolved_elements'] == 1
+
+
+def test_reviewed_mapping_bootstraps_without_annual_or_domain_observation(tmp_path):
+    import shutil
+    from coppersushi.data_sources.catalog_sweep import sweep
+    from coppersushi.data_sources.element_catalog import load
+    root = FIXTURE.parent/'catalog-sweep'
+    shutil.copytree(root, tmp_path/'input')
+    source = tmp_path/'input'
+    shutil.copyfile(root/'config/reviewed-mappings.csv', source/'config/element-assessments.csv')
+    sweep(source/'cache', source/'backfill', tmp_path/'output', source/'config')
+    with load(tmp_path/'output') as db:
+        row = db.execute("SELECT * FROM elements WHERE eic='99T-REVIEWED'").fetchone()
+        assert row['orientation_basis'] == 'inferred'
+        ends = db.execute('SELECT * FROM element_endpoints WHERE element_id=?', (row['element_id'],)).fetchall()
+        assert len(ends) == 2
+        assert all(end['assignment_basis'] == 'inferred' and end['published_name'] is None for end in ends)

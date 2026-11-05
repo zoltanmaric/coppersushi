@@ -12,10 +12,8 @@ __pycache__/
 /forecasts/infra/*.tfvars.json
 /forecasts/infra/*.tfplan
 
-# JAO's terms reserve all reproduction rights and forbid redistributing Content; this repository
-# is public, so no JAO-derived bytes are committed — not the tables, not captured API responses.
-# `python -m coppersushi.data_sources.jao fetch <day>` refills the first; the tests run on
-# synthesised look-alikes in tests/fixtures/synthetic-jao/.
+# Bulk JAO observations and generated catalogs are rebuilt locally; reviewed mappings
+# are tracked in config/. See config/element-catalog/README.md for source terms.
 /data/jao/
 /tests/fixtures/jao/
 /wiki/.obsidian/

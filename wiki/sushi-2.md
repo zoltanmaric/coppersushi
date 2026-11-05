@@ -31,7 +31,11 @@ flowchart LR
     osm_locator["osm_locator<br/>core-tso-data's OSM-locator substation coordinates, unlicensed, fetched locally"]
     element_catalog["Physical-element catalog<br/>sites, source names, publications and assessed A/B terminals: four CSVs"]
     validated_catalog["Validated catalog<br/>SQLite keys, references, states and exact site joins"]
-    catalog_sweep["Catalog compiler<br/>retained JAO observations, reviewed hypotheses and independent orientation evidence"]
+    catalog_sweep["Catalog compiler<br/>cached JAO seed/observations, tracked reviewed mappings and independent orientation evidence"]
+    setup_data["Application data setup<br/>cached downloads, catalog compilation and country outlines"]
+    setup_data --> jao_endpoint_cache
+    setup_data --> osm_locator
+    setup_data --> catalog_sweep
     jao_endpoint_cache --> catalog_sweep
     jao_active_constraints --> catalog_sweep
     osm_locator --> catalog_sweep
@@ -40,6 +44,8 @@ flowchart LR
     catalog_assessments["Reviewed endpoint and direction hypotheses<br/>basis and evidence retained; normal map appearance"] --> catalog_sweep
     catalog_sweep --> element_catalog
     element_catalog --> validated_catalog
+    validated_catalog --> startup_check["Startup readiness<br/>nonempty validated catalog, endpoint seed, locator, outlines and solved network"]
+    zone_shapes --> startup_check
     cnec_geometry["cnec_geometry<br/>each named element and publisher placed by its published substations"]
     zone_shapes["zone_shapes<br/>Core bidding-zone polygons derived from solved_network at image build; small bundled GeoJSON read at runtime"]
     mapbox_basemap["mapbox_basemap<br/>Mapbox's dark style fetched per process, label layers removed"]

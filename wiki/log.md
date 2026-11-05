@@ -359,3 +359,11 @@ Found JAO's October 2025 notice establishing 100 requests/minute per user or IP.
 ## [2026-11-03] query | Meaning of price attribution
 
 Defined [price attribution](flow-based-market-coupling.md#attribution) with a numerical example, distinguishing supplementary calculation inputs, resulting price contributions, and the separate question of prices after removing a constraint.
+
+## [2026-11-05] decision | Reviewed CNEC mappings support educational use
+
+The project treats its free, noncommercial explanation of market constraints as
+Legitimate Use under JAO's terms. This is a project interpretation, not written
+redistribution permission. Reviewed mappings remain tracked; bulk endpoint tables,
+generated catalogs and the separately unlicensed locator remain locally rebuilt
+inputs. [Source provenance and setup](../config/element-catalog/README.md#sources-and-educational-use).
