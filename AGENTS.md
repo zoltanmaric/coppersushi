@@ -16,6 +16,8 @@
 
 - **conciseness** — Conciseness is of utmost importance. The bottleneck of agent-driven development is the human's comprehension and attention. Minimize what the reader must inspect, not just sentence length: a separate page must earn its attention with useful content that has no existing home. Say only what needs to be said — so the human can read it fast and move fast. This applies to chat replies, documents, and wiki pages alike. Follow Simplified Technical English principles: common words, short sentences, and clear explanations; explain necessary technical terms and make their context explicit.
 
+- **browser-verification** — After showing a preview or exercising a browser flow, inspect console errors, failed network requests (including HTTP errors), and visible warnings for that interaction. Investigate relevant failures before reporting success; disclose unresolved failures and unavailable inspection capabilities. Use existing browser tools for these checks; keep agent-only diagnostics out of application code.
+
 - **delete-heavily** — Rely heavily on git — delete code with a heavy hand. Git history is the archive. Never keep commented-out code, unused functions, "just in case" branches, or half-finished experiments in the tree; delete them and recover from history if ever needed. Prefer discarding stale uncommitted work over carrying it along.
 
 - **design-first** — Design-first for non-trivial work.
