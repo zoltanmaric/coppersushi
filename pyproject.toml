@@ -9,7 +9,6 @@ requires-python = ">=3.14,<3.15"
 dependencies = [
     "dash==4.4.1",
     "dash-bootstrap-components==2.0.4",
-    "pypsa==1.2.4",
     "pandas==3.0.5",
     "plotly==6.9.0",
     "numpy==2.5.2",
@@ -27,6 +26,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+build = ["pypsa==1.2.4"]
 dev = [
     "pytest==9.1.1",
     "mypy==2.4.0",
@@ -62,8 +62,9 @@ make = "4.4.1.*"
 coppersushi = { path = ".", editable = true }
 
 [tool.pixi.environments]
-default = { features = ["dev"], solve-group = "default" }
+default = { features = ["build", "dev"], solve-group = "default" }
 runtime = { features = [], solve-group = "default" }
+build = { features = ["build"], solve-group = "default" }
 
 [tool.pixi.tasks]
 setup = { cmd = "python -c \"import sys; print('Python interpreter:', sys.executable)\"", depends-on = ["theme-install", "hosting-setup"] }

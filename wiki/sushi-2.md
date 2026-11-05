@@ -47,7 +47,10 @@ flowchart LR
     opf_embed["opf_embed<br/>/embed/opf-2024: map and hourly controls"]
     net_power_map --> opf_full
     net_power_map --> opf_embed
-    solved_network --> net_power_map
+    opf_bundle["opf_bundle<br/>24 hourly figures generated with PyPSA in the build environment"]
+    solved_network --> opf_bundle
+    opf_bundle -->|Lambda runtime: no solver dependencies| net_power_map
+    solved_network -->|local development fallback| net_power_map
     solved_network --> zone_shapes
     zone_shapes --> cnec_price_figure
     jao_domain --> jao_endpoint_cache

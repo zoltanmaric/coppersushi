@@ -113,7 +113,9 @@ read-only. Complete validated cache bundles persist in private S3; related
 tables publish together and endpoint discoveries merge without lost concurrent
 writes. Failed fetches remain retryable.
 
-The image precomputes zone outlines and 24 hourly OPF figures without credentials.
+The `bundle-builder` stage uses the `build` environment to precompute zone outlines
+and 24 hourly OPF figures without credentials. The final image uses `runtime`,
+which omits PyPSA and its solver dependencies.
 Runtime reads the selected hour and adds the Mapbox token. Local OPF views without
 bundles render on demand; country outlines require `pixi run --locked build-zone-shapes`.
 Lambda initialization and first-use data loading are separate costs. Buffered synchronous responses must fit Lambda's 6 MB limit.

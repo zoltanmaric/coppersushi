@@ -160,7 +160,11 @@ committed version is a Git LFS object kept forever. Set `PYPSA_EUR_DIR` to use a
 The app runs on AWS Lambda behind CloudFront. Follow the [deployment runbook](infra/lambda/README.md)
 to prepare bundled data, build the image and deploy an update.
 
-Docker uses Pixi's official image to install the `runtime` environment from the same
-`pyproject.toml` and `pixi.lock` used for development. The final image receives that
-prepared environment and its activation script; it needs no package manager or
-separate production dependency definition.
+Dependencies compose in `pyproject.toml`: the shared base serves the app, the `build`
+extra adds PyPSA for bundle generation, and `dev` adds development tools. Pixi's
+`default` environment combines all three; `build` combines base + build; `runtime`
+uses only the base. All environments share version resolution in `pixi.lock`.
+
+Docker prepares data in the `bundle-builder` stage and installs the serving
+packages and precompiles Python bytecode in `environment`. The final Lambda image receives the runtime environment
+and generated data, without the build environment or its solver dependencies.
