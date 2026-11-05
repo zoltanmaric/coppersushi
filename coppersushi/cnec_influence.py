@@ -3,7 +3,7 @@
 A ray is the row's shadow price times the zone's PTDF difference to the reference zone: zonal
 sensitivity, never a power-flow path. Rays leave the reference zone, arc north and land on each zone's
 label point; they are not routed along grid branches. The look follows
-wiki/assets/cnec-price-influence-map-preview.png: width scales with contribution size; purple is positive and teal is negative.
+wiki/assets/cnec-price-influence-map-preview.png: purple is positive and teal is negative.
 """
 
 import math
@@ -21,7 +21,7 @@ from coppersushi.cnec_attribution import price_spread
 ARC_POINTS = 24
 BOW = 0.18  # Control point this fraction of the chord north of its midpoint: rays rise from the
 # element and arc down onto their zones, and a ray due north stays straight
-RAY_WIDTH = (1.0, 3.5)  # Thinnest and widest ray, by contribution size relative to the largest drawn
+RAY_WIDTH = 4.2
 NEGLIGIBLE = 1e-9  # A contribution this small needs no ray
 
 
@@ -56,20 +56,12 @@ def arc(
     return bezier(x0, control_x, x1), bezier(y0, control_y, y1)
 
 
-def _sized(contributions: pd.Series, smallest: float, largest: float) -> pd.Series:
-    """Linear in the contribution's size relative to the largest drawn."""
-    scale = contributions.abs().max()
-    share = contributions.abs() / scale if scale > 0 else contributions.abs()
-    return smallest + (largest - smallest) * share
-
-
 def _rays(origin: tuple[float, float], zonal: pd.DataFrame) -> list[go.Scattermapbox]:
     """Quiet, signed contribution rays; selection belongs to the physical element."""
     influenced = zonal[zonal.contribution.abs() > NEGLIGIBLE]
-    widths = _sized(influenced.contribution, *RAY_WIDTH)
     rays = []
     label_lon, label_lat, labels = [], [], []
-    for (_, row), width in zip(influenced.iterrows(), widths):
+    for _, row in influenced.iterrows():
         lon, lat = arc(origin, (row.x, row.y))
         midpoint = len(lon) // 2
         label_lon.append(lon[midpoint])
@@ -84,7 +76,7 @@ def _rays(origin: tuple[float, float], zonal: pd.DataFrame) -> list[go.Scatterma
             hoverinfo="text",
             hovertext=row.hover,
             showlegend=False,
-            line=dict(color=map_style.PRICE_DOWN if row.contribution < 0 else map_style.BINDING, width=width),
+            line=dict(color=map_style.PRICE_DOWN if row.contribution < 0 else map_style.BINDING, width=RAY_WIDTH),
             opacity=0.48,
         )
         rays.append(core)

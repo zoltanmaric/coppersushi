@@ -69,13 +69,6 @@ def test_positive_contributions_are_purple_and_negative_contributions_are_teal()
     assert trace(overlay, "DE ray").line.color == map_style.PRICE_DOWN
 
 
-def test_width_follows_the_size_of_the_contribution():
-    overlay = cnec_influence.overlay(*frames())
-    widths = {zone: trace(overlay, f"{zone} ray").line.width for zone in ("BE", "SI", "DE")}
-    assert widths["SI"] > widths["DE"] > widths["BE"]
-    assert widths["SI"] == cnec_influence.RAY_WIDTH[1]
-
-
 def test_rays_are_translucent_without_a_glow():
     overlay = cnec_influence.overlay(*frames())
     core = trace(overlay, "SI ray")
