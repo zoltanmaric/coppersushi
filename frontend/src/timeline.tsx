@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 
 /** Retain one tick per returned interval, including both occurrences of a DST hour. */
 export function timelineTicks(labels: string[]) {
@@ -11,11 +11,30 @@ export function timelineTicks(labels: string[]) {
   });
 }
 
-interface Props {labels: string[]; interval: number; disabled: boolean; onChange: (interval: number) => void}
-export function Timeline({labels, interval, disabled, onChange}: Props) {
+interface Props {labels: string[]; interval: number; disabled: boolean; onChange: (interval: number) => void;
+  onScrubbingChange: (scrubbing: boolean) => void}
+const navigationKeys = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown']);
+
+export function Timeline({labels, interval, disabled, onChange, onScrubbingChange}: Props) {
+  useEffect(() => {
+    const finish = () => onScrubbingChange(false);
+    const keyUp = (event: KeyboardEvent) => {if (navigationKeys.has(event.key)) finish();};
+    window.addEventListener('pointerup', finish);
+    window.addEventListener('pointercancel', finish);
+    window.addEventListener('keyup', keyUp);
+    window.addEventListener('blur', finish);
+    return () => {
+      window.removeEventListener('pointerup', finish);
+      window.removeEventListener('pointercancel', finish);
+      window.removeEventListener('keyup', keyUp);
+      window.removeEventListener('blur', finish);
+    };
+  }, [onScrubbingChange]);
   return <div className="cnec-timeline-scroll"><div className="cnec-timeline">
     <input aria-label="Market interval" aria-valuetext={labels[interval]} type="range" min={0}
       max={Math.max(0, labels.length - 1)} step={1} value={interval} disabled={disabled}
+      onPointerDown={() => onScrubbingChange(true)} onBlur={() => onScrubbingChange(false)}
+      onKeyDown={event => {if (navigationKeys.has(event.key)) onScrubbingChange(event.repeat);}}
       onChange={e => onChange(Number(e.target.value))}/>
     <div className="cnec-timeline-marks" aria-hidden="true">
       {timelineTicks(labels).map(tick => <span key={tick.index} title={tick.label}

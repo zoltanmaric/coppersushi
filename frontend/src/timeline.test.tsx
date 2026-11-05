@@ -33,7 +33,7 @@ test('both repeated two-o’clock labels remain distinguishable', () => {
 test('the rendered timeline exposes ticks, timezone labels and keyboard-sized interval steps', () => {
   const labels = calendars['2026-10-25'].labels;
   let selected = 0;
-  const {container} = render(<Timeline labels={labels} interval={0} disabled={false} onChange={index => {selected = index;}}/>);
+  const {container} = render(<Timeline labels={labels} interval={0} disabled={false} onScrubbingChange={() => {}} onChange={index => {selected = index;}}/>);
   expect(container.querySelectorAll('.cnec-tick')).toHaveLength(100);
   expect(container.querySelectorAll('.cnec-tick-major')).toHaveLength(13);
   expect(screen.getAllByText('02:00').map(el => el.textContent)).toEqual(['02:00CEST', '02:00CET']);
@@ -43,4 +43,25 @@ test('the rendered timeline exposes ticks, timezone labels and keyboard-sized in
   expect(slider.getAttribute('step')).toBe('1');
   fireEvent.change(slider, {target: {value: '12'}});
   expect(selected).toBe(12);
+});
+
+
+test('single key steps are immediate; key repetition and dragging finish on release', () => {
+  let scrubbing = false;
+  render(<Timeline labels={calendars['2026-10-25'].labels} interval={0} disabled={false}
+    onChange={() => {}} onScrubbingChange={value => {scrubbing = value;}}/>);
+  const slider = screen.getByLabelText('Market interval');
+  fireEvent.keyDown(slider, {key: 'ArrowRight', repeat: false});
+  expect(scrubbing).toBe(false);
+  fireEvent.keyDown(slider, {key: 'ArrowRight', repeat: true});
+  expect(scrubbing).toBe(true);
+  fireEvent.keyUp(window, {key: 'ArrowRight'});
+  expect(scrubbing).toBe(false);
+  fireEvent.pointerDown(slider);
+  expect(scrubbing).toBe(true);
+  fireEvent.pointerUp(window);
+  expect(scrubbing).toBe(false);
+  fireEvent.pointerDown(slider);
+  fireEvent.blur(window);
+  expect(scrubbing).toBe(false);
 });

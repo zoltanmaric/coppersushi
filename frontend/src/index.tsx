@@ -50,6 +50,8 @@ function View({id, day: routeDay, min_day, token, basemap}: Props) {
   useEffect(() => {dispatch({type: 'day', day: routeDay});}, [routeDay]);
   const {day, interval, selected, source} = selection;
   const view = {day, interval, selected};
+  const [scrubbing, setScrubbing] = useState(false);
+  const inputSettled = !scrubbing;
   const [camera, setCamera] = useState<Camera>({lat: 50, lon: 10, zoom: 3.5, bearing: 0});
   const [moving, setMoving] = useState(false);
   const pointerStart = useRef<{x: number; y: number} | null>(null);
@@ -69,20 +71,20 @@ function View({id, day: routeDay, min_day, token, basemap}: Props) {
   }, []);
   const calendar = useQuery({queryKey: ['calendar', day], queryFn: ({signal}) => fetchCnec('day', `day/${day}`, signal)});
   const validInterval = !!calendar.data && interval < calendar.data.labels.length;
-  const prices = useQuery({queryKey: ['prices', day, interval], enabled: validInterval,
+  const prices = useQuery({queryKey: ['prices', day, interval], enabled: validInterval && inputSettled,
     queryFn: ({signal}) => fetchCnec('layer', 'prices', signal, {day, interval, selected: null})});
-  const constraints = useQuery({queryKey: ['constraints', day, interval], enabled: validInterval,
+  const constraints = useQuery({queryKey: ['constraints', day, interval], enabled: validInterval && inputSettled,
     queryFn: ({signal}) => fetchCnec('layer', 'constraints', signal, {day, interval, selected: null})});
   const attribution = useQuery({queryKey: ['attribution', day], enabled: constraints.isSuccess,
     queryFn: ({signal}) => fetchCnec('attribution', `attribution/${day}`, signal)});
   const caps = useQuery({queryKey: ['enriched', day, interval, null, attribution.dataUpdatedAt],
-    enabled: prices.isSuccess && constraints.isSuccess && attribution.isSuccess,
+    enabled: inputSettled && prices.isSuccess && constraints.isSuccess && attribution.isSuccess,
     queryFn: ({signal}) => fetchCnec('layer', 'enriched', signal, {day, interval, selected: null, attribution: attribution.data})});
   const highlight = useQuery({queryKey: ['highlight', day, interval, selected],
-    enabled: selected !== null && constraints.isSuccess,
+    enabled: inputSettled && selected !== null && constraints.isSuccess,
     queryFn: ({signal}) => fetchCnec('layer', 'constraints', signal, view)});
   const enriched = useQuery({queryKey: ['enriched', day, interval, selected, attribution.dataUpdatedAt],
-    enabled: selected !== null && prices.isSuccess && constraints.isSuccess && attribution.isSuccess,
+    enabled: inputSettled && selected !== null && prices.isSuccess && constraints.isSuccess && attribution.isSuccess,
     queryFn: ({signal}) => fetchCnec('layer', 'enriched', signal, {...view, attribution: attribution.data})});
   const full = selected === null ? caps.data : enriched.data;
   const figure = useMemo(() => full?.figure ?? combine(token, basemap, prices.data, highlight.data ?? constraints.data, caps.data),
@@ -126,7 +128,7 @@ function View({id, day: routeDay, min_day, token, basemap}: Props) {
     ['Attribution', attribution], ['Country caps', caps], ['Selection', highlight],
     ...(selected === null ? [] : [['Contributions', enriched] as const]),
   ] as const;
-  const loading = !calendar.data && calendar.isFetching ? 'Loading market intervals…' : !prices.data && prices.isFetching ? 'Loading prices…' :
+  const loading = validInterval && !inputSettled && !mapCurrent ? 'Loading interval…' : !calendar.data && calendar.isFetching ? 'Loading market intervals…' : !prices.data && prices.isFetching ? 'Loading prices…' :
     !constraints.data && constraints.isFetching ? 'Loading constraints…' :
     (attribution.isFetching || caps.isFetching || enriched.isFetching) ? 'Loading price contributions…' : '';
   function select(value: string) {
@@ -214,7 +216,7 @@ function View({id, day: routeDay, min_day, token, basemap}: Props) {
         onClick={() => dispatch({type: 'interval', interval: interval + 1})}>Next</button>
       <output>{calendar.data?.labels[interval]}</output>
       <Timeline labels={calendar.data?.labels ?? []} interval={interval} disabled={!validInterval}
-        onChange={interval => dispatch({type: 'interval', interval})}/>
+        onScrubbingChange={setScrubbing} onChange={interval => dispatch({type: 'interval', interval})}/>
     </div>
   </section>;
 }
