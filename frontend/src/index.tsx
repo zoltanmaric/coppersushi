@@ -201,9 +201,9 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
       <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick} onCameraMove={() => setMoving(true)}
         config={{responsive: true, displayModeBar: false, scrollZoom: true}} style={{height: '100%'}}/>
       <small className="cnec-sources">
-        Data: <a href="https://publicationtool.jao.eu/core/">JAO</a> · {' '}
-        <a href="https://www.electricitymaps.com/">Electricity Maps</a> · {' '}
-        <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>
+        Data: <a href="https://publicationtool.jao.eu/core/" target="_blank" rel="noopener noreferrer">JAO</a> · {' '}
+        <a href="https://www.electricitymaps.com/" target="_blank" rel="noopener noreferrer">Electricity Maps</a> · {' '}
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>
       </small>
       <PriceLegend figure={graphFigure}/>
 
