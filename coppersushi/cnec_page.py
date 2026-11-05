@@ -100,9 +100,9 @@ def render(
             alpha = float(scaling.alpha.iloc[0])
     if selected is not None and selected.source_id in active.source_id.values:
         row = active[active.source_id.eq(selected.source_id)].iloc[0]
-        reference_zone = cnec_attribution.physical_reference(row, mapped_elements, day.zones)
+        reference_zone = cnec_attribution.physical_reference(row, mapped_elements, day.zones, day.prices)
         if reference_zone is None:
-            note = "Contribution unavailable: sending endpoint has no unambiguous Core bidding zone."
+            note = "Contribution unavailable: no unambiguous Core reference is available."
     if note:
         assert selected is not None
         snapshot = cnec_market.snapshot(day.constraints, day.ptdfs,
