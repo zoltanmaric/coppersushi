@@ -13,43 +13,65 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  checks:
     if: ${{ github.event_name == 'workflow_dispatch' || !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 5
+    outputs:
+      tasks: ${{ steps.select.outputs.tasks }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 2
-      - name: Select Ghost checks
-        id: ghost
+      - name: Select checks
+        id: select
         env:
           EVENT_NAME: ${{ github.event_name }}
         run: |
           if [[ "$EVENT_NAME" == workflow_dispatch ]]; then
-            echo 'changed=true' >> "$GITHUB_OUTPUT"
+            ghost=true
           elif git diff --quiet HEAD^1 HEAD -- 121gigawatts/ pyproject.toml pixi.lock .github/workflows/; then
-            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            ghost=false
           else
-            echo 'changed=true' >> "$GITHUB_OUTPUT"
+            ghost=true
           fi
+          if [[ "$ghost" == true ]]; then
+            echo 'tasks=["test-app","test-forecast","typecheck","frontend-test","theme-test","hosting-test"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'tasks=["test-app","test-forecast","typecheck","frontend-test"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  test:
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        task: ${{ fromJSON(needs.checks.outputs.tasks) }}
+    steps:
+      - uses: actions/checkout@v7
       - uses: prefix-dev/setup-pixi@v0.9.4
         with:
           pixi-version: v0.77.1
           cache: true
           locked: true
-      - run: pixi run --locked frontend-build
-      - run: pixi run --locked test-core
+      - name: Build frontend assets for application tests
+        if: matrix.task == 'test-app'
+        run: pixi run --locked frontend-build
+      - name: Install frontend dependencies
+        if: matrix.task == 'frontend-test'
+        run: pixi run --locked frontend-install
       - name: Install Ghost dependencies
-        if: steps.ghost.outputs.changed == 'true'
-        run: |
-          pixi run --locked theme-install
-          pixi run --locked hosting-setup
-      - name: Check Ghost theme and hosting
-        if: steps.ghost.outputs.changed == 'true'
-        run: |
-          pixi run --locked theme-test
-          pixi run --locked hosting-test
+        if: matrix.task == 'theme-test'
+        run: pixi run --locked theme-install
+      - name: Install hosting dependencies
+        if: matrix.task == 'hosting-test'
+        run: pixi run --locked hosting-setup
+      - name: Run check
+        env:
+          CHECK_TASK: ${{ matrix.task }}
+        run: pixi run --locked "$CHECK_TASK"
 
   container:
     if: ${{ github.event_name == 'workflow_dispatch' || !github.event.pull_request.draft }}

@@ -29,6 +29,7 @@ dependencies = [
 build = ["pypsa==1.2.4"]
 dev = [
     "pytest==9.1.1",
+    "pytest-xdist==3.8.0",
     "mypy==2.4.0",
     "ansible-core==2.20.0",
     "pandas-stubs==3.0.5.260914",
@@ -70,7 +71,7 @@ build = { features = ["build"], solve-group = "default" }
 setup = { cmd = "python -c \"import sys; print('Python interpreter:', sys.executable)\"", depends-on = ["theme-install", "hosting-setup", "frontend-build"] }
 dev = { cmd = "python app.py", depends-on = ["frontend-build"] }
 build-zone-shapes = "python -m coppersushi.data_sources.zone_shapes"
-test-app = "python -m pytest -q --durations=20"
+test-app = "python -m pytest -q -n 4 --dist loadfile --durations=20"
 test-forecast = "python -m unittest discover -s forecasts/tests -v"
 typecheck = "python -m mypy --config-file mypy.ini"
 test-core = { depends-on = ["test-app", "test-forecast", "typecheck", "frontend-test"] }
