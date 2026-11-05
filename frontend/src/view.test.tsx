@@ -40,7 +40,7 @@ test('prices appear while constraints remain pending; attribution is quiet until
   expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toBe('Loading constraints…');
   await reply('constraints', responses.constraints);
   await waitFor(() => expect(screen.getByLabelText('Map').textContent).toContain('binding lines'));
-  await waitFor(() => expect(screen.queryByRole('status', {name: 'Map loading'})).toBeNull());
+  expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toBe('Loading price contributions…');
   expect(pending.some(p => p.path.endsWith('attribution/2024-08-29'))).toBe(true);
   fireEvent.change(screen.getByLabelText('Binding constraint'), {target: {value: '1'}});
   await waitFor(() => expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toBe('Loading price contributions…'));
@@ -163,4 +163,24 @@ test('invalid API payloads are visible errors, never successful empty layers', a
   await reply('prices', {unexpected: true});
   await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Invalid layer response'));
   expect(screen.getByLabelText('Map').textContent).not.toContain('prices');
+});
+
+
+test('a loaded interval remains unchanged until the next interval layers settle', async () => {
+  await open();
+  await reply('prices', responses.prices);
+  await reply('constraints', responses.constraints);
+  await reply('attribution/2024-08-29', responses.attribution);
+  await reply('enriched', responses.caps, null);
+  await waitFor(() => expect(graph.data.some(t => t.name === 'country cap')).toBe(true));
+  const displayed = graph;
+  fireEvent.click(screen.getByText('Next'));
+  expect(graph).toBe(displayed);
+  await reply('prices', {...responses.prices, request: {...responses.prices.request, interval: 1}});
+  expect(graph).toBe(displayed);
+  await reply('constraints', {...responses.constraints, request: {...responses.constraints.request, interval: 1}}, null);
+  expect(graph).toBe(displayed);
+  await reply('enriched', {...responses.caps, request: {...responses.caps.request, interval: 1}}, null);
+  await waitFor(() => expect(graph).not.toBe(displayed));
+  expect(graph.data.map(t => t.uid)).toEqual(displayed.data.map(t => t.uid));
 });

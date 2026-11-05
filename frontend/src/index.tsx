@@ -63,14 +63,31 @@ function View({id, day: routeDay, token, basemap}: Props) {
   const full = selected === null ? caps.data : enriched.data;
   const figure = useMemo(() => full?.figure ?? combine(token, basemap, prices.data, highlight.data ?? constraints.data, caps.data),
     [token, basemap, full, prices.data, highlight.data, constraints.data, caps.data]);
-  const graphFigure = useMemo(() => {
+  const candidate = useMemo(() => {
     const copy = structuredClone(figure);
     // Keep camera inputs stable even when a newly arrived layer suggests different bounds.
+    const counts = new Map<string, number>();
+    for (const trace of copy.data) {
+      const name = String(trace.name ?? trace.type);
+      const ordinal = counts.get(name) ?? 0;
+      counts.set(name, ordinal + 1);
+      trace.uid = `t${Array.from(name, c => c.codePointAt(0)!.toString(16)).join("-")}-${ordinal}`;
+    }
     copy.layout.mapbox.style = basemap;
     copy.layout.mapbox.center = {lat: 50, lon: 10};
     copy.layout.mapbox.zoom = 3.5;
     return copy;
   }, [figure, basemap]);
+  // Publish one interval update after its independently fetched layers settle.
+  // The retained figure carries its own timestamp while the controls request a new interval.
+  const settled = validInterval && !prices.isPending && !constraints.isPending &&
+    (prices.isError || constraints.isError || attribution.isError || (attribution.isSuccess && !caps.isPending)) &&
+    (selected === null || prices.isError || constraints.isError || attribution.isError || enriched.isSuccess || enriched.isError);
+  const [displayed, setDisplayed] = useState<{day: string; figure: PlotlyFigure} | null>(null);
+  useEffect(() => {
+    if (settled) setDisplayed({day, figure: candidate});
+  }, [settled, day, candidate]);
+  const graphFigure = displayed?.day === day ? displayed.figure : candidate;
   const options = full?.options ?? caps.data?.options ?? constraints.data?.options ?? [];
   useEffect(() => {
     const readyOptions = source === 'constraints' ? constraints.data?.options : caps.data?.options;
@@ -85,7 +102,7 @@ function View({id, day: routeDay, token, basemap}: Props) {
   ] as const;
   const loading = !calendar.data && calendar.isFetching ? 'Loading market intervals…' : !prices.data && prices.isFetching ? 'Loading prices…' :
     !constraints.data && constraints.isFetching ? 'Loading constraints…' :
-    selected !== null && (attribution.isFetching || enriched.isFetching) ? 'Loading price contributions…' : '';
+    (attribution.isFetching || caps.isFetching || enriched.isFetching) ? 'Loading price contributions…' : '';
   function select(value: string) {
     const option = options.find(o => o.value === value);
     if (option) dispatch({type: 'select', selected: value === '' ? null : Number(value), source: option.source});
