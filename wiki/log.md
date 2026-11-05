@@ -367,3 +367,7 @@ Legitimate Use under JAO's terms. This is a project interpretation, not written
 redistribution permission. Reviewed mappings remain tracked; bulk endpoint tables,
 generated catalogs and the separately unlicensed locator remain locally rebuilt
 inputs. [Source provenance and setup](../config/element-catalog/README.md#sources-and-educational-use).
+
+## [2026-11-05] decision | Native API comparison in architecture review
+
+Verify supported APIs in the pinned dependency version and state behavior tradeoffs before endorsing custom integration code. The observed review gaps are recorded in [rule provenance](rule-provenance.md).
