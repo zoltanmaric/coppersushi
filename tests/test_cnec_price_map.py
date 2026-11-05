@@ -144,7 +144,6 @@ def test_selected_constraint_overlays_its_influence_and_highlights_its_branch(in
     plain = cnec_price_map.figure(*inputs)
     fig = cnec_price_map.figure(*selected_inputs(inputs))
     assert list(trace(fig, "published day-ahead price").z) == [50.0, 70.0]
-    assert any("BE · +2.87 €/MWh" in text for text in trace(fig, "contribution relative to AT").text)
     assert (trace(fig, "BE ray").lon[-1], trace(fig, "BE ray").lat[-1]) == pytest.approx((4.5, 50.8))
     selected = trace(fig, "selected CNEC")
     assert list(selected.lon) == [14.4, 15.1]

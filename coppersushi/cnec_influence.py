@@ -3,8 +3,7 @@
 A ray is the row's shadow price times the zone's PTDF difference to the reference zone: zonal
 sensitivity, never a power-flow path. Rays leave the reference zone, arc north and land on each zone's
 label point; they are not routed along grid branches. The look follows
-wiki/assets/cnec-price-influence-map-preview.png: width and dot size scale with the size of
-the contribution, colour says its sign.
+wiki/assets/cnec-price-influence-map-preview.png: width scales with contribution size; purple is positive and teal is negative.
 """
 
 import math
@@ -22,12 +21,8 @@ from coppersushi.cnec_attribution import price_spread
 ARC_POINTS = 24
 BOW = 0.18  # Control point this fraction of the chord north of its midpoint: rays rise from the
 # element and arc down onto their zones, and a ray due north stays straight
-RAY_WIDTH = (1.2, 6.0)  # Thinnest and widest ray, by contribution size relative to the largest drawn
-DOT_SIZE = (8, 22)
-DOT_HALO_FACTOR = 1.8  # The line halo factor would swallow the neighbouring label
-ORIGIN_SIZE = 7
-NEUTRAL = "rgba(255,255,255,0.75)"  # The reference zone, and a zone the row leaves untouched
-NEGLIGIBLE = 1e-9  # A contribution this small earns a neutral dot and no ray
+RAY_WIDTH = (1.0, 3.5)  # Thinnest and widest ray, by contribution size relative to the largest drawn
+NEGLIGIBLE = 1e-9  # A contribution this small needs no ray
 
 
 class Overlay(NamedTuple):
@@ -68,14 +63,6 @@ def _sized(contributions: pd.Series, smallest: float, largest: float) -> pd.Seri
     return smallest + (largest - smallest) * share
 
 
-def _colour(contribution: float) -> str:
-    if contribution > NEGLIGIBLE:
-        return map_style.PRICE_UP
-    if contribution < -NEGLIGIBLE:
-        return map_style.PRICE_DOWN
-    return NEUTRAL
-
-
 def _rays(origin: tuple[float, float], zonal: pd.DataFrame) -> list[go.Scattermapbox]:
     """Quiet, signed contribution rays; selection belongs to the physical element."""
     influenced = zonal[zonal.contribution.abs() > NEGLIGIBLE]
@@ -97,8 +84,8 @@ def _rays(origin: tuple[float, float], zonal: pd.DataFrame) -> list[go.Scatterma
             hoverinfo="text",
             hovertext=row.hover,
             showlegend=False,
-            line=dict(color=map_style.BINDING, width=width),
-            opacity=0.32,
+            line=dict(color=map_style.PRICE_DOWN if row.contribution < 0 else map_style.BINDING, width=width),
+            opacity=0.48,
         )
         rays.append(core)
     label_trace = go.Scattermapbox(
@@ -108,30 +95,6 @@ def _rays(origin: tuple[float, float], zonal: pd.DataFrame) -> list[go.Scatterma
         hoverinfo="text", hovertext=influenced.hover, showlegend=False,
     )
     return rays + [label_trace]
-
-
-def _dots(zonal: pd.DataFrame, reference: str) -> list[go.Scattermapbox]:
-    """A dot on every drawn zone, sized and coloured by its contribution."""
-    at_reference = zonal.zone.eq(reference)
-    text: pd.Series = zonal.zone + " · " + np.where(
-        at_reference,
-        "reference zone",
-        zonal.contribution.map(lambda value: f"{value:+,.2f} €/MWh") + f" relative to {reference}",
-    )
-    dots = go.Scattermapbox(
-        name=f"contribution relative to {reference}",
-        lon=zonal.x,
-        lat=zonal.y,
-        mode="markers",
-        hoverinfo="text",
-        text=text,
-        hovertext=zonal.hover,
-        marker=go.scattermapbox.Marker(
-            color=[_colour(value) for value in zonal.contribution],
-            size=_sized(zonal.contribution, *DOT_SIZE),
-        ),
-    )
-    return map_style.haloed(dots, factor=DOT_HALO_FACTOR)
 
 
 def overlay(centres: pd.DataFrame, contribution: DataFrame[PriceContributions]) -> Overlay:
@@ -161,20 +124,11 @@ def overlay(centres: pd.DataFrame, contribution: DataFrame[PriceContributions]) 
         + "<br>Total observed spread: " + zonal.observed
         + "<br>Remainder (other constraints / source precision): " + zonal.remainder
     )
-    dots = _dots(zonal, reference)
     note = (
         f"Selected contribution in €/MWh relative to <b>{reference}</b>. "
         "Rays show this constraint’s price contribution, not a power-flow path."
     )
     if len(reference_price) != 1:
-        return Overlay(dots, note + " The reference zone has no mapped centre.")
+        return Overlay([], note + " The reference zone has no mapped centre.")
     origin = (reference_price.x.iloc[0], reference_price.y.iloc[0])
-    origin_dot = go.Scattermapbox(
-        name="ray origin",
-        lon=[origin[0]],
-        lat=[origin[1]],
-        mode="markers",
-        hoverinfo="skip",
-        marker=go.scattermapbox.Marker(color="white", size=ORIGIN_SIZE),
-    )
-    return Overlay(_rays(origin, zonal) + dots + map_style.haloed(origin_dot), note)
+    return Overlay(_rays(origin, zonal), note)
