@@ -57,7 +57,8 @@ def test_choropleth_carries_one_price_per_priced_zone_and_labels_each(inputs):
     assert [feature["id"] for feature in fill.geojson["features"]] == ["AT", "BE"]
     labels = trace(fig, "zone prices")
     assert list(labels.text) == ["Austria<br>€50.00", "Belgium<br>€70.00"]
-    assert labels.hoverinfo == "skip"
+    assert labels.hoverinfo == "none"
+    assert list(labels.customdata) == [["zone", "AT"], ["zone", "BE"]]
 
 
 def test_each_zone_label_sits_inside_its_own_zone(inputs):
