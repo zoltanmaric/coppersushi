@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from coppersushi.market_day import MarketDay
 from coppersushi import REPO
-from coppersushi.data_model.cnec_attribution import AlphaFactor, AttributionContext, AttributionPayload, AttributionFailure, attribution_to_browser, attribution_from_browser
+from coppersushi.data_model.cnec_attribution import AlphaFactor, AttributionContext, AttributionPayload, AttributionRequest, attribution_to_browser, attribution_from_browser
 from coppersushi.data_sources import cnec_attribution as source
 
 FIXTURE = REPO / "tests/fixtures/cnec-attribution"
@@ -88,23 +88,15 @@ def test_loader_does_not_hide_failures(monkeypatch, tmp_path, stage):
         source.load_day(MarketDay.on("2026-09-12"), refresh=True)
 
 
-def test_attribution_success_and_failure_cannot_be_combined():
-    failure = AttributionFailure(day=MarketDay.on("2026-11-03").date, error="unavailable")
-    with pytest.raises(ValidationError):
-        AttributionFailure.model_validate({**failure.model_dump(), "complete": True})
-    with pytest.raises(ValidationError):
-        AttributionPayload.model_validate({**failure.model_dump(), "complete": True, "rows": []})
-
-
 def test_browser_delivery_date_is_typed_and_serializes_as_iso():
     from datetime import date
-    failure = AttributionFailure.model_validate({
-        "day": "2026-11-03", "error": "unavailable",
+    failure = AttributionRequest.model_validate({
+        "day": "2026-11-03",
     })
     assert failure.day == date(2026, 11, 3)
     assert failure.model_dump(mode="json")["day"] == "2026-11-03"
     with pytest.raises(ValidationError):
-        AttributionFailure.model_validate({**failure.model_dump(), "day": "2026-02-30"})
+        AttributionRequest.model_validate({**failure.model_dump(), "day": "2026-02-30"})
 
 
 def test_loader_uses_market_day_boundaries_on_clock_change(monkeypatch, tmp_path):

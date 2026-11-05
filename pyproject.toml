@@ -67,13 +67,13 @@ runtime = { features = [], solve-group = "default" }
 build = { features = ["build"], solve-group = "default" }
 
 [tool.pixi.tasks]
-setup = { cmd = "python -c \"import sys; print('Python interpreter:', sys.executable)\"", depends-on = ["theme-install", "hosting-setup"] }
-dev = "python app.py"
+setup = { cmd = "python -c \"import sys; print('Python interpreter:', sys.executable)\"", depends-on = ["theme-install", "hosting-setup", "frontend-build"] }
+dev = { cmd = "python app.py", depends-on = ["frontend-build"] }
 build-zone-shapes = "python -m coppersushi.data_sources.zone_shapes"
 test-app = "python -m pytest -q"
 test-forecast = "python -m unittest discover -s forecasts/tests -v"
 typecheck = "python -m mypy --config-file mypy.ini"
-test = { depends-on = ["test-app", "test-forecast", "typecheck", "theme-test", "hosting-test"] }
+test = { depends-on = ["test-app", "test-forecast", "typecheck", "theme-test", "hosting-test", "frontend-test"] }
 solve = "python -m coppersushi.data_sources.pypsa_eur solve"
 theme-install = { cmd = "yarn install --frozen-lockfile --ignore-optional", cwd = "121gigawatts" }
 theme-dev = { cmd = "yarn dev", cwd = "121gigawatts" }
@@ -84,3 +84,8 @@ hosting-test = "make -C 121gigawatts/hosting test"
 hosting-check = "make -C 121gigawatts/hosting check"
 hosting-configure = "make -C 121gigawatts/hosting configure"
 hosting-restore = "make -C 121gigawatts/hosting restore"
+
+frontend-install = { cmd = "npm ci", cwd = "frontend" }
+frontend-build = { cmd = "npm run build", cwd = "frontend", depends-on = ["frontend-install"] }
+frontend-test = "python -m scripts.cnec_contracts --check && npm run --prefix frontend types -- --check && npm run --prefix frontend typecheck && npm test --prefix frontend"
+frontend-contracts = "python -m scripts.cnec_contracts && npm run --prefix frontend types"

@@ -42,57 +42,6 @@ def mapped_elements():
     return pd.read_csv(MAP / "mapped-elements.csv").pipe(MappedCnecElements.validate)
 
 
-def descendants(component):
-    yield component
-    children = getattr(component, "children", None)
-    if children is None:
-        return
-    for child in children if isinstance(children, list) else [children]:
-        yield from descendants(child)
-
-
-def test_layout_starts_on_the_supplied_day_and_exposes_all_controls():
-    page = cnec_page.layout("2024-08-29")
-    controls = {
-        component.id: component
-        for component in descendants(page)
-        if getattr(component, "id", None)
-    }
-    assert controls["cnec-date"].value == "2024-08-29"
-    assert {
-        "cnec-constraint",
-        "cnec-reference-zone",
-        "cnec-map",
-        "cnec-interval",
-        "cnec-status",
-    } <= set(controls)
-
-
-def test_layout_starts_with_a_visible_geographic_map_while_data_loads():
-    page = cnec_page.layout("2024-08-29", "public-mapbox-token")
-    loading = next(
-        component
-        for component in descendants(page)
-        if component.__class__.__name__ == "Loading"
-    )
-    graph = next(
-        component
-        for component in descendants(page)
-        if getattr(component, "id", None) == "cnec-map"
-    )
-
-    assert graph.figure.data[0].type == "scattermapbox"
-    assert graph.figure.layout.mapbox.style == "dark"
-    assert graph.figure.layout.mapbox.accesstoken == "public-mapbox-token"
-    assert graph.figure.layout.mapbox.center.lat == 50
-    assert loading.overlay_style["visibility"] == "visible"
-    assert "Loading binding constraints…" in {
-        component.children
-        for component in descendants(loading.custom_spinner)
-        if isinstance(getattr(component, "children", None), str)
-    }
-
-
 def test_a_historical_day_has_every_hour_and_timezone_disambiguated_marks():
     rendered = cnec_page.render(inputs(), mapped_elements(), 0, None)
     assert rendered.interval_max == 23

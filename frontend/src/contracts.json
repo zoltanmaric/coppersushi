@@ -1,0 +1,318 @@
+{
+  "$defs": {
+    "ApiError": {
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "title": "Error",
+          "type": "string"
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "title": "ApiError",
+      "type": "object"
+    },
+    "AttributionPayload": {
+      "additionalProperties": false,
+      "description": "Successfully loaded price-attribution inputs for one browser request.",
+      "properties": {
+        "day": {
+          "format": "date",
+          "title": "Day",
+          "type": "string"
+        },
+        "complete": {
+          "title": "Complete",
+          "type": "boolean"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/$defs/AttributionRow"
+          },
+          "title": "Rows",
+          "type": "array"
+        }
+      },
+      "required": [
+        "day",
+        "complete",
+        "rows"
+      ],
+      "title": "AttributionPayload",
+      "type": "object"
+    },
+    "AttributionRow": {
+      "additionalProperties": false,
+      "description": "Inputs for explaining why electricity prices differ between bidding zones.\n\nAttribution calculates how much each binding grid or import/export limit\ncontributes to that price difference, in EUR/MWh. This row holds the scaling\nfactor and Polish cap inputs for one market interval, encoded as browser JSON.\nNull means an input is unavailable.\n\nSee wiki/flow-based-market-coupling.md#attribution for an example and limits.",
+      "properties": {
+        "interval": {
+          "format": "date-time",
+          "title": "Interval",
+          "type": "string"
+        },
+        "alpha": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Alpha"
+        },
+        "import_limit": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Import Limit"
+        },
+        "export_limit": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Export Limit"
+        },
+        "polish_position": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Polish Position"
+        },
+        "polish_alt": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Polish Alt"
+        }
+      },
+      "required": [
+        "interval",
+        "alpha",
+        "import_limit",
+        "export_limit",
+        "polish_position",
+        "polish_alt"
+      ],
+      "title": "AttributionRow",
+      "type": "object"
+    },
+    "ConstraintOption": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "constraints",
+            "attribution"
+          ],
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "value",
+        "source"
+      ],
+      "title": "ConstraintOption",
+      "type": "object"
+    },
+    "DayResponse": {
+      "additionalProperties": false,
+      "description": "Market-time-unit labels computed in the market timezone, including DST folds.",
+      "properties": {
+        "day": {
+          "format": "date",
+          "title": "Day",
+          "type": "string"
+        },
+        "labels": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Labels",
+          "type": "array"
+        }
+      },
+      "required": [
+        "day",
+        "labels"
+      ],
+      "title": "DayResponse",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "LayerResponse": {
+      "additionalProperties": false,
+      "description": "One ready visual layer scoped to the exact view that requested it.",
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/ViewRequest"
+        },
+        "figure": {
+          "$ref": "#/$defs/PlotlyFigure"
+        },
+        "options": {
+          "items": {
+            "$ref": "#/$defs/ConstraintOption"
+          },
+          "title": "Options",
+          "type": "array"
+        },
+        "reference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reference"
+        }
+      },
+      "required": [
+        "request",
+        "figure",
+        "options",
+        "reference"
+      ],
+      "title": "LayerResponse",
+      "type": "object"
+    },
+    "PlotlyFigure": {
+      "additionalProperties": false,
+      "description": "Plotly's extensible JSON figure; Plotly validates its trace/layout schemas.",
+      "properties": {
+        "data": {
+          "items": {
+            "additionalProperties": {
+              "$ref": "#/$defs/JsonValue"
+            },
+            "type": "object"
+          },
+          "title": "Data",
+          "type": "array"
+        },
+        "layout": {
+          "$ref": "#/$defs/PlotlyLayout"
+        }
+      },
+      "required": [
+        "data",
+        "layout"
+      ],
+      "title": "PlotlyFigure",
+      "type": "object"
+    },
+    "PlotlyLayout": {
+      "additionalProperties": true,
+      "description": "A map layout with Plotly-owned extensions and an explicit camera object.",
+      "properties": {
+        "mapbox": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Mapbox",
+          "type": "object"
+        },
+        "uirevision": {
+          "title": "Uirevision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mapbox",
+        "uirevision"
+      ],
+      "title": "PlotlyLayout",
+      "type": "object"
+    },
+    "ViewRequest": {
+      "additionalProperties": false,
+      "description": "One explicit market-day view; selection is a published row identifier.",
+      "properties": {
+        "day": {
+          "format": "date",
+          "title": "Day",
+          "type": "string"
+        },
+        "interval": {
+          "minimum": 0,
+          "title": "Interval",
+          "type": "integer"
+        },
+        "selected": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Selected"
+        }
+      },
+      "required": [
+        "day",
+        "interval",
+        "selected"
+      ],
+      "title": "ViewRequest",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "day": {
+      "$ref": "#/$defs/DayResponse"
+    },
+    "layer": {
+      "$ref": "#/$defs/LayerResponse"
+    },
+    "attribution": {
+      "$ref": "#/$defs/AttributionPayload"
+    },
+    "error": {
+      "$ref": "#/$defs/ApiError"
+    }
+  },
+  "required": [
+    "day",
+    "layer",
+    "attribution",
+    "error"
+  ],
+  "title": "CnecContracts",
+  "type": "object"
+}

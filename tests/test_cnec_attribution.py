@@ -121,13 +121,6 @@ def test_reference_follows_publisher_direction_and_missing_geometry_stays_unavai
     assert attribution.physical_reference(row, mapped.iloc[:0], read_zones()) is None
 
 
-def test_click_ignores_unrelated_or_stale_ids_and_preserves_selected_contingency():
-    options = [{'value': ''}, {'value': '12'}, {'value': '13'}]
-    click = {'points': [{'customdata': ['12,13']}]}
-    assert cnec_page.clicked_selection(click, options, None) == '12'
-    assert cnec_page.clicked_selection(click, options, '13') == '13'
-    assert cnec_page.clicked_selection(click, [{'value': ''}], None) is None
-    assert cnec_page.clicked_selection({'points': [{'location': 'DE'}]}, options, '13') == '13'
 
 
 @pytest.mark.parametrize('day,count', [('2024-10-27',25), ('2026-03-29',92), ('2026-10-25',100)])
@@ -196,15 +189,6 @@ def test_virtual_bounds_are_hidden_and_stale_selections_are_cleared(selected):
     assert not any((t.name or '').startswith('contribution relative') for t in rendered.figure.data)
 
 
-@pytest.mark.parametrize('date', ['2024-03-31', '2024-10-27', '2026-09-12', '2026-10-25'])
-def test_previous_next_moves_exactly_one_mtu_and_stops_at_day_boundaries(date):
-    day = MarketDay.on(date)
-    times = day.market_time_units()
-    assert cnec_page.advance_interval(day, 0, -1) == 0
-    assert cnec_page.advance_interval(day, len(times)-1, 1) == len(times)-1
-    for index in range(1, len(times)-1):
-        assert cnec_page.advance_interval(day, index, -1) == index-1
-        assert cnec_page.advance_interval(day, index, 1) == index+1
 
 
 @pytest.mark.parametrize("country, adjusted, other, effect, observed, remainder", [

@@ -25,7 +25,7 @@ flowchart LR
     solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
     jao_active_constraints["jao_active_constraints<br/>post-auction binding constraints, shadow prices and zonal PTDFs by market time unit"]
     jao_attribution["jao_attribution<br/>α, Polish allocation limits and net positions, guarded PL alternative prices"]
-    cnec_attribution_context["cnec_attribution_context<br/>browser store scoped to day and retry; loaded after the base map"]
+    cnec_attribution_context["cnec_attribution_context<br/>typed day-scoped response loaded quietly after constraints"]
     jao_domain["jao_domain<br/>final flow-based domain: monitored elements with their substation names, PTDFs and RAM"]
     jao_endpoint_cache["jao_endpoint_cache<br/>validated seed bundled in the image; viewed-hour misses fetched and cached locally"]
     osm_locator["osm_locator<br/>core-tso-data's OSM-locator substation coordinates, unlicensed, fetched locally"]
@@ -65,10 +65,13 @@ flowchart LR
     jao_active_constraints --> cnec_market_snapshot
     day_ahead_prices --> cnec_market_snapshot
     cnec_market_snapshot --> cnec_price_figure
-    cnec_price_figure --> jao_map
-    cnec_http["cnec_http<br/>typed JSON calendar, price, constraint and enrichment endpoints"]
-    cnec_price_figure --> cnec_http
-    cnec_attribution_context --> cnec_http
+    cnec_http["CNEC HTTP API<br/>independent price and constraint layers; enrichment figures"]
+    react_cnec["React CNEC view hosted by Dash<br/>selection reducer and TanStack Query; progressive layers"]
+    day_ahead_prices -->|price layer| cnec_http
+    cnec_geometry -->|constraint layer| cnec_http
+    cnec_price_figure -->|enriched view| cnec_http
+    cnec_http --> react_cnec
+    react_cnec --> jao_map
 ```
 
 Code is one package, `coppersushi/`, organised by domain noun; `io-boundary` in `coppersushi/AGENTS.md` names the two modules that touch the world.
@@ -99,11 +102,7 @@ without the bundle retain on-demand figure construction.
 An optional CloudFront hostname fronts the Lambda deployment, with an ACM certificate
 and externally managed DNS; see [hosting](../infra/lambda/README.md#delivery).
 
-CloudFront caches only static asset routes. Page selection, layouts and data callbacks
-continue to use the existing server-side flow; see [hosting](../infra/lambda/README.md#delivery).
+CloudFront caches only static asset routes. OPF retains Dash callbacks; the CNEC React view requests independent layers from
+the same Python server, keeping successful layers visible during enrichment; see [hosting](../infra/lambda/README.md#delivery).
 
 For external-input resilience, see [JAO availability and response retention](jao-availability.md).
-
-### CNEC HTTP boundary
-
-`cnec_http.py` exposes independently requested calendar, prices, physical constraints and attribution layers at `/api/cnec`. Pydantic contracts validate requests and responses. The Dash view remains a consumer of the same domain rendering functions.

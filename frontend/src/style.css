@@ -1,0 +1,13 @@
+.cnec-controls {display:grid;grid-template-columns:12em minmax(15em,1fr) auto;gap:.6em;padding:.4em 1em;align-items:center}
+.cnec-controls input,.cnec-controls select {min-width:0;padding:.45em;border:1px solid #666;border-radius:4px;background:#fff;color:#222}
+.cnec-map-container {height:calc(100vh - 210px);min-height:400px;position:relative}
+.cnec-progress {position:absolute;right:12px;top:12px;max-width:min(30em,70%);font-size:.85rem;background:rgba(20,20,20,.88);border-radius:4px;z-index:5}
+.cnec-progress:empty {display:none}
+.cnec-progress>div {padding:6px 10px}
+.cnec-progress [role=alert] {color:#ffc4bd}
+.cnec-react button {background:#315978;color:white;border:0;border-radius:4px;padding:.4em .7em;margin-right:4px}
+.cnec-react button:disabled {opacity:.5}
+.cnec-time-controls {padding:.5em 1em 1.5em}
+.cnec-time-controls output {margin-left:.8em}
+.cnec-time-controls input {display:block;width:100%;margin-top:.5em;accent-color:#af77ed}
+@media(max-width:650px){.cnec-controls {grid-template-columns:1fr}.cnec-time-controls output {display:block;margin:.5em 0}}
