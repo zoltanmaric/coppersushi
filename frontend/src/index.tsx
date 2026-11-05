@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState} from 'react';
 import {QueryClient, QueryClientProvider, useQuery} from '@tanstack/react-query';
+import {BrowserRouter, Route, Routes, useLocation, useNavigate, useParams} from 'react-router-dom';
 import {fetchCnec} from './api';
 import {Timeline} from './timeline';
 import {reduceSelection} from './state';
@@ -19,7 +20,26 @@ const Graph = (props: GraphProps) => {
   return <Component {...props} setProps={setProps}/>;
 };
 
-export function CnecView(props: Props) {
+type HostProps = Omit<Props, 'day'> & {default_day: string};
+
+export function CnecView(props: HostProps) {
+  return <BrowserRouter><Routes>
+    <Route path="/cnec/:day?" element={<RoutedCnecPage {...props}/>}/>
+  </Routes></BrowserRouter>;
+}
+
+function RoutedCnecPage({default_day, ...props}: HostProps) {
+  const {day} = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const changeDay = useCallback((day: string) => navigate({
+    pathname: `/cnec/${day}`, search: location.search, hash: location.hash,
+  }), [navigate, location.search, location.hash]);
+  return <CnecPage {...props} day={day ?? default_day} navigate={changeDay}/>;
+}
+
+/** React page; the host owns routing and supplies the delivery-day navigation action. */
+export function CnecPage(props: Props & {navigate: (day: string) => void}) {
   const [client] = useState(() => new QueryClient({defaultOptions: {queries: {
     retry: false, staleTime: 300_000, refetchOnWindowFocus: false, refetchOnReconnect: false, refetchOnMount: false,
   }}}));
@@ -42,7 +62,7 @@ function combine(token: string, basemap: Props['basemap'], prices?: LayerRespons
     layout: {...(constraints?.figure.layout ?? prices?.figure.layout ?? initial.layout), uirevision: 'cnec-camera'}};
 }
 
-function View({id, day: routeDay, min_day, token, basemap}: Props) {
+function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {navigate: (day: string) => void}) {
   const [selection, dispatch] = useReducer(reduceSelection, {day: routeDay, interval: 0, selected: null, source: "constraints"});
   useEffect(() => {dispatch({type: 'day', day: routeDay});}, [routeDay]);
   const {day, interval, selected, source} = selection;
@@ -125,7 +145,7 @@ function View({id, day: routeDay, min_day, token, basemap}: Props) {
   return <section id={id} className="cnec-react">
     <div className="cnec-controls">
       <input aria-label="Delivery day" type="date" min={min_day} value={day} onChange={e => {
-        if (e.target.value >= min_day) dispatch({type: 'day', day: e.target.value});
+        if (e.target.value >= min_day && e.target.value !== day) navigate(e.target.value);
       }}/>
       <select aria-label="Binding constraint" value={selected === null ? '' : String(selected)}
         disabled={!constraints.data} onChange={e => select(e.target.value)}>
@@ -138,6 +158,11 @@ function View({id, day: routeDay, min_day, token, basemap}: Props) {
     <div className="cnec-map-container">
       <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick}
         config={{responsive: true, displayModeBar: false, scrollZoom: true}} style={{height: '100%'}}/>
+      <small className="cnec-sources">
+        Data: <a href="https://publicationtool.jao.eu/core/">JAO</a> · {' '}
+        <a href="https://www.electricitymaps.com/">Electricity Maps</a> · {' '}
+        <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>
+      </small>
       <aside className="cnec-progress" aria-live="polite">
         {loading && <div role="status" aria-label="Map loading">{loading}</div>}
         {full?.notes.map(note => <div role="status" key={note}>{note}</div>)}

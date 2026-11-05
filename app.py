@@ -13,7 +13,7 @@ import pandas as pd
 from pandera.typing import DataFrame
 
 import plotly.graph_objects as go
-from dash import Dash, dcc, html, Input, Output, Patch, ctx, no_update
+from dash import Dash, dcc, html, Input, Output, State, Patch, ctx, no_update
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 
@@ -141,8 +141,8 @@ def is_embed_path(pathname: str, root_view: str = ROOT_VIEW) -> bool:
 
 def navigation() -> html.Nav:
     return html.Nav([
-        dcc.Link('2024 OPF on the 2025 grid', href='/opf-2024'),
-        dcc.Link('Prices and binding CNECs', href=f'/{CNEC_ROUTE}'),
+        html.A('2024 OPF on the 2025 grid', href='/opf-2024'),
+        html.A('Prices and binding CNECs', href=f'/{CNEC_ROUTE}'),
     ], className='app-navigation')
 
 
@@ -206,31 +206,35 @@ def network_layout(token: str | None = None) -> html.Div:
 
 
 app.layout = html.Div([
-    dcc.Location(id='url'),
+    dcc.Location(id='url', refresh='callback-nav'),
+    dcc.Store(id='active-page'),
     html.Div(id='page'),
 ])
 
 
-@app.callback(Output('page', 'children'), Input('url', 'pathname'))
 def show_page(pathname: str, root_view: str = ROOT_VIEW) -> html.Div:
     if unsupported_cnec_path(pathname):
         return html.Div(dcc.Location(id='cnec-redirect', href='/cnec', refresh=True))
     if is_cnec_path(pathname):
         return html.Div([navigation(),
-            html.Small([
-                'Data: ', html.A('JAO', href='https://publicationtool.jao.eu/core/'), ' · ',
-                html.A('Electricity Maps', href='https://www.electricitymaps.com/'), ' · ',
-                html.A('© OpenStreetMap contributors', href='https://www.openstreetmap.org/copyright'),
-                '. Price contributions calculated by Copper Sushi.',
-            ], style={'display': 'block', 'padding': '0 1rem .25rem'}),
-            CnecView(id='cnec-view', day=cnec_day_from_path(pathname) or cnec_page.local_today(), min_day=CNEC_FIRST_DAY.isoformat(), token=mapbox_token(), basemap=basemap()),
+            CnecView(id='cnec-view', default_day=cnec_page.local_today(), min_day=CNEC_FIRST_DAY.isoformat(), token=mapbox_token(), basemap=basemap()),
         ])
     if network_key_from_path(pathname) is None:
-        return html.Div([html.H1('Page not found'), dcc.Link('2024 OPF', href='/opf-2024')])
+        return html.Div([html.H1('Page not found'), html.A('2024 OPF', href='/opf-2024')])
     return html.Div([
         *([] if is_embed_path(pathname, root_view) else [navigation()]),
         network_layout(mapbox_token()),
     ], className='app-page')
+
+
+@app.callback(Output('page', 'children'), Output('active-page', 'data'),
+              Input('url', 'pathname'), State('active-page', 'data'))
+def route_page(pathname: str, active_page: str | None) -> tuple:
+    """Dash owns page-kind transitions; React owns dates within the mounted CNEC page."""
+    kind = 'cnec' if is_cnec_path(pathname) and not unsupported_cnec_path(pathname) else 'other'
+    if kind == active_page == 'cnec':
+        return no_update, no_update
+    return show_page(pathname), kind
 
 
 
