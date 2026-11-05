@@ -38,6 +38,7 @@ offer a separate stacked PR using the fission tests. Apply Reaper's execution an
 independent-review requirements when implementing cleanup; discovery alone does not
 start its standalone workflow.
 
+- When addressing a review comment, reply in its thread explaining the change and referencing the commit.
 - Keep review findings in chat by default. Post them to a pull request only if the user explicitly asks; first show the proposed comment text and anchors and get approval.
 - Post each approved finding as a separate inline review thread on the narrowest relevant changed line, so it can be replied to and resolved independently. If no exact line exists, use the closest relevant changed line. Post a top-level summary only if the user asks.
 - Attribute each posted thread with the agent, model version and reasoning effort. If the runtime does not expose a field, say so instead of guessing.
