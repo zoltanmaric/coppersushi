@@ -1,6 +1,7 @@
 from dataclasses import replace
 from datetime import date
 from flask import redirect, request
+from werkzeug.wrappers import Response
 import logging
 from time import perf_counter
 from collections.abc import Callable
@@ -161,7 +162,7 @@ def unsupported_cnec_path(pathname: str) -> bool:
 
 
 @server.before_request
-def redirect_unsupported_cnec_day():
+def redirect_unsupported_cnec_day() -> Response | None:
     if request.method == 'GET' and unsupported_cnec_path(request.path):
         return redirect('/cnec')
     return None
