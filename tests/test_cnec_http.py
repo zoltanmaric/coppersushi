@@ -75,3 +75,26 @@ def test_clock_change_day_preserves_both_repeated_hours(client):
     assert len(result.json['labels']) == 100
     assert any('02:00 CEST' in label for label in result.json['labels'])
     assert any('02:00 CET' in label for label in result.json['labels'])
+
+
+@pytest.mark.parametrize("content_type,body,status", [
+    (None, None, 415),
+    ("text/plain", "hello", 415),
+    ("application/json", "{broken", 400),
+])
+def test_json_boundary_preserves_http_errors(content_type, body, status):
+    from flask import request
+    from coppersushi.data_model.cnec_api import ApiError
+
+    server = Flask(__name__)
+
+    @server.post('/json')
+    @cnec_http.json_endpoint
+    def json_input() -> ApiError:
+        request.get_json()
+        return ApiError(error="unreachable for invalid input")
+
+    response = server.test_client().post('/json', data=body, content_type=content_type)
+    assert response.status_code == status
+    assert response.is_json
+    assert response.json['error'].startswith(str(status))

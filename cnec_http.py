@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 import plotly.graph_objects as go
 from pandera.typing import DataFrame
-from werkzeug.exceptions import BadRequest
+from werkzeug.exceptions import BadRequest, HTTPException
 from coppersushi.data_model.network_views import BiddingZoneShapes
 from coppersushi.data_model.jao import ActiveConstraints
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
@@ -42,9 +42,9 @@ def json_endpoint(function: Callable[P, R]) -> Callable[P, Response]:
         try:
             payload: BaseModel = function(*args, **kwargs)
             status = 200
-        except BadRequest as error:
+        except HTTPException as error:
             payload = ApiError(error=str(error))
-            status = 400
+            status = error.code or 500
         except Exception as error:
             logger.exception('CNEC request failed')
             payload = ApiError(error=str(error))
