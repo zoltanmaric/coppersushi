@@ -32,6 +32,7 @@
 
 .cnec-spark {position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:hidden}
  .cnec-spark polyline {fill:none;stroke-linecap:round;stroke-linejoin:round}
+.cnec-direction {fill:#e5e8eb;stroke:#70449a;stroke-width:1;stroke-linejoin:round}
 .cnec-energy-aura {stroke:#a72af5;stroke-width:11;opacity:.65}
 .cnec-energy-rim {stroke:#b955ff;stroke-width:4;opacity:.9;filter:drop-shadow(0 0 2px #a72af5)}
 .cnec-energy-core {stroke:#fff7ff;stroke-width:1.6}
@@ -56,3 +57,4 @@
 .cnec-transformer-glow circle {stroke:#e0baff;stroke-width:4;filter:blur(2px)}
 @keyframes cnec-ambient-breathe {0%,100% {opacity:.25} 50% {opacity:.45}}
 @media (prefers-reduced-motion:reduce) {.cnec-ambient-glow,.cnec-transformer-glow {animation:none;opacity:.35}}
+

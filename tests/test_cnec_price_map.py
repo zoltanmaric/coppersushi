@@ -89,6 +89,7 @@ def test_one_element_is_drawn_once_and_one_target_carries_each_binding_row(input
     rows = trace(fig, "binding rows")
     assert len(rows.lon) == 1
     assert rows.marker.symbol == "triangle"
+    assert isinstance(rows.to_plotly_json()["marker"]["angle"], list)
     assert "Grayspire" in rows.text[0]
     assert "Base case (no contingency)" in rows.text[0]
     assert "not physically overloaded" not in rows.text[0]

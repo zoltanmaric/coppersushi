@@ -50,6 +50,21 @@ export function ConstraintOverlay({figure, camera, hidden}: {figure: PlotlyFigur
       }
     });
   }
+  // Plotly keeps the hover/click target; repeat its direction glyph above the SVG energy.
+  const arrows: {x: number; y: number; angle: number}[] = [];
+  const directions = figure.data.find(trace => trace.name === 'binding rows');
+  const marker = directions?.marker;
+  const angles = marker && typeof marker === 'object' && !Array.isArray(marker) && 'angle' in marker ? marker.angle : null;
+  const arrowLon = directions?.lon, arrowLat = directions?.lat;
+  if (!hidden && Array.isArray(arrowLon) && Array.isArray(arrowLat) && Array.isArray(angles)) {
+    arrowLon.forEach((x, i) => {
+      const y = arrowLat[i], angle = angles[i];
+      if (typeof x === 'number' && typeof y === 'number' && typeof angle === 'number') {
+        const [px, py] = project(x, y, camera, size.width, size.height);
+        arrows.push({x: px, y: py, angle: angle - camera.bearing});
+      }
+    });
+  }
   const ambient: string[] = [];
   if (!hidden) {
     for (const trace of figure.data.filter(t => t.name === 'market-binding CNECs' || t.name === 'binding country cap')) {
@@ -128,5 +143,7 @@ export function ConstraintOverlay({figure, camera, hidden}: {figure: PlotlyFigur
       <polyline className="cnec-spark-glow" points={bolt.main}/><polyline className="cnec-spark-core" points={bolt.main}/>
       {bolt.fork && <polyline className="cnec-spark-core cnec-spark-fork" points={bolt.fork}/>}
     </g>)}
+    {arrows.map((arrow, i) => <polygon key={i} className="cnec-direction"
+      points="0,-5 4.5,3.5 -4.5,3.5" transform={`translate(${arrow.x},${arrow.y}) rotate(${arrow.angle})`}/>)}
   </svg>;
 }

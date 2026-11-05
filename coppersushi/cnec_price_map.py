@@ -223,7 +223,7 @@ def _constraint_traces(
             text=targets.hover,
             customdata=targets[["source_ids"]].to_numpy(),
             marker=go.scattermapbox.Marker(
-                color=map_style.BINDING, size=size, symbol=symbol, angle=targets.angle,
+                color=map_style.BINDING, size=size, symbol=symbol, angle=targets.angle.to_list(),
                 opacity=1 if directed else 0
             ),
         )
