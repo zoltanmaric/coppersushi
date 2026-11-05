@@ -242,14 +242,49 @@ def test_geometry_discovery_skips_only_conflicting_publication(tmp_path, monkeyp
         cnecs.element_ends([*fc, conflict])
 
 
-def test_durable_location_cache_error_keeps_seed(tmp_path, monkeypatch):
+@pytest.mark.parametrize("failed_stage", ["restore", "publish", "local_save", "hourly_save"])
+def test_endpoint_discovery_and_persistence_fail_independently(tmp_path, monkeypatch, failed_stage):
     from botocore.exceptions import ClientError
     monkeypatch.setattr(jao, 'JAO_DIR', tmp_path)
     fc = rows('final-computation-hour.json')
-    seed = cnecs.element_ends(fc).iloc[:1]
-    jao.write_element_ends(seed)
-    def broken_cache(*args):
+    ends = cnecs.element_ends(fc)
+    jao.write_element_ends(ends.iloc[:1])
+    calls = []
+
+    def broken(*args):
         raise ClientError({'Error': {'Code': '503', 'Message': 'unavailable'}}, 'GetObject')
-    monkeypatch.setattr(jao.cache, 'restore', broken_cache)
+
+    monkeypatch.setattr(jao, '_get', lambda *a, **kw: calls.append('fetch') or fc)
+    monkeypatch.setattr(jao.cache, 'restore', broken if failed_stage == 'restore' else lambda *a: False)
+    monkeypatch.setattr(jao.cache, 'publish', broken if failed_stage == 'publish' else lambda *a: calls.append('publish'))
+    if failed_stage == 'local_save':
+        monkeypatch.setattr(jao, 'write_element_ends', broken)
+    if failed_stage == 'hourly_save':
+        monkeypatch.setattr(jao.cache, 'atomic_text', broken)
     found = jao.load_element_ends(pd.Timestamp('2024-08-28T22:00:00Z'), cnecs.elements(fc))
-    pd.testing.assert_frame_equal(found.reset_index(drop=True), seed.reset_index(drop=True))
+    pd.testing.assert_frame_equal(found.reset_index(drop=True), ends)
+    assert 'fetch' in calls
+    if failed_stage != 'local_save':
+        pd.testing.assert_frame_equal(jao.read_element_ends(), ends)
+    if failed_stage in ('restore', 'local_save'):
+        assert 'publish' in calls
+
+
+def test_partial_hourly_cache_survives_failed_refresh(tmp_path, monkeypatch):
+    monkeypatch.setattr(jao, 'JAO_DIR', tmp_path)
+    fc = rows('final-computation-hour.json')
+    ends = cnecs.element_ends(fc)
+    seed, hourly = ends.iloc[:1], ends.iloc[1:2]
+    jao.write_element_ends(seed)
+    directory = tmp_path / 'endpoints/20240828T22Z'
+    directory.mkdir(parents=True)
+    hourly.to_csv(directory / 'element-ends.csv', index=False)
+
+    def offline(*args, **kwargs):
+        raise OSError('upstream unavailable')
+
+    monkeypatch.setattr(jao, '_get', offline)
+    found = jao.load_element_ends(pd.Timestamp('2024-08-28T22:00:00Z'), cnecs.elements(fc))
+    expected = ends.iloc[:2].reset_index(drop=True)
+    pd.testing.assert_frame_equal(found.reset_index(drop=True), expected)
+    pd.testing.assert_frame_equal(jao.read_element_ends(), expected)

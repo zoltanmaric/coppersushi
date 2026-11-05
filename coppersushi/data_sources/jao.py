@@ -349,36 +349,55 @@ def load_element_ends(interval: pd.Timestamp, required: pd.DataFrame) -> DataFra
     # Work in UTC: flooring a local DST-change hour can be ambiguous.
     hour = interval.tz_convert("UTC").floor("h")
     combined = ends
-    try:
-        directory = JAO_DIR / "endpoints" / hour.strftime("%Y%m%dT%HZ")
-        key = f"jao/endpoints/{hour.strftime('%Y%m%dT%HZ')}"
-        name = "element-ends.csv"
-        if not (directory / name).exists():
-            cache.restore(key, directory, (name,))
-        downloaded = False
+    directory = JAO_DIR / "endpoints" / hour.strftime("%Y%m%dT%HZ")
+    key = f"jao/endpoints/{hour.strftime('%Y%m%dT%HZ')}"
+    name = "element-ends.csv"
+    failures = (OSError, ValueError, RuntimeError, KeyError, BotoCoreError, ClientError, pa.errors.SchemaError)
+    if not (directory / name).exists():
         try:
-            fetched = pd.read_csv(directory / name).pipe(lambda f: _restore_blanks(f, ElementEnds)).pipe(ElementEnds.validate)
-            usable = fetched.loc[fetched.substation_from.fillna('').ne('') & fetched.substation_to.fillna('').ne('')]
-            _require_element_ends(required, pd.concat([complete, usable], ignore_index=True))
-        except (OSError, ValueError, pa.errors.SchemaError, InvalidDomainCache):
+            cache.restore(key, directory, (name,))
+        except failures:
+            logger.warning("Endpoint cache restore failed for %s", hour, exc_info=True)
+    try:
+        cached = pd.read_csv(directory / name).pipe(lambda f: _restore_blanks(f, ElementEnds)).pipe(ElementEnds.validate)
+        usable = cached.loc[cached.substation_from.fillna('').ne('') & cached.substation_to.fillna('').ne('')]
+        combined = pd.concat([combined, usable], ignore_index=True).drop_duplicates(
+            ["eic", "tso", "name"], keep="last"
+        ).pipe(ElementEnds.validate)
+    except failures:
+        logger.warning("Ignoring unusable hourly endpoint cache for %s", hour, exc_info=True)
+    downloaded = None
+    complete = combined.loc[combined.substation_from.fillna('').ne('') & combined.substation_to.fillna('').ne('')]
+    if not _missing_element_ends(required, complete).empty:
+        try:
             rows = _get("finalComputation", hour, hour + pd.Timedelta(hours=1), timeout=25)
             fetched = cnecs.element_ends(rows, skip_conflicts=True)
             usable = fetched.loc[fetched.substation_from.fillna('').ne('') & fetched.substation_to.fillna('').ne('')]
-            downloaded = True
-        combined = pd.concat([ends, usable], ignore_index=True).drop_duplicates(
-            ["eic", "tso", "name"], keep="last"
-        ).pipe(ElementEnds.validate)
-        combined_complete = combined.loc[combined.substation_from.fillna('').ne('') & combined.substation_to.fillna('').ne('')]
-        missing = _missing_element_ends(required, combined_complete)
-        if missing.empty and downloaded:
-            cache.atomic_text(directory / name, fetched.to_csv(index=False))
-            cache.publish(key, directory, (name,))
-        if not missing.empty:
-            logger.warning("Location metadata missing for %d publication(s) at %s", len(missing), hour)
-        if not usable.empty and downloaded:
+            combined = pd.concat([combined, usable], ignore_index=True).drop_duplicates(
+                ["eic", "tso", "name"], keep="last"
+            ).pipe(ElementEnds.validate)
+            downloaded = fetched
+        except failures:
+            logger.warning("Location discovery failed for %s; keeping available locations", hour, exc_info=True)
+    complete = combined.loc[combined.substation_from.fillna('').ne('') & combined.substation_to.fillna('').ne('')]
+    missing = _missing_element_ends(required, complete)
+    if not missing.empty:
+        logger.warning("Location metadata missing for %d publication(s) at %s", len(missing), hour)
+    if not combined.equals(ends):
+        try:
             write_element_ends(combined)
-    except (OSError, ValueError, RuntimeError, KeyError, BotoCoreError, ClientError, pa.errors.SchemaError):
-        logger.warning("Location discovery failed for %s; keeping available locations", hour, exc_info=True)
+        except failures:
+            logger.warning("Local endpoint save failed for %s", hour, exc_info=True)
+    if downloaded is not None and missing.empty:
+        try:
+            cache.atomic_text(directory / name, downloaded.to_csv(index=False))
+        except failures:
+            logger.warning("Hourly endpoint save failed for %s", hour, exc_info=True)
+        else:
+            try:
+                cache.publish(key, directory, (name,))
+            except failures:
+                logger.warning("Endpoint cache publish failed for %s", hour, exc_info=True)
     return combined
 
 
