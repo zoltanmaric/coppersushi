@@ -3,6 +3,10 @@
 Append-only chronology of wiki operations (ingests, queries, lints).
 Entry format: `## [YYYY-MM-DD] <operation> | <title>`
 
+## [2026-11-05] query | CNEC map renderer and progressive updates
+
+The CNEC controls already use React, while Plotly and Mapbox own map rendering. Independent API responses still refresh Plotly symbol layers; batching reduces redraws but delays progressive display. [Map rendering direction](copper-sushi-app.md#map-rendering-direction) records the observed interaction and rendering constraints for evaluating a replacement.
+
 ## [2026-09-10] query | Which way a published row binds
 
 Checked on the 2026-09-11 final domain: `direction` is relative to the publishing TSO's own

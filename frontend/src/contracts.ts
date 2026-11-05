@@ -20,6 +20,7 @@ export type Value = string;
 export type Source = "constraints" | "attribution";
 export type Options = ConstraintOption[];
 export type Reference = string | null;
+export type Notes = string[];
 export type Day2 = string;
 export type Complete = boolean;
 export type Interval1 = string;
@@ -52,6 +53,7 @@ export interface LayerResponse {
   figure: PlotlyFigure;
   options: Options;
   reference: Reference;
+  notes: Notes;
 }
 /**
  * One explicit market-day view; selection is a published row identifier.

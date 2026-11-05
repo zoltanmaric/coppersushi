@@ -140,7 +140,6 @@ def test_country_outline_hits_and_selected_contribution_are_separate_from_the_ob
     assert set(v[0] for v in hit.customdata) == {'-2'}
     assert any('Net export limit: 0 MW' in text for text in hit.text if text)
     assert rendered.reference == 'PL'
-    assert 'Other Core zones: +20.00 €/MWh' in rendered.figure.layout.annotations[0].text
     # Actual DE–PL prices differ by only €10; the selected cap contributes €20, offset elsewhere.
     dots = next(t for t in rendered.figure.data if t.name == 'contribution relative to PL')
     assert any('DE · +20.00' in v for v in dots.text)
@@ -165,7 +164,8 @@ def test_line_interior_hits_keep_row_identity_and_missing_alpha_keeps_selection(
     unavailable = cnec_page.render(missing, mapped, 0, 10)
     assert any(t.name == 'selected CNEC' for t in unavailable.figure.data)
     assert not any(t.name.startswith('contribution relative') for t in unavailable.figure.data)
-    assert 'missing or zero' in unavailable.figure.layout.annotations[0].text
+    assert any('missing or zero' in note for note in unavailable.notes)
+    assert any('Poland cap' in note for note in unavailable.notes)
 
 
 @pytest.mark.parametrize('selected', [None, 12, 13])

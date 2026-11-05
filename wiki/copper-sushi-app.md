@@ -29,11 +29,24 @@ navigation.
 
 **Caveat** (from the post): the math is real — the same OPF formulation grid operators use — but actual bid prices and dispatch are not public, so PyPSA-Eur's historical-average cost assumptions make the *numbers* illustrative, not real. See ch. 4 of the [PyPSA-Eur paper](https://arxiv.org/abs/1806.01613).
 
+## Map rendering direction
+
+The CNEC controls and request state already use React. Dash hosts the page and its Plotly graph; Plotly renders the map through Mapbox. Changing the UI framework alone would keep the same map rendering behavior if Plotly remains.
+
+Observed limitations to address in a future map renderer:
+
+- Plotly updates the whole figure when independently fetched layers arrive. Country fills and symbols can blink repeatedly. Waiting for the layers to settle reduces redraws but delays the first prices and leaves the preceding interval visible while loading.
+- Country names and constraint markers are Mapbox symbols. They fade and are placed again on data updates; Plotly does not expose the map's symbol fade duration. A label-free basemap prevents the basemap's own names from appearing between updates.
+- Plotly/Dash graph listeners bind a callback once. The React integration must forward events to the latest handler or clicks on asynchronously loaded constraints use stale options. Map clicks and the dropdown must remain synchronized.
+- Plotly emits a missing sprite warning for `-15`; the map also reported style rebuild warnings when switching basemap styles. Browser checks must distinguish such warnings from failed data requests and visible errors.
+
+A single map with independently managed price, constraint and attribution layers could allow progressive updates without refreshing unrelated symbols. Evaluate a direct Mapbox or MapLibre integration, or another renderer, against click targets, camera persistence, fade behavior, loading/error states and large-grid performance before choosing. The [v1 map-engine measurements](codebase-v1.md) found Plotly's MapLibre path slow for the larger OPF network; they do not establish the performance of a direct integration.
+
 ## The CNEC page
 
-The base map loads before country-cap and price-contribution inputs. A status message identifies pending enrichment; hour navigation remains independent of that request. Enrichment is scoped to the day and retry, and late map results are discarded when the viewed hour or selection changes. Server logs report data-loading, geometry, attribution and figure-building durations.
+The label-free base map loads first. On the first interval, the price, physical-constraint and country-cap layers appear together after their requests settle. On a later interval, the previous figure and its timestamp remain visible until the replacement is ready; the controls show the requested interval and loading status. Errors remain visible and retryable. Late results do not replace the requested view. Server logs report data-loading, geometry, attribution and figure-building durations.
 
-Click a country-cap outline, transformer/PST marker, constrained line to select a binding row. The dropdown stays synchronized; when several rows share a target, it preserves the selected row or chooses the largest published dual. Poland alone has a supported aggregate cap. Virtual interfaces are outside the map’s scope. Previous/next buttons move one market time unit; minor ticks and timezone labels distinguish daylight-saving hours. See the [spread explainer](../assets/market-clearing.html) for interpretation.
+Click a country-cap outline, transformer/PST marker, constrained line to select a binding row. The dropdown stays synchronized; when several rows share a target, it preserves the selected row or chooses the largest published dual. Poland alone has a supported aggregate cap. Virtual interfaces are outside the map’s scope. Previous/next buttons move one market time unit; minor ticks and timezone labels distinguish daylight-saving hours. See the [spread explainer](market-clearing.html) for interpretation.
 
 `/cnec/<day>` puts the Core day-ahead market's published outcome beside its published binding constraints: every bidding zone coloured and labelled by its cleared price, and the [critical network elements with contingencies (CNECs)](core-day-ahead-capacity-calculation.md#cnec) that bound in that market time unit in purple. Purple means market-binding under the named contingency, not physically overloaded. A slider steps through the day's intervals; historical days load when their source data is available, and the next day once the prices and the Joint Allocation Office's (JAO's) active constraints are published.
 

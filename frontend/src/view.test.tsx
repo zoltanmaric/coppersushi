@@ -29,23 +29,24 @@ async function reply(path: string, data: object, selected?: number | null, statu
   await act(async () => {pending.splice(index, 1)[0].resolve(new Response(JSON.stringify(data), {status}));});
 }
 async function open() {
-  render(<CnecView id="cnec" day="2024-08-29" token="token"/>);
+  render(<CnecView id="cnec" day="2024-08-29" token="token" basemap={{version: 8, sources: {}, layers: []}}/>);
   await reply('day/2024-08-29', responses.day);
 }
 
-test('prices appear while constraints remain pending; attribution is quiet until selection', async () => {
+test('first map appears after its layers settle', async () => {
   await open();
   await reply('prices', responses.prices);
-  await waitFor(() => expect(screen.getByLabelText('Map').textContent).toContain('prices'));
-  expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toBe('Loading constraints…');
+  expect(screen.getByLabelText('Map').textContent).not.toContain('prices');
+  await waitFor(() => expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toBe('Loading constraints…'));
   await reply('constraints', responses.constraints);
-  await waitFor(() => expect(screen.getByLabelText('Map').textContent).toContain('binding lines'));
-  await waitFor(() => expect(screen.queryByRole('status', {name: 'Map loading'})).toBeNull());
+  expect(screen.getByLabelText('Map').textContent).not.toContain('binding lines');
+  await waitFor(() => expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toBe('Loading price contributions…'));
   expect(pending.some(p => p.path.endsWith('attribution/2024-08-29'))).toBe(true);
   fireEvent.change(screen.getByLabelText('Binding constraint'), {target: {value: '1'}});
   await waitFor(() => expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toBe('Loading price contributions…'));
-  expect(screen.getByLabelText('Map').textContent).toContain('prices');
+  expect(screen.getByLabelText('Map').textContent).not.toContain('prices');
   await reply('attribution/2024-08-29', responses.attribution);
+  await reply('enriched', responses.caps, null);
   await reply('enriched', responses.enriched, 1);
   await waitFor(() => expect(screen.getByLabelText('Map').textContent).toContain('contributions'));
   expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('1');
@@ -148,7 +149,10 @@ test('map hits select allowed rows and preserve a selected contingency', async (
   await open();
   await reply('constraints', {...responses.constraints, options: [...responses.constraints.options,
     {...responses.constraints.options[1], label: 'Second contingency', value: '2'}]});
-  await waitFor(() => expect(screen.getByText('Second contingency')).toBeTruthy());
+  await reply('prices', responses.prices);
+  await reply('attribution/2024-08-29', responses.attribution);
+  await reply('enriched', {...responses.caps, options: [...responses.caps.options, {...responses.constraints.options[1], label: 'Second contingency', value: '2'}]}, null);
+  await waitFor(() => expect(graph.data.some(t => t.name === 'country cap')).toBe(true));
   act(() => clickGraph({clickData: {points: [{customdata: ['1,2']}]}}));
   expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('1');
   fireEvent.change(screen.getByLabelText('Binding constraint'), {target: {value: '2'}});
@@ -163,4 +167,52 @@ test('invalid API payloads are visible errors, never successful empty layers', a
   await reply('prices', {unexpected: true});
   await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Invalid layer response'));
   expect(screen.getByLabelText('Map').textContent).not.toContain('prices');
+});
+
+
+test('a loaded interval remains unchanged until the next interval layers settle', async () => {
+  await open();
+  await reply('prices', responses.prices);
+  await reply('constraints', responses.constraints);
+  await reply('attribution/2024-08-29', responses.attribution);
+  await reply('enriched', responses.caps, null);
+  await waitFor(() => expect(graph.data.some(t => t.name === 'country cap')).toBe(true));
+  const displayed = graph;
+  fireEvent.click(screen.getByText('Next'));
+  expect(graph).toBe(displayed);
+  await reply('prices', {...responses.prices, request: {...responses.prices.request, interval: 1}});
+  expect(graph).toBe(displayed);
+  await reply('constraints', {...responses.constraints, request: {...responses.constraints.request, interval: 1}}, null);
+  expect(graph).toBe(displayed);
+  act(() => clickGraph({clickData: {points: [{customdata: ['1']}]}}));
+  expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('');
+  await reply('enriched', {...responses.caps, request: {...responses.caps.request, interval: 1}}, null);
+  await waitFor(() => expect(graph).not.toBe(displayed));
+  expect(graph.data.map(t => t.uid)).toEqual(displayed.data.map(t => t.uid));
+});
+
+
+test('the initially bound graph callback selects constraints loaded later', async () => {
+  await open();
+  const initialClick = clickGraph;
+  await reply('constraints', responses.constraints);
+  await reply('prices', responses.prices);
+  await reply('attribution/2024-08-29', responses.attribution);
+  await reply('enriched', responses.caps, null);
+  await waitFor(() => expect(graph.data.some(t => t.name === 'country cap')).toBe(true));
+  act(() => initialClick({clickData: {points: [{customdata: ['-1']}]}}));
+  expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('-1');
+});
+
+
+test('shows a specific unavailable attribution reason', async () => {
+  await open();
+  await reply('prices', responses.prices);
+  await reply('constraints', responses.constraints);
+  await reply('attribution/2024-08-29', {...responses.attribution, complete: false});
+  await waitFor(() => expect(pending.some(p => p.path.endsWith('enriched'))).toBe(true));
+  expect(screen.queryByText('Some attribution inputs are unavailable.')).toBeNull();
+  expect(screen.queryByText('Poland cap attribution unavailable for this interval.')).toBeNull();
+  await reply('enriched', {...responses.caps, notes: ['Poland cap attribution unavailable for this interval.']}, null);
+  await waitFor(() => expect(screen.getByText('Poland cap attribution unavailable for this interval.')).toBeTruthy());
 });

@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useReducer, useState} from 'react';
+import React, {useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState} from 'react';
 import {QueryClient, QueryClientProvider, useQuery} from '@tanstack/react-query';
 import {fetchCnec} from './api';
 import {Timeline} from './timeline';
@@ -6,13 +6,17 @@ import {reduceSelection} from './state';
 import type {PlotlyFigure, LayerResponse, ConstraintOption} from './contracts';
 import './style.css';
 
-interface Props {id: string; day: string; token: string}
+interface Props {id: string; day: string; token: string; basemap: PlotlyFigure['layout']['mapbox']['style']}
 interface GraphChange {clickData?: {points: {customdata?: unknown}[]} | null}
 interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void}
 // Reuse Dash's Graph component and its Plotly loader instead of shipping Plotly twice.
 const Graph = (props: GraphProps) => {
   const Component = (window as unknown as {dash_core_components: {Graph: React.ComponentType<GraphProps>}}).dash_core_components.Graph;
-  return <Component {...props}/>;
+  // Dash binds event listeners once; forward them to the current React handler.
+  const handler = useRef(props.setProps);
+  useLayoutEffect(() => {handler.current = props.setProps;}, [props.setProps]);
+  const setProps = useCallback((change: GraphChange) => handler.current(change), []);
+  return <Component {...props} setProps={setProps}/>;
 };
 
 export function CnecView(props: Props) {
@@ -22,23 +26,23 @@ export function CnecView(props: Props) {
   return <QueryClientProvider client={client}><View {...props}/></QueryClientProvider>;
 }
 
-function shell(token: string): PlotlyFigure {
+function shell(token: string, basemap: Props['basemap']): PlotlyFigure {
   return {data: [{type: 'scattermapbox', lon: [], lat: []}], layout: {
-    mapbox: {style: 'dark', accesstoken: token, center: {lat: 50, lon: 10}, zoom: 3.5},
+    mapbox: {style: basemap, accesstoken: token, center: {lat: 50, lon: 10}, zoom: 3.5},
     uirevision: 'cnec-camera', margin: {t: 0, b: 0, l: 0, r: 0}, showlegend: false,
     paper_bgcolor: '#1b1b1b',
   }};
 }
 
-function combine(token: string, prices?: LayerResponse, constraints?: LayerResponse, caps?: LayerResponse): PlotlyFigure {
-  const initial = shell(token);
+function combine(token: string, basemap: Props['basemap'], prices?: LayerResponse, constraints?: LayerResponse, caps?: LayerResponse): PlotlyFigure {
+  const initial = shell(token, basemap);
   if (!prices && !constraints) return initial;
   const priceData = prices?.figure.data ?? [];
   return {data: [...priceData.slice(0, 1), ...(constraints?.figure.data ?? []), ...(caps?.figure.data.filter(t => t.meta === 'country-cap') ?? []), ...priceData.slice(1)],
     layout: {...(constraints?.figure.layout ?? prices?.figure.layout ?? initial.layout), uirevision: 'cnec-camera'}};
 }
 
-function View({id, day: routeDay, token}: Props) {
+function View({id, day: routeDay, token, basemap}: Props) {
   const [selection, dispatch] = useReducer(reduceSelection, {day: routeDay, interval: 0, selected: null, source: "constraints"});
   useEffect(() => {dispatch({type: 'day', day: routeDay});}, [routeDay]);
   const {day, interval, selected, source} = selection;
@@ -61,15 +65,35 @@ function View({id, day: routeDay, token}: Props) {
     enabled: selected !== null && prices.isSuccess && constraints.isSuccess && attribution.isSuccess,
     queryFn: ({signal}) => fetchCnec('layer', 'enriched', signal, {...view, attribution: attribution.data})});
   const full = selected === null ? caps.data : enriched.data;
-  const figure = useMemo(() => full?.figure ?? combine(token, prices.data, highlight.data ?? constraints.data, caps.data),
-    [token, full, prices.data, highlight.data, constraints.data, caps.data]);
-  const graphFigure = useMemo(() => {
+  const figure = useMemo(() => full?.figure ?? combine(token, basemap, prices.data, highlight.data ?? constraints.data, caps.data),
+    [token, basemap, full, prices.data, highlight.data, constraints.data, caps.data]);
+  const candidate = useMemo(() => {
     const copy = structuredClone(figure);
     // Keep camera inputs stable even when a newly arrived layer suggests different bounds.
+    const counts = new Map<string, number>();
+    for (const trace of copy.data) {
+      const name = String(trace.name ?? trace.type);
+      const ordinal = counts.get(name) ?? 0;
+      counts.set(name, ordinal + 1);
+      trace.uid = `t${Array.from(name, c => c.codePointAt(0)!.toString(16)).join("-")}-${ordinal}`;
+    }
+    copy.layout.mapbox.style = basemap;
     copy.layout.mapbox.center = {lat: 50, lon: 10};
     copy.layout.mapbox.zoom = 3.5;
     return copy;
-  }, [figure]);
+  }, [figure, basemap]);
+  // Publish one interval update after its independently fetched layers settle.
+  // The retained figure carries its own timestamp while the controls request a new interval.
+  const settled = validInterval && !prices.isPending && !constraints.isPending &&
+    (prices.isError || constraints.isError || attribution.isError || (attribution.isSuccess && !caps.isPending)) &&
+    (selected === null || prices.isError || constraints.isError || attribution.isError || enriched.isSuccess || enriched.isError);
+  const [displayed, setDisplayed] = useState<{day: string; interval: number; selected: number | null; figure: PlotlyFigure} | null>(null);
+  useEffect(() => {
+    if (settled) setDisplayed({day, interval, selected, figure: candidate});
+  }, [settled, day, interval, selected, candidate]);
+  const emptyFigure = useMemo(() => shell(token, basemap), [token, basemap]);
+  const graphFigure = displayed?.day === day ? displayed.figure : settled ? candidate : emptyFigure;
+  const mapCurrent = displayed?.day === day && displayed.interval === interval && displayed.selected === selected;
   const options = full?.options ?? caps.data?.options ?? constraints.data?.options ?? [];
   useEffect(() => {
     const readyOptions = source === 'constraints' ? constraints.data?.options : caps.data?.options;
@@ -84,12 +108,13 @@ function View({id, day: routeDay, token}: Props) {
   ] as const;
   const loading = !calendar.data && calendar.isFetching ? 'Loading market intervals…' : !prices.data && prices.isFetching ? 'Loading prices…' :
     !constraints.data && constraints.isFetching ? 'Loading constraints…' :
-    selected !== null && (attribution.isFetching || enriched.isFetching) ? 'Loading price contributions…' : '';
+    (attribution.isFetching || caps.isFetching || enriched.isFetching) ? 'Loading price contributions…' : '';
   function select(value: string) {
     const option = options.find(o => o.value === value);
     if (option) dispatch({type: 'select', selected: value === '' ? null : Number(value), source: option.source});
   }
   function mapClick(change: GraphChange) {
+    if (!mapCurrent) return;
     const values = change.clickData?.points[0]?.customdata;
     if (!Array.isArray(values) || typeof values[0] !== 'string') return;
     const candidates = values[0].split(',');
@@ -110,13 +135,12 @@ function View({id, day: routeDay, token}: Props) {
       </select>
       <span>{selected === null ? '' : `Reference: ${enriched.isSuccess ? enriched.data.reference ?? 'unavailable' : enriched.isError || prices.isError || attribution.isError ? 'unavailable' : 'pending'}`}</span>
     </div>
-    <div className="cnec-scope">Spread attribution: physical CNECs and country caps. <a href="/assets/market-clearing.html">How spread attribution works</a></div>
     <div className="cnec-map-container">
       <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick}
         config={{responsive: true, displayModeBar: false, scrollZoom: true}} style={{height: '100%'}}/>
       <aside className="cnec-progress" aria-live="polite">
         {loading && <div role="status" aria-label="Map loading">{loading}</div>}
-        {attribution.data && !attribution.data.complete && <div>Some attribution inputs are unavailable.</div>}
+        {full?.notes.map(note => <div role="status" key={note}>{note}</div>)}
         {failures.map(([name, query]) => query.error && <div role="alert" key={name}>
           {name}: {query.error.message} <button onClick={() => void query.refetch()}>Retry</button>
         </div>)}

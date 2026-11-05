@@ -29,7 +29,7 @@ class Snapshot(NamedTuple):
     caps: DataFrame[CountryCaps]
     selected_id: int | None = None
     reference: str | None = None
-    note: str = ""
+    notes: tuple[str, ...] = ()
 
 
 def key_of(constraint: pd.Series) -> ConstraintKey:
@@ -59,9 +59,9 @@ def snapshot[Prices: ZonalPrices](
     contribution: DataFrame[PriceContributions] | None = None
     caps = cnec_attribution.country_caps(context, prices, interval)
     cap_inputs = None if context is None else _at_interval(context, interval)
-    note = ""
+    notes: list[str] = []
     if cap_inputs is None or len(cap_inputs) != 1 or cap_inputs.iloc[0][["polish_alt", "polish_position", "import_limit", "export_limit"]].isna().any():
-        note = "Poland cap attribution unavailable for this interval."
+        notes.append("Poland cap attribution unavailable for this interval.")
     if selected is not None:
         identity = selected.source_id
         if identity in current.source_id.values:
@@ -71,7 +71,7 @@ def snapshot[Prices: ZonalPrices](
             if alpha is not None and 0 < alpha <= 1:
                 contribution = cnecs.price_contributions(chosen.iloc[0], ptdfs, reference_zone, alpha).pipe(PriceContributions.validate)
             else:
-                note = "Contribution unavailable: missing or zero FB scaling factor α."
+                notes.append("Contribution unavailable: missing or zero FB scaling factor α.")
         elif identity in caps.source_id.values:
             row = caps[caps.source_id.eq(identity)].iloc[0]
             reference_zone = "PL"
@@ -89,5 +89,5 @@ def snapshot[Prices: ZonalPrices](
         selected_id=None if selected is None else selected.source_id,
         caps=caps,
         reference=reference_zone,
-        note=note,
+        notes=tuple(notes),
     )

@@ -35,6 +35,7 @@ def test_a_cnec_path_opens_the_price_page_on_its_day():
 
 def test_the_cnec_link_names_no_day_so_the_page_opens_on_today(monkeypatch):
     monkeypatch.setattr(app, "mapbox_token", lambda: "token")
+    monkeypatch.setattr(app, "basemap", lambda: {"version": 8, "sources": {}, "layers": []})
     links = (c for c in _components(app.show_page("/opf-2024")) if isinstance(c, dcc.Link))
     assert next(link for link in links if link.children == "Prices and binding CNECs").href == "/cnec"
     controls = {component.id: component for component in _ids(app.show_page("/cnec"))}
@@ -43,6 +44,7 @@ def test_the_cnec_link_names_no_day_so_the_page_opens_on_today(monkeypatch):
 
 def test_each_route_gets_only_its_own_controls(monkeypatch):
     monkeypatch.setattr(app, "mapbox_token", lambda: "token")
+    monkeypatch.setattr(app, "basemap", lambda: {"version": 8, "sources": {}, "layers": []})
     network = {component.id for component in _ids(app.show_page("/opf-2024"))}
     cnec = {component.id for component in _ids(app.show_page("/cnec/2024-08-29"))}
     assert {"map", "snapshot-slider"} <= network
@@ -56,6 +58,7 @@ def test_cnec_retry_draws_new_endpoints_without_reloading_the_day(tmp_path, monk
     day = inputs()
     monkeypatch.setattr(app, "cnec_day", lambda _: day)
     monkeypatch.setattr(app, "mapbox_token", lambda: "token")
+    monkeypatch.setattr(app, "basemap", lambda: {"version": 8, "sources": {}, "layers": []})
     monkeypatch.setattr(app, "basemap", lambda: "dark")
     monkeypatch.setattr(jao, "JAO_DIR", tmp_path)
     located = pd.read_csv(REPO / "tests/fixtures/cnec-price-map/located-substations.csv")
@@ -78,7 +81,6 @@ def test_cnec_retry_draws_new_endpoints_without_reloading_the_day(tmp_path, monk
     monkeypatch.setattr(jao, "_get", fetch)
     result = app.render_cnec(MarketDay.on("2024-08-29"), 0, None)
     figure = result.figure
-    assert "2 of 2 active rows mapped" in figure.layout.annotations[0].text
     assert len(calls) == 1
     app.render_cnec(MarketDay.on("2024-08-29"), 0, "1")
     assert len(calls) == 1
@@ -127,6 +129,7 @@ def _ids(component):
 @pytest.mark.parametrize("mode", ['embed', 'full'])
 def test_root_rollout_keeps_permanent_urls_stable(mode, monkeypatch):
     monkeypatch.setattr(app, "mapbox_token", lambda: "token")
+    monkeypatch.setattr(app, "basemap", lambda: {"version": 8, "sources": {}, "layers": []})
     assert app.is_embed_path('/', mode) is (mode == 'embed')
     assert app.is_embed_path('/embed/opf-2024', mode)
     assert not app.is_embed_path('/opf-2024', mode)
@@ -225,11 +228,12 @@ def test_missing_render_interval_does_not_default_to_midnight(monkeypatch):
 
 def test_cnec_mount_uses_react_component_and_has_no_loading_callback_chain(monkeypatch):
     monkeypatch.setattr(app, 'mapbox_token', lambda: 'token')
+    monkeypatch.setattr(app, 'basemap', lambda: {'version': 8, 'sources': {}, 'layers': []})
     page = app.show_page('/cnec/2024-08-29')
     view = next(c for c in _components(page) if getattr(c, 'id', None) == 'cnec-view')
     assert view.to_plotly_json() == {
         'namespace': 'coppersushi_cnec', 'type': 'CnecView',
-        'props': {'id': 'cnec-view', 'day': '2024-08-29', 'token': 'token'},
+        'props': {'id': 'cnec-view', 'day': '2024-08-29', 'token': 'token', 'basemap': {'version': 8, 'sources': {}, 'layers': []}},
     }
     dependencies = app.server.test_client().get('/_dash-dependencies').json
     assert all('cnec-' not in callback['output'] for callback in dependencies)
