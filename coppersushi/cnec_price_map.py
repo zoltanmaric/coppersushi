@@ -12,7 +12,7 @@ from coppersushi.data_model.jao import ActiveConstraints
 import plotly.graph_objects as go
 
 from coppersushi import cnec_influence, map_style, market
-from coppersushi.cnec_market import Snapshot
+from coppersushi.cnec_market import Snapshot, daily_price_range
 from coppersushi.data_model.cnec_price_map import MATCHED, MappedCnecElements
 from coppersushi.market_day import MARKET_TZ
 
@@ -101,7 +101,7 @@ def _fill_anchor(basemap: str | dict) -> str | None:
 
 
 def _price_traces(
-    priced_zones: pd.DataFrame, fill_anchor: str | None
+    priced_zones: pd.DataFrame, fill_anchor: str | None, price_range: tuple[float, float]
 ) -> tuple[go.Choroplethmapbox, go.Scattermapbox]:
     """The price fill and, apart, the labels: the figure draws those last, over every dot and ray."""
     labels_at = _zone_centres(priced_zones)
@@ -121,6 +121,7 @@ def _price_traces(
         },
         locations=priced_zones.zone,
         z=priced_zones.price,
+        zmin=price_range[0], zmax=price_range[1], zauto=False,
         colorscale=map_style.VALUE_COLORSCALE,
         marker_opacity=map_style.ZONE_FILL_OPACITY,
         marker_line_color=map_style.ZONE_BORDER,
@@ -322,7 +323,7 @@ def figure(
     """
     priced_zones = _priced_zones(zones, view.prices)
     placed = _placed(view.constraints, geometries)
-    fill, labels = _price_traces(priced_zones, _fill_anchor(basemap))
+    fill, labels = _price_traces(priced_zones, _fill_anchor(basemap), view.price_range)
     selected = _selected(placed, view.selected_id)
     centres = _zone_centres(priced_zones)
     if view.selected_id in view.caps.source_id.values:
@@ -346,8 +347,8 @@ def figure(
 def price_figure(zones: DataFrame[BiddingZoneShapes], prices: DataFrame[ZonalPrices],
                  interval: pd.Timestamp, token: str, basemap: str | dict) -> go.Figure:
     """Price layer independent of constraint and attribution availability."""
-    priced = _priced_zones(zones, prices)
-    return go.Figure(_price_traces(priced, _fill_anchor(basemap)),
+    priced = _priced_zones(zones, ZonalPrices.validate(prices[prices.interval.eq(interval)]))
+    return go.Figure(_price_traces(priced, _fill_anchor(basemap), daily_price_range(prices)),
                      layout=map_layout(zones, interval, token, basemap))
 
 
