@@ -1,7 +1,6 @@
 from dataclasses import replace
 import logging
 from time import perf_counter
-from typing import Any, NamedTuple
 from collections.abc import Callable
 from functools import partial
 import os
@@ -11,16 +10,17 @@ import pandas as pd
 from pandera.typing import DataFrame
 
 import plotly.graph_objects as go
-from dash import Dash, dcc, html, Input, Output, State, Patch, ctx, no_update
+from dash import Dash, dcc, html, Input, Output, Patch, ctx, no_update
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 
+from coppersushi.cnec_component import CnecView
 from coppersushi.data_model.jao import ActiveConstraints
 from coppersushi import cnec_geometry, cnec_page, map_style, power_flow
 from coppersushi.data_model.network_views import BiddingZoneShapes
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
-from coppersushi.data_model.cnec_attribution import AttributionPayload, AttributionFailure, attribution_to_browser, attribution_from_browser
-from coppersushi.data_sources import opf_bundle, zone_shapes, credentials, cnec_attribution as attribution_source, electricity_maps, jao, mapbox_styles, networks, osm_locator
+from coppersushi.data_model.cnec_attribution import AttributionPayload, attribution_from_browser
+from coppersushi.data_sources import opf_bundle, zone_shapes, credentials, electricity_maps, jao, mapbox_styles, networks, osm_locator
 from coppersushi.market_day import MARKET_TZ, MarketDay
 
 # Every page's controls live in one tree that the router swaps, so a callback whose
@@ -103,6 +103,14 @@ def cnec_geometries(day: cnec_page.Day, interval_index: int) -> DataFrame[Mapped
     return locate_constraints(interval, required)
 
 
+def locate_constraints(interval: pd.Timestamp, required: DataFrame[ActiveConstraints]) -> DataFrame[MappedCnecElements]:
+    """Resolve one interval without waiting for prices or attribution."""
+    ends = timed("endpoints", jao.load_element_ends, interval, required)
+    return timed("locate", cnec_geometry.locate_elements,
+        ends, timed("locator_read", osm_locator.read_csvs), osm_locator.load_aliases(),
+    )
+
+
 def cnec_day(day: MarketDay) -> cnec_page.Day:
     """One delivery day's inputs, fetching the day's own feeds on first use."""
     if day not in _cnec_days:
@@ -127,14 +135,6 @@ def network_key_from_path(pathname: str) -> str | None:
 def is_embed_path(pathname: str, root_view: str = ROOT_VIEW) -> bool:
     key = (pathname or '').strip('/')
     return key == 'embed/opf-2024' or (not key and root_view == 'embed')
-
-
-def locate_constraints(interval: pd.Timestamp, required: DataFrame[ActiveConstraints]) -> DataFrame[MappedCnecElements]:
-    """Resolve one interval without waiting for prices or attribution."""
-    ends = timed("endpoints", jao.load_element_ends, interval, required)
-    return timed("locate", cnec_geometry.locate_elements,
-        ends, timed("locator_read", osm_locator.read_csvs), osm_locator.load_aliases(),
-    )
 
 
 def navigation() -> html.Nav:
@@ -197,7 +197,7 @@ app.layout = html.Div([
 @app.callback(Output('page', 'children'), Input('url', 'pathname'))
 def show_page(pathname: str, root_view: str = ROOT_VIEW) -> html.Div:
     if is_cnec_path(pathname):
-        return html.Div([navigation(), cnec_page.layout(cnec_day_from_path(pathname), mapbox_token())])
+        return html.Div([navigation(), CnecView(id='cnec-view', day=cnec_day_from_path(pathname) or cnec_page.local_today(), token=mapbox_token())])
     if network_key_from_path(pathname) is None:
         return html.Div([html.H1('Page not found'), dcc.Link('2024 OPF', href='/opf-2024')])
     return html.Div([
@@ -263,244 +263,25 @@ def update_figure(pathname: str, snapshot_index: int) -> tuple:
     return render(pathname, snapshot_index, ctx.triggered_id == 'snapshot-slider')
 
 
-class CnecRendered(NamedTuple):
-    """A successfully rendered map and its matching controls."""
-
-    view: cnec_page.Rendered
-
-
-class CnecRenderFailure(NamedTuple):
-    """A render failure to display without replacing the previous map."""
-
-    error: str
-
-
-type CnecRender = CnecRendered | CnecRenderFailure
-
-
-def render_cnec(day: MarketDay, interval_index: int, selected: str | None, attribution: AttributionPayload | None = None) -> CnecRender:
-    """The CNEC page's map and controls for one day; a failed load becomes the banner."""
-    try:
-        inputs = timed("day_inputs", cnec_day, day)
-        if attribution is not None:
-            inputs = replace(inputs, context=attribution_from_browser(attribution))
-        rendered = timed("figure", cnec_page.render,
-            inputs, cnec_geometries(inputs, interval_index),
-            interval_index, selected, mapbox_token=mapbox_token(), basemap=timed("basemap", basemap)
-        )
-    except Exception as e:  # noqa: BLE001 — every loader failure must reach the page
-        logging.exception('Loading the CNEC day %s failed', day)
-        return CnecRenderFailure(f'Could not load {day.date.isoformat()}: {e}')
-    return CnecRendered(rendered)
-
-
-def cnec_outputs(result: CnecRender) -> tuple:
-    """Convert a render result to the map/control outputs at the Dash boundary."""
-    if isinstance(result, CnecRenderFailure):
-        return (no_update,) * 6 + (result.error, True) + (no_update,) * 4
-    view = result.view
-    return (
-        view.figure, view.interval_max, view.interval_marks, view.interval_value,
-        view.constraint_options, view.constraint_value, '', False,
-        f'Reference: {view.reference or "unavailable"}',
-        view.interval_value == 0, view.interval_value == view.interval_max, None,
+def render_cnec(day: MarketDay, interval_index: int, selected: str | None, attribution: AttributionPayload | None = None) -> cnec_page.Rendered:
+    """Load and render one CNEC view; the HTTP boundary handles failures."""
+    inputs = timed("day_inputs", cnec_day, day)
+    if attribution is not None:
+        inputs = replace(inputs, context=attribution_from_browser(attribution))
+    return timed("figure", cnec_page.render,
+        inputs, cnec_geometries(inputs, interval_index),
+        interval_index, selected, mapbox_token=mapbox_token(), basemap=timed("basemap", basemap)
     )
 
 
-@app.callback(
-    Output('cnec-active-ready', 'data'),
-    Input('cnec-date', 'value'))
-def load_cnec_constraints(day: str) -> dict:
-    try:
-        _cnec_days.pop(MarketDay.on(day), None)
-        timed("constraints_load", jao.load_active_day, day)
-        return {'day': day}
-    except Exception as error:
-        logging.exception('Loading CNEC constraints for %s failed', day)
-        return {'day': day, 'error': str(error)}
-
-
-@app.callback(
-    Output('cnec-prices-ready', 'data'),
-    Input('cnec-active-ready', 'data'),
-    State('cnec-date', 'value'))
-def load_cnec_prices(active: dict | None, day: str) -> dict:
-    if not active or active['day'] != day:
-        raise PreventUpdate
-    if 'error' in active:
-        return active
-    try:
-        timed("prices_load", electricity_maps.load_day, day)
-        return active
-    except Exception as error:
-        logging.exception('Loading CNEC prices for %s failed', day)
-        return {**active, 'error': str(error)}
-
-
-app.clientside_callback(
-    """function(day, active, prices) {
-        if (!active || active.day !== day) return 'Loading binding constraints…';
-        if (!prices || prices.day !== day) return 'Loading prices for the 12 Core zones…';
-        return 'Locating binding lines and drawing the map…';
-    }""",
-    Output('cnec-progress', 'children'),
-    Input('cnec-date', 'value'),
-    Input('cnec-active-ready', 'data'),
-    Input('cnec-prices-ready', 'data'))
-
-
-CNEC_OUTPUTS = [
-    ('cnec-map', 'figure'), ('cnec-interval', 'max'), ('cnec-interval', 'marks'),
-    ('cnec-interval', 'value'), ('cnec-constraint', 'options'), ('cnec-constraint', 'value'),
-    ('cnec-status', 'children'), ('cnec-status', 'is_open'),
-    ('cnec-reference-zone', 'children'), ('cnec-previous', 'disabled'),
-    ('cnec-next', 'disabled'), ('cnec-map', 'clickData'),
-]
-
-
-@app.callback(
-    [Output(*output) for output in CNEC_OUTPUTS] + [Output('cnec-view-day', 'data'),
-                                                        Output('cnec-attribution-status', 'children')],
-    Input('cnec-prices-ready', 'data'),
-    State('cnec-date', 'value'))
-def open_cnec(ready: dict[str, Any] | None, day: str) -> tuple:
-    token = {'day': day}
-    if not ready or ready.get('day') != day:
-        raise PreventUpdate
-    if 'error' in ready:
-        return (*cnec_outputs(CnecRenderFailure(f"Could not load {day}: {ready['error']}")), no_update, no_update)
-    result = render_cnec(MarketDay.on(day), 0, None)
-    loaded = isinstance(result, CnecRendered)
-    return (*cnec_outputs(result), token if loaded else no_update,
-            'Loading country caps and price contributions…' if loaded else no_update)
-
-
-@app.callback(
-    [Output(*output, allow_duplicate=True) for output in CNEC_OUTPUTS],
-    Input('cnec-map', 'clickData'),
-    Input('cnec-previous', 'n_clicks'),
-    Input('cnec-next', 'n_clicks'),
-    Input('cnec-interval', 'value'),
-    Input('cnec-constraint', 'value'),
-    State('cnec-attribution-ready', 'data'),
-    State('cnec-date', 'value'),
-    State('cnec-prices-ready', 'data'),
-    State('cnec-constraint', 'options'),
-    State('cnec-view-day', 'data'),
-    prevent_initial_call=True)
-def update_cnec(click: dict | None, previous: int | None, next_: int | None,
-                interval_index: int | None, selected: str | None, attribution: dict | None,
-                day: str, ready: dict | None, options: list[dict] | None,
-                viewed_day: dict | None) -> tuple:
-    token = {'day': day}
-    if (viewed_day != token or not ready or 'error' in ready
-            or ready.get('day') != day):
-        raise PreventUpdate
-    if interval_index is None:
-        raise ValueError("Loaded CNEC view is missing its interval index")
-    delivery = MarketDay.on(day)
-    enrichment = attribution if attribution and attribution.get('day') == day else None
-    if ctx.triggered_id == 'cnec-map':
-        if not click:
-            raise PreventUpdate
-        selected = cnec_page.clicked_selection(click, options or [], selected)
-    elif ctx.triggered_id == 'cnec-previous':
-        interval_index = cnec_page.advance_interval(delivery, interval_index, -1)
-    elif ctx.triggered_id == 'cnec-next':
-        interval_index = cnec_page.advance_interval(delivery, interval_index, 1)
-    payload = AttributionPayload.model_validate(enrichment) if enrichment and enrichment.get('rows') is not None else None
-    return cnec_outputs(render_cnec(delivery, interval_index, selected, payload))
-
-
-@app.callback(
-    Output('cnec-attribution-ready', 'data'),
-    Input('cnec-view-day', 'data'),
-    State('cnec-date', 'value'))
-def load_cnec_attribution(viewed: dict | None, day: str) -> dict:
-    """Start enrichment only after the base map has reached the browser."""
-    token = {'day': day}
-    if viewed != token:
-        raise PreventUpdate
-    delivery = MarketDay.on(day)
-    try:
-        frame = timed('attribution', attribution_source.load_day, delivery)
-        return attribution_to_browser(frame, delivery).model_dump(mode="json")
-    except Exception as error:
-        logging.exception('Loading CNEC attribution for %s failed', day)
-        return AttributionFailure(day=delivery.date, error=f'Attribution failed: {error}').model_dump(mode='json')
-
-
-@app.callback(
-    Output('cnec-enriched-view', 'data'),
-    Input('cnec-attribution-ready', 'data'),
-    State('cnec-date', 'value'),
-    State('cnec-interval', 'value'),
-    State('cnec-constraint', 'value'),
-    State('cnec-view-day', 'data'),
-    prevent_initial_call=True)
-def enrich_cnec(attribution: dict | None, day: str, interval_index: int,
-                selected: str | None, viewed: dict | None) -> dict:
-    """Keep navigation independent of the pending attribution request."""
-    token = {'day': day}
-    if (viewed != token or not attribution or attribution.get('rows') is None
-            or attribution.get('day') != day):
-        raise PreventUpdate
-    result = render_cnec(MarketDay.on(day), interval_index, selected, AttributionPayload.model_validate(attribution))
-    if isinstance(result, CnecRenderFailure):
-        return {**token, 'interval': interval_index, 'selected': selected,
-                'error': result.error}
-    view = result.view
-    return {**token, 'interval': interval_index, 'selected': selected,
-            'figure': view.figure, 'options': view.constraint_options,
-            'reference': f'Reference: {view.reference or "unavailable"}'}
-
-
-app.clientside_callback(
-    """function(view, day, interval, selected) {
-        const unchanged = [window.dash_clientside.no_update, window.dash_clientside.no_update,
-                           window.dash_clientside.no_update, window.dash_clientside.no_update,
-                           window.dash_clientside.no_update];
-        if (!view || view.day !== day ||
-            view.interval !== interval || view.selected !== selected) return unchanged;
-        if (view.error) return [...unchanged.slice(0, 3), view.error, true];
-        return [view.figure, view.options, view.reference, '', false];
-    }""",
-    Output('cnec-map', 'figure', allow_duplicate=True),
-    Output('cnec-constraint', 'options', allow_duplicate=True),
-    Output('cnec-reference-zone', 'children', allow_duplicate=True),
-    Output('cnec-status', 'children', allow_duplicate=True),
-    Output('cnec-status', 'is_open', allow_duplicate=True),
-    Input('cnec-enriched-view', 'data'),
-    State('cnec-date', 'value'),
-    State('cnec-interval', 'value'),
-    State('cnec-constraint', 'value'),
-    prevent_initial_call=True)
-
-
-app.clientside_callback(
-    """function(attribution, day) {
-        if (!attribution || attribution.day !== day)
-            return window.dash_clientside.no_update;
-        if (attribution.error) return attribution.error;
-        return attribution.complete ? '' : 'Source data is missing for some intervals; affected contributions are unavailable.';
-    }""",
-    Output('cnec-attribution-status', 'children', allow_duplicate=True),
-    Input('cnec-attribution-ready', 'data'),
-    State('cnec-date', 'value'),
-    prevent_initial_call=True)
-
-
-# Independent HTTP layers share the existing application services.
+# HTTP requests and React own CNEC coordination; Dash still owns OPF callbacks.
 import cnec_http
 from coppersushi.data_model.cnec_api import EnrichedRequest
 
 
 def enriched_view(view: EnrichedRequest) -> cnec_page.Rendered:
-    result = render_cnec(MarketDay.on(view.day), view.interval,
+    return render_cnec(MarketDay.on(view.day), view.interval,
                         None if view.selected is None else str(view.selected), view.attribution)
-    if isinstance(result, CnecRenderFailure):
-        raise RuntimeError(result.error)
-    return result.view
 
 
 cnec_http.register(server, cnec_http.Services(core_zones, mapbox_token, basemap,

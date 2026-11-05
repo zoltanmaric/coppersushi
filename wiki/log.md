@@ -199,7 +199,7 @@ Established the `forecasts/` project: Germany–Luxembourg quarter-hour prices a
 
 ## [2026-10-09] ingest | Lovable CNEC interaction review
 
-Inspected the public WelfMaxxing port in Chrome: border, transformer and line-interior clicks select constraints and show comparison rays. Reproduced a stale tooltip across interval changes, incorrect export-cap wording using €/MWh, and ray labels without units. Recorded the port candidates and regression cases in the [port-back spec](specs/cnec-constraint-selection.md); source arithmetic and the feature subset remain to be checked and agreed.
+Inspected the public WelfMaxxing port in Chrome: border, transformer and line-interior clicks select constraints and show comparison rays. Reproduced a stale tooltip across interval changes, incorrect export-cap wording using €/MWh, and ray labels without units. Recorded the port candidates and regression cases in the port-back spec (now covered by [the CNEC app documentation](copper-sushi-app.md#the-cnec-page)); source arithmetic and the feature subset remain to be checked and agreed.
 
 Agreed direct border/transformer/line selection, selected-border highlighting and comparison rays. The rays must isolate the selected constraint's signed contribution to the zonal price difference, including for border constraints; observed price spreads are not a substitute. Control layout and automatic versus explicit reference selection remain open. Captured the distinction between physical PTDFs and the coefficients of the actual border constraint, plus cancellation between contributions, in the spec.
 

@@ -34,7 +34,6 @@
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026
 
 ## Specs (working memory — burn-down state, not settled knowledge)
-- [specs/cnec-constraint-selection.md](specs/cnec-constraint-selection.md) — direct map selection, signed constraint contributions and interval navigation
 - [specs/day-ahead-price-forecast.md](specs/day-ahead-price-forecast.md) — first forecast build: validated S3 snapshots, then local model/evaluation and reproducible experiment records
 
 ## Literature (one digest per authoritative document, link only)

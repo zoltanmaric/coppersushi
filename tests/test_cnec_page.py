@@ -42,64 +42,6 @@ def mapped_elements():
     return pd.read_csv(MAP / "mapped-elements.csv").pipe(MappedCnecElements.validate)
 
 
-def descendants(component):
-    yield component
-    children = getattr(component, "children", None)
-    if children is None:
-        return
-    for child in children if isinstance(children, list) else [children]:
-        yield from descendants(child)
-
-
-def test_layout_starts_on_the_supplied_day_and_exposes_all_controls():
-    page = cnec_page.layout("2024-08-29")
-    controls = {
-        component.id: component
-        for component in descendants(page)
-        if getattr(component, "id", None)
-    }
-    assert controls["cnec-date"].value == "2024-08-29"
-    assert {
-        "cnec-constraint",
-        "cnec-reference-zone",
-        "cnec-map",
-        "cnec-interval",
-        "cnec-status",
-    } <= set(controls)
-
-
-def test_layout_starts_with_a_visible_geographic_map_while_data_loads():
-    page = cnec_page.layout("2024-08-29", "public-mapbox-token")
-    loading = next(
-        component
-        for component in descendants(page)
-        if component.__class__.__name__ == "Loading"
-    )
-    graph = next(
-        component
-        for component in descendants(page)
-        if getattr(component, "id", None) == "cnec-map"
-    )
-
-    assert graph.figure.data[0].type == "scattermapbox"
-    assert graph.figure.layout.mapbox.style == "dark"
-    assert graph.figure.layout.mapbox.accesstoken == "public-mapbox-token"
-    assert graph.figure.layout.mapbox.center.lat == 50
-    assert loading.overlay_style["visibility"] == "visible"
-    assert "Loading binding constraints…" in {
-        component.children
-        for component in descendants(loading.custom_spinner)
-        if isinstance(getattr(component, "children", None), str)
-    }
-
-
-def test_a_historical_day_has_every_hour_and_timezone_disambiguated_marks():
-    rendered = cnec_page.render(inputs(), mapped_elements(), 0, None)
-    assert rendered.interval_max == 23
-    assert rendered.interval_marks[0]["label"] == "00:00 CEST"
-    assert rendered.interval_marks[22]["label"] == "22:00 CEST" and rendered.interval_marks[23]["label"] == " "
-
-
 def test_binding_rows_are_sorted_by_shadow_price_and_keep_their_source_id():
     rendered = cnec_page.render(inputs(), mapped_elements(), 0, None)
     assert [option["value"] for option in rendered.constraint_options] == ["", "1", "2"]
@@ -109,7 +51,6 @@ def test_binding_rows_are_sorted_by_shadow_price_and_keep_their_source_id():
 
 def test_selecting_a_row_adds_its_reference_based_influence():
     rendered = cnec_page.render(inputs(), mapped_elements(), 0, "1")
-    assert rendered.constraint_value == "1"
     assert any(trace.name == "contribution relative to AT" for trace in rendered.figure.data)
 
 
@@ -118,5 +59,5 @@ def test_a_selection_from_another_interval_is_cleared():
     later_prices = day.prices.assign(interval=pd.Timestamp("2024-08-28T23:00:00Z"))
     later = cnec_page.Day(**{**day.__dict__, "prices": later_prices})
     rendered = cnec_page.render(later, mapped_elements(), 1, "1")
-    assert rendered.constraint_value is None
+    assert rendered.reference is None
     assert rendered.constraint_options == [cnec_page.NO_SELECTION]

@@ -93,12 +93,6 @@ class AttributionPayload(AttributionRequest):
     rows: list[AttributionRow]
 
 
-class AttributionFailure(AttributionRequest):
-    """A failed attribution load, tied to its browser request; contains no data."""
-
-    error: str
-
-
 class AttributionContext(pa.DataFrameModel):
     """Table of scaling and Polish cap inputs, one UTC market interval per row."""
 

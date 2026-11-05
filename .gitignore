@@ -40,3 +40,7 @@ docs/superpowers/plans/
 node_modules/
 .terraform/
 dist/
+
+# Generated React component assets.
+/assets/cnec-view.js
+/assets/cnec-view.css

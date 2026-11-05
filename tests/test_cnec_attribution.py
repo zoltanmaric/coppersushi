@@ -121,22 +121,6 @@ def test_reference_follows_publisher_direction_and_missing_geometry_stays_unavai
     assert attribution.physical_reference(row, mapped.iloc[:0], read_zones()) is None
 
 
-def test_click_ignores_unrelated_or_stale_ids_and_preserves_selected_contingency():
-    options = [{'value': ''}, {'value': '12'}, {'value': '13'}]
-    click = {'points': [{'customdata': ['12,13']}]}
-    assert cnec_page.clicked_selection(click, options, None) == '12'
-    assert cnec_page.clicked_selection(click, options, '13') == '13'
-    assert cnec_page.clicked_selection(click, [{'value': ''}], None) is None
-    assert cnec_page.clicked_selection({'points': [{'location': 'DE'}]}, options, '13') == '13'
-
-
-@pytest.mark.parametrize('day,count', [('2024-10-27',25), ('2026-03-29',92), ('2026-10-25',100)])
-def test_timeline_includes_minor_ticks_and_disambiguates_repeated_hours(day, count):
-    marks = cnec_page.interval_marks(MarketDay.on(day))
-    assert len(marks) == count
-    labels = [v['label'] for v in marks.values() if v['label'].strip()]
-    assert len(labels) == len(set(labels))
-    assert all('CEST' in v or 'CET' in v for v in labels)
 
 
 def page_inputs():
@@ -179,7 +163,6 @@ def test_line_interior_hits_keep_row_identity_and_missing_alpha_keeps_selection(
     assert set(v[0] for v in hit.customdata) == {'10'}
     missing = cnec_page.Day(**{**day.__dict__, 'context': None})
     unavailable = cnec_page.render(missing, mapped, 0, 10)
-    assert unavailable.constraint_value == '10'
     assert any(t.name == 'selected CNEC' for t in unavailable.figure.data)
     assert not any(t.name.startswith('contribution relative') for t in unavailable.figure.data)
     assert 'missing or zero' in unavailable.figure.layout.annotations[0].text
@@ -189,22 +172,12 @@ def test_line_interior_hits_keep_row_identity_and_missing_alpha_keeps_selection(
 def test_virtual_bounds_are_hidden_and_stale_selections_are_cleared(selected):
     day, mapped = page_inputs()
     rendered = cnec_page.render(day, mapped, 0, selected)
-    assert rendered.constraint_value is None
     assert not {'12', '13'} & {option['value'] for option in rendered.constraint_options}
     assert not any('interface' in (t.name or '') or 'ALEGrO' in (t.name or '') for t in rendered.figure.data)
     assert rendered.reference is None
     assert not any((t.name or '').startswith('contribution relative') for t in rendered.figure.data)
 
 
-@pytest.mark.parametrize('date', ['2024-03-31', '2024-10-27', '2026-09-12', '2026-10-25'])
-def test_previous_next_moves_exactly_one_mtu_and_stops_at_day_boundaries(date):
-    day = MarketDay.on(date)
-    times = day.market_time_units()
-    assert cnec_page.advance_interval(day, 0, -1) == 0
-    assert cnec_page.advance_interval(day, len(times)-1, 1) == len(times)-1
-    for index in range(1, len(times)-1):
-        assert cnec_page.advance_interval(day, index, -1) == index-1
-        assert cnec_page.advance_interval(day, index, 1) == index+1
 
 
 @pytest.mark.parametrize("country, adjusted, other, effect, observed, remainder", [

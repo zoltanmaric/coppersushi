@@ -1,14 +1,22 @@
+FROM --platform=linux/amd64 node:22-bookworm-slim AS frontend-builder
+WORKDIR /opt/webapp/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
 FROM --platform=linux/amd64 ghcr.io/prefix-dev/pixi:0.77.1-noble AS source
 WORKDIR /opt/webapp
 COPY . .
 
 FROM source AS environment
+COPY --from=frontend-builder /opt/webapp/assets/ /opt/webapp/assets/
 RUN pixi install --locked -e runtime && \
     pixi shell-hook --locked -e runtime -s bash > /opt/entrypoint.sh && \
     printf '\nexec "$@"\n' >> /opt/entrypoint.sh
 # Lambda cannot retain bytecode compiled into its read-only image on first use.
 RUN /bin/bash /opt/entrypoint.sh python -m compileall -q \
-    .pixi/envs/runtime/lib/python3.14 app.py coppersushi
+    .pixi/envs/runtime/lib/python3.14 app.py cnec_http.py coppersushi
 
 FROM source AS bundle-builder
 RUN pixi install --locked -e build

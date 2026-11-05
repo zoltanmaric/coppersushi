@@ -30,3 +30,6 @@ infra/lambda/*.tfplan
 **/dist
 
 121gigawatts
+
+assets/cnec-view.js
+assets/cnec-view.css
