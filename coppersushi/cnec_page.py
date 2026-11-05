@@ -145,10 +145,10 @@ def interval_marks(day: MarketDay) -> dict[int, dict]:
     }
 
 
-NO_SELECTION = {"label": "No constraint selected", "value": ""}
+NO_SELECTION = {"label": "No constraint selected", "value": "", "source": "constraints"}
 
 
-def _constraint_options(constraints: pd.DataFrame) -> list[dict]:
+def constraint_options(constraints: pd.DataFrame) -> list[dict]:
     options = [NO_SELECTION]
     for row in constraints.sort_values("shadow_price", ascending=False).itertuples():
         contingency = getattr(row, "cont_name", None)
@@ -160,6 +160,7 @@ def _constraint_options(constraints: pd.DataFrame) -> list[dict]:
                     f"{row.shadow_price:,.2f} €/MWh"
                 ),
                 "value": str(row.source_id),
+                "source": str(row.option_source),
             }
         )
     return options
@@ -179,8 +180,8 @@ def render(
     interval = intervals[index]
     active = day.constraints[day.constraints.interval.eq(interval)]
     caps = cnec_attribution.country_caps(day.context, day.prices, interval)
-    option_tables: list[pd.DataFrame] = [active, caps]
-    options = _constraint_options(pd.concat(option_tables, ignore_index=True))
+    option_tables: list[pd.DataFrame] = [active.assign(option_source="constraints"), caps.assign(option_source="attribution")]
+    options = constraint_options(pd.concat(option_tables, ignore_index=True))
     option_values = {option["value"] for option in options} - {NO_SELECTION["value"]}
     chosen = "" if selected_source_id is None else str(selected_source_id)
     selected_value = chosen if chosen in option_values else None

@@ -66,6 +66,9 @@ flowchart LR
     day_ahead_prices --> cnec_market_snapshot
     cnec_market_snapshot --> cnec_price_figure
     cnec_price_figure --> jao_map
+    cnec_http["cnec_http<br/>typed JSON calendar, price, constraint and enrichment endpoints"]
+    cnec_price_figure --> cnec_http
+    cnec_attribution_context --> cnec_http
 ```
 
 Code is one package, `coppersushi/`, organised by domain noun; `io-boundary` in `coppersushi/AGENTS.md` names the two modules that touch the world.
@@ -100,3 +103,7 @@ CloudFront caches only static asset routes. Page selection, layouts and data cal
 continue to use the existing server-side flow; see [hosting](../infra/lambda/README.md#delivery).
 
 For external-input resilience, see [JAO availability and response retention](jao-availability.md).
+
+### CNEC HTTP boundary
+
+`cnec_http.py` exposes independently requested calendar, prices, physical constraints and attribution layers at `/api/cnec`. Pydantic contracts validate requests and responses. The Dash view remains a consumer of the same domain rendering functions.
