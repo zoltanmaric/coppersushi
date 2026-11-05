@@ -46,11 +46,13 @@ A single map with independently managed price, constraint and attribution layers
 
 ## The CNEC page
 
+Floating date/day arrows, interval arrows and the slider remain inside the map. On desktop the slider sits beside the date/time panel; on portrait screens it sits below. The unchanged daily legend sits top-left and the reference selector top-right. A pure calculation uses fixed Core bounds and viewport dimensions to choose the camera before Graph mounts. It reserves a modest margin for controls; later interval changes retain the camera.
+
 Country prices share one colour scale across all Core zones and intervals of the selected day. A compact legend shows the day’s minimum and maximum; interval changes keep those bounds fixed.
 
 [WelfMaxxing](https://welfmaxxing.lovable.app/) is the hackathon prototype; voice transcription may render its name as “Wealth Maxing.” Its map interaction is a visual reference for Copper Sushi.
 
-The label-free base map loads first. On the first interval, the price, physical-constraint and country-cap layers appear together after their requests settle. On a later interval, the previous figure and its timestamp remain visible until the replacement is ready; the controls show the requested interval and loading status. Errors remain visible and retryable. Late results do not replace the requested view. Server logs report data-loading, geometry, attribution and figure-building durations.
+The label-free base map loads first. On the first interval, the price, physical-constraint and country-cap layers appear together after their requests settle. On a later interval, the previous figure remains visible until the replacement is ready; the controls show the requested interval and loading status. Errors remain visible and retryable. Late results do not replace the requested view. Server logs report data-loading, geometry, attribution and figure-building durations.
 
 Click a country-cap outline, transformer/PST marker, constrained line to select a binding row. When several rows share a target, it preserves the selected row or chooses the largest published dual. Country labels and the reference dropdown choose the same Core reference; Germany is the initial choice. Poland alone has a supported aggregate cap. Known edge case: when several contingency rows share one target, map clicks retain the selected row or choose the largest dual; other rows require their `constraint` deep link. For example, PST Gronau TR 441 E has simultaneous DIRECT rows at 2026-11-05 14:15 CET for Doetinchem–Niederrhein SW/Z (311868) and COBRA HVDC (311869). A per-target chooser is deferred. Virtual interfaces are outside the map’s scope. Previous/next buttons move one market time unit; minor ticks and timezone labels distinguish daylight-saving hours. See the [spread explainer](market-clearing.html) for interpretation.
 
