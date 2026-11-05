@@ -12,7 +12,12 @@ a silently truncated hour is indistinguishable from a quiet one.
 Field meanings: `wiki/literature/jao-core-publication-handbook.md`.
 """
 
-from datetime import datetime
+from datetime import datetime, UTC
+from email.utils import parsedate_to_datetime
+import math
+import threading
+import time
+import urllib.error
 import json
 import logging
 import sys
@@ -89,6 +94,49 @@ def _stamp(moment: datetime) -> str:
     return moment.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
+class RequestPacer:
+    """One process's shared JAO request-start budget and server-directed cooldown."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._next_start = 0.0
+        self._blocked_until = 0.0
+
+    def wait(self) -> None:
+        while True:
+            with self._lock:
+                now = time.monotonic()
+                if now < self._blocked_until:
+                    seconds = math.ceil(self._blocked_until - now)
+                    raise RuntimeError(f"JAO rate limit: retry in {seconds} seconds.")
+                delay = self._next_start - now
+                if delay <= 0:
+                    self._next_start = now + 1.5
+                    return
+            # Keep the lock available so a concurrent 429 can stop queued callers.
+            time.sleep(delay)
+
+    def throttle(self, retry_after: str | None) -> None:
+        seconds = 60.0
+        if retry_after:
+            try:
+                seconds = float(retry_after)
+            except ValueError:
+                try:
+                    moment = parsedate_to_datetime(retry_after)
+                    if moment.tzinfo is not None:
+                        seconds = (moment - datetime.now(tz=UTC)).total_seconds()
+                except (ValueError, TypeError, OverflowError):
+                    pass
+        if not math.isfinite(seconds) or seconds <= 0:
+            seconds = 60.0
+        with self._lock:
+            self._blocked_until = max(self._blocked_until, time.monotonic() + seconds)
+
+
+_pacer = RequestPacer()
+
+
 def _get(
     endpoint: str, start: datetime, end: datetime, timeout: int = TIMEOUT_SECONDS,
     base_url: str = BASE_URL,
@@ -98,11 +146,14 @@ def _get(
     window = {"FromUtc": _stamp(start), "ToUtc": _stamp(end), "Take": 100_000_000}
     url = f"{base_url}/{endpoint}?{urllib.parse.urlencode(window)}"
     logger.info("jao: GET %s %s..%s", endpoint, window["FromUtc"], window["ToUtc"])
-    # PuTo limit: 100 requests/minute per user or IP, shared across callers.
-    # For bulk queries, pace starts at <=40/minute (1.5 s apart), not per worker.
-    # This helper does not throttle; see wiki/jao-availability.md#rate-limits.
-    with urllib.request.urlopen(url, timeout=timeout) as response:
-        payload = json.load(response)
+    _pacer.wait()
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            payload = json.load(response)
+    except urllib.error.HTTPError as error:
+        if error.code == 429:
+            _pacer.throttle(error.headers.get("Retry-After"))
+        raise
     rows = payload["data"]
     if "totalRows" in payload:
         check_complete(endpoint, rows, payload["totalRows"])
