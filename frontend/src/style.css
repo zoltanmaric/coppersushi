@@ -1,6 +1,9 @@
 .cnec-controls {display:grid;grid-template-columns:12em minmax(15em,1fr) auto;gap:.6em;padding:.4em 1em;align-items:center}
 .cnec-controls input,.cnec-controls select {min-width:0;padding:.45em;border:1px solid #666;border-radius:4px;background:#fff;color:#222}
 .cnec-map-container {height:calc(100vh - 210px);min-height:400px;position:relative}
+.cnec-sources {position:absolute;bottom:8px;left:50%;transform:translateX(-50%);max-width:calc(100% - 80px);padding:2px 6px;border-radius:3px;background:rgba(20,20,20,.65);color:#aaa;font-size:11px;line-height:1.4;text-align:center;z-index:2;pointer-events:none}
+.cnec-sources a {color:inherit;pointer-events:auto;text-decoration:none}
+.cnec-sources a:hover,.cnec-sources a:focus-visible {color:#eee;text-decoration:underline}
 .cnec-progress {position:absolute;right:12px;top:12px;max-width:min(30em,70%);font-size:.85rem;background:rgba(20,20,20,.88);border-radius:4px;z-index:5}
 .cnec-progress:empty {display:none}
 .cnec-progress>div {padding:6px 10px}

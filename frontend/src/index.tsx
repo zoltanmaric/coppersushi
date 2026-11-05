@@ -158,6 +158,11 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
     <div className="cnec-map-container">
       <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick}
         config={{responsive: true, displayModeBar: false, scrollZoom: true}} style={{height: '100%'}}/>
+      <small className="cnec-sources">
+        Data: <a href="https://publicationtool.jao.eu/core/">JAO</a> · {' '}
+        <a href="https://www.electricitymaps.com/">Electricity Maps</a> · {' '}
+        <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>
+      </small>
       <aside className="cnec-progress" aria-live="polite">
         {loading && <div role="status" aria-label="Map loading">{loading}</div>}
         {full?.notes.map(note => <div role="status" key={note}>{note}</div>)}

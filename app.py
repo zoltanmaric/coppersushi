@@ -217,12 +217,6 @@ def show_page(pathname: str, root_view: str = ROOT_VIEW) -> html.Div:
         return html.Div(dcc.Location(id='cnec-redirect', href='/cnec', refresh=True))
     if is_cnec_path(pathname):
         return html.Div([navigation(),
-            html.Small([
-                'Data: ', html.A('JAO', href='https://publicationtool.jao.eu/core/'), ' · ',
-                html.A('Electricity Maps', href='https://www.electricitymaps.com/'), ' · ',
-                html.A('© OpenStreetMap contributors', href='https://www.openstreetmap.org/copyright'),
-                '. Price contributions calculated by Copper Sushi.',
-            ], style={'display': 'block', 'padding': '0 1rem .25rem'}),
             CnecView(id='cnec-view', default_day=cnec_page.local_today(), min_day=CNEC_FIRST_DAY.isoformat(), token=mapbox_token(), basemap=basemap()),
         ])
     if network_key_from_path(pathname) is None:
