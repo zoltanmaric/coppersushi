@@ -1,5 +1,5 @@
 import {expect, test} from 'vitest';
-import {project} from './spark';
+import {project} from './constraint-overlay';
 
 const camera = {lat: 50, lon: 10, zoom: 3.5, bearing: 0};
 test('projects the camera centre to the viewport centre', () => {

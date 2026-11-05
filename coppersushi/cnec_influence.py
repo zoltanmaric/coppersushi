@@ -72,7 +72,10 @@ def _rays(origin: tuple[float, float], zonal: pd.DataFrame) -> list[go.Scatterma
             name=f"{row.zone} ray",
             lon=lon,
             lat=lat,
-            mode="lines",
+            mode="lines+markers",
+            # Scattermapbox has no line-cap setting. Same-width endpoint circles round the stroke.
+            marker=dict(size=[RAY_WIDTH, *([0] * (len(lon) - 2)), RAY_WIDTH],
+                        color=map_style.PRICE_DOWN if row.contribution < 0 else map_style.BINDING),
             hoverinfo="text",
             hovertext=row.hover,
             showlegend=False,

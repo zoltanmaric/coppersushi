@@ -150,3 +150,19 @@ def test_selected_constraint_overlays_its_influence_and_highlights_its_branch(in
     assert selected.line.width > trace(fig, "market-binding CNECs").line.width
     assert not any(item.name == "selected CNEC" for item in plain.data)
     assert fig.data[-1].name == "zone prices"  # Labels over every dot and ray
+
+
+def test_transformer_geometry_keeps_a_click_target_and_identifies_its_selection_shape(inputs):
+    zones, geometries, view = selected_inputs(inputs)
+    geometries = geometries.assign(element_type="PST")
+    fig = cnec_price_map.figure(zones, geometries, view)
+    selected = trace(fig, "selected CNEC")
+    target = trace(fig, "binding transformers and PSTs")
+    assert selected.meta == {"element_type": "PST"}
+    assert selected.opacity == 0  # The SVG renderer draws the rings, not a line through them.
+    assert target.marker.opacity == 0
+    assert target.marker.size >= 20
+    assert target.customdata[0][0] == "1,2"
+    # SVG projection consumes plain coordinate arrays, not Plotly's binary ndarray encoding.
+    assert isinstance(target.to_plotly_json()["lon"], list)
+    assert isinstance(target.to_plotly_json()["lat"], list)

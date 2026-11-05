@@ -4,8 +4,8 @@ import {fetchCnec} from './api';
 import {Timeline} from './timeline';
 import {reduceSelection} from './state';
 import type {PlotlyFigure, LayerResponse, ConstraintOption} from './contracts';
-import {SelectionSpark} from './spark';
-import type {Camera} from './spark';
+import {ConstraintOverlay} from './constraint-overlay';
+import type {Camera} from './constraint-overlay';
 import './style.css';
 
 interface Props {id: string; day: string; min_day: string; token: string; basemap: PlotlyFigure['layout']['mapbox']['style']}
@@ -175,7 +175,7 @@ function View({id, day: routeDay, min_day, token, basemap}: Props) {
       }}>
       <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick}
         config={{responsive: true, displayModeBar: false, scrollZoom: true}} style={{height: '100%'}}/>
-      <SelectionSpark figure={graphFigure} camera={camera} hidden={moving || !mapCurrent}/>
+      <ConstraintOverlay figure={graphFigure} camera={camera} hidden={moving || !mapCurrent}/>
       <aside className="cnec-progress" aria-live="polite">
         {loading && <div role="status" aria-label="Map loading">{loading}</div>}
         {full?.notes.map(note => <div role="status" key={note}>{note}</div>)}

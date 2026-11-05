@@ -23,7 +23,7 @@ SELECTED_WIDTH = 4  # The selected row's branch, under the same halo as the rest
 END_SIZE = 6  # Mapbox caps Plotly's lines flat; a dot at each end rounds them. Only
 # circles take the trace colour: every other symbol is the sprite's own grey icon.
 TARGET_SIZE = 8
-POINT_SIZE = 9
+POINT_SIZE = 22  # Transparent hit target around the SVG transformer symbol.
 
 
 def _priced_zones(zones: DataFrame[BiddingZoneShapes], prices: DataFrame[ZonalPrices]) -> pd.DataFrame:
@@ -176,7 +176,7 @@ def _constraint_traces(
     not distinct lines on the map, so the line and its marker have different grains.
 
     A line's hover target is a triangle pointing the way its rows bind; a transformer's or
-    PST's is a square.
+    PST's is a pair of rings drawn by the frontend over a transparent hit target.
     """
     mapped = placed[placed.match_status.eq(MATCHED)]
     line_rows = mapped[~mapped.element_type.isin(POINT_TYPES)]
@@ -199,6 +199,9 @@ def _constraint_traces(
         highlighted = line(
             "selected CNEC", SELECTED_WIDTH, [selected.x0, selected.x1], [selected.y0, selected.y1]
         )
+        highlighted[0].meta = {"element_type": selected.element_type}
+        if selected.element_type in POINT_TYPES:
+            highlighted[0].opacity = 0
 
     ends = go.Scattermapbox(
         name="binding line ends",
@@ -213,14 +216,15 @@ def _constraint_traces(
         targets = _hover_targets(rows, directed)
         return go.Scattermapbox(
             name=name,
-            lon=targets.target_x,
-            lat=targets.target_y,
+            lon=targets.target_x.to_list(),
+            lat=targets.target_y.to_list(),
             mode="markers",
             hoverinfo="text",
             text=targets.hover,
             customdata=targets[["source_ids"]].to_numpy(),
             marker=go.scattermapbox.Marker(
-                color=map_style.BINDING, size=size, symbol=symbol, angle=targets.angle
+                color=map_style.BINDING, size=size, symbol=symbol, angle=targets.angle,
+                opacity=1 if directed else 0
             ),
         )
 
@@ -231,7 +235,7 @@ def _constraint_traces(
         ends,
         _line_hit_targets(line_rows),
         markers(line_rows, "binding rows", "triangle", TARGET_SIZE, directed=True),
-        markers(point_rows, "binding transformers and PSTs", "square", POINT_SIZE, directed=False),
+        markers(point_rows, "binding transformers and PSTs", "circle", POINT_SIZE, directed=False),
     ]
 
 

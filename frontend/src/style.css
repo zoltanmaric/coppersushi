@@ -45,3 +45,8 @@
 @keyframes cnec-energy-breathe {0%,100% {opacity:.88} 45% {opacity:1} 48% {opacity:.82} 51% {opacity:1}}
 @keyframes cnec-electric {0%,17%,61% {opacity:.1} 8%,39%,83% {opacity:.9} 24%,70%,100% {opacity:.35}}
 @media (prefers-reduced-motion:reduce) {.cnec-energy-blade,.cnec-spark-bolt {animation:none}.cnec-spark-bolt {opacity:.35}}
+
+.cnec-transformer circle {fill:none;stroke:#a72af5;stroke-width:1.8}
+.cnec-transformer-energy .cnec-energy-aura {stroke-width:6;opacity:.5}
+.cnec-transformer-energy .cnec-energy-rim {stroke-width:2.5}
+.cnec-transformer-energy .cnec-energy-core {stroke-width:1}
