@@ -20,7 +20,6 @@ POINT_TYPES = ("Transformer", "PST")
 FRAME_ZOOM = 1.0  # Chosen against the rendered page, not derived: viewport aspect varies
 LINE_WIDTH = 2.5
 SELECTED_WIDTH = 4  # The selected row's branch, under the same halo as the rest
-GLOW_FACTOR = 4.4  # Wider than map_style's default: a 2.5-px line wants an 11-px halo to read at all
 END_SIZE = 6  # Mapbox caps Plotly's lines flat; a dot at each end rounds them. Only
 # circles take the trace colour: every other symbol is the sprite's own grey icon.
 TARGET_SIZE = 8
@@ -193,7 +192,7 @@ def _constraint_traces(
             hoverinfo="none",
             line=dict(color=map_style.BINDING, width=width),
         )
-        return map_style.haloed(core, factor=GLOW_FACTOR)
+        return [core]
 
     highlighted = []
     if selected is not None and selected.match_status == MATCHED:
@@ -283,7 +282,7 @@ def _cap_traces(zones: DataFrame[BiddingZoneShapes], caps: DataFrame[CountryCaps
     outline = go.Scattermapbox(name="binding country cap", lon=lon,
         lat=lat, mode="lines", line=dict(color=map_style.BINDING,
         width=SELECTED_WIDTH if selected_id == row.source_id else LINE_WIDTH), hoverinfo="skip")
-    traces += map_style.haloed(outline)
+    traces += map_style.haloed(outline) if selected_id == row.source_id else [outline]
     traces.append(go.Scattermapbox(name="select country cap", lon=outline.lon, lat=outline.lat,
         mode="markers", marker=dict(size=14, color="rgba(128,80,255,0.01)"),
         customdata=[[str(row.source_id)]] * len(lon), text=[hover] * len(lon), hoverinfo="text"))

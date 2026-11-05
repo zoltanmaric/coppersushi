@@ -77,10 +77,10 @@ def _colour(contribution: float) -> str:
 
 
 def _rays(origin: tuple[float, float], zonal: pd.DataFrame) -> list[go.Scattermapbox]:
-    """Every glow first, then every core, so no ray's halo lies over another's core."""
+    """Quiet, signed contribution rays; selection belongs to the physical element."""
     influenced = zonal[zonal.contribution.abs() > NEGLIGIBLE]
     widths = _sized(influenced.contribution, *RAY_WIDTH)
-    haloed = []
+    rays = []
     label_lon, label_lat, labels = [], [], []
     for (_, row), width in zip(influenced.iterrows(), widths):
         lon, lat = arc(origin, (row.x, row.y))
@@ -97,17 +97,17 @@ def _rays(origin: tuple[float, float], zonal: pd.DataFrame) -> list[go.Scatterma
             hoverinfo="text",
             hovertext=row.hover,
             showlegend=False,
-            line=dict(color=_colour(row.contribution), width=width),
+            line=dict(color=map_style.BINDING, width=width),
+            opacity=0.32,
         )
-        glow, core = map_style.haloed(core)
-        haloed.append((glow, core))
+        rays.append(core)
     label_trace = go.Scattermapbox(
         name="ray contributions", lon=label_lon, lat=label_lat,
         mode="text", text=labels, textposition="middle center",
         textfont=dict(color="white", size=12),
         hoverinfo="text", hovertext=influenced.hover, showlegend=False,
     )
-    return [glow for glow, _ in haloed] + [core for _, core in haloed] + [label_trace]
+    return rays + [label_trace]
 
 
 def _dots(zonal: pd.DataFrame, reference: str) -> list[go.Scattermapbox]:

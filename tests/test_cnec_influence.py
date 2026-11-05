@@ -69,8 +69,8 @@ def test_rays_leave_reference_and_land_on_the_zone_along_an_arc():
 
 def test_pink_raises_a_price_and_cyan_lowers_it():
     overlay = cnec_influence.overlay(*frames())
-    assert trace(overlay, "BE ray").line.color == map_style.PRICE_UP
-    assert trace(overlay, "DE ray").line.color == map_style.PRICE_DOWN
+    assert trace(overlay, "BE ray").line.color == map_style.BINDING
+    assert trace(overlay, "DE ray").line.color == map_style.BINDING
     dots = trace(overlay, "contribution relative to AT")
     by_text = dict(zip(dots.text, dots.marker.color))
     assert by_text["BE · +2.87 €/MWh relative to AT"] == map_style.PRICE_UP
@@ -89,14 +89,12 @@ def test_width_and_dot_size_follow_the_size_of_the_contribution():
     assert sizes["AT · reference zone"] == cnec_influence.DOT_SIZE[0]
 
 
-def test_each_ray_and_dot_glows_under_its_core():
+def test_rays_are_translucent_without_a_glow():
     overlay = cnec_influence.overlay(*frames())
-    glow, core = trace(overlay, "SI ray glow"), trace(overlay, "SI ray")
-    assert list(glow.lon) == list(core.lon)
-    assert glow.line.width > core.line.width
-    assert glow.opacity < (core.opacity or 1.0)
+    core = trace(overlay, "SI ray")
+    assert core.opacity == pytest.approx(.32)
+    assert not any(t.name.endswith("ray glow") for t in overlay.traces)
     names = [item.name for item in overlay.traces]
-    assert names.index("DE ray glow") < names.index("BE ray")  # No halo over another's core
     assert names.index("contribution relative to AT glow") < names.index("contribution relative to AT")
 
 
