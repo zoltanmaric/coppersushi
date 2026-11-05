@@ -149,8 +149,8 @@ Terraform providers retain their `.terraform.lock.hcl` files.
 The tests run against small checked-in fixtures under `tests/fixtures/`, never against the
 networks. Tests require no Mapbox token; they build figures without fetching map tiles.
 
-GitHub Actions runs this suite on non-draft pull requests, including when a draft is
-marked ready. Draft updates skip it. The suite includes the existing architecture checks.
+See the [CI design](.github/workflows/README.md) for GitHub Actions check groups,
+parallelism, cache choices and the local container check.
 
 ## Solving a day with PyPSA-Eur
 The networks in `networks/` are produced by [PyPSA-Eur](https://github.com/PyPSA/pypsa-eur),

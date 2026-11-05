@@ -36,14 +36,17 @@ def test_an_interval_with_no_binding_row_still_has_its_published_prices():
     assert view.contribution is None
 
 
-def test_selecting_a_row_adds_its_relative_contribution():
+@pytest.mark.parametrize('reference', market.CORE_ZONES)
+def test_selecting_a_row_adds_its_relative_contribution(reference):
     interval = pd.Timestamp("2024-08-28T22:00:00Z")
     base = cnec_market.snapshot(*inputs(), interval)
     selected = cnec_market.key_of(base.constraints.iloc[0])
-    view = cnec_market.snapshot(*inputs(), interval, selected, "AT", alpha=1.0)
+    view = cnec_market.snapshot(*inputs(), interval, selected, reference, alpha=1.0)
     contribution = view.contribution.set_index("zone").contribution
-    assert contribution["AT"] == pytest.approx(0.0)
-    assert contribution["BE"] == pytest.approx(2.87)
+    assert view.reference == reference
+    assert view.contribution.reference_zone.eq(reference).all()
+    assert contribution[reference] == pytest.approx(0.0)
+    assert contribution["BE"] - contribution["AT"] == pytest.approx(2.87)
 
 
 def test_a_selection_requires_an_explicit_reference():
