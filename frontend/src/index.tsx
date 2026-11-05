@@ -5,6 +5,7 @@ import {fetchCnec} from './api';
 import {Timeline} from './timeline';
 import {reduceSelection} from './state';
 import {mapSelection} from './map-selection';
+import {lockMapOrientation} from './map-orientation';
 import type {PlotlyFigure, LayerResponse} from './contracts';
 import {PriceLegend} from './price-legend';
 
@@ -18,8 +19,8 @@ interface GraphChange {clickData?: unknown; relayoutData?: Record<string, unknow
 interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void; onCameraMove: () => void}
 // Reuse Dash's Graph component and its Plotly loader instead of shipping Plotly twice.
 interface PlotElement extends HTMLElement {
-  on: (event: 'plotly_relayouting', handler: () => void) => void;
-  removeListener?: (event: 'plotly_relayouting', handler: () => void) => void;
+  on: (event: 'plotly_relayouting' | 'plotly_afterplot', handler: () => void) => void;
+  removeListener?: (event: 'plotly_relayouting' | 'plotly_afterplot', handler: () => void) => void;
 }
 
 const Graph = ({onCameraMove, ...props}: GraphProps) => {
@@ -32,12 +33,15 @@ const Graph = ({onCameraMove, ...props}: GraphProps) => {
   useEffect(() => {
     let plot: PlotElement | null = null;
     const moving = () => handlers.current.onCameraMove();
+    const lockOrientation = () => {if (plot) lockMapOrientation(plot);};
     // Dash loads Plotly asynchronously. Subscribe when its public event emitter is mounted.
     const attach = () => {
       const node = host.current?.querySelector<PlotElement>('.js-plotly-plot');
       if (!node || typeof node.on !== 'function') return;
       plot = node;
       plot.on('plotly_relayouting', moving);
+      plot.on('plotly_afterplot', lockOrientation);
+      lockOrientation();
       observer.disconnect();
     };
     const observer = new MutationObserver(attach);
@@ -46,6 +50,7 @@ const Graph = ({onCameraMove, ...props}: GraphProps) => {
     return () => {
       observer.disconnect();
       plot?.removeListener?.('plotly_relayouting', moving);
+      plot?.removeListener?.('plotly_afterplot', lockOrientation);
     };
   }, []);
   return <div ref={host} style={props.style}><Component {...props} style={{height: '100%'}} setProps={setProps}/></div>;
@@ -82,7 +87,7 @@ export function CnecPage(props: Props & {navigate: (day: string) => void}) {
 
 function shell(token: string, basemap: Props['basemap']): PlotlyFigure {
   return {data: [{type: 'scattermapbox', mode: 'lines', lon: [], lat: []}], layout: {
-    mapbox: {style: basemap, accesstoken: token, center: {lat: 50, lon: 10}, zoom: 3.5},
+    mapbox: {style: basemap, accesstoken: token, center: {lat: 50, lon: 10}, zoom: 3.5, bearing: 0, pitch: 0},
     clickanywhere: true, uirevision: 'cnec-camera', margin: {t: 0, b: 0, l: 0, r: 0}, showlegend: false,
     paper_bgcolor: '#1b1b1b',
   }};
@@ -140,6 +145,8 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
     copy.layout.mapbox.style = basemap;
     copy.layout.mapbox.center = {lat: 50, lon: 10};
     copy.layout.mapbox.zoom = 3.5;
+    copy.layout.mapbox.bearing = 0;
+    copy.layout.mapbox.pitch = 0;
     return copy;
   }, [figure, basemap]);
   // Publish one interval update after its independently fetched layers settle.
