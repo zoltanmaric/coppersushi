@@ -99,3 +99,52 @@ def test_substation_site_relation_uses_complete_member_boundaries(tmp_path):
         row=db.execute("SELECT * FROM sites WHERE display_name='New station'").fetchone()
         assert (row['longitude'],row['latitude']) == (5.1,47.1)
         assert 'openstreetmap.org/relation/424242' in row['evidence']
+
+
+def test_assessment_resolves_missing_sites_without_fabricating_publication(tmp_path):
+    import csv
+    import shutil
+    from coppersushi.data_sources.catalog_sweep import sweep
+    from coppersushi.data_sources.element_catalog import load, mapped_elements
+    root = FIXTURE.parent/'catalog-sweep'
+    shutil.copytree(root,tmp_path/'input')
+    source=tmp_path/'input'
+    import gzip
+    annual=source/'cache/research/country-caps/annual-json'
+    annual.mkdir(parents=True)
+    with gzip.open(annual/'activeFbConstraints-synthetic.gz','wb') as stream:
+        stream.write((root/'annual.json').read_bytes())
+    first=sweep(source/'cache',source/'backfill',tmp_path/'output',source/'config')
+    with load(tmp_path/'output') as db:
+        missing=dict(db.execute("SELECT e.* FROM elements e JOIN element_endpoints p USING(element_id) WHERE p.status='missing' LIMIT 1").fetchone())
+    with (source/'config/element-assessments.csv').open('w') as stream:
+        writer=csv.DictWriter(stream,fieldnames=['tso','eic','name','site_a','site_b','direct_orientation','assignment_evidence','orientation_evidence'])
+        writer.writeheader()
+        writer.writerow(dict(tso=missing['tso'],eic=missing['eic'],name=missing['name'],site_a='Westhaven',site_b='Eastfield',direct_orientation='b_to_a',assignment_evidence='synthetic hypothesis',orientation_evidence='synthetic direction'))
+    result=sweep(source/'cache',source/'backfill',tmp_path/'output',source/'config')
+    assert result['fully_resolved_elements']==first['fully_resolved_elements']+1
+    with load(tmp_path/'output') as db:
+        endpoints=db.execute('SELECT * FROM element_endpoints WHERE element_id=?',(missing['element_id'],)).fetchall()
+        assert all(r['assignment_basis']=='inferred' and r['published_name'] is None for r in endpoints)
+    line=mapped_elements(tmp_path/'output').set_index('name').loc[missing['name']]
+    assert (line.x0,line.x1)==(4.,3.)
+
+
+def test_assessment_cannot_overwrite_a_resolved_published_pair(tmp_path):
+    import csv
+    import shutil
+    import pytest
+    from coppersushi.data_sources.catalog_sweep import sweep
+    from coppersushi.data_sources.element_catalog import load
+    root=FIXTURE.parent/'catalog-sweep'
+    shutil.copytree(root,tmp_path/'input')
+    source=tmp_path/'input'
+    sweep(source/'cache',source/'backfill',tmp_path/'output',source/'config')
+    with load(tmp_path/'output') as db:
+        row=dict(db.execute("SELECT * FROM elements WHERE name='Westhaven-Eastfield'").fetchone())
+    with (source/'config/element-assessments.csv').open('w') as stream:
+        writer=csv.DictWriter(stream,fieldnames=['tso','eic','name','site_a','site_b','direct_orientation','assignment_evidence','orientation_evidence'])
+        writer.writeheader()
+        writer.writerow(dict(tso=row['tso'],eic=row['eic'],name=row['name'],site_a='Eastfield',site_b='Westhaven',direct_orientation='a_to_b',assignment_evidence='contradictory synthetic guess',orientation_evidence='synthetic'))
+    with pytest.raises(ValueError,match='contradicts a resolved terminal'):
+        sweep(source/'cache',source/'backfill',tmp_path/'output',source/'config')

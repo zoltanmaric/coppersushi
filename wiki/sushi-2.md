@@ -29,14 +29,15 @@ flowchart LR
     jao_domain["jao_domain<br/>final flow-based domain: monitored elements with their substation names, PTDFs and RAM"]
     jao_endpoint_cache["jao_endpoint_cache<br/>validated seed bundled in the image; viewed-hour misses fetched and cached locally"]
     osm_locator["osm_locator<br/>core-tso-data's OSM-locator substation coordinates, unlicensed, fetched locally"]
-    element_catalog["Physical-element catalog<br/>sites, source names, publications and oriented endpoints: four CSVs"]
+    element_catalog["Physical-element catalog<br/>sites, source names, publications and assessed A/B terminals: four CSVs"]
     validated_catalog["Validated catalog<br/>SQLite keys, references, states and exact site joins"]
-    catalog_sweep["Catalog compiler<br/>retained JAO observations, reviewed bindings and source hashes"]
+    catalog_sweep["Catalog compiler<br/>retained JAO observations, reviewed hypotheses and independent orientation evidence"]
     jao_endpoint_cache --> catalog_sweep
     jao_active_constraints --> catalog_sweep
     osm_locator --> catalog_sweep
     osm_site_geometry["Verified OSM substation polygons<br/>complete retained boundaries for sites absent from bus cache"]
     osm_site_geometry --> catalog_sweep
+    catalog_assessments["Reviewed endpoint and direction hypotheses<br/>basis and evidence retained; normal map appearance"] --> catalog_sweep
     catalog_sweep --> element_catalog
     element_catalog --> validated_catalog
     cnec_geometry["cnec_geometry<br/>each named element and publisher placed by its published substations"]

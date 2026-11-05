@@ -15,7 +15,8 @@ from pathlib import Path
 import uuid
 
 import pandas as pd
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal, cast
 
 
 class LocatorRecord(BaseModel):
@@ -26,6 +27,28 @@ class LocatorRecord(BaseModel):
     osm_id: int | None
     template: str
     osm_type: str | None = None
+
+
+class SiteAssessment(BaseModel):
+    """A reviewed physical location, including junctions absent from the locator."""
+    model_config = ConfigDict(extra='forbid')
+    name: str = Field(min_length=1)
+    longitude: float = Field(ge=-180, le=180)
+    latitude: float = Field(ge=-90, le=90)
+    evidence: str = Field(min_length=1)
+
+
+class ElementAssessment(BaseModel):
+    """A reviewed hypothesis for one exact source publication, separate from observations."""
+    model_config = ConfigDict(extra='forbid')
+    tso: str = Field(min_length=1)
+    eic: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    site_a: str = Field(min_length=1)
+    site_b: str = Field(min_length=1)
+    direct_orientation: Literal['a_to_b','b_to_a','unknown']
+    assignment_evidence: str = Field(min_length=1)
+    orientation_evidence: str = Field(min_length=1)
 
 
 from coppersushi import REPO, cnec_geometry as geometry
@@ -131,6 +154,26 @@ def sweep(cache_root: Path, backfill: Path, output: Path,
                                  evidence=(f'https://www.openstreetmap.org/{r.osm_type}/{r.osm_id}; verified OSM site coordinates' if r.template=='OSM' else f'osm-locator@{osm_locator.COMMIT}; {anchor}; template={r.template}'))
         point_sites[(float(r.x), float(r.y))] = site_id
         names.add(('osm' if r.template=='OSM' else 'osm-locator', r.name, site_id))
+    assessed_sites = configuration/'assessed-sites.csv'
+    if assessed_sites.exists():
+        with assessed_sites.open(newline='') as stream:
+            for raw in csv.DictReader(stream):
+                site_assessment = SiteAssessment.model_validate(raw)
+                site_id = identity(('site','assessment',site_assessment.name))
+                if any(r['display_name']==site_assessment.name for r in sites.values()):
+                    raise ValueError(f'Duplicate assessed site: {site_assessment.name}')
+                sites[site_id] = dict(site_id=site_id, display_name=site_assessment.name,
+                    longitude=site_assessment.longitude, latitude=site_assessment.latitude, evidence=site_assessment.evidence)
+                names.add(('assessment',site_assessment.name,site_id))
+    assessments = {}
+    assessment_path = configuration/'element-assessments.csv'
+    if assessment_path.exists():
+        with assessment_path.open(newline='') as stream:
+            for raw in csv.DictReader(stream):
+                parsed_assessment = ElementAssessment.model_validate(raw)
+                key = (parsed_assessment.eic,parsed_assessment.tso,parsed_assessment.name)
+                if key in assessments: raise ValueError(f'Duplicate element assessment: {key}')
+                assessments[key] = parsed_assessment
     index = geometry.substation_index(LocatedSubstations.validate(locations))
     aliases = osm_locator.load_aliases()
     normalized = {geometry._folded(k):v for k,v in aliases.items()}
@@ -204,13 +247,18 @@ def sweep(cache_root: Path, backfill: Path, output: Path,
         key=(eic,tso,name);element_id=identity(('jao',*key))
         rows=observations.get(key) or legacy.get((eic,tso),[])
         types={r.get('element_type','') for r in rows}-{''}
-        elements.append(dict(element_id=element_id,source='jao',tso=tso,eic=eic,name=name,
-                             element_type=next(iter(types)) if len(types)==1 else None))
+        element = dict(element_id=element_id,source='jao',tso=tso,eic=eic,name=name,
+                       element_type=next(iter(types)) if len(types)==1 else None,
+                       direct_orientation='unknown', orientation_basis='unknown',
+                       orientation_evidence='No unambiguous published reference terminals')
+        elements.append(element)
         values={side:{r.get(f'substation_{side}','') for r in rows}-{''} for side in ('from','to')}
         published={side:next(iter(v)) if len(v)==1 else None for side,v in values.items()}
         corrected={side:(scoped.get((eic,tso,name,n),n) if n is not None else None) for side,n in published.items()}
         placement=geometry._placement(corrected['from'],corrected['to'],index,normalized)
         evidence='; '.join(sorted({r['evidence'] for r in rows})) or 'No cached endpoint metadata'
+        if all(published.values()):
+            element.update(direct_orientation='a_to_b', orientation_basis='published', orientation_evidence=evidence)
         statuses=[]
         for side,number in [('from',0),('to',1)]:
             n=published[side];hit=geometry._candidates(corrected[side],index,normalized)
@@ -226,14 +274,41 @@ def sweep(cache_root: Path, backfill: Path, output: Path,
             if binding and len(values[side])==1:
                 site_id=binding['site_id'];status='resolved'
             method='site binding: '+binding['evidence'] if binding else 'scoped correction' if corrected[side]!=n else ('name lookup / nearest pair' if status=='resolved' else status)
-            endpoints.append(dict(element_id=element_id,side=side,published_name=n,site_id=site_id,status=status,
+            endpoints.append(dict(element_id=element_id,terminal='a' if side=='from' else 'b',published_name=n,site_id=site_id,status=status,
+                                  assignment_basis='inferred' if status=='resolved' else 'unknown',
                                   evidence=f'{method}; {evidence}' + (f'; conflicting names={sorted(values[side])}' if status=='conflict' else '')))
             statuses.append(status)
             # Only unambiguous names become reusable aliases. Scoped/nearest-pair choices do not.
             if site_id and n is not None and not binding and hit and len(hit[1])==1 and corrected[side]==n:names.add(('jao',n,site_id))
+        assessment = assessments.get(key)
+        if assessment:
+            if any(status=='conflict' for status in statuses):
+                raise ValueError(f'Assessment conflicts with published terminals: {key}')
+            selected = []
+            for target in (assessment.site_a,assessment.site_b):
+                matches = [r['site_id'] for r in sites.values() if r['display_name']==target]
+                if len(matches)!=1: raise ValueError(f'Assessment requires one site for {target}: {key}')
+                selected.append(matches[0])
+            # A newer complete publication must be reviewed rather than silently overwritten.
+            if any(endpoint['site_id'] is not None and endpoint['site_id'] != selected[number]
+                   for number, endpoint in enumerate(endpoints[-2:])):
+                raise ValueError(f'Assessment contradicts a resolved terminal: {key}')
+            if not all(status=='resolved' for status in statuses):
+                for endpoint, site_id in zip(endpoints[-2:],selected):
+                    endpoint.update(site_id=site_id,status='resolved',assignment_basis='inferred',
+                                    evidence=assessment.assignment_evidence+'; original observation: '+evidence)
+                statuses=['resolved','resolved']
+                element['element_type'] = element['element_type'] or 'Line'
+                if not all(published.values()):
+                    element.update(direct_orientation=assessment.direct_orientation,
+                        orientation_basis='unknown' if assessment.direct_orientation=='unknown' else 'inferred',
+                        orientation_evidence=assessment.orientation_evidence)
         audit.append(dict(element_id=element_id,eic=eic,tso=tso,name=name,appearances=counts[key],
                           status='resolved' if statuses==['resolved','resolved'] else '/'.join(statuses),
-                          endpoint_evidence=evidence))
+                          orientation_basis=cast(str, element['orientation_basis']),
+                          endpoint_evidence=(assessment.assignment_evidence+'; original observation: '+evidence
+                                             if assessment else evidence)))
+    if set(assessments)-keys: raise ValueError(f'Unobserved element assessments: {set(assessments)-keys}')
     records={'sites':list(sites.values()),'site_names':[dict(source=s,published_name=n,site_id=i) for s,n,i in sorted(names)],
              'elements':elements,'element_endpoints':endpoints}
     # Stage and validate before replacing the previously validated catalog.
@@ -251,6 +326,8 @@ def sweep(cache_root: Path, backfill: Path, output: Path,
     summary=dict(sites=len(sites),elements=len(elements),physical_constraint_observations=len(constraints),
                  excluded_nonphysical_observations=len(external),endpoint_statuses=dict(Counter(r['status'] for r in endpoints)),
                  fully_resolved_elements=sum(r['status']=='resolved' for r in audit),
+                 reviewed_assessments=len(assessments),
+                 inferred_orientation_elements=sum(r['orientation_basis']=='inferred' for r in elements),
                  unresolved_active_appearances=sum(int(r['appearances']) for r in audit if r['status']!='resolved'))
     (staging/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
     (staging/'sources.json').write_text(json.dumps(manifest,indent=2)+'\n')

@@ -40,16 +40,29 @@ def load(directory: Path) -> Iterator[sqlite3.Connection]:
     try:
         connection.executescript(SCHEMA.read_text())
         with connection:
+            legacy_elements = False
             for table in TABLES:
                 columns = [row['name'] for row in connection.execute(f'PRAGMA table_info({table})')]
                 path = directory / f'{table}.csv'
                 with path.open(newline='', encoding='utf-8') as stream:
                     reader = csv.reader(stream, strict=True)
-                    if next(reader, None) != columns:
+                    header = next(reader, None)
+                    legacy = {'elements': ['element_id','source','tso','eic','name','element_type'],
+                              'element_endpoints': ['element_id','side','published_name','site_id','status','evidence']}
+                    old = table in legacy and header == legacy[table]
+                    if table == 'elements':
+                        legacy_elements = old
+                    if header != columns and not old:
                         raise InvalidCatalog(f'{path}: header must be {columns}')
                     for number, row in enumerate(reader, start=2):
-                        if len(row) != len(columns):
+                        if len(row) != len(header or []):
                             raise InvalidCatalog(f'{path}:{number}: expected {len(columns)} fields')
+                        if old:
+                            if table == 'elements':
+                                row += ['a_to_b','published','Legacy JAO from/to publication']
+                            else:
+                                row[1] = {'from':'a','to':'b'}.get(row[1],row[1])
+                                row += ['inferred' if row[4]=='resolved' else 'unknown']
                         try:
                             connection.execute(f'INSERT INTO {table} VALUES ({",".join("?" for _ in columns)})',
                                                [value if value != '' else None for value in row])
@@ -57,10 +70,23 @@ def load(directory: Path) -> Iterator[sqlite3.Connection]:
                             raise InvalidCatalog(f'{path}:{number}: {error}') from error
             incomplete = connection.execute('''
                 SELECT e.element_id FROM elements e LEFT JOIN element_endpoints p USING(element_id)
-                GROUP BY e.element_id HAVING count(p.side) <> 2
+                GROUP BY e.element_id HAVING count(p.terminal) <> 2
             ''').fetchall()
             if incomplete:
-                raise InvalidCatalog(f'element_endpoints.csv: require from/to rows for {[r[0] for r in incomplete]}')
+                raise InvalidCatalog(f'element_endpoints.csv: require A/B rows for {[r[0] for r in incomplete]}')
+            if legacy_elements:
+                connection.execute('''
+                    UPDATE elements SET direct_orientation='unknown', orientation_basis='unknown',
+                        orientation_evidence='Legacy snapshot lacks reference terminal labels'
+                    WHERE element_id IN (SELECT element_id FROM element_endpoints WHERE published_name IS NULL)
+                ''')
+            unsupported = connection.execute('''
+                SELECT e.element_id FROM elements e JOIN element_endpoints p USING(element_id)
+                WHERE (e.orientation_basis='published' AND p.published_name IS NULL)
+                   OR (e.orientation_basis='inferred' AND p.site_id IS NULL)
+            ''').fetchall()
+            if unsupported:
+                raise InvalidCatalog('Known orientation requires published terminal labels or inferred site assignments')
         yield connection
     finally:
         connection.close()
@@ -79,13 +105,17 @@ def mapped_elements(directory: Path) -> DataFrame[MappedCnecElements]:
                    fs.longitude AS x0, fs.latitude AS y0,
                    ts.longitude AS x1, ts.latitude AS y1
             FROM elements e
-            JOIN element_endpoints f ON f.element_id=e.element_id AND f.side='from'
-            JOIN element_endpoints t ON t.element_id=e.element_id AND t.side='to'
+            JOIN element_endpoints f ON f.element_id=e.element_id AND f.terminal='a'
+            JOIN element_endpoints t ON t.element_id=e.element_id AND t.terminal='b'
             LEFT JOIN sites fs ON fs.site_id=f.site_id
             LEFT JOIN sites ts ON ts.site_id=t.site_id
             WHERE e.source='jao'
         """):
-            resolved = row['from_site'] is not None and row['to_site'] is not None
+            resolved = row['from_site'] is not None and row['to_site'] is not None and row['direct_orientation'] != 'unknown'
+            coordinates = {key: row[key] if resolved else None for key in ('x0','y0','x1','y1')}
+            if row['direct_orientation'] == 'b_to_a':
+                coordinates = dict(x0=coordinates['x1'], y0=coordinates['y1'],
+                                   x1=coordinates['x0'], y1=coordinates['y0'])
             points = sorted([(row['x0'], row['y0']), (row['x1'], row['y1'])]) if resolved else []
             branch = 'osm-locator/' + '--'.join(f'{x:.5f},{y:.5f}' for x,y in points) if resolved else None
             records.append(dict(eic=row['eic'], tso=row['tso'], name=row['name'],
@@ -94,7 +124,7 @@ def mapped_elements(directory: Path) -> DataFrame[MappedCnecElements]:
                                 branch_id=branch, match_status='matched' if resolved else 'no_substation',
                                 bus_source='element-catalog' if resolved else geometry.UNRESOLVED,
                                 score=1.0 if resolved else 0.0,
-                                **{key: row[key] if resolved else None for key in ('x0','y0','x1','y1')}))
+                                **coordinates))
     return pd.DataFrame(records, columns=list(MappedCnecElements.to_schema().columns)).pipe(MappedCnecElements.validate)
 
 

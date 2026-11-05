@@ -1,5 +1,5 @@
-element_id,side,published_name,site_id,status,evidence
-line-a,from,Westhaven,site-a,resolved,synthetic
-line-a,to,Eastfield,site a,resolved,synthetic
-line-b,from,Westhaven,site-a,resolved,synthetic
-line-b,to,,,missing,synthetic
+element_id,terminal,published_name,site_id,status,evidence,assignment_basis
+line-a,a,Westhaven,site-a,resolved,synthetic,inferred
+line-a,b,Eastfield,site a,resolved,synthetic,inferred
+line-b,a,Westhaven,site-a,resolved,synthetic,inferred
+line-b,b,,,missing,synthetic,unknown
