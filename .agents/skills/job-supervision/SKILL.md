@@ -14,6 +14,8 @@ description: Launches and supervises long-running commands — solves, workflows
 
 **Preflight** every fallible precondition before the expensive phase: credentials that expire, connectivity, config validation (`snakemake -n`), disk space.
 
+On Docker build `ENOSPC` (`No space left on device`), compare host and Docker disk usage, inspect `docker system df`, reclaim unused build cache with `docker builder prune --force`, verify reclaimed space, and retry once. Limit automatic cleanup to build cache; report insufficient space if the retry still fails.
+
 ## Launch recipe
 
 - **Detach from the tool's timeout in its own process group, keep the PID and the exit status**: a background tool call is capped, and a plain `nohup … &` shares the tool shell's group. Launch as `nohup perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV' bash -c '<cmd>; echo "EXIT $?"' </dev/null >> <logdir>/<name>.log 2>&1 & echo $! > <logdir>/<name>.pid`, then, after a second, confirm `ps -o pgid= -p $(cat <name>.pid)` prints the PID.
