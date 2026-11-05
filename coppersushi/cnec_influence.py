@@ -60,8 +60,10 @@ def _rays(origin: tuple[float, float], zonal: pd.DataFrame) -> list[go.Scatterma
     """Quiet, signed contribution rays; selection belongs to the physical element."""
     influenced = zonal[zonal.contribution.abs() > NEGLIGIBLE]
     rays = []
+    backgrounds = [map_style.PRICE_DOWN_HOVER if value < 0 else map_style.BINDING_LIGHT
+                   for value in influenced.contribution]
     label_lon, label_lat, labels = [], [], []
-    for _, row in influenced.iterrows():
+    for (_, row), background in zip(influenced.iterrows(), backgrounds):
         lon, lat = arc(origin, (row.x, row.y))
         midpoint = len(lon) // 2
         label_lon.append(lon[midpoint])
@@ -78,6 +80,7 @@ def _rays(origin: tuple[float, float], zonal: pd.DataFrame) -> list[go.Scatterma
                         color=map_style.PRICE_DOWN if row.contribution < 0 else map_style.BINDING),
             hoverinfo="text",
             hovertext=row.hover,
+            hoverlabel=dict(map_style.BINDING_HOVERLABEL, bgcolor=background, bordercolor=background),
             showlegend=False,
             line=dict(color=map_style.PRICE_DOWN if row.contribution < 0 else map_style.BINDING, width=RAY_WIDTH),
             opacity=0.48,
@@ -88,6 +91,7 @@ def _rays(origin: tuple[float, float], zonal: pd.DataFrame) -> list[go.Scatterma
         mode="text", text=labels, textposition="middle center",
         textfont=dict(color="white", size=12),
         hoverinfo="text", hovertext=influenced.hover, showlegend=False,
+        hoverlabel=dict(map_style.BINDING_HOVERLABEL, bgcolor=backgrounds, bordercolor=backgrounds),
     )
     return rays + [label_trace]
 

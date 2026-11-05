@@ -142,9 +142,8 @@ def _price_traces(
         lon=labels_at.x,
         lat=labels_at.y,
         mode="text",
-        hoverinfo="text",
+        hoverinfo="skip",
         text=names + "<br>" + labels_at.price.map(lambda value: f"€{value:,.2f}"),
-        hovertext=names + " · " + labels_at.price.map(lambda value: f"{value:,.2f} €/MWh"),
         textfont=dict(color="white", size=14),
         showlegend=False,
     )
@@ -228,6 +227,7 @@ def _constraint_traces(
             lat=targets.target_y.to_list(),
             mode="markers",
             hoverinfo="text",
+            hoverlabel=map_style.BINDING_HOVERLABEL,
             text=targets.hover,
             customdata=targets[["source_ids"]].to_numpy(),
             marker=go.scattermapbox.Marker(
@@ -238,7 +238,7 @@ def _constraint_traces(
 
     point_rows = mapped[mapped.element_type.isin(POINT_TYPES)]
     branches = map_style.haloed(line("market-binding CNECs", LINE_WIDTH, lon, lat)[0])
-    branches[0].line.color = "#d4a3ff"
+    branches[0].line.color = map_style.BINDING_LIGHT
     return [
         *branches,
         *highlighted,
@@ -270,7 +270,7 @@ def _line_hit_targets(rows: pd.DataFrame) -> go.Scattermapbox:
             hover.append(text)
     return go.Scattermapbox(name="select line", lon=lon, lat=lat, mode="markers",
         marker=dict(size=16, color="rgba(128,80,255,0.01)"), customdata=data,
-        text=hover, hoverinfo="text", showlegend=False)
+        text=hover, hoverinfo="text", hoverlabel=map_style.BINDING_HOVERLABEL, showlegend=False)
 
 
 @lru_cache(maxsize=32)
@@ -318,11 +318,12 @@ def _cap_traces(zones: DataFrame[BiddingZoneShapes], caps: DataFrame[CountryCaps
         lat=lat, mode="lines", line=dict(color=map_style.BINDING,
         width=SELECTED_WIDTH if selected_id == row.source_id else LINE_WIDTH), hoverinfo="skip")
     halo, core = map_style.haloed(outline)
-    halo.line.color = "#d4a3ff"
+    halo.line.color = map_style.BINDING_LIGHT
     traces += [halo, core]
     traces.append(go.Scattermapbox(name="select country cap", lon=outline.lon, lat=outline.lat,
         mode="markers", marker=dict(size=14, color="rgba(128,80,255,0.01)"),
-        customdata=[[str(row.source_id)]] * len(lon), text=[hover] * len(lon), hoverinfo="text"))
+        customdata=[[str(row.source_id)]] * len(lon), text=[hover] * len(lon), hoverinfo="text",
+        hoverlabel=map_style.BINDING_HOVERLABEL))
     for trace in traces:
         trace.meta = "country-cap"
     return traces
