@@ -35,6 +35,7 @@ def test_empty_required_table_is_not_ready(tmp_path, monkeypatch):
 
 def test_preparation_compiles_fresh_checkout_and_reuses_downloads(tmp_path, monkeypatch):
     root = FIXTURES/'catalog-sweep'
+    monkeypatch.setattr(osm_locator, 'EXPECTED_TEMPLATES', frozenset({'AT'}))
     monkeypatch.setattr(runtime_data, 'REPO', tmp_path)
     monkeypatch.delenv('COPPERSUSHI_ELEMENT_CATALOG', raising=False)
     monkeypatch.setattr(osm_locator, 'CACHE_DIR', tmp_path/'data/osm-locator')
@@ -56,18 +57,17 @@ def test_preparation_compiles_fresh_checkout_and_reuses_downloads(tmp_path, monk
         return buses.open('rb')
     monkeypatch.setattr(runtime_data.urllib.request, 'urlopen', download)
 
+    from tests.test_jao import written
     def fetch_domain(day):
         calls.append('domain')
-        path = jao.day_dir(day)
-        path.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(root/'cache/jao/element-ends.csv', path/'element-ends.csv')
+        written(jao.day_dir(day))
     monkeypatch.setattr(jao, 'fetch_day', fetch_domain)
-    monkeypatch.setattr(jao, 'read_day', lambda path: pd.read_csv(path/'element-ends.csv'))
+    original_seed = jao.seed_element_ends
     def seed(days):
         calls.append('seed')
-        shutil.copyfile(jao.day_dir(days[0])/'element-ends.csv', jao.JAO_DIR/'element-ends.csv')
+        original_seed(days)
     monkeypatch.setattr(jao, 'seed_element_ends', seed)
-    monkeypatch.setattr(runtime_data.catalog_backfill, 'fetch_site_evidence', lambda path: path.mkdir(parents=True, exist_ok=True))
+    monkeypatch.setattr(runtime_data.catalog_backfill, 'fetch_site_evidence', lambda path, **kwargs: path.mkdir(parents=True, exist_ok=True))
     original_sweep = runtime_data.catalog_sweep.sweep
     def compile_catalog(cache, backfill, output):
         calls.append('compile')
@@ -95,3 +95,18 @@ def test_preparation_compiles_fresh_checkout_and_reuses_downloads(tmp_path, monk
     calls.clear()
     runtime_data.prepare(MarketDay.on('2026-01-01'))
     assert calls == ['domain', 'seed', 'compile', 'outlines']
+
+    shutil.copyfile(FIXTURES/'runtime-data/missing-hour.csv', jao.day_dir('2026-01-01')/'elements.csv')
+    calls.clear()
+    runtime_data.prepare(MarketDay.on('2026-01-01'))
+    assert calls == ['domain', 'compile']
+
+
+def test_truncated_catalog_reports_setup_command(tmp_path, monkeypatch):
+    shutil.copytree(FIXTURES/'element-catalog', tmp_path/'catalog')
+    shutil.copyfile(FIXTURES/'runtime-data/truncated.csv', tmp_path/'catalog/site_names.csv')
+    monkeypatch.setenv('COPPERSUSHI_ELEMENT_CATALOG', str(tmp_path/'catalog'))
+    monkeypatch.setattr(jao, 'read_element_ends', lambda: pd.read_csv(FIXTURES/'element-catalog/discovered-ends.csv'))
+    monkeypatch.setattr(osm_locator, 'read_csvs', lambda: pd.read_csv(FIXTURES/'cnec-price-map/located-substations.csv'))
+    with pytest.raises(RuntimeError, match='pixi run --locked setup-app'):
+        runtime_data.check()

@@ -52,7 +52,8 @@ reviewed element-specific site selections; the compiler rejects absent target si
 
 Site IDs are assigned once from source anchors, then retained by the existing
 snapshot's name/location bindings. Rebuilding in the same directory preserves them
-across small coordinate corrections. Element IDs encode the exact publisher/name
+across small coordinate corrections. An invalid prior catalog is rebuilt from inputs;
+only a fully validated prior snapshot contributes retained IDs or source hashes. Element IDs encode the exact publisher/name
 identity; source renames remain distinct publications. Do not use IDs as display names.
 
 The compiler writes an immutable generation directory and atomically switches

@@ -3,6 +3,15 @@ from coppersushi import REPO
 FIXTURE = REPO / 'tests' / 'fixtures' / 'element-catalog'
 
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def synthetic_templates(monkeypatch):
+    from coppersushi.data_sources import osm_locator
+    monkeypatch.setattr(osm_locator, 'EXPECTED_TEMPLATES', frozenset({'AT'}))
+
+
 def test_sweep_is_repeatable_and_keeps_conflicting_source_names(tmp_path):
     from coppersushi.data_sources.catalog_sweep import sweep
     root = FIXTURE.parent / 'catalog-sweep'
@@ -249,3 +258,28 @@ def test_reviewed_mapping_bootstraps_without_annual_or_domain_observation(tmp_pa
         ends = db.execute('SELECT * FROM element_endpoints WHERE element_id=?', (row['element_id'],)).fetchall()
         assert len(ends) == 2
         assert all(end['assignment_basis'] == 'inferred' and end['published_name'] is None for end in ends)
+
+
+@pytest.mark.parametrize('damage', ['missing', 'bad_header', 'truncated', 'broken_current'])
+def test_sweep_rebuilds_damaged_generated_catalog(tmp_path, damage):
+    import shutil
+    from coppersushi.data_sources.catalog_sweep import sweep
+    from coppersushi.data_sources.element_catalog import load, snapshot
+    root = FIXTURE.parent/'catalog-sweep'
+    output = tmp_path/'catalog'
+    sweep(root/'cache', root/'backfill', output, root/'config')
+    sites = (output/'sites.csv').read_bytes()
+    if damage == 'broken_current':
+        shutil.rmtree(snapshot(output))
+    else:
+        path = (output/'site_names.csv').resolve()
+        if damage == 'missing':
+            path.unlink()
+        elif damage == 'bad_header':
+            shutil.copyfile(FIXTURE/'invalid.sql', path)
+        else:
+            shutil.copyfile(FIXTURE.parent/'runtime-data/truncated.csv', path)
+    sweep(root/'cache', root/'backfill', output, root/'config')
+    with load(output) as db:
+        assert db.execute('SELECT count(*) FROM elements').fetchone()[0] > 0
+    assert (output/'sites.csv').read_bytes() == sites

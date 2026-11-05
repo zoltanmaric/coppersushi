@@ -11,11 +11,13 @@ import csv
 import gzip
 import hashlib
 import json
+import logging
 from pathlib import Path
 import uuid
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
+from shapely.geometry import Point, Polygon
 from typing import Literal
 
 
@@ -54,6 +56,8 @@ class ElementAssessment(BaseModel):
 from coppersushi import REPO, cnec_geometry as geometry
 from coppersushi.data_model.osm_locator import LocatedSubstations
 from coppersushi.data_sources import element_catalog, osm_locator
+
+logger = logging.getLogger(__name__)
 
 
 def stamp(value: str) -> str:
@@ -114,6 +118,44 @@ def apply_assessments(assessments: dict[tuple[str, str, str], ElementAssessment]
                 orientation_evidence=assessment.orientation_evidence)
 
 
+def substation_centroid(document: dict, kind: str, osm_id: int) -> Point:
+    """Validate complete OSM substation boundaries before using or caching evidence."""
+    from shapely.ops import unary_union
+    label = f'{kind}/{osm_id}'
+    try:
+        elements = document['elements']
+        matches = [e for e in elements if e.get('type') == kind and e.get('id') == osm_id]
+        if kind not in ('way', 'relation') or len(matches) != 1 or matches[0].get('tags', {}).get('power') != 'substation':
+            raise ValueError(f'OSM {label} is not the expected substation')
+        nodes = {e['id']: (e['lon'], e['lat']) for e in elements if e.get('type') == 'node'}
+        ways = {e['id']: e for e in elements if e.get('type') == 'way'}
+        if kind == 'way':
+            boundaries = matches
+        else:
+            site = matches[0]
+            members = site.get('members', [])
+            if site.get('tags', {}).get('type') != 'site' or not members or any(
+                m['type'] != 'way' or m.get('role', '') not in ('', 'outer') or m['ref'] not in ways for m in members
+            ):
+                raise ValueError(f'OSM {label} requires complete substation site boundaries')
+            boundaries = [ways[m['ref']] for m in members]
+        polygons = []
+        for boundary in boundaries:
+            refs = boundary.get('nodes', [])
+            if len(refs) < 4 or refs[0] != refs[-1] or any(n not in nodes for n in refs):
+                raise ValueError(f'OSM {label} requires a complete closed substation polygon')
+            polygon = Polygon([nodes[n] for n in refs])
+            if not polygon.is_valid or polygon.is_empty:
+                raise ValueError(f'OSM {label} has invalid substation geometry')
+            polygons.append(polygon)
+        centroid = unary_union(polygons).centroid
+        if not (-180 <= centroid.x <= 180 and -90 <= centroid.y <= 90):
+            raise ValueError(f'OSM {label} has invalid coordinates')
+        return centroid
+    except (KeyError, TypeError, AttributeError) as error:
+        raise ValueError(f'OSM {label} has malformed substation evidence') from error
+
+
 def sweep(cache_root: Path, backfill: Path, output: Path,
           configuration: Path = REPO/'config/element-catalog') -> dict:
     output.mkdir(parents=True, exist_ok=True)
@@ -128,34 +170,9 @@ def sweep(cache_root: Path, backfill: Path, output: Path,
             raise ValueError(f"Unsupported OSM object type: {kind}")
         label = f'{kind}/{osm_id}'
         document = json.loads((backfill/f"osm-{kind}-{osm_id}.json").read_text())
-        matches = [e for e in document['elements'] if e.get('type')==kind and e.get('id')==osm_id]
-        if len(matches)!=1 or matches[0].get('tags',{}).get('power')!='substation':
-            raise ValueError(f"OSM {label} is not the expected substation")
+        centroid = substation_centroid(document, kind, osm_id)
         matched = buses[buses.tags.eq(label)][['x','y']].drop_duplicates()
         if matched.empty:
-            from shapely.geometry import Polygon
-            from shapely.ops import unary_union
-            nodes = {e['id']:(e['lon'],e['lat']) for e in document['elements'] if e.get('type')=='node'}
-            ways = {e['id']:e for e in document['elements'] if e.get('type')=='way'}
-            if kind=='way':
-                boundaries = matches
-            else:
-                site=matches[0]
-                members=site.get('members',[])
-                if site.get('tags',{}).get('type')!='site' or not members or any(
-                    m['type']!='way' or m.get('role','') not in ('','outer') or m['ref'] not in ways for m in members):
-                    raise ValueError(f"OSM {label} requires complete substation site boundaries")
-                boundaries=[ways[m['ref']] for m in members]
-            polygons=[]
-            for boundary in boundaries:
-                refs = boundary.get('nodes',[])
-                if len(refs)<4 or refs[0]!=refs[-1] or any(n not in nodes for n in refs):
-                    raise ValueError(f"OSM {label} requires a complete closed substation polygon")
-                polygon = Polygon([nodes[n] for n in refs])
-                if not polygon.is_valid or polygon.is_empty:
-                    raise ValueError(f"OSM {label} has invalid substation geometry")
-                polygons.append(polygon)
-            centroid = unary_union(polygons).centroid
             x,y = centroid.x,centroid.y
         else:
             if (matched.max()-matched.min()).gt(.01).any():
@@ -167,11 +184,16 @@ def sweep(cache_root: Path, backfill: Path, output: Path,
     # Existing IDs survive coordinate corrections and changes in representative spelling.
     old_sites = {}
     old_names = defaultdict(list)
-    if (output / 'sites.csv').exists():
-        with element_catalog.load(output) as db:
+    previous = None
+    try:
+        candidate = element_catalog.snapshot(output)
+        with element_catalog.load(candidate) as db:
             old_sites = {r['site_id']: dict(r) for r in db.execute('SELECT * FROM sites')}
             for r in db.execute("SELECT * FROM site_names WHERE source IN ('osm-locator','osm')"):
                 old_names[r['published_name']].append(r['site_id'])
+        previous = candidate
+    except (FileNotFoundError, element_catalog.InvalidCatalog, csv.Error, UnicodeError) as error:
+        logger.info('Rebuilding without an unavailable or invalid prior catalog: %s', error)
     sites: dict[str, dict] = {}
     names: set[tuple[str,str,str]] = set()
     point_sites: dict[geometry.Point,str] = {}
@@ -242,8 +264,8 @@ def sweep(cache_root: Path, backfill: Path, output: Path,
               osm_locator.ALIASES_FILE, osm_locator.ELEMENT_ALIASES_FILE,
               *sorted(backfill.glob('osm-*.json')),
               *sorted(backfill.glob('raw-*.json.gz'))]
-    if (output/'sites.csv').exists():
-        inputs += [element_catalog.snapshot(output)/f'{table}.csv' for table in element_catalog.TABLES]
+    if previous is not None:
+        inputs += [previous/f'{table}.csv' for table in element_catalog.TABLES]
     for path in inputs:
         if path.is_relative_to(cache_root): label = str(path.relative_to(cache_root))
         elif path.is_relative_to(output): label = 'previous/' + path.name

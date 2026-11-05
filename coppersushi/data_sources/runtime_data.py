@@ -1,5 +1,6 @@
 """Prepare and validate the static tables required by local and container startup."""
 import argparse
+import csv
 import hashlib
 import logging
 import os
@@ -50,7 +51,7 @@ def check(*, sources_only: bool = False) -> None:
         with path.open('rb') as stream:
             if stream.read(64).startswith(b'version https://git-lfs'):
                 raise ValueError('solved network is a Git LFS pointer')
-    except (OSError, ValueError, RuntimeError, KeyError, pa.errors.SchemaError) as error:
+    except (OSError, ValueError, RuntimeError, KeyError, csv.Error, pa.errors.SchemaError) as error:
         raise RuntimeError(f'Application data is missing or invalid: {error}. Run `{SETUP_COMMAND}`.') from error
 
 
@@ -65,7 +66,7 @@ def prepare(day: MarketDay, refresh: bool = False) -> None:
             raise FileNotFoundError('refresh requested')
         if osm_locator.read_csvs().empty:
             raise ValueError('empty locator')
-    except (OSError, ValueError, RuntimeError, pa.errors.SchemaError):
+    except (OSError, ValueError, RuntimeError, KeyError, pa.errors.SchemaError):
         logger.info('Preparing OSM locator')
         osm_locator.fetch()
         osm_locator.read_csvs()
@@ -87,7 +88,7 @@ def prepare(day: MarketDay, refresh: bool = False) -> None:
         if refresh:
             raise FileNotFoundError('refresh requested')
         jao.read_day(jao.day_dir(seed_day))
-    except (OSError, ValueError, RuntimeError, pa.errors.SchemaError):
+    except (OSError, ValueError, RuntimeError, KeyError, pa.errors.SchemaError):
         logger.info('Preparing JAO domain for %s', day.date)
         jao.fetch_day(seed_day)
     # Reading validates every domain table; an interrupted download cannot become a seed.
@@ -97,9 +98,9 @@ def prepare(day: MarketDay, refresh: bool = False) -> None:
             raise FileNotFoundError('refresh requested')
         if jao.read_element_ends().empty:
             raise ValueError('empty endpoint seed')
-    except (OSError, ValueError, RuntimeError, pa.errors.SchemaError):
+    except (OSError, ValueError, RuntimeError, KeyError, pa.errors.SchemaError):
         jao.seed_element_ends([seed_day])
-    catalog_backfill.fetch_site_evidence(backfill)
+    catalog_backfill.fetch_site_evidence(backfill, refresh=refresh)
     logger.info('Compiling element catalog')
     summary = catalog_sweep.sweep(root, backfill, catalog_directory())
     logger.info('Catalog: %s', summary)
