@@ -75,8 +75,8 @@
 @keyframes cnec-ambient-breathe {0%,100% {opacity:.25} 50% {opacity:.45}}
 @media (prefers-reduced-motion:reduce) {.cnec-ambient-glow {animation:none;opacity:.35}}
 
-.cnec-map-tools {position:absolute;top:16px;right:16px;z-index:3;display:flex;gap:10px;max-width:calc(100% - 32px);align-items:stretch}
+.cnec-map-tools {position:absolute;top:16px;left:16px;right:16px;z-index:3;display:flex;justify-content:space-between;gap:10px;align-items:stretch;pointer-events:none}
 .cnec-map-tools .cnec-price-legend {position:static;box-sizing:border-box;max-width:100%}
-.cnec-reference {padding:12px 14px;font-size:14px;display:flex;flex-direction:column;justify-content:space-between;gap:8px;min-width:90px;box-sizing:border-box}
+.cnec-reference {pointer-events:auto;padding:12px 14px;font-size:14px;display:flex;flex-direction:column;justify-content:space-between;gap:8px;min-width:90px;box-sizing:border-box}
 .cnec-reference select {font:inherit;font-size:18px;font-weight:600;border:0;background:transparent;color:#eee;color-scheme:dark;min-height:28px;cursor:pointer}
 @media(max-width:450px){.cnec-map-tools {left:12px;right:12px;max-width:none;gap:8px}.cnec-price-legend {flex:1;min-width:0}.cnec-reference {min-width:95px}}
