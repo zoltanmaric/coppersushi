@@ -30,7 +30,7 @@
     },
     "options": [],
     "reference": null,
-    "note": ""
+    "notes": []
   },
   "constraints": {
     "request": {
@@ -68,7 +68,7 @@
       }
     ],
     "reference": null,
-    "note": ""
+    "notes": []
   },
   "attribution": {
     "day": "2024-08-29",
@@ -120,7 +120,7 @@
       }
     ],
     "reference": "DE",
-    "note": ""
+    "notes": []
   },
   "caps": {
     "request": {
@@ -159,6 +159,6 @@
       }
     ],
     "reference": null,
-    "note": ""
+    "notes": []
   }
 }

@@ -140,7 +140,7 @@ function View({id, day: routeDay, token, basemap}: Props) {
         config={{responsive: true, displayModeBar: false, scrollZoom: true}} style={{height: '100%'}}/>
       <aside className="cnec-progress" aria-live="polite">
         {loading && <div role="status" aria-label="Map loading">{loading}</div>}
-        {full?.note && <div role="status">{full.note}</div>}
+        {full?.notes.map(note => <div role="status" key={note}>{note}</div>)}
         {failures.map(([name, query]) => query.error && <div role="alert" key={name}>
           {name}: {query.error.message} <button onClick={() => void query.refetch()}>Retry</button>
         </div>)}

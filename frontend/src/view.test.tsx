@@ -213,6 +213,6 @@ test('shows a specific unavailable attribution reason', async () => {
   await waitFor(() => expect(pending.some(p => p.path.endsWith('enriched'))).toBe(true));
   expect(screen.queryByText('Some attribution inputs are unavailable.')).toBeNull();
   expect(screen.queryByText('Poland cap attribution unavailable for this interval.')).toBeNull();
-  await reply('enriched', {...responses.caps, note: 'Poland cap attribution unavailable for this interval.'}, null);
+  await reply('enriched', {...responses.caps, notes: ['Poland cap attribution unavailable for this interval.']}, null);
   await waitFor(() => expect(screen.getByText('Poland cap attribution unavailable for this interval.')).toBeTruthy());
 });

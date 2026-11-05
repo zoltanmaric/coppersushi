@@ -106,7 +106,7 @@ def register(server: Flask, services: Services) -> None:
         figure = cnec_price_map.price_figure(services.core_zones(),
             ZonalPrices.validate(frame[frame.interval.eq(interval)]), interval,
             services.mapbox_token(), services.basemap())
-        return LayerResponse(request=view, figure=figure_payload(figure), options=[], reference=None, note="")
+        return LayerResponse(request=view, figure=figure_payload(figure), options=[], reference=None, notes=[])
 
     @api.post('/constraints')
     @json_endpoint
@@ -120,7 +120,7 @@ def register(server: Flask, services: Services) -> None:
             geometry, interval, view.selected, services.mapbox_token(), services.basemap())
         options = cnec_page.constraint_options(rows.assign(option_source="constraints"))
         return LayerResponse.model_validate(dict(request=view, figure=figure_payload(figure),
-                                                 options=options, reference=None, note=""))
+                                                 options=options, reference=None, notes=[]))
 
     @api.get('/attribution/<day>')
     @json_endpoint
@@ -140,6 +140,6 @@ def register(server: Flask, services: Services) -> None:
         return LayerResponse.model_validate(dict(
             request=ViewRequest(day=view.day, interval=view.interval, selected=view.selected),
             figure=figure_payload(result.figure), options=result.constraint_options,
-            reference=result.reference, note=result.note))
+            reference=result.reference, notes=list(result.notes)))
 
     server.register_blueprint(api)

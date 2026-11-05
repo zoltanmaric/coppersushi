@@ -47,7 +47,7 @@ class LayerResponse(Contract):
     figure: PlotlyFigure
     options: list[ConstraintOption]
     reference: str | None
-    note: str
+    notes: list[str]
 
 
 class DayResponse(Contract):

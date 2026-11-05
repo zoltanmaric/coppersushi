@@ -38,7 +38,7 @@ class Rendered(NamedTuple):
     figure: go.Figure
     constraint_options: list[dict]
     reference: str | None
-    note: str
+    notes: tuple[str, ...]
 
 
 def local_today() -> str:
@@ -107,7 +107,7 @@ def render(
         assert selected is not None
         snapshot = cnec_market.snapshot(day.constraints, day.ptdfs,
                                        day.prices, interval, context=day.context)
-        snapshot = snapshot._replace(selected_id=selected.source_id, note=note)
+        snapshot = snapshot._replace(selected_id=selected.source_id, notes=(*snapshot.notes, note))
     else:
         snapshot = cnec_market.snapshot(
             day.constraints, day.ptdfs, day.prices, interval,
@@ -119,5 +119,5 @@ def render(
         ),
         constraint_options=options,
         reference=snapshot.reference,
-        note=snapshot.note,
+        notes=snapshot.notes,
     )

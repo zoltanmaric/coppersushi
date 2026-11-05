@@ -200,9 +200,12 @@
           ],
           "title": "Reference"
         },
-        "note": {
-          "title": "Note",
-          "type": "string"
+        "notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
         }
       },
       "required": [
@@ -210,7 +213,7 @@
         "figure",
         "options",
         "reference",
-        "note"
+        "notes"
       ],
       "title": "LayerResponse",
       "type": "object"
