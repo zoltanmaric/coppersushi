@@ -91,7 +91,8 @@ function View({id, day: routeDay, token, basemap}: Props) {
   useEffect(() => {
     if (settled) setDisplayed({day, figure: candidate});
   }, [settled, day, candidate]);
-  const graphFigure = displayed?.day === day ? displayed.figure : candidate;
+  const emptyFigure = useMemo(() => shell(token, basemap), [token, basemap]);
+  const graphFigure = displayed?.day === day ? displayed.figure : settled ? candidate : emptyFigure;
   const options = full?.options ?? caps.data?.options ?? constraints.data?.options ?? [];
   useEffect(() => {
     const readyOptions = source === 'constraints' ? constraints.data?.options : caps.data?.options;

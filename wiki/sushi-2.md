@@ -70,14 +70,14 @@ flowchart LR
     cnec_geometry --> cnec_price_figure
     mapbox_basemap --> cnec_price_figure
     jao_attribution --> cnec_attribution_context
-    cnec_attribution_context -->|enrich after initial render| cnec_market_snapshot
+    cnec_attribution_context -->|enrich interval figure| cnec_market_snapshot
     cnec_geometry --> cnec_market_snapshot
     zone_shapes --> cnec_market_snapshot
     jao_active_constraints --> cnec_market_snapshot
     day_ahead_prices --> cnec_market_snapshot
     cnec_market_snapshot --> cnec_price_figure
     cnec_http["CNEC HTTP API<br/>independent price and constraint layers; enrichment figures"]
-    react_cnec["React CNEC view hosted by Dash<br/>selection reducer and TanStack Query; progressive layers"]
+    react_cnec["React CNEC view hosted by Dash<br/>selection reducer and TanStack Query; settled interval figures"]
     day_ahead_prices -->|price layer| cnec_http
     cnec_geometry -->|constraint layer| cnec_http
     cnec_price_figure -->|enriched view| cnec_http
@@ -114,6 +114,6 @@ An optional CloudFront hostname fronts the Lambda deployment, with an ACM certif
 and externally managed DNS; see [hosting](../infra/lambda/README.md#delivery).
 
 CloudFront caches only static asset routes. OPF retains Dash callbacks; the CNEC React view requests independent layers from
-the same Python server, keeping successful layers visible during enrichment; see [hosting](../infra/lambda/README.md#delivery).
+the same Python server, retaining the last settled figure while the next loads; see [hosting](../infra/lambda/README.md#delivery).
 
 For external-input resilience, see [JAO availability and response retention](jao-availability.md).

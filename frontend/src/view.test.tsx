@@ -33,19 +33,20 @@ async function open() {
   await reply('day/2024-08-29', responses.day);
 }
 
-test('prices appear while constraints remain pending; attribution is quiet until selection', async () => {
+test('first map appears after its layers settle', async () => {
   await open();
   await reply('prices', responses.prices);
-  await waitFor(() => expect(screen.getByLabelText('Map').textContent).toContain('prices'));
-  expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toBe('Loading constraints…');
+  expect(screen.getByLabelText('Map').textContent).not.toContain('prices');
+  await waitFor(() => expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toBe('Loading constraints…'));
   await reply('constraints', responses.constraints);
-  await waitFor(() => expect(screen.getByLabelText('Map').textContent).toContain('binding lines'));
-  expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toBe('Loading price contributions…');
+  expect(screen.getByLabelText('Map').textContent).not.toContain('binding lines');
+  await waitFor(() => expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toBe('Loading price contributions…'));
   expect(pending.some(p => p.path.endsWith('attribution/2024-08-29'))).toBe(true);
   fireEvent.change(screen.getByLabelText('Binding constraint'), {target: {value: '1'}});
   await waitFor(() => expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toBe('Loading price contributions…'));
-  expect(screen.getByLabelText('Map').textContent).toContain('prices');
+  expect(screen.getByLabelText('Map').textContent).not.toContain('prices');
   await reply('attribution/2024-08-29', responses.attribution);
+  await reply('enriched', responses.caps, null);
   await reply('enriched', responses.enriched, 1);
   await waitFor(() => expect(screen.getByLabelText('Map').textContent).toContain('contributions'));
   expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('1');
