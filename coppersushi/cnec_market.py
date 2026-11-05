@@ -60,7 +60,12 @@ def snapshot[Prices: ZonalPrices](
     caps = cnec_attribution.country_caps(context, prices, interval)
     cap_inputs = None if context is None else _at_interval(context, interval)
     notes: list[str] = []
-    if cap_inputs is None or len(cap_inputs) != 1 or cap_inputs.iloc[0][["polish_alt", "polish_position", "import_limit", "export_limit"]].isna().any():
+    polish_prices = prices[prices.interval.eq(interval) & prices.zone.eq("PL")]
+    polish_price = float(polish_prices.price.iloc[0]) if len(polish_prices) == 1 else float("nan")
+    if cap_inputs is None or len(cap_inputs) != 1 or cnec_attribution.polish_cap_attribution_unavailable(
+        cap_inputs.iloc[0].polish_position, cap_inputs.iloc[0].import_limit,
+        cap_inputs.iloc[0].export_limit, cap_inputs.iloc[0].polish_alt, polish_price,
+    ):
         notes.append("Poland cap attribution unavailable for this interval.")
     if selected is not None:
         identity = selected.source_id
