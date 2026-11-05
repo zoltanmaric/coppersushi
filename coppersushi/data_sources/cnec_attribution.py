@@ -47,7 +47,7 @@ def load_day(day: MarketDay, refresh: bool = False) -> DataFrame[AttributionCont
         fetch("netPos", NetPosition),
         # JAO omitted 00:00–01:00 UTC on 2026-10-25 even for the full 25-hour query.
         # See wiki/country-import-export-caps.md#publication-coverage for evidence and gaps.
-        fetch("DA_PL_AC", PolishAlternative),
+        fetch("DA_PL_AC", PolishAlternative) if day.date >= PolishAlternative.publication_start else [],
     )
     if frame.notna().all().all():
         path.parent.mkdir(parents=True, exist_ok=True)

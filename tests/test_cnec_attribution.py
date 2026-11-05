@@ -197,3 +197,22 @@ def test_pure_country_cap_spread_preserves_cents_and_other_terms(
     assert spread.selected + spread.remainder == pytest.approx(spread.observed)
     assert f"{spread.observed:.2f}" == f"{observed:.2f}"
     assert f"{spread.selected:.2f}" == f"{-effect:.2f}"
+
+
+@pytest.mark.parametrize(('position', 'import_limit', 'export_limit', 'alternative', 'unavailable'), [
+    (453.5, 1584.0, 4959.0, float('nan'), False),  # 2026-04-03 00:00 CEST
+    (0.0, 200.0, 0.0, float('nan'), True),
+    (-200.0, 200.0, 0.0, float('nan'), True),
+    (-199.9, 200.0, 0.0, float('nan'), True),
+    (-199.8, 200.0, 0.0, float('nan'), False),
+    (0.0, 200.0, 0.0, 120.0, False),
+    (float('nan'), 200.0, 0.0, 120.0, True),
+    (1.0, 200.0, 0.0, float('nan'), True),
+])
+def test_polish_cap_availability(position, import_limit, export_limit, alternative, unavailable):
+    assert attribution.polish_cap_attribution_unavailable(position, import_limit, export_limit, alternative) is unavailable
+
+
+def test_polish_alternative_publication_start():
+    from datetime import date
+    assert PolishAlternative.publication_start == date(2026, 5, 6)

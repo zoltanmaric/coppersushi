@@ -85,6 +85,21 @@ def price_spread(reference_price: float, other_price: float, contribution: float
     return PriceSpread(observed, contribution, observed - contribution)
 
 
+# Published positions can differ from a binding limit by 0.1 MW.
+# See wiki/country-import-export-caps.md#poland-validation.
+POSITION_TOLERANCE_MW = 0.11
+
+
+def polish_cap_attribution_unavailable(position: float, import_limit: float,
+                                       export_limit: float, alternative_price: float) -> bool:
+    """Missing alternative price matters only if a limit might bind."""
+    if not all(np.isfinite(value) for value in (position, import_limit, export_limit)):
+        return True
+    strictly_inside = (-import_limit + POSITION_TOLERANCE_MW < position
+                       < export_limit - POSITION_TOLERANCE_MW)
+    return not strictly_inside and not np.isfinite(alternative_price)
+
+
 def country_caps[Prices: ZonalPrices](inputs: DataFrame[AttributionContext] | None, prices: DataFrame[Prices], interval: pd.Timestamp) -> DataFrame[CountryCaps]:
     """Only a saturated PL cap with a correctly signed, nonzero validated dual is binding."""
     columns = ["source_id", "interval", "name", "shadow_price", "direction", "capacity", "delta"]
@@ -101,12 +116,9 @@ def country_caps[Prices: ZonalPrices](inputs: DataFrame[AttributionContext] | No
     if not np.isfinite(delta) or abs(delta) <= 1e-9:
         return CountryCaps.validate(pd.DataFrame(columns=columns).assign(
             interval=pd.Series([], dtype="datetime64[ns, UTC]")))
-    # Published positions can differ from a binding limit by 0.1 MW.
-    # Empirical bound: wiki/country-import-export-caps.md#poland-validation.
-    position_tolerance_mw = 0.11
-    if delta < 0 and abs(row.polish_position - row.export_limit) <= position_tolerance_mw:
+    if delta < 0 and abs(row.polish_position - row.export_limit) <= POSITION_TOLERANCE_MW:
         identity, sense, capacity = -2, "export", row.export_limit
-    elif delta > 0 and abs(row.polish_position + row.import_limit) <= position_tolerance_mw:
+    elif delta > 0 and abs(row.polish_position + row.import_limit) <= POSITION_TOLERANCE_MW:
         identity, sense, capacity = -1, "import", row.import_limit
     else:
         return CountryCaps.validate(pd.DataFrame(columns=columns).assign(
