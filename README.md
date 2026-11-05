@@ -149,8 +149,12 @@ Terraform providers retain their `.terraform.lock.hcl` files.
 The tests run against small checked-in fixtures under `tests/fixtures/`, never against the
 networks. Tests require no Mapbox token; they build figures without fetching map tiles.
 
-GitHub Actions runs this suite on non-draft pull requests, including when a draft is
-marked ready. Draft updates skip it. The suite includes the existing architecture checks.
+GitHub Actions runs `test-core` (app, forecast, type and frontend checks) on non-draft
+pull requests, including when a draft is marked ready. Ghost checks also run when
+`121gigawatts/`, `pyproject.toml`, `pixi.lock` or workflow files change. Manual runs
+include all checks. A parallel container job checks the serving environment and
+native libraries, with cached Docker layers. Draft updates skip both jobs.
+Python test output lists the 20 slowest test phases.
 
 ## Solving a day with PyPSA-Eur
 The networks in `networks/` are produced by [PyPSA-Eur](https://github.com/PyPSA/pypsa-eur),

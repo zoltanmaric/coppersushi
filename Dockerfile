@@ -5,21 +5,28 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-FROM --platform=linux/amd64 ghcr.io/prefix-dev/pixi:0.77.1-noble AS source
+FROM --platform=linux/amd64 ghcr.io/prefix-dev/pixi:0.77.1-noble AS dependencies
 WORKDIR /opt/webapp
-COPY . .
+COPY pyproject.toml pixi.lock ./
 
-FROM source AS environment
-COPY --from=frontend-builder /opt/webapp/assets/ /opt/webapp/assets/
+FROM dependencies AS runtime-dependencies
+# Keep third-party installation and bytecode independent of application edits.
+RUN pixi install --locked -e runtime --skip coppersushi
+# Lambda cannot retain bytecode compiled into its read-only image on first use.
+RUN .pixi/envs/runtime/bin/python -m compileall -q .pixi/envs/runtime/lib/python3.14
+
+FROM runtime-dependencies AS environment
+COPY . .
+# Install the editable package only after its source is available.
 RUN pixi install --locked -e runtime && \
     pixi shell-hook --locked -e runtime -s bash > /opt/entrypoint.sh && \
     printf '\nexec "$@"\n' >> /opt/entrypoint.sh
-# Lambda cannot retain bytecode compiled into its read-only image on first use.
-RUN /bin/bash /opt/entrypoint.sh python -m compileall -q \
-    .pixi/envs/runtime/lib/python3.14 app.py cnec_http.py coppersushi
+RUN /bin/bash /opt/entrypoint.sh python -m compileall -q app.py cnec_http.py coppersushi
+COPY --from=frontend-builder /opt/webapp/assets/ /opt/webapp/assets/
 
-FROM source AS bundle-builder
-RUN pixi install --locked -e build
+FROM dependencies AS bundle-builder
+RUN pixi install --locked -e build --skip coppersushi
+COPY . .
 
 # Refuse pointers and missing data before precomputing maps.
 RUN if grep -rlq '^version https://git-lfs' networks/; then \
