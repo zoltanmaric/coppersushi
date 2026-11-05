@@ -1,0 +1,10 @@
+INSERT INTO sites VALUES ('site-a', 'Duplicate', 1, 1, 'synthetic');
+INSERT INTO site_names VALUES ('locator', 'Unknown', 'absent-site');
+INSERT INTO element_endpoints VALUES ('absent-element', 'from', 'Westhaven', 'site-a', 'resolved', 'synthetic');
+INSERT INTO site_names VALUES ('locator', 'Westhaven', 'site-a');
+UPDATE sites SET longitude = 181 WHERE site_id = 'site-a';
+UPDATE sites SET latitude = 'bad-coordinate' WHERE site_id = 'site-a';
+UPDATE element_endpoints SET side = 'middle' WHERE element_id = 'line-a';
+UPDATE element_endpoints SET site_id = NULL WHERE element_id = 'line-a';
+UPDATE element_endpoints SET site_id = 'site a' WHERE status = 'missing';
+DELETE FROM sites WHERE site_id = 'site-a';

@@ -25,6 +25,8 @@ jobs:
           cache: true
           locked: true
       - run: pixi run --locked setup
+      - name: Validate the relational element catalog
+        run: pixi run --locked python -m coppersushi.data_sources.element_catalog tests/fixtures/element-catalog
       - run: pixi run --locked test
       - name: Build the locked container environment
         run: docker build --target environment -t coppersushi-environment .
