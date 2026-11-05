@@ -1,7 +1,8 @@
 """Place JAO's monitored elements on the map from their published substation names.
 
 Places an element from its two substations alone and touches no network. JAO's domain feed names both
-endpoints of every monitored element, so no element name is parsed here — the sole inference
+endpoints of every monitored element. Identity-scoped aliases correct known endpoint errors;
+the sole inference
 is which located substation a published name means. Three things make that inference:
 
 - **Two keys per name.** JAO spells German umlauts both ways: transliterated (`Roehrsdorf`
@@ -68,16 +69,17 @@ def keys(name: str) -> list[str]:
 def _variants(name: str, aliases: dict[str, str]) -> Iterator[tuple[str, float]]:
     """Keys to try, best first, each with the confidence a hit on it deserves."""
     base = keys(name)
-    if alias := aliases.get(_folded(name)):
-        base = keys(alias) + base
-    yield from ((key, EXACT) for key in base)
-    # A tap point on a corridor is published as `Y_Mellach`; the site is `Mellach`.
-    yield from ((key[2:], TAP) for key in base if key.startswith("y "))
+    variants = [(key, EXACT) for key in base]
+    variants.extend((key[2:], TAP) for key in base if key.startswith("y "))
     for key in base:
         tokens = key.split()
-        for cut in range(len(tokens) - 1, 0, -1):
-            # Trailing equipment tokens: `Mikulowa PST1` is located as `Mikulowa`.
-            yield " ".join(tokens[:cut]), TRIMMED
+        variants.extend((" ".join(tokens[:cut]), TRIMMED)
+                        for cut in range(len(tokens) - 1, 0, -1))
+    for key, score in variants:
+        # Equipment suffixes and spelling aliases compose: Gyoer 245 -> Gyoer -> Gyor.
+        if alias := aliases.get(key):
+            yield from ((target, score) for target in keys(alias))
+        yield key, score
 
 
 def _cluster(points: list[Point]) -> list[Point]:
@@ -164,6 +166,7 @@ def locate_elements(
     ends: DataFrame[ElementEnds],
     substations: DataFrame[LocatedSubstations],
     aliases: dict[str, str] | None = None,
+    element_aliases: dict[tuple[str, str, str, str], str] | None = None,
 ) -> DataFrame[MappedCnecElements]:
     """One row per publisher and named element, placed between its substations where located.
 
@@ -176,7 +179,10 @@ def locate_elements(
     An element with an endpoint the locator does not hold keeps its row without coordinates,
     so the map can say how much of the published set it is showing. `aliases` names the
     sites the locator files under a different name, keyed by the published name.
+    `element_aliases` corrects endpoints only for an exact (EIC, TSO, element name, endpoint name) key.
     """
+    scoped = {(eic, tso, element_name, _folded(name)): target
+              for (eic, tso, element_name, name), target in (element_aliases or {}).items()}
     index = substation_index(substations)
     by_alias = {_folded(published): located for published, located in (aliases or {}).items()}
     rows = [
@@ -186,7 +192,11 @@ def locate_elements(
             "name": element["name"],
             "element_type": element.element_type,
             "branch_type": "Transformer" if element.element_type in POINT_TYPES else "Line",
-            **_placement(element.substation_from, element.substation_to, index, by_alias),
+            **_placement(
+                scoped.get((element.eic, element.tso, element["name"], _folded(element.substation_from)), element.substation_from),
+                scoped.get((element.eic, element.tso, element["name"], _folded(element.substation_to)), element.substation_to),
+                index, by_alias,
+            ),
         }
         for _, element in ends.iterrows()
     ]

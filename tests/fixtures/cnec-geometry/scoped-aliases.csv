@@ -1,0 +1,5 @@
+eic,tso,element_name,published_name,locator_name
+circuit-1,RTE,Anchor-West 1,Village,Village West
+circuit-2,RTE,Anchor-West 2,Village,Village West
+circuit-2,RTE,Anchor-West 2,Anchr,Anchor
+changed,RTE,Changed endpoint,Village,Village West
