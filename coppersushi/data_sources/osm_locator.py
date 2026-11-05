@@ -19,6 +19,7 @@ one substation, and refusing the pairs that are not, is matching, which lives on
 pure matcher (`coppersushi/cnec_geometry.py`) because it depends on the key being matched on.
 """
 
+import csv
 import io
 import logging
 import re
@@ -41,6 +42,7 @@ TARBALL_URL = f"https://codeload.github.com/fneum/core-tso-data/tar.gz/{COMMIT}"
 CACHE_DIR = REPO / "data" / "osm-locator"
 # Committed, unlike the cache: a hand-made list of spellings, carrying no locator content.
 ALIASES_FILE = REPO / "config" / "substation-aliases.csv"
+ELEMENT_ALIASES_FILE = REPO / "config" / "element-substation-aliases.csv"
 TIMEOUT_SECONDS = 300
 
 MEMBER_PATTERN = re.compile(r"^[^/]+/OSM-locator/[^/]+\.csv$")
@@ -155,6 +157,22 @@ def load_aliases(path: Path = ALIASES_FILE) -> dict[str, str]:
     """
     aliases = pd.read_csv(path)
     return dict(zip(aliases.published_name, aliases.locator_name))
+
+
+def load_element_aliases(path: Path = ELEMENT_ALIASES_FILE) -> dict[tuple[str, str, str, str], str]:
+    """Endpoint corrections restricted to one publisher's element identity."""
+    result: dict[tuple[str, str, str, str], str] = {}
+    with path.open(newline="", encoding="utf-8") as stream:
+        for number, row in enumerate(csv.DictReader(stream), start=2):
+            values = [row.get(c, "") for c in ("eic", "tso", "element_name", "published_name", "locator_name")]
+            if not all(isinstance(v, str) and v.strip() for v in values):
+                raise ValueError(f"{path}:{number}: endpoint alias fields must be nonempty")
+            eic, tso, element_name, name, target = values
+            key = (eic, tso, element_name, name)
+            if key in result:
+                raise ValueError(f"{path}:{number}: duplicate endpoint alias {key}")
+            result[key] = target
+    return result
 
 
 if __name__ == "__main__":

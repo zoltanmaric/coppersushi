@@ -31,6 +31,11 @@ flowchart LR
     osm_locator["osm_locator<br/>core-tso-data's OSM-locator substation coordinates, unlicensed, fetched locally"]
     element_catalog["Physical-element catalog<br/>sites, source names, publications and oriented endpoints: four CSVs"]
     validated_catalog["Validated catalog<br/>SQLite keys, references, states and exact site joins"]
+    catalog_sweep["Catalog compiler<br/>retained JAO observations, reviewed bindings and source hashes"]
+    jao_endpoint_cache --> catalog_sweep
+    jao_active_constraints --> catalog_sweep
+    osm_locator --> catalog_sweep
+    catalog_sweep --> element_catalog
     element_catalog --> validated_catalog
     cnec_geometry["cnec_geometry<br/>each named element and publisher placed by its published substations"]
     zone_shapes["zone_shapes<br/>Core bidding-zone polygons derived from solved_network at image build; small bundled GeoJSON read at runtime"]

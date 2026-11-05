@@ -1,0 +1,240 @@
+"""Compile a private physical-element catalog and coverage audit from retained JAO caches.
+
+No downloads occur here. Raw annual responses and targeted backfill responses remain
+immutable inputs. Virtual hubs and nonphysical constraints are counted, never imported
+as sites or physical elements. Re-run into the same directory to retain assigned site IDs.
+"""
+import argparse
+from collections import Counter, defaultdict
+from datetime import datetime, UTC
+import csv
+import gzip
+import hashlib
+import json
+from pathlib import Path
+import uuid
+
+import pandas as pd
+from pydantic import BaseModel
+
+
+class LocatorRecord(BaseModel):
+    """A located substation accepted at the catalog import boundary."""
+    name: str
+    x: float
+    y: float
+    osm_id: int | None
+    template: str
+
+
+from coppersushi import REPO, cnec_geometry as geometry
+from coppersushi.data_model.osm_locator import LocatedSubstations
+from coppersushi.data_sources import element_catalog, osm_locator
+
+
+def stamp(value: str) -> str:
+    moment = datetime.fromisoformat(value)
+    if moment.tzinfo is None:
+        raise ValueError(f'Naive observation timestamp: {value}')
+    return moment.astimezone(UTC).isoformat()
+
+
+def identity(values: tuple[str, ...]) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, json.dumps(values, ensure_ascii=False)))
+
+
+def write(path: Path, columns: list[str], rows: list[dict]) -> None:
+    with path.open('w', newline='', encoding='utf-8') as stream:
+        writer = csv.DictWriter(stream, fieldnames=columns)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def sweep(cache_root: Path, backfill: Path, output: Path,
+          configuration: Path = REPO/'config/element-catalog') -> dict:
+    output.mkdir(parents=True, exist_ok=True)
+    locations = pd.DataFrame(osm_locator.read_csvs(cache_root / 'osm-locator'))
+    supplements = pd.read_csv(configuration/'osm-sites.csv')
+    buses = pd.read_csv(cache_root/'osm-prebuilt-v0.7/buses.csv')
+    extra = []
+    for supplement in supplements.to_dict('records'):
+        matched = buses[buses.tags.eq(f"way/{supplement['osm_way']}")][['x','y']].drop_duplicates()
+        if matched.empty or (matched.max()-matched.min()).gt(.01).any():
+            raise ValueError(f"Expected one cached OSM location for way/{supplement['osm_way']}")
+        tags = json.loads((backfill/f"osm-way-{supplement['osm_way']}.json").read_text())['elements'][0]['tags']
+        if tags.get('power') != 'substation':
+            raise ValueError(f"OSM way/{supplement['osm_way']} is not a substation")
+        extra.append(dict(name=supplement['published_name'], x=float(matched.x.mean()), y=float(matched.y.mean()),
+                          osm_id=supplement['osm_way'], template='OSM'))
+    locations = pd.concat([locations,pd.DataFrame(extra)],ignore_index=True)
+    # Existing IDs survive coordinate corrections and changes in representative spelling.
+    old_sites = {}
+    old_names = defaultdict(list)
+    if (output / 'sites.csv').exists():
+        with element_catalog.load(output) as db:
+            old_sites = {r['site_id']: dict(r) for r in db.execute('SELECT * FROM sites')}
+            for r in db.execute("SELECT * FROM site_names WHERE source IN ('osm-locator','osm')"):
+                old_names[r['published_name']].append(r['site_id'])
+    sites: dict[str, dict] = {}
+    names: set[tuple[str,str,str]] = set()
+    point_sites: dict[geometry.Point,str] = {}
+    anchors: dict[str,str] = {}
+    for location in locations.sort_values(['template', 'name']).to_dict('records'):
+        if pd.isna(location['osm_id']): location['osm_id'] = None
+        r = LocatorRecord.model_validate(location)
+        anchor = f'osm-locator:{int(r.osm_id)}' if r.osm_id is not None else f'locator:{r.template}:{r.name}'
+        prior = [s for s in old_names[r.name] if abs(old_sites[s]['longitude']-r.x)<.01 and abs(old_sites[s]['latitude']-r.y)<.01]
+        site_id = anchors.get(anchor) or (prior[0] if len(prior)==1 else identity(('site', anchor)))
+        anchors[anchor] = site_id
+        if site_id in sites:
+            s = sites[site_id]
+            if abs(s['longitude']-r.x)>.01 or abs(s['latitude']-r.y)>.01:
+                raise ValueError(f'Conflicting coordinates for {anchor}; review locator identity')
+        else:
+            sites[site_id] = dict(site_id=site_id, display_name=r.name, longitude=r.x, latitude=r.y,
+                                 evidence=(f'https://www.openstreetmap.org/way/{r.osm_id}; cached osm-prebuilt-v0.7 coordinates' if r.template=='OSM' else f'osm-locator@{osm_locator.COMMIT}; {anchor}; template={r.template}'))
+        point_sites[(float(r.x), float(r.y))] = site_id
+        names.add(('osm' if r.template=='OSM' else 'osm-locator', r.name, site_id))
+    index = geometry.substation_index(LocatedSubstations.validate(locations))
+    aliases = osm_locator.load_aliases()
+    normalized = {geometry._folded(k):v for k,v in aliases.items()}
+    scoped = osm_locator.load_element_aliases()
+    for name, target in aliases.items():
+        hit = geometry._candidates(target, index, {})
+        if hit:
+            for point in hit[1]:names.add(('jao',name,point_sites[point]))
+
+    bindings = {}
+    with (configuration/'endpoint-bindings.csv').open(newline='') as stream:
+        for row in csv.DictReader(stream):
+            binding_key = (row['eic'], row['tso'], row['element_name'], row['published_name'])
+            if binding_key in bindings or row['site_id'] not in sites or not row['evidence']:
+                raise ValueError(f'Invalid or duplicate endpoint binding: {binding_key}')
+            bindings[binding_key] = row
+
+    files = sorted((cache_root/'jao').rglob('element-ends.csv')) + sorted(backfill.glob('ends-*.csv'))
+    # Legacy domain tables recover names absent from older endpoint caches. Multi-TSO
+    # aggregated rows cannot establish publisher orientation, so they are not imported.
+    files += sorted((cache_root/'jao').glob('*/elements.csv'))
+    observations = defaultdict(list); legacy = defaultdict(list); manifest = []
+    inputs = [*sorted((cache_root/'osm-locator').glob('*.csv')),
+              cache_root/'osm-prebuilt-v0.7/buses.csv',
+              *sorted(configuration.glob('*.csv')), element_catalog.SCHEMA,
+              osm_locator.ALIASES_FILE, osm_locator.ELEMENT_ALIASES_FILE,
+              *sorted(backfill.glob('osm-way-*.json')),
+              *sorted(backfill.glob('raw-*.json.gz'))]
+    if (output/'sites.csv').exists():
+        inputs += [element_catalog.snapshot(output)/f'{table}.csv' for table in element_catalog.TABLES]
+    for path in inputs:
+        if path.is_relative_to(cache_root): label = str(path.relative_to(cache_root))
+        elif path.is_relative_to(output): label = 'previous/' + path.name
+        elif path.is_relative_to(backfill): label = 'backfill/' + path.name
+        else: label = 'config/' + path.name
+        manifest.append(dict(file=label,sha256=hashlib.sha256(path.read_bytes()).hexdigest()))
+    for path in files:
+        frame = pd.read_csv(path, keep_default_na=False)
+        label = str(path.relative_to(cache_root)) if path.is_relative_to(cache_root) else f'backfill/{path.name}'
+        manifest.append(dict(file=label, sha256=hashlib.sha256(path.read_bytes()).hexdigest()))
+        for row in frame.to_dict('records'):
+            if ',' in row.get('tso','') or ';' in row.get('tso','') or ' / ' in row.get('tso',''): continue
+            if path.name == 'elements.csv':
+                # Aggregated domain tables do not establish each publisher's orientation.
+                row['substation_from'] = row['substation_to'] = ''
+            row['evidence'] = label
+            if row.get('name'):observations[(row['eic'],row['tso'],row['name'])].append(row)
+            else:legacy[(row['eic'],row['tso'])].append(row)
+    counts: Counter[tuple[str,str,str]] = Counter()
+    constraints = {}; external = {}
+    contingency_counts: Counter[str] = Counter()
+    for path in sorted((cache_root/'research/country-caps/annual-json').glob('activeFbConstraints*.gz')):
+        manifest.append(dict(file=str(path.relative_to(cache_root)),sha256=hashlib.sha256(path.read_bytes()).hexdigest()))
+        for row in json.load(gzip.open(path))['data']:
+            record_key = (stamp(row['dateTimeUtc']),row['id'])
+            if not row.get('cnecEic') or row['cnecEic']=='NA':
+                external[record_key]=row.get('cnecName','');continue
+            constraints[record_key]=(row['cnecEic'],row['tso'].upper(),row['cnecName'].strip(),row.get('branchEic'))
+    for path in sorted((cache_root/'jao').glob('*/active-constraints.csv')):
+        manifest.append(dict(file=str(path.relative_to(cache_root)),sha256=hashlib.sha256(path.read_bytes()).hexdigest()))
+        for row in pd.read_csv(path,keep_default_na=False).to_dict('records'):
+            timestamp=stamp(row['interval'])
+            constraints[(timestamp,int(row['source_id']))]=(row['eic'],row['tso'],row['name'],row.get('branch_eic'))
+    for eic,tso,name,branch in constraints.values():
+        counts[(eic,tso,name)]+=1
+        if branch and branch!='NA':contingency_counts[branch]+=1
+    keys=set(observations)|set(counts)
+    elements=[]; endpoints=[]; audit=[]
+    for eic,tso,name in sorted(keys):
+        if not eic or not tso or not name:continue
+        key=(eic,tso,name);element_id=identity(('jao',*key))
+        rows=observations.get(key) or legacy.get((eic,tso),[])
+        types={r.get('element_type','') for r in rows}-{''}
+        elements.append(dict(element_id=element_id,source='jao',tso=tso,eic=eic,name=name,
+                             element_type=next(iter(types)) if len(types)==1 else None))
+        values={side:{r.get(f'substation_{side}','') for r in rows}-{''} for side in ('from','to')}
+        published={side:next(iter(v)) if len(v)==1 else None for side,v in values.items()}
+        corrected={side:(scoped.get((eic,tso,name,n),n) if n is not None else None) for side,n in published.items()}
+        placement=geometry._placement(corrected['from'],corrected['to'],index,normalized)
+        evidence='; '.join(sorted({r['evidence'] for r in rows})) or 'No cached endpoint metadata'
+        statuses=[]
+        for side,number in [('from',0),('to',1)]:
+            n=published[side];hit=geometry._candidates(corrected[side],index,normalized)
+            site_id=None
+            if len(values[side])>1:status='conflict'
+            elif n is None:status='missing'
+            elif placement['match_status']=='matched':
+                site_id=point_sites[(placement[f'x{number}'],placement[f'y{number}'])];status='resolved'
+            elif hit and len(hit[1])==1:site_id=point_sites[hit[1][0]];status='resolved'
+            elif hit:status='ambiguous'
+            else:status='unresolved'
+            binding = bindings.get((eic,tso,name,n))
+            if binding and len(values[side])==1:
+                site_id=binding['site_id'];status='resolved'
+            method='site binding: '+binding['evidence'] if binding else 'scoped correction' if corrected[side]!=n else ('name lookup / nearest pair' if status=='resolved' else status)
+            endpoints.append(dict(element_id=element_id,side=side,published_name=n,site_id=site_id,status=status,
+                                  evidence=f'{method}; {evidence}' + (f'; conflicting names={sorted(values[side])}' if status=='conflict' else '')))
+            statuses.append(status)
+            # Only unambiguous names become reusable aliases. Scoped/nearest-pair choices do not.
+            if site_id and n is not None and not binding and hit and len(hit[1])==1 and corrected[side]==n:names.add(('jao',n,site_id))
+        audit.append(dict(element_id=element_id,eic=eic,tso=tso,name=name,appearances=counts[key],
+                          status='resolved' if statuses==['resolved','resolved'] else '/'.join(statuses),
+                          endpoint_evidence=evidence))
+    records={'sites':list(sites.values()),'site_names':[dict(source=s,published_name=n,site_id=i) for s,n,i in sorted(names)],
+             'elements':elements,'element_endpoints':endpoints}
+    # Stage and validate before replacing the previously validated catalog.
+    staging=output/'.generations'/uuid.uuid4().hex;staging.mkdir(parents=True)
+    import sqlite3
+    with sqlite3.connect(':memory:') as db:
+        db.executescript(element_catalog.SCHEMA.read_text())
+        for table,rows in records.items():
+            columns=[r[1] for r in db.execute(f'PRAGMA table_info({table})')]
+            write(staging/f'{table}.csv',columns,rows)
+    with element_catalog.load(staging):pass
+    write(staging/'audit.csv',list(audit[0]),sorted(audit,key=lambda r:-r['appearances']))
+    write(staging/'contingencies.csv',['eic','appearances','has_monitored_record'],[
+        dict(eic=k,appearances=v,has_monitored_record=k in {x[0] for x in keys}) for k,v in contingency_counts.most_common()])
+    summary=dict(sites=len(sites),elements=len(elements),physical_constraint_observations=len(constraints),
+                 excluded_nonphysical_observations=len(external),endpoint_statuses=dict(Counter(r['status'] for r in endpoints)),
+                 fully_resolved_elements=sum(r['status']=='resolved' for r in audit),
+                 unresolved_active_appearances=sum(int(r['appearances']) for r in audit if r['status']!='resolved'))
+    (staging/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
+    (staging/'sources.json').write_text(json.dumps(manifest,indent=2)+'\n')
+    # Readers pin current once; publishing changes only this one directory pointer.
+    pointer = output/f'.current-{uuid.uuid4().hex}'
+    pointer.symlink_to(staging.relative_to(output), target_is_directory=True)
+    pointer.replace(output/'current')
+    for path in staging.iterdir():
+        link = output/f'.link-{uuid.uuid4().hex}'
+        link.symlink_to(Path('current')/path.name)
+        link.replace(output/path.name)
+    return summary
+
+
+def main() -> None:
+    p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--cache-root',type=Path,required=True)
+    p.add_argument('--backfill',type=Path,required=True)
+    p.add_argument('--output',type=Path,required=True)
+    args=p.parse_args();print(json.dumps(sweep(args.cache_root,args.backfill,args.output),indent=2))
+
+
+if __name__=='__main__':main()

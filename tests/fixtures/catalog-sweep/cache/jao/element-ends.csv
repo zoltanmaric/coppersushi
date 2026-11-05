@@ -1,0 +1,3 @@
+eic,tso,name,element_type,substation_from,substation_to
+99T-SYNTHETIC,TEST,Westhaven-Eastfield,Line,Westhaven,Eastfield
+99T-UNKNOWN,TEST,Westhaven-Unknown,Line,Westhaven,Unknown

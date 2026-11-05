@@ -1,0 +1,7 @@
+eic,tso,name,element_type,substation_from,substation_to
+circuit-1,RTE,Anchor-West 1,Line,Anchor,Village
+circuit-2,RTE,Anchor-West 2,Line,Anchr,Village
+other,RTE,Other,Line,Anchor,Village
+circuit-1,OTHER,Other publisher,Line,Anchor,Village
+changed,RTE,Changed endpoint,Line,Anchor,Unknown
+circuit-1,RTE,Another leg,Line,Anchor,Village

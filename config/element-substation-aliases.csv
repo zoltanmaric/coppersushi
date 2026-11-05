@@ -1,0 +1,6 @@
+eic,tso,element_name,published_name,locator_name,note
+17T0000000215642,RTE,L 400kV N0 2 CREYS-ST-VULBAS-OUEST,Saint-Vulbas,ST-VULBAS-OUEST,Published circuit name explicitly identifies OUEST
+17T000000021541E,RTE,L 400kV N0 1 CREYS-ST-VULBAS-OUEST,Saint-Vulbas,ST-VULBAS-OUEST,Published circuit name explicitly identifies OUEST
+17T000000021541E,RTE,L 400kV N0 1 CREYS-ST-VULBAS-OUEST,Sreys,CREYS,Published circuit name identifies CREYS
+22T-BE-IN-LI019P,ELIA,Y-Courcelles (-Gramme - Tergnee) 380.31,Saint Amand,REPIQUAGE ST-AMAND 380kV,Published Y-line endpoints identify the Saint-Amand tap
+22T-BE-IN-LI019P,ELIA,Y-Gramme (-Courcelles - Tergnee) 380.31,Saint Amand,REPIQUAGE ST-AMAND 380kV,Published Y-line endpoints identify the Saint-Amand tap
