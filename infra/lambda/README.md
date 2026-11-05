@@ -19,7 +19,9 @@ from the merged `infra/lambda/` sources before planning; preserve its state and 
 
 1. Run `git lfs pull` and prepare the JAO endpoint seed and OSM locator using the
    [market-data commands](../../README.md#market-data). The Docker build validates
-   these inputs and precomputes the hourly OPF maps.
+   these inputs and precomputes the hourly OPF maps. Prepare the validated
+   [element catalog](../../config/element-catalog/README.md#build-and-validate)
+   in `data/element-catalog` as well; the image build rejects a missing or invalid snapshot.
 2. Build the Lambda target with a new image tag:
    `docker build --platform linux/amd64 --provenance=false --target lambda -t <image> .`
    For a GHCR token error, see [GHCR authentication](#ghcr-authentication).

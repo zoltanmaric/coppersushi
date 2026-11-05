@@ -1,4 +1,4 @@
-# Only the endpoint seed and locator are included from downloaded data.
+# Only prepared map inputs are included from downloaded data.
 .git
 .idea
 .secrets
@@ -7,6 +7,7 @@ data/*
 !data/jao
 data/jao/*
 !data/jao/element-ends.csv
+!data/element-catalog
 !data/osm-locator
 data/osm-locator/*
 !data/osm-locator/*.csv

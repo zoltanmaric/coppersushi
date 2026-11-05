@@ -120,6 +120,15 @@ pixi run --locked python -m coppersushi.data_sources.jao seed 2026-09-11
 ```
 
 The seed command validates the fetched domain day and writes `data/jao/element-ends.csv`.
+
+The physical-element catalog keeps sites, source names, published elements and oriented
+endpoints in four CSVs under ignored `data/element-catalog/`. See
+[the catalog schema and workflow](config/element-catalog/README.md). SQLite validates
+keys, references and endpoint states before the app reads it. The app uses
+`data/element-catalog` by default; `COPPERSUSHI_ELEMENT_CATALOG` selects another
+snapshot. New publications and missing endpoint metadata retain viewed-hour discovery;
+recorded conflicts and unresolved site names remain explicit.
+
 Supply several fetched days to combine their coverage; the latest day's endpoints win.
 The page reuses these endpoints across delivery days. If the viewed hour needs an element absent
 from the cache, it shows the loading indicator while fetching that hour and saves the additions.

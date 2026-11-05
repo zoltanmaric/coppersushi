@@ -291,7 +291,8 @@ def load_element_ends(interval: pd.Timestamp, required: pd.DataFrame) -> DataFra
     except (OSError, ValueError, pa.errors.SchemaError) as error:
         logger.warning("jao: ignoring unusable endpoint cache: %s", error)
         ends = pd.DataFrame(columns=cnecs.END_COLUMNS).pipe(ElementEnds.validate)
-    if _missing_element_ends(required, ends).empty:
+    complete = ends.loc[ends.substation_from.fillna('').ne('') & ends.substation_to.fillna('').ne('')]
+    if _missing_element_ends(required, complete).empty:
         return ends
     # Work in UTC: flooring a local DST-change hour can be ambiguous.
     hour = interval.tz_convert("UTC").floor("h")
@@ -303,7 +304,7 @@ def load_element_ends(interval: pd.Timestamp, required: pd.DataFrame) -> DataFra
             cache.restore(key, directory, (name,))
         try:
             fetched = pd.read_csv(directory / name).pipe(lambda f: _restore_blanks(f, ElementEnds)).pipe(ElementEnds.validate)
-            _require_element_ends(required, pd.concat([ends, fetched], ignore_index=True))
+            _require_element_ends(required, pd.concat([complete, fetched], ignore_index=True))
         except (OSError, ValueError, pa.errors.SchemaError, InvalidDomainCache):
             rows = _get("finalComputation", hour, hour + pd.Timedelta(hours=1), timeout=25)
             fetched = cnecs.element_ends(rows)

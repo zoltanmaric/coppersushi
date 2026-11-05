@@ -149,7 +149,7 @@ def test_endpoint_seed_is_validated_and_reused_across_days(tmp_path, monkeypatch
     pd.testing.assert_frame_equal(jao.read_element_ends(), ends)
 
 
-@pytest.mark.parametrize("cache_state", ["absent", "old_schema", "empty", "incomplete"])
+@pytest.mark.parametrize("cache_state", ["absent", "old_schema", "empty", "incomplete", "blank_endpoints", "blank_seed_stale_hour"])
 def test_missing_endpoints_fetch_one_hour_then_survive_a_reload(tmp_path, monkeypatch, cache_state):
     monkeypatch.setattr(jao, "JAO_DIR", tmp_path)
     fc = rows("final-computation-hour.json")
@@ -159,8 +159,14 @@ def test_missing_endpoints_fetch_one_hour_then_survive_a_reload(tmp_path, monkey
         ends.drop(columns="name").to_csv(tmp_path / "element-ends.csv", index=False)
     elif cache_state == "empty":
         (tmp_path / "element-ends.csv").touch()
+    elif cache_state in ("blank_endpoints", "blank_seed_stale_hour"):
+        (tmp_path / "element-ends.csv").write_bytes((FIXTURES / "blank-endpoints.csv").read_bytes())
     elif cache_state == "incomplete":
         jao.write_element_ends(ends.iloc[:1])
+    if cache_state == "blank_seed_stale_hour":
+        hour = tmp_path / "endpoints/20240828T22Z"
+        hour.mkdir(parents=True)
+        ends.iloc[:1].to_csv(hour / "element-ends.csv", index=False)
     calls = []
 
     def fetch(endpoint, start, end, timeout):
