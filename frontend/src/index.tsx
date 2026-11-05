@@ -141,7 +141,6 @@ function View({id, day: routeDay, token, basemap}: Props) {
       <aside className="cnec-progress" aria-live="polite">
         {loading && <div role="status" aria-label="Map loading">{loading}</div>}
         {full?.note && <div role="status">{full.note}</div>}
-        {!full && attribution.data && !attribution.data.complete && <div>Some attribution inputs are unavailable.</div>}
         {failures.map(([name, query]) => query.error && <div role="alert" key={name}>
           {name}: {query.error.message} <button onClick={() => void query.refetch()}>Retry</button>
         </div>)}

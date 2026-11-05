@@ -209,7 +209,10 @@ test('shows a specific unavailable attribution reason', async () => {
   await open();
   await reply('prices', responses.prices);
   await reply('constraints', responses.constraints);
-  await reply('attribution/2024-08-29', responses.attribution);
+  await reply('attribution/2024-08-29', {...responses.attribution, complete: false});
+  await waitFor(() => expect(pending.some(p => p.path.endsWith('enriched'))).toBe(true));
+  expect(screen.queryByText('Some attribution inputs are unavailable.')).toBeNull();
+  expect(screen.queryByText('Poland cap attribution unavailable for this interval.')).toBeNull();
   await reply('enriched', {...responses.caps, note: 'Poland cap attribution unavailable for this interval.'}, null);
   await waitFor(() => expect(screen.getByText('Poland cap attribution unavailable for this interval.')).toBeTruthy());
 });
