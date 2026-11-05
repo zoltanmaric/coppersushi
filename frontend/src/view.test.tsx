@@ -184,3 +184,19 @@ test('a loaded interval remains unchanged until the next interval layers settle'
   await waitFor(() => expect(graph).not.toBe(displayed));
   expect(graph.data.map(t => t.uid)).toEqual(displayed.data.map(t => t.uid));
 });
+
+
+test('the initially bound graph callback selects constraints loaded later', async () => {
+  await open();
+  const initialClick = clickGraph;
+  await reply('constraints', responses.constraints);
+  await waitFor(() => expect(screen.getByText('Test line')).toBeTruthy());
+  act(() => initialClick({clickData: {points: [{customdata: ['1']}]}}));
+  expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('1');
+  await reply('prices', responses.prices);
+  await reply('attribution/2024-08-29', responses.attribution);
+  await reply('enriched', responses.caps, null);
+  await waitFor(() => expect(screen.getByText('Polish cap')).toBeTruthy());
+  act(() => initialClick({clickData: {points: [{customdata: ['-1']}]}}));
+  expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('-1');
+});

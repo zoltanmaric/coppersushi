@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useReducer, useState} from 'react';
+import React, {useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState} from 'react';
 import {QueryClient, QueryClientProvider, useQuery} from '@tanstack/react-query';
 import {fetchCnec} from './api';
 import {Timeline} from './timeline';
@@ -12,7 +12,11 @@ interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: o
 // Reuse Dash's Graph component and its Plotly loader instead of shipping Plotly twice.
 const Graph = (props: GraphProps) => {
   const Component = (window as unknown as {dash_core_components: {Graph: React.ComponentType<GraphProps>}}).dash_core_components.Graph;
-  return <Component {...props}/>;
+  // Dash binds event listeners once; forward them to the current React handler.
+  const handler = useRef(props.setProps);
+  useLayoutEffect(() => {handler.current = props.setProps;}, [props.setProps]);
+  const setProps = useCallback((change: GraphChange) => handler.current(change), []);
+  return <Component {...props} setProps={setProps}/>;
 };
 
 export function CnecView(props: Props) {
