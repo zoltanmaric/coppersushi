@@ -33,8 +33,8 @@ P_B − P_A = (P_VA − P_A) + (P_VB − P_VA) + (P_B − P_VB)
 
 Regional PTDFs and shadow prices determine the outer terms. The interconnector restriction determines the middle term. A zero Core-country coefficient therefore gives zero direct term in that basis, not proof of zero interconnector contribution in this endpoint decomposition.
 
-### Map scope
+### Map-scope
 
-The map does not implement virtual-interface rendering or attribution. It reconciles within-Core country spreads using physical CNECs and country allocation caps. Its active-data adapter retains only physical rows and country PTDF columns; there is no adjacent-region loader or endpoint-validation path.
+The map deliberately excludes virtual hubs and their interface-bound rows from selection, rendering and attribution. It reconciles within-Core country spreads using physical CNECs’ country PTDFs and country allocation caps. Virtual-bound terms belong to the [endpoint decomposition](#price-decomposition); adding them to that country sum would mix two decompositions of the same spread. Cable restrictions still affect the jointly cleared solution, including the physical shadow prices used by the map.
 
-The [HTML explainer](../assets/market-clearing.html) describes the shared clearing equations and why a cable-bound term must not be added to the country decomposition. Cable restrictions can affect the jointly determined solution and cross-region spreads; their omission is a product scope decision, not an assertion of economic irrelevance.
+The active-data adapter retains only physical rows and country PTDF columns. Cross-region endpoint attribution is outside this scope. The [HTML explainer](../assets/market-clearing.html) works through both decompositions for Belgium–Germany.

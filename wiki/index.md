@@ -1,7 +1,7 @@
 # Wiki Index
 
 ## Concepts
-- [virtual-hub-interconnectors.md](virtual-hub-interconnectors.md) — explicit interface mapping, endpoint-price decomposition, validated ALEGrO contributions, adjacent-region arithmetic checks, losses and ramping gaps
+- [virtual-hub-interconnectors.md](virtual-hub-interconnectors.md) — interface mapping, endpoint-price decomposition and deliberate exclusion from the country-spread map
 - [jao-constraint-types.md](jao-constraint-types.md) — row classification across physical assets, country caps, virtual hubs, equality and LTA constraints, with verified metadata gaps
 - [country-import-export-caps.md](country-import-export-caps.md) — all-Core country-cap coverage, price effects, Polish alternative-price evidence and publication gaps
 - [copper-plate-problem.md](copper-plate-problem.md) — the EU market-design argument motivating this project (copper plate, redispatch, co-optimisation, locational pricing)
