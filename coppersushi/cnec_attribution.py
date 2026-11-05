@@ -91,13 +91,14 @@ POSITION_TOLERANCE_MW = 0.11
 
 
 def polish_cap_attribution_unavailable(position: float, import_limit: float,
-                                       export_limit: float, alternative_price: float) -> bool:
-    """Missing alternative price matters only if a limit might bind."""
+                                       export_limit: float, alternative_price: float,
+                                       clearing_price: float) -> bool:
+    """Prices are required only if a limit might bind."""
     if not all(np.isfinite(value) for value in (position, import_limit, export_limit)):
         return True
     strictly_inside = (-import_limit + POSITION_TOLERANCE_MW < position
                        < export_limit - POSITION_TOLERANCE_MW)
-    return not strictly_inside and not np.isfinite(alternative_price)
+    return not strictly_inside and not all(np.isfinite(value) for value in (alternative_price, clearing_price))
 
 
 def country_caps[Prices: ZonalPrices](inputs: DataFrame[AttributionContext] | None, prices: DataFrame[Prices], interval: pd.Timestamp) -> DataFrame[CountryCaps]:

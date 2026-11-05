@@ -210,9 +210,23 @@ def test_pure_country_cap_spread_preserves_cents_and_other_terms(
     (1.0, 200.0, 0.0, float('nan'), True),
 ])
 def test_polish_cap_availability(position, import_limit, export_limit, alternative, unavailable):
-    assert attribution.polish_cap_attribution_unavailable(position, import_limit, export_limit, alternative) is unavailable
+    assert attribution.polish_cap_attribution_unavailable(position, import_limit, export_limit, alternative, 100.0) is unavailable
 
 
 def test_polish_alternative_publication_start():
     from datetime import date
-    assert PolishAlternative.publication_start == date(2026, 5, 6)
+    from coppersushi.data_sources.cnec_attribution import POLISH_ALTERNATIVE_PUBLICATION_START
+    assert POLISH_ALTERNATIVE_PUBLICATION_START == date(2026, 5, 6)
+
+
+@pytest.mark.parametrize('polish_price', [float('nan'), float('inf')])
+def test_missing_price_makes_binding_cap_attribution_unavailable(polish_price):
+    assert attribution.polish_cap_attribution_unavailable(0.0, 200.0, 0.0, 120.0, polish_price)
+    assert not attribution.polish_cap_attribution_unavailable(-100.0, 200.0, 0.0, 120.0, polish_price)
+
+
+def test_missing_polish_price_is_reported_for_saturated_cap():
+    phys, ptdfs, prices = tables()
+    no_poland = prices[prices.zone.ne('PL')]
+    view = cnec_market.snapshot(phys, ptdfs, no_poland, prices.interval.iloc[0], context=context())
+    assert 'Poland cap attribution unavailable for this interval.' in view.notes

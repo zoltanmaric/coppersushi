@@ -9,7 +9,6 @@ See wiki/flow-based-market-coupling.md#attribution for an example and interpreta
 
 import datetime
 from datetime import date
-from typing import ClassVar
 
 import pandas as pd
 import pandera.pandas as pa
@@ -48,8 +47,6 @@ class NetPosition(JaoRecord):
 
 class PolishAlternative(JaoRecord):
     """Polish net position and alternative price used to infer the cap contribution."""
-
-    publication_start: ClassVar[date] = date(2026, 5, 6)
 
     id: StrictInt
     border_PL_ALT: StrictFloat

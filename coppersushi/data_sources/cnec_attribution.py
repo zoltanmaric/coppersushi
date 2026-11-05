@@ -2,6 +2,7 @@
 
 import tempfile
 import time
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -14,6 +15,8 @@ from coppersushi.data_model.cnec_attribution import (
 from coppersushi import cnec_attribution
 from coppersushi.data_sources import cache, jao
 from coppersushi.market_day import MarketDay
+
+POLISH_ALTERNATIVE_PUBLICATION_START = date(2026, 5, 6)
 
 def load_day(day: MarketDay, refresh: bool = False) -> DataFrame[AttributionContext]:
     """Cache complete inputs; empty feeds leave gaps, while loading and validation errors raise."""
@@ -47,7 +50,7 @@ def load_day(day: MarketDay, refresh: bool = False) -> DataFrame[AttributionCont
         fetch("netPos", NetPosition),
         # JAO omitted 00:00–01:00 UTC on 2026-10-25 even for the full 25-hour query.
         # See wiki/country-import-export-caps.md#publication-coverage for evidence and gaps.
-        fetch("DA_PL_AC", PolishAlternative) if day.date >= PolishAlternative.publication_start else [],
+        fetch("DA_PL_AC", PolishAlternative) if day.date >= POLISH_ALTERNATIVE_PUBLICATION_START else [],
     )
     if frame.notna().all().all():
         path.parent.mkdir(parents=True, exist_ok=True)
