@@ -371,3 +371,7 @@ inputs. [Source provenance and setup](../config/element-catalog/README.md#source
 ## [2026-11-05] decision | Native API comparison in architecture review
 
 Verify supported APIs in the pinned dependency version and state behavior tradeoffs before endorsing custom integration code. The observed review gaps are recorded in [rule provenance](rule-provenance.md).
+
+## [2026-11-05] decision | Map ownership for animated effects
+
+Recorded [the shared camera/layer ownership limitation](copper-sushi-app.md#map-rendering-direction) behind the custom selection overlay and independent-layer redraw problems. Native static strokes are simpler but lose the electric filaments; the animated appearance remains the chosen tradeoff.
