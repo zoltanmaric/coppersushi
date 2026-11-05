@@ -106,10 +106,12 @@ def test_a_line_marker_points_the_way_its_rows_bind(inputs):
     assert list(opposite.lon) == list(direct.lon)
 
 
-def test_unselected_binding_lines_are_plain_purple_with_rounded_ends(inputs):
+def test_unselected_binding_lines_have_a_steady_glow_and_rounded_ends(inputs):
     fig = cnec_price_map.figure(*inputs)
     lines = trace(fig, "market-binding CNECs")
-    assert not any(t.name == "market-binding CNECs glow" for t in fig.data)
+    glow = trace(fig, "market-binding CNECs glow")
+    assert glow.line.width > lines.line.width
+    assert glow.opacity < 1
     assert lines.line.color == map_style.BINDING
     ends = trace(fig, "binding line ends")
     assert sorted(zip(ends.lon, ends.lat)) == [(14.4, 46.7), (15.1, 46.2)]

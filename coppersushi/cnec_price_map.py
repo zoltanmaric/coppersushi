@@ -186,8 +186,8 @@ def _constraint_traces(
     def line(name: str, width: float, lon: np.ndarray | list[float], lat: np.ndarray | list[float]) -> list[go.Scattermapbox]:
         core = go.Scattermapbox(
             name=name,
-            lon=lon,
-            lat=lat,
+            lon=list(lon),
+            lat=list(lat),
             mode="lines",
             hoverinfo="none",
             line=dict(color=map_style.BINDING, width=width),
@@ -229,8 +229,10 @@ def _constraint_traces(
         )
 
     point_rows = mapped[mapped.element_type.isin(POINT_TYPES)]
+    branches = map_style.haloed(line("market-binding CNECs", LINE_WIDTH, lon, lat)[0])
+    branches[0].line.color = "#d4a3ff"
     return [
-        *line("market-binding CNECs", LINE_WIDTH, lon, lat),
+        *branches,
         *highlighted,
         ends,
         _line_hit_targets(line_rows),
@@ -286,7 +288,9 @@ def _cap_traces(zones: DataFrame[BiddingZoneShapes], caps: DataFrame[CountryCaps
     outline = go.Scattermapbox(name="binding country cap", lon=lon,
         lat=lat, mode="lines", line=dict(color=map_style.BINDING,
         width=SELECTED_WIDTH if selected_id == row.source_id else LINE_WIDTH), hoverinfo="skip")
-    traces += map_style.haloed(outline) if selected_id == row.source_id else [outline]
+    halo, core = map_style.haloed(outline)
+    halo.line.color = "#d4a3ff"
+    traces += [halo, core]
     traces.append(go.Scattermapbox(name="select country cap", lon=outline.lon, lat=outline.lat,
         mode="markers", marker=dict(size=14, color="rgba(128,80,255,0.01)"),
         customdata=[[str(row.source_id)]] * len(lon), text=[hover] * len(lon), hoverinfo="text"))

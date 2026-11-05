@@ -51,9 +51,11 @@ function View({id, day: routeDay, min_day, token, basemap}: Props) {
   const view = {day, interval, selected};
   const [camera, setCamera] = useState<Camera>({lat: 50, lon: 10, zoom: 3.5, bearing: 0});
   const [moving, setMoving] = useState(false);
+  const pointerStart = useRef<{x: number; y: number} | null>(null);
   const wheelTimer = useRef<number | undefined>(undefined);
   useEffect(() => {
-    const endDrag = () => setMoving(false);
+    // Releasing a drag does not stop Mapbox inertia. Only relayout publishes its final camera.
+    const endDrag = () => {pointerStart.current = null;};
     window.addEventListener('pointerup', endDrag);
     window.addEventListener('pointercancel', endDrag);
     return () => {
@@ -167,7 +169,12 @@ function View({id, day: routeDay, min_day, token, basemap}: Props) {
       </select>
       <span>{selected === null ? '' : `Reference: ${enriched.isSuccess ? enriched.data.reference ?? 'unavailable' : enriched.isError || prices.isError || attribution.isError ? 'unavailable' : 'pending'}`}</span>
     </div>
-    <div className="cnec-map-container" onPointerDownCapture={() => setMoving(true)}
+    <div className="cnec-map-container" onPointerDownCapture={event => {
+      pointerStart.current = {x: event.clientX, y: event.clientY};
+    }} onPointerMoveCapture={event => {
+      const start = pointerStart.current;
+      if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 3) setMoving(true);
+    }}
       onWheelCapture={() => {
         setMoving(true);
         window.clearTimeout(wheelTimer.current);

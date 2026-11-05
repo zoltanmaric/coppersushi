@@ -50,6 +50,24 @@ export function ConstraintOverlay({figure, camera, hidden}: {figure: PlotlyFigur
       }
     });
   }
+  const ambient: string[] = [];
+  if (!hidden) {
+    for (const trace of figure.data.filter(t => t.name === 'market-binding CNECs' || t.name === 'binding country cap')) {
+      const xs = trace.lon, ys = trace.lat;
+      if (!Array.isArray(xs) || !Array.isArray(ys)) continue;
+      let segment: string[] = [];
+      xs.forEach((x, i) => {
+        const y = ys[i];
+        if (typeof x === 'number' && typeof y === 'number' && Number.isFinite(x) && Number.isFinite(y)) {
+          segment.push(project(x, y, camera, size.width, size.height).join(','));
+        } else if (segment.length) {
+          ambient.push(segment.join(' '));
+          segment = [];
+        }
+      });
+      if (segment.length) ambient.push(segment.join(' '));
+    }
+  }
   const meta = line?.meta;
   const transformer = meta && typeof meta === 'object' && !Array.isArray(meta) && 'element_type' in meta &&
     (meta.element_type === 'Transformer' || meta.element_type === 'PST');
@@ -94,7 +112,11 @@ export function ConstraintOverlay({figure, camera, hidden}: {figure: PlotlyFigur
     <defs><filter id={filterId} x="-100%" y="-100%" width="300%" height="300%" colorInterpolationFilters="sRGB">
       <feGaussianBlur stdDeviation="3.5"/>
     </filter></defs>
+    {ambient.map((path, i) => <polyline key={i} points={path} className="cnec-ambient-glow"/>)}
     {transformers.map(([x, y], i) => <g key={i} className="cnec-transformer" transform={`translate(${x},${y})`}>
+      <g className="cnec-transformer-glow">
+        <circle cx={-RING_OFFSET} r={RING_RADIUS}/><circle cx={RING_OFFSET} r={RING_RADIUS}/>
+      </g>
       <circle cx={-RING_OFFSET} r={RING_RADIUS}/><circle cx={RING_OFFSET} r={RING_RADIUS}/>
     </g>)}
     {blades.map((blade, i) => <g key={i} className={`cnec-energy-blade${transformer ? ' cnec-transformer-energy' : ''}`}>
