@@ -114,11 +114,11 @@ def test_reference_follows_publisher_direction_and_missing_geometry_stays_unavai
     phys, *_ = tables()
     mapped = pd.read_csv(FIXTURE / 'mapped.csv')
     row = phys.iloc[0]
-    assert attribution.physical_reference(row, mapped, read_zones()) == 'BE'
+    assert attribution.physical_reference(row, mapped, read_zones(), pd.DataFrame()) == 'BE'
     opposite = row.copy()
     opposite['direction'] = 'OPPOSITE'
-    assert attribution.physical_reference(opposite, mapped, read_zones()) == 'DE'
-    assert attribution.physical_reference(row, mapped.iloc[:0], read_zones()) is None
+    assert attribution.physical_reference(opposite, mapped, read_zones(), pd.DataFrame()) == 'DE'
+    assert attribution.physical_reference(row, mapped.iloc[:0], read_zones(), pd.DataFrame()) is None
 
 
 
@@ -230,3 +230,21 @@ def test_missing_polish_price_is_reported_for_saturated_cap():
     no_poland = prices[prices.zone.ne('PL')]
     view = cnec_market.snapshot(phys, ptdfs, no_poland, prices.interval.iloc[0], context=context())
     assert 'Poland cap attribution unavailable for this interval.' in view.notes
+
+
+def test_swiss_reference_uses_core_endpoint_or_lowest_neighbour():
+    phys, *_ = tables()
+    row = phys.iloc[0].copy()
+    row['tso'] = 'SWISSGRID'
+    mapped = pd.read_csv(FIXTURE / 'mapped.csv').iloc[:1].copy()
+    mapped.loc[:, 'tso'] = 'SWISSGRID'
+    # First endpoint is outside the Core; the other is in Germany.
+    mapped.loc[:, ['x0', 'y0']] = [100., 80.]
+    prices = pd.DataFrame({'interval': [row.interval]*3, 'zone': ['AT', 'DE', 'FR'], 'price': [80., 70., 60.]})
+    assert attribution.physical_reference(row, mapped, read_zones(), prices) == 'DE'
+    # With neither endpoint in Core, choose the cheapest supported neighbour.
+    mapped.loc[:, ['x1', 'y1']] = [101., 80.]
+    assert attribution.physical_reference(row, mapped, read_zones(), prices) == 'FR'
+    prices.loc[prices.zone.eq('AT'), 'price'] = 50.
+    assert attribution.physical_reference(row, mapped, read_zones(), prices) == 'AT'
+    assert attribution.physical_reference(row, mapped, read_zones(), prices.iloc[:2]) is None

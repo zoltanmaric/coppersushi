@@ -189,8 +189,8 @@ def test_scoped_endpoint_corrections_restore_geometry_and_reference(direction, e
     zones = zone_shapes.read(FIXTURES / "scoped-zones.geojson")
     row = ends.iloc[0].copy()
     row["direction"] = direction
-    assert physical_reference(row, mapped, zones) == expected
-    assert physical_reference(row, cnec_geometry.locate_elements(ends, sites), zones) is None
+    assert physical_reference(row, mapped, zones, pd.DataFrame()) == expected
+    assert physical_reference(row, cnec_geometry.locate_elements(ends, sites), zones, pd.DataFrame()) is None
 
 
 def test_equipment_suffix_and_alias_compose(substations):

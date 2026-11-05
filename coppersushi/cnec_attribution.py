@@ -128,16 +128,27 @@ def country_caps[Prices: ZonalPrices](inputs: DataFrame[AttributionContext] | No
                           capacity, delta]], columns=columns).pipe(CountryCaps.validate)
 
 
-def physical_reference(row: pd.Series, geometries: DataFrame[MappedCnecElements], zones: DataFrame[BiddingZoneShapes]) -> str | None:
-    """Reference the publisher-oriented sending endpoint, requiring unique zone coverage."""
+def physical_reference[Prices: ZonalPrices](row: pd.Series, geometries: DataFrame[MappedCnecElements],
+                       zones: DataFrame[BiddingZoneShapes], prices: DataFrame[Prices]) -> str | None:
+    """Choose a Core reference from the line's endpoints or Swiss neighbours."""
     matched = geometries[geometries.eic.eq(row.eic) & geometries.tso.eq(row.tso)
                          & geometries.name.eq(row['name'])]
     if len(matched) != 1 or matched.iloc[0].match_status != "matched":
         return None
-    mapped = matched.iloc[0]
     if row.direction not in {"DIRECT", "OPPOSITE"}:
         return None
-    end = 0 if row.direction == "DIRECT" else 1
-    point = Point(mapped[f"x{end}"], mapped[f"y{end}"])
-    candidates = [zone for zone, geometry in zip(zones.zone, zones.geometry) if geometry.covers(point)]
-    return candidates[0] if len(candidates) == 1 and candidates[0] in CORE_ZONES else None
+    mapped = matched.iloc[0]
+    sending = 0 if row.direction == "DIRECT" else 1
+    for end in (sending, 1 - sending):
+        point = Point(mapped[f"x{end}"], mapped[f"y{end}"])
+        candidates = [zone for zone, geometry in zip(zones.zone, zones.geometry) if geometry.covers(point)]
+        if len(candidates) > 1:
+            return None
+        if candidates and candidates[0] in CORE_ZONES:
+            return candidates[0]
+    if row.tso != "SWISSGRID":
+        return None
+    neighbours = prices[prices.interval.eq(row.interval) & prices.zone.isin(("AT", "DE", "FR"))]
+    if len(neighbours) != 3 or set(neighbours.zone) != {"AT", "DE", "FR"} or not np.isfinite(neighbours.price).all():
+        return None
+    return str(neighbours.sort_values(["price", "zone"]).zone.iloc[0])

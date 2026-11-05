@@ -72,6 +72,7 @@ flowchart LR
     mapbox_basemap --> cnec_price_figure
     jao_attribution --> cnec_attribution_context
     cnec_attribution_context -->|enrich interval figure| cnec_market_snapshot
+    cnec_geometry -->|Core endpoint or lowest-priced Swiss neighbour reference| cnec_market_snapshot
     cnec_geometry --> cnec_market_snapshot
     zone_shapes --> cnec_market_snapshot
     jao_active_constraints --> cnec_market_snapshot
