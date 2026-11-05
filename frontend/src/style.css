@@ -58,6 +58,6 @@
 @keyframes cnec-ambient-breathe {0%,100% {opacity:.25} 50% {opacity:.45}}
 @media (prefers-reduced-motion:reduce) {.cnec-ambient-glow,.cnec-transformer-glow {animation:none;opacity:.35}}
 
-.cnec-price-legend {position:absolute;bottom:32px;left:12px;width:180px;padding:9px 11px;border-radius:6px;background:rgba(25,25,25,.82);color:#ddd;font-size:11px;pointer-events:none}
-.cnec-price-gradient {height:5px;margin:7px 0 4px;border-radius:3px}
-.cnec-price-range {display:flex;justify-content:space-between;color:#aaa;font-size:10px;font-variant-numeric:tabular-nums}
+.cnec-price-legend {position:absolute;bottom:32px;left:12px;width:220px;padding:12px 14px;border-radius:6px;background:rgba(25,25,25,.82);color:#ddd;font-size:14px;pointer-events:none}
+.cnec-price-gradient {height:7px;margin:9px 0 6px;border-radius:3px}
+.cnec-price-range {display:flex;justify-content:space-between;color:#bbb;font-size:13px;font-variant-numeric:tabular-nums}
