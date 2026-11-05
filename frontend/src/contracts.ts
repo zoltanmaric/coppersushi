@@ -10,6 +10,7 @@ export type Labels = string[];
 export type Day1 = string;
 export type Interval = number;
 export type Selected = number | null;
+export type Reference = ("AT" | "BE" | "CZ" | "DE" | "FR" | "HR" | "HU" | "NL" | "PL" | "RO" | "SI" | "SK") | null;
 export type JsonValue = unknown;
 export type Data = {
   [k: string]: JsonValue;
@@ -19,7 +20,7 @@ export type Label = string;
 export type Value = string;
 export type Source = "constraints" | "attribution";
 export type Options = ConstraintOption[];
-export type Reference = string | null;
+export type Reference1 = string | null;
 export type Notes = string[];
 export type Day2 = string;
 export type Complete = boolean;
@@ -52,7 +53,7 @@ export interface LayerResponse {
   request: ViewRequest;
   figure: PlotlyFigure;
   options: Options;
-  reference: Reference;
+  reference: Reference1;
   notes: Notes;
 }
 /**
@@ -62,6 +63,7 @@ export interface ViewRequest {
   day: Day1;
   interval: Interval;
   selected: Selected;
+  reference?: Reference;
 }
 /**
  * Plotly's extensible JSON figure; Plotly validates its trace/layout schemas.

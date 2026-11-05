@@ -1,7 +1,7 @@
 """Typed tables for market outcomes published outside the network model."""
 
 import datetime
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, StrictFloat, StrictStr
 
@@ -9,6 +9,10 @@ from pandera.typing import Series
 import pandera.pandas as pa
 
 from coppersushi.data_model.jao import ZonedTimestamp
+
+
+CoreZone = Literal["AT", "BE", "CZ", "DE", "FR", "HR", "HU", "NL", "PL", "RO", "SI", "SK"]
+CORE_ZONES: tuple[CoreZone, ...] = get_args(CoreZone)
 
 
 class ElectricityMapsPrice(BaseModel):

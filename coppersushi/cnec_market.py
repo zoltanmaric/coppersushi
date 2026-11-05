@@ -89,10 +89,15 @@ def snapshot[Prices: ZonalPrices](
                 notes.append("Contribution unavailable: missing or zero FB scaling factor α.")
         elif identity in caps.source_id.values:
             row = caps[caps.source_id.eq(identity)].iloc[0]
-            reference_zone = "PL"
+            reference_zone = reference_zone or "PL"
             cap_contribution = pd.DataFrame({"zone": CORE_ZONES, "source_id": identity,
                                          "reference_zone": "PL", "contribution": -row.delta})
             cap_contribution.loc[cap_contribution.zone.eq("PL"), "contribution"] = 0.0
+            baseline = cap_contribution.loc[cap_contribution.zone.eq(reference_zone), "contribution"]
+            if len(baseline) != 1:
+                raise ValueError("reference must be a Core bidding zone")
+            cap_contribution = cap_contribution.assign(
+                contribution=cap_contribution["contribution"] - baseline.iloc[0], reference_zone=reference_zone)
             contribution = PriceContributions.validate(cap_contribution)
         else:
             raise ValueError("selected constraint matched 0 active rows")

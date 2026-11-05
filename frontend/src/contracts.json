@@ -290,6 +290,32 @@
             }
           ],
           "title": "Selected"
+        },
+        "reference": {
+          "anyOf": [
+            {
+              "enum": [
+                "AT",
+                "BE",
+                "CZ",
+                "DE",
+                "FR",
+                "HR",
+                "HU",
+                "NL",
+                "PL",
+                "RO",
+                "SI",
+                "SK"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reference"
         }
       },
       "required": [

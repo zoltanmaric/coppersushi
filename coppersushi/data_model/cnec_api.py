@@ -4,6 +4,7 @@ from datetime import date
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, StrictInt
 from coppersushi.data_model.cnec_attribution import AttributionPayload
+from coppersushi.data_model.market import CoreZone
 
 
 class Contract(BaseModel):
@@ -15,6 +16,7 @@ class ViewRequest(Contract):
     day: date
     interval: StrictInt = Field(ge=0)
     selected: StrictInt | None
+    reference: CoreZone | None = None  # None chooses the element’s automatic reference.
 
 
 class EnrichedRequest(ViewRequest):

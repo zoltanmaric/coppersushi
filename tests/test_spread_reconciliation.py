@@ -57,7 +57,7 @@ def interval_view(published, request):
 
 @pytest.mark.parametrize('reference', CORE_ZONES)
 def test_published_country_spreads_reconcile(published, interval_view, reference):
-    _, ptdfs, *_ = published
+    physical, ptdfs, prices, context = published
     current, composed, alpha = interval_view
     observed = current.prices.set_index('zone').price
     assert set(observed.index) == PRICE_ZONES
@@ -70,8 +70,13 @@ def test_published_country_spreads_reconcile(published, interval_view, reference
         term = contribution.set_index('zone').contribution
         total += term - term.loc[reference]
     for identity in current.caps.source_id:
-        # Cap snapshots always use Poland as their reference.
-        term = composed[identity].set_index('zone').contribution
+        selected = cnec_market.snapshot(physical, ptdfs, prices, current.interval,
+            cnec_market.ConstraintKey(identity), reference, context=context, alpha=alpha)
+        assert selected.reference == reference
+        term = selected.contribution.set_index('zone').contribution
+        assert term[reference] == 0
+        original = composed[identity].set_index('zone').contribution
+        pd.testing.assert_series_equal(term, original - original[reference])
         total += term - term.loc[reference]
     for origin, destination in combinations(observed.index, 2):
         assert total[destination] - total[origin] == pytest.approx(

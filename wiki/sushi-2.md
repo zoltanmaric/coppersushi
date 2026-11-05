@@ -78,14 +78,14 @@ flowchart LR
     mapbox_basemap --> cnec_price_figure
     jao_attribution --> cnec_attribution_context
     cnec_attribution_context -->|enrich interval figure| cnec_market_snapshot
-    cnec_geometry -->|Core endpoint or lowest-priced Swiss neighbour reference| cnec_market_snapshot
+    react_cnec -->|chosen Core reference via HTTP; geometry fallback for automatic callers| cnec_market_snapshot
     cnec_geometry --> cnec_market_snapshot
     zone_shapes --> cnec_market_snapshot
     jao_active_constraints --> cnec_market_snapshot
     day_ahead_prices --> cnec_market_snapshot
     cnec_market_snapshot --> cnec_price_figure
     cnec_http["CNEC HTTP API<br/>price and constraint layers; enrichment figures and attribution status"]
-    react_cnec["React CNEC view hosted by Dash<br/>React Router date routes; selection reducer and TanStack Query; view-bound settled figures"]
+    react_cnec["React CNEC view hosted by Dash<br/>React Router date routes; explicit reference-country selection reducer and TanStack Query; view-bound settled figures"]
     day_ahead_prices -->|price layer| cnec_http
     cnec_geometry -->|constraint layer| cnec_http
     cnec_price_figure -->|enriched view| cnec_http

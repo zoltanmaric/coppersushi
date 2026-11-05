@@ -294,25 +294,26 @@ def update_figure(pathname: str, snapshot_index: int) -> tuple:
     return render(pathname, snapshot_index, ctx.triggered_id == 'snapshot-slider')
 
 
-def render_cnec(day: MarketDay, interval_index: int, selected: str | None, attribution: AttributionPayload | None = None) -> cnec_page.Rendered:
+def render_cnec(day: MarketDay, interval_index: int, selected: str | None, attribution: AttributionPayload | None = None, reference: CoreZone | None = None) -> cnec_page.Rendered:
     """Load and render one CNEC view; the HTTP boundary handles failures."""
     inputs = timed("day_inputs", cnec_day, day)
     if attribution is not None:
         inputs = replace(inputs, context=attribution_from_browser(attribution))
     return timed("figure", cnec_page.render,
         inputs, cnec_geometries(inputs, interval_index),
-        interval_index, selected, mapbox_token=mapbox_token(), basemap=timed("basemap", basemap)
+        interval_index, selected, reference=reference, mapbox_token=mapbox_token(), basemap=timed("basemap", basemap)
     )
 
 
 # HTTP requests and React own CNEC coordination; Dash still owns OPF callbacks.
 import cnec_http
 from coppersushi.data_model.cnec_api import EnrichedRequest
+from coppersushi.data_model.market import CoreZone
 
 
 def enriched_view(view: EnrichedRequest) -> cnec_page.Rendered:
     return render_cnec(MarketDay.on(view.day), view.interval,
-                        None if view.selected is None else str(view.selected), view.attribution)
+                        None if view.selected is None else str(view.selected), view.attribution, view.reference)
 
 
 cnec_http.register(server, cnec_http.Services(core_zones, mapbox_token, basemap,

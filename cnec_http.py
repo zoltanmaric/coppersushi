@@ -138,7 +138,7 @@ def register(server: Flask, services: Services) -> None:
             raise BadRequest('Attribution belongs to another market day')
         result = services.render(view)
         return LayerResponse.model_validate(dict(
-            request=ViewRequest(day=view.day, interval=view.interval, selected=view.selected),
+            request=ViewRequest(day=view.day, interval=view.interval, selected=view.selected, reference=view.reference),
             figure=figure_payload(result.figure), options=result.constraint_options,
             reference=result.reference, notes=list(result.notes)))
 
