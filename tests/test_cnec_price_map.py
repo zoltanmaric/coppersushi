@@ -152,3 +152,19 @@ def test_selected_constraint_overlays_its_influence_and_highlights_its_branch(in
     assert selected.line.width > trace(fig, "market-binding CNECs").line.width
     assert not any(item.name == "selected CNEC" for item in plain.data)
     assert fig.data[-1].name == "zone prices"  # Labels over every dot and ray
+
+
+def test_daily_scale_includes_other_intervals_and_negative_prices(inputs):
+    zones, geometries, view = inputs
+    later = view.prices.assign(interval=view.interval + pd.Timedelta(hours=1), price=[-50.0, 300.0])
+    prices = pd.concat([view.prices, later], ignore_index=True)
+    bounds = cnec_market.daily_price_range(prices)
+    assert bounds == (-50.0, 300.0)
+    for interval in prices.interval.unique():
+        fig = cnec_price_map.price_figure(zones, prices, pd.Timestamp(interval), 'test-token', 'dark')
+        fill = trace(fig, 'published day-ahead price')
+        assert (fill.zmin, fill.zmax, fill.zauto) == (-50.0, 300.0, False)
+        assert len(fill.z) == len(view.prices)
+    enriched = cnec_price_map.figure(zones, geometries, view._replace(price_range=bounds))
+    fill = trace(enriched, 'published day-ahead price')
+    assert (fill.zmin, fill.zmax) == bounds

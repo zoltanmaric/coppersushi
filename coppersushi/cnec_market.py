@@ -1,6 +1,7 @@
 """One market-time-unit view of published prices and active flow-based constraints."""
 
 from typing import NamedTuple, cast
+import math
 import pandera.pandas as pa
 
 import pandas as pd
@@ -27,9 +28,18 @@ class Snapshot(NamedTuple):
     constraints: DataFrame[ActiveConstraints]
     contribution: DataFrame[PriceContributions] | None
     caps: DataFrame[CountryCaps]
+    price_range: tuple[float, float]
     selected_id: int | None = None
     reference: str | None = None
     notes: tuple[str, ...] = ()
+
+
+def daily_price_range[Prices: ZonalPrices](prices: DataFrame[Prices]) -> tuple[float, float]:
+    """One scale across every supplied market-day interval and Core bidding zone."""
+    values = prices.loc[prices.zone.isin(CORE_ZONES), "price"]
+    if values.empty or not values.map(math.isfinite).all():
+        raise ValueError("A daily price scale requires finite Core prices")
+    return float(values.min()), float(values.max())
 
 
 def key_of(constraint: pd.Series) -> ConstraintKey:
@@ -93,6 +103,7 @@ def snapshot[Prices: ZonalPrices](
         contribution=contribution,
         selected_id=None if selected is None else selected.source_id,
         caps=caps,
+        price_range=daily_price_range(prices),
         reference=reference_zone,
         notes=tuple(notes),
     )

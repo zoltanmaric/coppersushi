@@ -54,7 +54,7 @@ flowchart LR
 
     day_ahead_prices["day_ahead_prices<br/>published zonal clearing prices by market time unit"]
     cnec_market_snapshot["cnec_market_snapshot<br/>one market time unit: zonal prices, active rows, selected relative contribution"]
-    cnec_price_figure["cnec_price_figure<br/>go.Figure: zonal price choropleth, market-binding CNECs and the selected row's zonal influence"]
+    cnec_price_figure["cnec_price_figure<br/>go.Figure: price choropleth with daily bounds, market-binding CNECs and the selected row's zonal influence"]
     jao_map["jao_map<br/>/cnec/&lt;day&gt;: cleared zonal prices, active CNECs and selected PTDF contribution"]
 
     pypsa_eur_pin --> pypsa_eur_run

@@ -104,7 +104,7 @@ def register(server: Flask, services: Services) -> None:
         interval = view_interval(view)
         frame = electricity_maps.load_day(view.day.isoformat())
         figure = cnec_price_map.price_figure(services.core_zones(),
-            ZonalPrices.validate(frame[frame.interval.eq(interval)]), interval,
+            ZonalPrices.validate(frame), interval,
             services.mapbox_token(), services.basemap())
         return LayerResponse(request=view, figure=figure_payload(figure), options=[], reference=None, notes=[])
 

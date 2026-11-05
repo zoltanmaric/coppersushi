@@ -5,6 +5,7 @@ import {fetchCnec} from './api';
 import {Timeline} from './timeline';
 import {reduceSelection} from './state';
 import type {PlotlyFigure, LayerResponse, ConstraintOption} from './contracts';
+import {PriceLegend} from './price-legend';
 import './style.css';
 
 interface Props {id: string; day: string; min_day: string; token: string; basemap: PlotlyFigure['layout']['mapbox']['style']}
@@ -163,6 +164,7 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
         <a href="https://www.electricitymaps.com/">Electricity Maps</a> · {' '}
         <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>
       </small>
+      <PriceLegend figure={graphFigure}/>
       <aside className="cnec-progress" aria-live="polite">
         {loading && <div role="status" aria-label="Map loading">{loading}</div>}
         {full?.notes.map(note => <div role="status" key={note}>{note}</div>)}
