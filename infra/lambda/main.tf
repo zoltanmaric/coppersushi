@@ -73,7 +73,9 @@ resource "aws_iam_role_policy" "app" {
     { Effect = "Allow", Action = ["s3:ListBucket"], Resource = aws_s3_bucket.cache.arn },
     { Effect = "Allow", Action = ["s3:GetObject", "s3:PutObject"], Resource = "${aws_s3_bucket.cache.arn}/cache/v1/*" },
     { Effect = "Allow", Action = ["secretsmanager:GetSecretValue"], Resource = aws_secretsmanager_secret.api.arn },
-    { Effect = "Allow", Action = ["logs:CreateLogStream", "logs:PutLogEvents"], Resource = "${aws_cloudwatch_log_group.app.arn}:*" }
+    { Effect = "Allow", Action = ["logs:CreateLogStream", "logs:PutLogEvents"], Resource = "${aws_cloudwatch_log_group.app.arn}:*" },
+    # X-Ray ingestion actions do not support resource-level permissions.
+    { Effect = "Allow", Action = ["xray:PutTraceSegments", "xray:PutTelemetryRecords"], Resource = "*" }
   ] })
 }
 resource "aws_lambda_function" "app" {
@@ -86,6 +88,7 @@ resource "aws_lambda_function" "app" {
   memory_size   = 2048
   timeout       = 120
   ephemeral_storage { size = 1024 }
+  tracing_config { mode = "Active" }
   environment {
     variables = {
       ROOT_VIEW                = "full"
