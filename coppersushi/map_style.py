@@ -4,14 +4,16 @@ import numpy as np
 import plotly.graph_objects as go
 
 BINDING = "#a72af5"
+BINDING_LIGHT = "#d4a3ff"
+BINDING_HOVERLABEL = dict(bgcolor=BINDING_LIGHT, bordercolor=BINDING_LIGHT, font=dict(color="#21152d"))
 BACKGROUND_BRANCH = "#4a4a4a"
 MUTED_BRANCH = "gray"
 MAP_STYLE = "dark"
 OPF_CAMERA = dict(center=dict(lat=53, lon=9), zoom=3.9, pitch=60)
 # One scale for every mapped value; purple is reserved for binding (wiki/sushi-2.md, Architecture 5)
-VALUE_COLORSCALE = "tropic"
-# A selected CNEC's signed influence on a zone's price: pink raises it, cyan lowers it
-PRICE_UP = "#ff4fb8"
+VALUE_COLORSCALE = go.Choroplethmapbox(colorscale="tropic").colorscale
+PRICE_DOWN_HOVER = VALUE_COLORSCALE[0][1]
+# Negative price contributions use cyan; positive ones use the binding-element purple.
 PRICE_DOWN = "#3fd0ff"
 ZONE_FILL_OPACITY = 0.6
 ZONE_BORDER = "rgba(255,255,255,0.55)"

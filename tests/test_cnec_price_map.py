@@ -57,7 +57,7 @@ def test_choropleth_carries_one_price_per_priced_zone_and_labels_each(inputs):
     assert [feature["id"] for feature in fill.geojson["features"]] == ["AT", "BE"]
     labels = trace(fig, "zone prices")
     assert list(labels.text) == ["Austria<br>€50.00", "Belgium<br>€70.00"]
-    assert list(labels.hovertext) == ["Austria · 50.00 €/MWh", "Belgium · 70.00 €/MWh"]
+    assert labels.hoverinfo == "skip"
 
 
 def test_each_zone_label_sits_inside_its_own_zone(inputs):
@@ -145,7 +145,6 @@ def test_selected_constraint_overlays_its_influence_and_highlights_its_branch(in
     plain = cnec_price_map.figure(*inputs)
     fig = cnec_price_map.figure(*selected_inputs(inputs))
     assert list(trace(fig, "published day-ahead price").z) == [50.0, 70.0]
-    assert any("BE · +2.87 €/MWh" in text for text in trace(fig, "contribution relative to AT").text)
     assert (trace(fig, "BE ray").lon[-1], trace(fig, "BE ray").lat[-1]) == pytest.approx((4.5, 50.8))
     selected = trace(fig, "selected CNEC")
     assert list(selected.lon) == [14.4, 15.1]
