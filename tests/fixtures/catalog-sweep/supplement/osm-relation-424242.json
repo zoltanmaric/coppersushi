@@ -1,0 +1,60 @@
+{
+  "elements": [
+    {
+      "type": "node",
+      "id": 1,
+      "lon": 5.0,
+      "lat": 47.0
+    },
+    {
+      "type": "node",
+      "id": 2,
+      "lon": 5.2,
+      "lat": 47.0
+    },
+    {
+      "type": "node",
+      "id": 3,
+      "lon": 5.2,
+      "lat": 47.2
+    },
+    {
+      "type": "node",
+      "id": 4,
+      "lon": 5.0,
+      "lat": 47.2
+    },
+    {
+      "type": "way",
+      "id": 424242,
+      "nodes": [
+        1,
+        2,
+        3,
+        4,
+        1
+      ],
+      "tags": {
+        "name": "New station",
+        "power": "substation",
+        "substation": "transmission"
+      }
+    },
+    {
+      "type": "relation",
+      "id": 424242,
+      "members": [
+        {
+          "type": "way",
+          "ref": 424242,
+          "role": ""
+        }
+      ],
+      "tags": {
+        "type": "site",
+        "power": "substation",
+        "name": "New station"
+      }
+    }
+  ]
+}

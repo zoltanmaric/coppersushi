@@ -35,6 +35,8 @@ flowchart LR
     jao_endpoint_cache --> catalog_sweep
     jao_active_constraints --> catalog_sweep
     osm_locator --> catalog_sweep
+    osm_site_geometry["Verified OSM substation polygons<br/>complete retained boundaries for sites absent from bus cache"]
+    osm_site_geometry --> catalog_sweep
     catalog_sweep --> element_catalog
     element_catalog --> validated_catalog
     cnec_geometry["cnec_geometry<br/>each named element and publisher placed by its published substations"]

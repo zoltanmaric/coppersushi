@@ -4,3 +4,6 @@ eic,tso,element_name,published_name,locator_name,note
 17T000000021541E,RTE,L 400kV N0 1 CREYS-ST-VULBAS-OUEST,Sreys,CREYS,Published circuit name identifies CREYS
 22T-BE-IN-LI019P,ELIA,Y-Courcelles (-Gramme - Tergnee) 380.31,Saint Amand,REPIQUAGE ST-AMAND 380kV,Published Y-line endpoints identify the Saint-Amand tap
 22T-BE-IN-LI019P,ELIA,Y-Gramme (-Courcelles - Tergnee) 380.31,Saint Amand,REPIQUAGE ST-AMAND 380kV,Published Y-line endpoints identify the Saint-Amand tap
+14T-220-0-0274AN,APG,Strass - Zell 274A,Zell,Zell am Ziller,APG transmission substation OSM 156973414 with 220 kV equipment
+14T-220-0-0273AQ,APG,Strass - Zell 273A,Zell,Zell am Ziller,APG transmission substation OSM 156973414 with 220 kV equipment
+10T1001C--00134X,PSE,Rzeszow - Khmelnytskyi,Khmelnytskyi,Khmelnytskyi nuclear switchyard,PSE identifies the nuclear-plant terminal; OSM circuit 21430816 and 400 kV line 1130860076 connect the plant switchyard; https://inwestycje.pse.pl/trwaja-przygotowania-do-budowy-stacji-jaroslaw-systemowa-400-110-kv/

@@ -117,18 +117,20 @@ def backfill(cache_root: Path, output: Path, max_requests: int) -> dict:
 
 
 def fetch_site_evidence(output: Path) -> None:
-    """Retain primary OSM tags for the explicitly curated supplemental way IDs."""
+    """Retain primary OSM tags and geometry for curated supplemental objects."""
     output.mkdir(parents=True,exist_ok=True)
     with (REPO/'config/element-catalog/osm-sites.csv').open(newline='') as stream:
         for row in csv.DictReader(stream):
-            way=int(row['osm_way'])
-            path=output/f'osm-way-{way}.json'
+            kind=row['osm_type']
+            if kind not in ('way','relation'):raise ValueError(f'Unsupported OSM object type: {kind}')
+            osm_id=int(row['osm_id'])
+            path=output/f'osm-{kind}-{osm_id}.json'
             if path.exists(): continue
-            with urllib.request.urlopen(f'https://api.openstreetmap.org/api/0.6/way/{way}.json',timeout=20) as response:
+            with urllib.request.urlopen(f'https://api.openstreetmap.org/api/0.6/{kind}/{osm_id}/full.json',timeout=20) as response:
                 document=json.load(response)
-            item=document['elements'][0]
-            if item['id']!=way or item['type']!='way' or item.get('tags',{}).get('power')!='substation':
-                raise ValueError(f'OSM way/{way} is not the expected substation')
+            item=next(e for e in document['elements'] if e.get('type')==kind and e.get('id')==osm_id)
+            if item['id']!=osm_id or item['type']!=kind or item.get('tags',{}).get('power')!='substation':
+                raise ValueError(f'OSM {kind}/{osm_id} is not the expected substation')
             path.write_text(json.dumps(document,indent=2)+'\n')
 
 

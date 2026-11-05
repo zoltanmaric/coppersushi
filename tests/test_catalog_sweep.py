@@ -52,3 +52,50 @@ def test_backfill_advances_past_retained_hours_but_retries_transient_failures(tm
         json.dump([],stream)
     catalog_backfill.backfill(tmp_path/'cache',output,1)
     assert calls[-1] == pd.Timestamp('2026-01-02',tz='UTC')
+
+
+def test_verified_polygon_adds_a_site_absent_from_old_bus_cache(tmp_path):
+    import shutil
+    from coppersushi.data_sources.catalog_sweep import sweep
+    from coppersushi.data_sources.element_catalog import load
+    root = FIXTURE.parent/'catalog-sweep'
+    shutil.copytree(root,tmp_path/'input')
+    source = tmp_path/'input'
+    shutil.copyfile(root/'supplement/osm-sites.csv',source/'config/osm-sites.csv')
+    shutil.copyfile(root/'supplement/osm-way-424242.json',source/'backfill/osm-way-424242.json')
+    sweep(source/'cache',source/'backfill',tmp_path/'output',source/'config')
+    with load(tmp_path/'output') as db:
+        row = db.execute("SELECT longitude,latitude FROM sites WHERE display_name='New station'").fetchone()
+        assert tuple(row) == (5.1,47.1)
+
+
+def test_missing_polygon_node_is_rejected_instead_of_using_partial_geometry(tmp_path):
+    import shutil
+    import json
+    import pytest
+    from coppersushi.data_sources.catalog_sweep import sweep
+    root = FIXTURE.parent/'catalog-sweep'
+    shutil.copytree(root,tmp_path/'input')
+    source = tmp_path/'input'
+    shutil.copyfile(root/'supplement/osm-sites.csv',source/'config/osm-sites.csv')
+    document=json.loads((root/'supplement/osm-way-424242.json').read_text())
+    document['elements'].pop(0)
+    (source/'backfill/osm-way-424242.json').write_text(json.dumps(document))
+    with pytest.raises(ValueError,match='complete closed'):
+        sweep(source/'cache',source/'backfill',tmp_path/'output',source/'config')
+
+
+def test_substation_site_relation_uses_complete_member_boundaries(tmp_path):
+    import shutil
+    from coppersushi.data_sources.catalog_sweep import sweep
+    from coppersushi.data_sources.element_catalog import load
+    root = FIXTURE.parent/'catalog-sweep'
+    shutil.copytree(root,tmp_path/'input')
+    source=tmp_path/'input'
+    shutil.copyfile(root/'supplement/relation-sites.csv',source/'config/osm-sites.csv')
+    shutil.copyfile(root/'supplement/osm-relation-424242.json',source/'backfill/osm-relation-424242.json')
+    sweep(source/'cache',source/'backfill',tmp_path/'output',source/'config')
+    with load(tmp_path/'output') as db:
+        row=db.execute("SELECT * FROM sites WHERE display_name='New station'").fetchone()
+        assert (row['longitude'],row['latitude']) == (5.1,47.1)
+        assert 'openstreetmap.org/relation/424242' in row['evidence']
