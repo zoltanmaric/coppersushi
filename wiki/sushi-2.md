@@ -65,7 +65,7 @@ flowchart LR
     zone_shapes --> cnec_price_figure
     jao_domain --> jao_endpoint_cache
     jao_active_constraints --> jao_endpoint_cache
-    jao_endpoint_cache -->|new publications or missing metadata only| cnec_geometry
+    jao_endpoint_cache -->|partial location discovery; keep known lines on failure| cnec_geometry
     osm_locator -->|live discovery only| cnec_geometry
     validated_catalog -->|reviewed publications first| cnec_geometry
     cnec_geometry --> cnec_price_figure

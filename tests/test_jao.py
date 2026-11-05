@@ -196,21 +196,28 @@ def test_failed_endpoint_fetch_can_be_retried_without_restart(tmp_path, monkeypa
 
     monkeypatch.setattr(jao, "_get", offline)
     interval = pd.Timestamp("2024-08-28T22:00:00Z")
-    with pytest.raises(RuntimeError, match="Please retry"):
-        jao.load_element_ends(interval, cnecs.elements(fc))
+    partial = jao.load_element_ends(interval, cnecs.elements(fc))
+    pd.testing.assert_frame_equal(partial.reset_index(drop=True), ends.iloc[:1].reset_index(drop=True))
     assert (tmp_path / "element-ends.csv").read_bytes() == before
     monkeypatch.setattr(jao, "_get", lambda *a, **kw: fc)
     assert len(jao.load_element_ends(interval, cnecs.elements(fc))) == len(ends)
 
 
-def test_incomplete_upstream_endpoints_are_an_error_not_an_unmapped_element(tmp_path, monkeypatch):
+def test_partial_endpoint_response_keeps_known_lines_and_retries_missing(tmp_path, monkeypatch):
     monkeypatch.setattr(jao, "JAO_DIR", tmp_path)
     fc = rows("final-computation-hour.json")
-    required = cnecs.elements(fc).assign(name="missing from the publication")
-    monkeypatch.setattr(jao, "_get", lambda *a, **kw: fc)
-    with pytest.raises(RuntimeError, match="Please retry"):
-        jao.load_element_ends(pd.Timestamp("2024-08-28T22:00:00Z"), required)
-    assert not (tmp_path / "element-ends.csv").exists()
+    required = cnecs.elements(fc)
+    calls = []
+    def partial(*args, **kwargs):
+        calls.append(1)
+        return fc[:1]
+    monkeypatch.setattr(jao, "_get", partial)
+    interval = pd.Timestamp("2024-08-28T22:00:00Z")
+    found = jao.load_element_ends(interval, required)
+    assert len(found) == len(cnecs.element_ends(fc[:1])) > 0
+    assert not (tmp_path / "endpoints/20240828T22Z/element-ends.csv").exists()
+    jao.load_element_ends(interval, required)
+    assert len(calls) == 2
 
 
 def test_an_interval_without_binding_elements_does_not_fetch(tmp_path, monkeypatch):
@@ -218,3 +225,31 @@ def test_an_interval_without_binding_elements_does_not_fetch(tmp_path, monkeypat
     monkeypatch.setattr(jao, "_get", lambda *a, **kw: pytest.fail("nothing to locate"))
     required = cnecs.active_constraints(rows("active-fb-day.json")).iloc[:0]
     assert jao.load_element_ends(pd.Timestamp("2024-08-28T22:00:00Z"), required).empty
+
+
+def test_geometry_discovery_skips_only_conflicting_publication(tmp_path, monkeypatch):
+    monkeypatch.setattr(jao, 'JAO_DIR', tmp_path)
+    fc = rows('final-computation-hour.json')
+    conflict = {**fc[0], 'substationFrom': 'Different synthetic station'}
+    monkeypatch.setattr(jao, '_get', lambda *a, **kw: [*fc, conflict])
+    interval = pd.Timestamp('2024-08-28T22:00:00Z')
+    required = cnecs.elements(fc)
+    found = jao.load_element_ends(interval, required)
+    assert not ((found.eic == fc[0]['cneEic']) & (found.tso == fc[0]['tso'])).any()
+    assert fc[0]['cneEic'] in set(found.eic)  # Another TSO's publication remains usable.
+    assert len(found) > 0
+    with pytest.raises(ValueError, match='more than one substation pair'):
+        cnecs.element_ends([*fc, conflict])
+
+
+def test_durable_location_cache_error_keeps_seed(tmp_path, monkeypatch):
+    from botocore.exceptions import ClientError
+    monkeypatch.setattr(jao, 'JAO_DIR', tmp_path)
+    fc = rows('final-computation-hour.json')
+    seed = cnecs.element_ends(fc).iloc[:1]
+    jao.write_element_ends(seed)
+    def broken_cache(*args):
+        raise ClientError({'Error': {'Code': '503', 'Message': 'unavailable'}}, 'GetObject')
+    monkeypatch.setattr(jao.cache, 'restore', broken_cache)
+    found = jao.load_element_ends(pd.Timestamp('2024-08-28T22:00:00Z'), cnecs.elements(fc))
+    pd.testing.assert_frame_equal(found.reset_index(drop=True), seed.reset_index(drop=True))

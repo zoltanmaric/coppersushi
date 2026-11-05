@@ -69,8 +69,9 @@ def test_cnec_retry_draws_new_endpoints_without_reloading_the_day(tmp_path, monk
         raise OSError("offline")
 
     monkeypatch.setattr(jao, "_get", offline)
-    with pytest.raises(RuntimeError, match="Please retry"):
-        app.render_cnec(MarketDay.on("2024-08-29"), 0, None)
+    unavailable = app.render_cnec(MarketDay.on("2024-08-29"), 0, None)
+    assert "0 of 2 active rows mapped" in unavailable.figure.layout.annotations[0].text
+    assert [option["value"] for option in unavailable.constraint_options] == ["", "1", "2"]
     fc = json.loads((REPO / "tests/fixtures/synthetic-jao/final-computation-hour.json").read_text())["data"]
     calls = []
 

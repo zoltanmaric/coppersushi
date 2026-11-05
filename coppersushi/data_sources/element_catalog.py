@@ -6,8 +6,10 @@ of truth. Empty CSV cells represent SQL NULL. Raw JAO catalogs stay in ignored d
 
 import argparse
 import csv
+import logging
 import sqlite3
 import pandas as pd
+import pandera.pandas as pa
 from contextlib import contextmanager
 from pathlib import Path
 from collections.abc import Iterator
@@ -16,6 +18,8 @@ from coppersushi import REPO
 from pandera.typing import DataFrame
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
 from coppersushi.data_model.jao import ActiveConstraints
+
+logger = logging.getLogger(__name__)
 
 SCHEMA = REPO / 'config' / 'element-catalog' / 'schema.sql'
 TABLES = ('sites', 'site_names', 'elements', 'element_endpoints')
@@ -157,8 +161,14 @@ def resolve(interval: pd.Timestamp, required: DataFrame[ActiveConstraints], dire
         return mapped
     ends = jao.load_element_ends(interval, missing)
     ends = ends.loc[pd.MultiIndex.from_frame(ends[identity]).isin(pd.MultiIndex.from_frame(missing[identity]))]
-    discovered = cnec_geometry.locate_elements(ends, osm_locator.read_csvs(),
-                    osm_locator.load_aliases(), osm_locator.load_element_aliases())
+    if ends.empty:
+        return mapped
+    try:
+        discovered = cnec_geometry.locate_elements(ends, osm_locator.read_csvs(),
+                        osm_locator.load_aliases(), osm_locator.load_element_aliases())
+    except (OSError, ValueError, KeyError, pa.errors.SchemaError):
+        logger.warning("Location discovery could not use the locator; keeping catalog locations", exc_info=True)
+        return mapped
     replaced = pd.MultiIndex.from_frame(discovered[identity])
     mapped = mapped.loc[~pd.MultiIndex.from_frame(mapped[identity]).isin(replaced)]
     return pd.concat([mapped, discovered], ignore_index=True).pipe(MappedCnecElements.validate)

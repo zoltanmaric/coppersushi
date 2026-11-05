@@ -98,3 +98,28 @@ def test_json_boundary_preserves_http_errors(content_type, body, status):
     assert response.status_code == status
     assert response.is_json
     assert response.json['error'].startswith(str(status))
+
+
+def test_location_fetch_failure_keeps_known_line_and_constraint_choices(tmp_path, monkeypatch):
+    from coppersushi.data_sources import element_catalog, jao, osm_locator
+    from tests.test_cnec_page import inputs, mapped_elements
+    from coppersushi import REPO
+    day = inputs()
+    constraints = day.constraints.copy()
+    constraints.loc[constraints.index[-1], ['eic', 'name']] = ['99T-NEW', 'New unmapped line']
+    monkeypatch.setattr(jao, 'JAO_DIR', tmp_path)
+    def offline(*args, **kwargs):
+        raise OSError('upstream unavailable')
+    monkeypatch.setattr(jao, '_get', offline)
+    monkeypatch.setattr(element_catalog, 'mapped_elements', lambda _: mapped_elements())
+    monkeypatch.setattr(osm_locator, 'read_csvs', lambda: pytest.fail('no endpoint was discovered'))
+    monkeypatch.setattr(cnec_http.jao, 'load_active_day', lambda _: SimpleNamespace(constraints=constraints))
+    server = Flask(__name__)
+    cnec_http.register(server, cnec_http.Services(lambda: day.zones, lambda: 'token',
+        lambda: 'white-bg', lambda interval, rows: element_catalog.resolve(
+            interval, rows, REPO/'tests/fixtures/element-catalog'), lambda _: None))
+    result = server.test_client().post('/api/cnec/constraints', json=VIEW)
+    assert result.status_code == 200
+    assert [o['value'] for o in result.json['options']] == ['', '1', '2']
+    assert '1 of 2 active rows mapped' in result.json['figure']['layout']['annotations'][0]['text']
+    assert any(t['name'] == 'market-binding CNECs' for t in result.json['figure']['data'])
