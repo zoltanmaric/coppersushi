@@ -4,10 +4,12 @@ import {fetchCnec} from './api';
 import {Timeline} from './timeline';
 import {reduceSelection} from './state';
 import type {PlotlyFigure, LayerResponse, ConstraintOption} from './contracts';
+import {SelectionSpark} from './spark';
+import type {Camera} from './spark';
 import './style.css';
 
 interface Props {id: string; day: string; min_day: string; token: string; basemap: PlotlyFigure['layout']['mapbox']['style']}
-interface GraphChange {clickData?: {points: {customdata?: unknown}[]} | null}
+interface GraphChange {clickData?: {points: {customdata?: unknown}[]} | null; relayoutData?: Record<string, unknown>}
 interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void}
 // Reuse Dash's Graph component and its Plotly loader instead of shipping Plotly twice.
 const Graph = (props: GraphProps) => {
@@ -47,6 +49,19 @@ function View({id, day: routeDay, min_day, token, basemap}: Props) {
   useEffect(() => {dispatch({type: 'day', day: routeDay});}, [routeDay]);
   const {day, interval, selected, source} = selection;
   const view = {day, interval, selected};
+  const [camera, setCamera] = useState<Camera>({lat: 50, lon: 10, zoom: 3.5, bearing: 0});
+  const [moving, setMoving] = useState(false);
+  const wheelTimer = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    const endDrag = () => setMoving(false);
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+    return () => {
+      window.removeEventListener('pointerup', endDrag);
+      window.removeEventListener('pointercancel', endDrag);
+      window.clearTimeout(wheelTimer.current);
+    };
+  }, []);
   const calendar = useQuery({queryKey: ['calendar', day], queryFn: ({signal}) => fetchCnec('day', `day/${day}`, signal)});
   const validInterval = !!calendar.data && interval < calendar.data.labels.length;
   const prices = useQuery({queryKey: ['prices', day, interval], enabled: validInterval,
@@ -114,6 +129,18 @@ function View({id, day: routeDay, min_day, token, basemap}: Props) {
     if (option) dispatch({type: 'select', selected: value === '' ? null : Number(value), source: option.source});
   }
   function mapClick(change: GraphChange) {
+    if (change.relayoutData) {
+      const update = change.relayoutData;
+      setCamera(previous => {
+        const centre = update['mapbox.center'];
+        const coords = centre && typeof centre === 'object' ? centre as Record<string, unknown> : {};
+        return {lat: typeof coords.lat === 'number' ? coords.lat : previous.lat,
+          lon: typeof coords.lon === 'number' ? coords.lon : previous.lon,
+          zoom: typeof update['mapbox.zoom'] === 'number' ? update['mapbox.zoom'] : previous.zoom,
+          bearing: typeof update['mapbox.bearing'] === 'number' ? update['mapbox.bearing'] : previous.bearing};
+      });
+      setMoving(false);
+    }
     if (!mapCurrent) return;
     const values = change.clickData?.points[0]?.customdata;
     if (!Array.isArray(values) || typeof values[0] !== 'string') return;
@@ -140,9 +167,15 @@ function View({id, day: routeDay, min_day, token, basemap}: Props) {
       </select>
       <span>{selected === null ? '' : `Reference: ${enriched.isSuccess ? enriched.data.reference ?? 'unavailable' : enriched.isError || prices.isError || attribution.isError ? 'unavailable' : 'pending'}`}</span>
     </div>
-    <div className="cnec-map-container">
+    <div className="cnec-map-container" onPointerDownCapture={() => setMoving(true)}
+      onWheelCapture={() => {
+        setMoving(true);
+        window.clearTimeout(wheelTimer.current);
+        wheelTimer.current = window.setTimeout(() => setMoving(false), 500);
+      }}>
       <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick}
         config={{responsive: true, displayModeBar: false, scrollZoom: true}} style={{height: '100%'}}/>
+      <SelectionSpark figure={graphFigure} camera={camera} hidden={moving || !mapCurrent}/>
       <aside className="cnec-progress" aria-live="polite">
         {loading && <div role="status" aria-label="Map loading">{loading}</div>}
         {full?.notes.map(note => <div role="status" key={note}>{note}</div>)}

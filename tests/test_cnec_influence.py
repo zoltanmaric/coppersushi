@@ -17,11 +17,11 @@ def trace(overlay, name):
 
 
 def frames():
-    """The fixture element, five zone centres, and one row's contribution relative to AT."""
-    placed, centres, contribution = (
-        pd.read_csv(FIXTURES / f"{name}.csv") for name in ("placed", "centres", "contribution")
+    """Five zone centres and one row's contribution relative to AT."""
+    centres, contribution = (
+        pd.read_csv(FIXTURES / f"{name}.csv") for name in ("centres", "contribution")
     )
-    return placed.iloc[0], centres, contribution
+    return centres, contribution
 
 
 def test_arc_starts_and_ends_where_asked():
@@ -60,9 +60,9 @@ def test_every_influenced_zone_gets_a_ray_and_the_others_a_neutral_dot():
     assert by_zone["CZ · +0.00 €/MWh relative to AT"] == cnec_influence.NEUTRAL
 
 
-def test_rays_leave_the_element_and_land_on_the_zone_along_an_arc():
+def test_rays_leave_reference_and_land_on_the_zone_along_an_arc():
     belgium = trace(cnec_influence.overlay(*frames()), "BE ray")
-    assert (belgium.lon[0], belgium.lat[0]) == ELEMENT
+    assert (belgium.lon[0], belgium.lat[0]) == (14.0, 47.2)
     assert (belgium.lon[-1], belgium.lat[-1]) == pytest.approx(BRUSSELS)
     assert len(belgium.lon) > 2
 
@@ -100,21 +100,18 @@ def test_each_ray_and_dot_glows_under_its_core():
     assert names.index("contribution relative to AT glow") < names.index("contribution relative to AT")
 
 
-def test_the_rays_start_from_a_bright_origin_on_the_element():
+def test_the_rays_start_from_a_bright_origin_in_the_reference_zone():
     origin = trace(cnec_influence.overlay(*frames()), "ray origin")
-    assert (origin.lon[0], origin.lat[0]) == ELEMENT
+    assert (origin.lon[0], origin.lat[0]) == (14.0, 47.2)
     assert origin.marker.color == "white"
 
 
-def test_an_unmapped_row_keeps_its_dots_but_anchors_no_rays_and_says_so():
-    selected, centres, contribution = frames()
-    unmapped = selected.copy()
-    unmapped[["x0", "y0", "x1", "y1"]] = None
-    unmapped["match_status"] = "no_branch"
-    overlay = cnec_influence.overlay(unmapped, centres, contribution)
+def test_missing_reference_centre_keeps_dots_without_rays():
+    centres, contribution = frames()
+    overlay = cnec_influence.overlay(centres[centres.zone.ne("AT")], contribution)
     assert not any(item.name.endswith(" ray") for item in overlay.traces)
     assert trace(overlay, "contribution relative to AT") is not None
-    assert "rays cannot be anchored" in overlay.note
+    assert "no mapped centre" in overlay.note
 
 
 def test_visible_ray_labels_show_each_signed_contribution():

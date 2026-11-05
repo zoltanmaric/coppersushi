@@ -29,3 +29,13 @@
 /* Plotly draws the compact attribution icon on the parent pseudo-element. */
 .cnec-map-container .mapboxgl-ctrl-attrib-button {position:absolute;inset:0;width:20px;height:20px;padding:0;border:0;background:transparent;cursor:pointer}
 .cnec-map-container .mapboxgl-ctrl-attrib::after {pointer-events:none}
+
+.cnec-spark {position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:hidden}
+.cnec-spark-bolt {opacity:0;animation:cnec-electric 2.1s linear infinite}
+.cnec-spark-bolt-1 {animation-delay:.16s;animation-duration:2.7s}
+.cnec-spark-bolt-2 {animation-delay:.39s;animation-duration:3.2s}
+.cnec-spark polyline {fill:none;stroke-linecap:round;stroke-linejoin:round}
+.cnec-spark-glow {stroke:#bd70ff;stroke-width:7;opacity:.9;filter:blur(4px)}
+.cnec-spark-core {stroke:#f8edff;stroke-width:1.5;filter:drop-shadow(0 0 3px #d195ff)}
+@keyframes cnec-electric {0%, 7%, 11%, 16%, 100% {opacity:0} 2%, 9%, 14% {opacity:1} 3% {opacity:.3}}
+@media (prefers-reduced-motion:reduce) {.cnec-spark-bolt {animation:none;opacity:0}.cnec-spark-bolt:first-child {opacity:.8}}

@@ -1,7 +1,7 @@
-"""A selected CNEC's signed influence on each zone's price, drawn as rays from the element.
+"""A selected CNEC's signed influence on each zone's price, drawn as rays from the reference zone.
 
 A ray is the row's shadow price times the zone's PTDF difference to the reference zone: zonal
-sensitivity, never a power-flow path. Rays leave the element, arc north and land on each zone's
+sensitivity, never a power-flow path. Rays leave the reference zone, arc north and land on each zone's
 label point; they are not routed along grid branches. The look follows
 wiki/assets/cnec-price-influence-map-preview.png: width and dot size scale with the size of
 the contribution, colour says its sign.
@@ -18,7 +18,6 @@ import plotly.graph_objects as go
 
 from coppersushi import map_style
 from coppersushi.cnec_attribution import price_spread
-from coppersushi.data_model.cnec_price_map import MATCHED
 
 ARC_POINTS = 24
 BOW = 0.18  # Control point this fraction of the chord north of its midpoint: rays rise from the
@@ -135,12 +134,8 @@ def _dots(zonal: pd.DataFrame, reference: str) -> list[go.Scattermapbox]:
     return map_style.haloed(dots, factor=DOT_HALO_FACTOR)
 
 
-def overlay(selected: pd.Series, centres: pd.DataFrame, contribution: DataFrame[PriceContributions]) -> Overlay:
-    """The selected row's rays and zone dots over the price layer.
-
-    ``selected`` is the row with its geometry, ``centres`` one label point per drawn zone.
-    An unmapped selected row keeps its dots: its rays have nowhere to start.
-    """
+def overlay(centres: pd.DataFrame, contribution: DataFrame[PriceContributions]) -> Overlay:
+    """Draw the selected row's contributions from its reference zone."""
     reference = str(contribution.reference_zone.iloc[0])
     columns = ["zone", "x", "y"] + (["price"] if "price" in centres else [])
     zonal = contribution.merge(centres[columns], on="zone", how="inner")
@@ -171,10 +166,9 @@ def overlay(selected: pd.Series, centres: pd.DataFrame, contribution: DataFrame[
         f"Selected contribution in €/MWh relative to <b>{reference}</b>. "
         "Rays show this constraint’s price contribution, not a power-flow path."
     )
-    if selected.match_status != MATCHED:
-        note += " The selected CNEC has no mapped geometry, so its rays cannot be anchored."
-        return Overlay(dots, note)
-    origin = ((selected.x0 + selected.x1) / 2, (selected.y0 + selected.y1) / 2)
+    if len(reference_price) != 1:
+        return Overlay(dots, note + " The reference zone has no mapped centre.")
+    origin = (reference_price.x.iloc[0], reference_price.y.iloc[0])
     origin_dot = go.Scattermapbox(
         name="ray origin",
         lon=[origin[0]],

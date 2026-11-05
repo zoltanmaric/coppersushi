@@ -323,19 +323,13 @@ def figure(
     priced_zones = _priced_zones(zones, view.prices)
     placed = _placed(view.constraints, geometries)
     fill, labels = _price_traces(priced_zones, _fill_anchor(basemap))
-    selected = _selected(placed, view.selected_id)
     centres = _zone_centres(priced_zones)
-    if view.selected_id in view.caps.source_id.values:
-        anchor = centres[centres.zone.eq("PL")]
-        if len(anchor) == 1:
-            point = anchor.iloc[0]
-            selected = pd.Series(dict(x0=point.x, y0=point.y, x1=point.x, y1=point.y, match_status=MATCHED))
     physical_selection = _selected(placed, view.selected_id)
     traces = [fill, *_constraint_traces(placed, physical_selection),
               *_cap_traces(zones, view.caps, view.selected_id)]
-    if selected is not None and view.contribution is not None:
+    if view.contribution is not None:
         assert view.reference is not None
-        influence = cnec_influence.overlay(selected, centres, view.contribution)
+        influence = cnec_influence.overlay(centres, view.contribution)
         traces += influence.traces
     traces.append(labels)  # Last, so no dot or ray lands on a price
     fig = go.Figure(traces)

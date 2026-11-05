@@ -13,6 +13,7 @@ let clickGraph: (change: {clickData: {points: {customdata: string[]}[]}}) => voi
 beforeEach(() => {
   window.history.replaceState(null, "", "/cnec/2024-08-29");
   pending = [];
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
   vi.stubGlobal('fetch', vi.fn((url: string, options: RequestInit) => new Promise<Response>(resolve => {
     pending.push({path: url, body: options.body ? JSON.parse(String(options.body)) : undefined, resolve});
   })));
