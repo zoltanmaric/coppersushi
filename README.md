@@ -12,7 +12,9 @@ The web app is deployed
 along with an explanation of the main features.
 
 The app has two views: `/opf-2024` (29 August 2024, hourly, on the 2025 grid)
-and `/cnec` (prices and binding constraints). `/embed/opf-2024` shows the OPF map
+and `/cnec` (prices and binding constraints). The CNEC view officially supports
+delivery dates from **5 November 2025** onward; earlier dates are outside supported
+coverage. The supported-history sweep is pending; not every supported date has been verified. This cutoff does not apply to the separate OPF demonstration. `/embed/opf-2024` shows the OPF map
 and time controls without navigation. Both OPF layouts use the same solved network.
 
 For the first rollout, `/` also shows the embed, preserving the article's existing

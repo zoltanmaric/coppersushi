@@ -2,3 +2,4 @@ name,longitude,latitude,evidence
 Y-Diefflen,6.7975,49.3347,JAO 202603 ninth-release static-grid map; approximate junction coordinates; https://www.jao.eu/static-grid-model
 Y-Wechold,9.18,52.87,JAO 202603 ninth-release static-grid map; approximate Y-Sottrum leg endpoint; https://www.jao.eu/static-grid-model
 Iven generation switchyard,13.399864,53.794447,OSM cached bus way/39688875; 220 kV Windpark Iven switchyard; identity as runtime terminal inferred; https://www.openstreetmap.org/way/39688875
+Weibern,13.702836,48.173996,Approximate site from JAO 202603 map; APG confirms 220 kV switchyard operating since November 2023; https://www.apg.at/projekte/schaltwerk-weibern/

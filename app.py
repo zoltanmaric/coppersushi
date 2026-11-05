@@ -1,4 +1,7 @@
 from dataclasses import replace
+from datetime import date
+from flask import redirect, request
+from werkzeug.wrappers import Response
 import logging
 from time import perf_counter
 from collections.abc import Callable
@@ -58,6 +61,7 @@ ROOT_VIEW = os.environ.get('ROOT_VIEW', 'embed')
 if ROOT_VIEW not in {'embed', 'full'}:
     raise ValueError('ROOT_VIEW must be embed or full')
 
+CNEC_FIRST_DAY = date(2025, 11, 5)
 CNEC_ROUTE = 'cnec'  # /cnec, or /cnec/<delivery day> to open on one day
 _cache: dict[str, tuple[go.Figure, pd.Index]] = {}
 _zones: dict[str, DataFrame[BiddingZoneShapes]] = {}
@@ -148,6 +152,21 @@ def cnec_day_from_path(pathname: str) -> str | None:
     return parts[1] if len(parts) > 1 and parts[0] == CNEC_ROUTE else None
 
 
+
+def unsupported_cnec_path(pathname: str) -> bool:
+    day = cnec_day_from_path(pathname)
+    try:
+        return day is not None and date.fromisoformat(day) < CNEC_FIRST_DAY
+    except ValueError:
+        return False
+
+
+@server.before_request
+def redirect_unsupported_cnec_day() -> Response | None:
+    if request.method == 'GET' and unsupported_cnec_path(request.path):
+        return redirect('/cnec')
+    return None
+
 def is_cnec_path(pathname: str) -> bool:
     return (pathname or '').strip('/').split('/')[0] == CNEC_ROUTE
 
@@ -194,8 +213,10 @@ app.layout = html.Div([
 
 @app.callback(Output('page', 'children'), Input('url', 'pathname'))
 def show_page(pathname: str, root_view: str = ROOT_VIEW) -> html.Div:
+    if unsupported_cnec_path(pathname):
+        return html.Div(dcc.Location(id='cnec-redirect', href='/cnec', refresh=True))
     if is_cnec_path(pathname):
-        return html.Div([navigation(), CnecView(id='cnec-view', day=cnec_day_from_path(pathname) or cnec_page.local_today(), token=mapbox_token(), basemap=basemap())])
+        return html.Div([navigation(), CnecView(id='cnec-view', day=cnec_day_from_path(pathname) or cnec_page.local_today(), min_day=CNEC_FIRST_DAY.isoformat(), token=mapbox_token(), basemap=basemap())])
     if network_key_from_path(pathname) is None:
         return html.Div([html.H1('Page not found'), dcc.Link('2024 OPF', href='/opf-2024')])
     return html.Div([

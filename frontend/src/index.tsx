@@ -6,7 +6,7 @@ import {reduceSelection} from './state';
 import type {PlotlyFigure, LayerResponse, ConstraintOption} from './contracts';
 import './style.css';
 
-interface Props {id: string; day: string; token: string; basemap: PlotlyFigure['layout']['mapbox']['style']}
+interface Props {id: string; day: string; min_day: string; token: string; basemap: PlotlyFigure['layout']['mapbox']['style']}
 interface GraphChange {clickData?: {points: {customdata?: unknown}[]} | null}
 interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void}
 // Reuse Dash's Graph component and its Plotly loader instead of shipping Plotly twice.
@@ -42,7 +42,7 @@ function combine(token: string, basemap: Props['basemap'], prices?: LayerRespons
     layout: {...(constraints?.figure.layout ?? prices?.figure.layout ?? initial.layout), uirevision: 'cnec-camera'}};
 }
 
-function View({id, day: routeDay, token, basemap}: Props) {
+function View({id, day: routeDay, min_day, token, basemap}: Props) {
   const [selection, dispatch] = useReducer(reduceSelection, {day: routeDay, interval: 0, selected: null, source: "constraints"});
   useEffect(() => {dispatch({type: 'day', day: routeDay});}, [routeDay]);
   const {day, interval, selected, source} = selection;
@@ -124,8 +124,8 @@ function View({id, day: routeDay, token, basemap}: Props) {
   }
   return <section id={id} className="cnec-react">
     <div className="cnec-controls">
-      <input aria-label="Delivery day" type="date" value={day} onChange={e => {
-        if (e.target.value) dispatch({type: 'day', day: e.target.value});
+      <input aria-label="Delivery day" type="date" min={min_day} value={day} onChange={e => {
+        if (e.target.value >= min_day) dispatch({type: 'day', day: e.target.value});
       }}/>
       <select aria-label="Binding constraint" value={selected === null ? '' : String(selected)}
         disabled={!constraints.data} onChange={e => select(e.target.value)}>

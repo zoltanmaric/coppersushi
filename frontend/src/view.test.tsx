@@ -29,7 +29,7 @@ async function reply(path: string, data: object, selected?: number | null, statu
   await act(async () => {pending.splice(index, 1)[0].resolve(new Response(JSON.stringify(data), {status}));});
 }
 async function open() {
-  render(<CnecView id="cnec" day="2024-08-29" token="token" basemap={{version: 8, sources: {}, layers: []}}/>);
+  render(<CnecView id="cnec" day="2024-08-29" min_day="2024-01-01" token="token" basemap={{version: 8, sources: {}, layers: []}}/>);
   await reply('day/2024-08-29', responses.day);
 }
 
@@ -215,4 +215,13 @@ test('shows a specific unavailable attribution reason', async () => {
   expect(screen.queryByText('Poland cap attribution unavailable for this interval.')).toBeNull();
   await reply('enriched', {...responses.caps, notes: ['Poland cap attribution unavailable for this interval.']}, null);
   await waitFor(() => expect(screen.getByText('Poland cap attribution unavailable for this interval.')).toBeTruthy());
+});
+
+test('delivery picker rejects dates before the supported window', async () => {
+  render(<CnecView id="cnec" day="2025-11-05" min_day="2025-11-05" token="token" basemap={{version: 8, sources: {}, layers: []}}/>);
+  const picker = screen.getByLabelText('Delivery day') as HTMLInputElement;
+  expect(picker.min).toBe('2025-11-05');
+  fireEvent.change(picker, {target: {value: '2025-11-04'}});
+  expect(picker.value).toBe('2025-11-05');
+
 });

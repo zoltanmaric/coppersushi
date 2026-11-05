@@ -46,7 +46,7 @@ def test_each_route_gets_only_its_own_controls(monkeypatch):
     monkeypatch.setattr(app, "mapbox_token", lambda: "token")
     monkeypatch.setattr(app, "basemap", lambda: {"version": 8, "sources": {}, "layers": []})
     network = {component.id for component in _ids(app.show_page("/opf-2024"))}
-    cnec = {component.id for component in _ids(app.show_page("/cnec/2024-08-29"))}
+    cnec = {component.id for component in _ids(app.show_page("/cnec/2025-11-05"))}
     assert {"map", "snapshot-slider"} <= network
     assert {"cnec-view"} <= cnec
     assert not network & cnec
@@ -229,11 +229,22 @@ def test_missing_render_interval_does_not_default_to_midnight(monkeypatch):
 def test_cnec_mount_uses_react_component_and_has_no_loading_callback_chain(monkeypatch):
     monkeypatch.setattr(app, 'mapbox_token', lambda: 'token')
     monkeypatch.setattr(app, 'basemap', lambda: {'version': 8, 'sources': {}, 'layers': []})
-    page = app.show_page('/cnec/2024-08-29')
+    page = app.show_page('/cnec/2025-11-05')
     view = next(c for c in _components(page) if getattr(c, 'id', None) == 'cnec-view')
     assert view.to_plotly_json() == {
         'namespace': 'coppersushi_cnec', 'type': 'CnecView',
-        'props': {'id': 'cnec-view', 'day': '2024-08-29', 'token': 'token', 'basemap': {'version': 8, 'sources': {}, 'layers': []}},
+        'props': {'id': 'cnec-view', 'day': '2025-11-05', 'min_day': '2025-11-05', 'token': 'token', 'basemap': {'version': 8, 'sources': {}, 'layers': []}},
     }
     dependencies = app.server.test_client().get('/_dash-dependencies').json
     assert all('cnec-' not in callback['output'] for callback in dependencies)
+
+
+def test_unsupported_cnec_dates_redirect_to_undated_view():
+    client = app.server.test_client()
+    response = client.get('/cnec/2025-11-04')
+    assert response.status_code == 302
+    assert response.headers['Location'] == '/cnec'
+    assert client.get('/cnec/2025-11-05').status_code == 200
+    redirect_component = app.show_page('/cnec/2025-11-04').children
+    assert redirect_component.href == '/cnec'
+    assert not app.unsupported_cnec_path('/opf-2024')
