@@ -2,6 +2,7 @@ import React, {useEffect, useMemo, useReducer, useState} from 'react';
 import {QueryClient, QueryClientProvider, useQuery} from '@tanstack/react-query';
 import {fetchCnec} from './api';
 import {Timeline} from './timeline';
+import {useHealth} from './useHealth';
 import {reduceSelection} from './state';
 import type {PlotlyFigure, LayerResponse, ConstraintOption} from './contracts';
 import './style.css';
@@ -85,6 +86,13 @@ function View({id, day: routeDay, token}: Props) {
   const loading = !calendar.data && calendar.isFetching ? 'Loading market intervals…' : !prices.data && prices.isFetching ? 'Loading prices…' :
     !constraints.data && constraints.isFetching ? 'Loading constraints…' :
     selected !== null && (attribution.isFetching || enriched.isFetching) ? 'Loading price contributions…' : '';
+  useHealth({
+    view: {day, interval, selected},
+    pending: !calendar.isSuccess || !prices.isSuccess || !constraints.isSuccess || !attribution.isSuccess || !caps.isSuccess || (selected !== null && !enriched.isSuccess),
+    failures: failures.flatMap(([name, query]) => query.error ? [{code: 'request_failed', message: `${name}: ${query.error.message}`}] : []),
+    diagnostics: full?.diagnostics ?? constraints.data?.diagnostics ?? null,
+    attributionComplete: attribution.data?.complete ?? null,
+  });
   function select(value: string) {
     const option = options.find(o => o.value === value);
     if (option) dispatch({type: 'select', selected: value === '' ? null : Number(value), source: option.source});

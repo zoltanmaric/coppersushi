@@ -72,6 +72,8 @@ flowchart LR
     cnec_price_figure -->|enriched view| cnec_http
     cnec_http --> react_cnec
     react_cnec --> jao_map
+    cnec_health["Browser health<br/>typed layer diagnostics and request/runtime errors; local snapshot and console warnings"]
+    react_cnec --> cnec_health
 ```
 
 Code is one package, `coppersushi/`, organised by domain noun; `io-boundary` in `coppersushi/AGENTS.md` names the two modules that touch the world.
@@ -106,3 +108,7 @@ CloudFront caches only static asset routes. OPF retains Dash callbacks; the CNEC
 the same Python server, keeping successful layers visible during enrichment; see [hosting](../infra/lambda/README.md#delivery).
 
 For external-input resilience, see [JAO availability and response retention](jao-availability.md).
+
+### Browser diagnostics
+
+The React view publishes the current day, interval, selection and health issues at `window.cnecHealth` and through a `cnec-health` browser event. Changed degraded reports produce a `[cnec-health]` console warning. Coverage and contribution availability come from typed API data; no DOM text is parsed. Runtime exceptions are scoped to the view that observed them, with a bounded history. Leaving the map clears the snapshot and listeners. Nothing is sent to a telemetry service.

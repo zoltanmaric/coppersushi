@@ -29,7 +29,11 @@
       }
     },
     "options": [],
-    "reference": null
+    "reference": null,
+    "diagnostics": {
+      "coverage": null,
+      "contribution_unavailable": null
+    }
   },
   "constraints": {
     "request": {
@@ -66,7 +70,11 @@
         "source": "constraints"
       }
     ],
-    "reference": null
+    "reference": null,
+    "diagnostics": {
+      "coverage": null,
+      "contribution_unavailable": null
+    }
   },
   "attribution": {
     "day": "2024-08-29",
@@ -117,7 +125,11 @@
         "source": "attribution"
       }
     ],
-    "reference": "DE"
+    "reference": "DE",
+    "diagnostics": {
+      "coverage": null,
+      "contribution_unavailable": null
+    }
   },
   "caps": {
     "request": {
@@ -155,6 +167,10 @@
         "source": "attribution"
       }
     ],
-    "reference": null
+    "reference": null,
+    "diagnostics": {
+      "coverage": null,
+      "contribution_unavailable": null
+    }
   }
 }

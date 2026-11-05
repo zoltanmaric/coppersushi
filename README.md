@@ -176,3 +176,5 @@ uses only the base. All environments share version resolution in `pixi.lock`.
 Docker prepares data in the `bundle-builder` stage and installs the serving
 packages and precompiles Python bytecode in `environment`. The final Lambda image receives the runtime environment
 and generated data, without the build environment or its solver dependencies.
+
+Browser diagnostics: inspect `window.cnecHealth` or filter the browser console for `[cnec-health]`. Reports cover request failures, incomplete attribution, unmapped constraints, unavailable contributions and runtime exceptions. The snapshot and `cnec-health` event are local; no telemetry is sent.

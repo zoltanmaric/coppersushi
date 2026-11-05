@@ -3,6 +3,7 @@
 import math
 
 import numpy as np
+from coppersushi.data_model.cnec_price_map import MappingCoverage
 import pandas as pd
 from pandera.typing import DataFrame
 from coppersushi.data_model.cnec_attribution import CountryCaps
@@ -375,7 +376,7 @@ def constraint_figure(zones: DataFrame[BiddingZoneShapes], constraints: DataFram
                       geometries: DataFrame[MappedCnecElements],
                       interval: pd.Timestamp, selected_id: int | None, token: str,
                       basemap: str | dict) -> go.Figure:
-    """Binding lines and interfaces, available without prices or attribution inputs."""
+    """Binding physical lines, available without prices or attribution inputs."""
     placed = _placed(constraints, geometries)
     annotation = (f"<b>{placed.match_status.eq(MATCHED).sum()} of {len(placed)} active rows mapped</b><br>"
                   "Purple means market-binding under contingency, not physically overloaded.")
@@ -408,3 +409,9 @@ def map_layout(zones: DataFrame[BiddingZoneShapes], interval: pd.Timestamp, toke
             ),
         ],
     )
+
+
+def mapping_coverage(constraints: DataFrame[ActiveConstraints], geometries: DataFrame[MappedCnecElements]) -> MappingCoverage:
+    """Count the same physical rows used to draw the map."""
+    placed = _placed(constraints, geometries)
+    return MappingCoverage(mapped=int(placed.match_status.eq(MATCHED).sum()), total=len(placed))

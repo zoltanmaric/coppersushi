@@ -20,6 +20,9 @@ export type Value = string;
 export type Source = "constraints" | "attribution";
 export type Options = ConstraintOption[];
 export type Reference = string | null;
+export type Mapped = number;
+export type Total = number;
+export type ContributionUnavailable = string | null;
 export type Day2 = string;
 export type Complete = boolean;
 export type Interval1 = string;
@@ -52,6 +55,7 @@ export interface LayerResponse {
   figure: PlotlyFigure;
   options: Options;
   reference: Reference;
+  diagnostics: MapDiagnostics;
 }
 /**
  * One explicit market-day view; selection is a published row identifier.
@@ -83,6 +87,20 @@ export interface ConstraintOption {
   label: Label;
   value: Value;
   source: Source;
+}
+/**
+ * Availability of the displayed layer, separate from its presentation text.
+ */
+export interface MapDiagnostics {
+  coverage: MappingCoverage | null;
+  contribution_unavailable: ContributionUnavailable;
+}
+/**
+ * Published physical rows with and without usable map geometry.
+ */
+export interface MappingCoverage {
+  mapped: Mapped;
+  total: Total;
 }
 /**
  * Successfully loaded price-attribution inputs for one browser request.

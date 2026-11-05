@@ -61,3 +61,17 @@ def test_a_selection_from_another_interval_is_cleared():
     rendered = cnec_page.render(later, mapped_elements(), 1, "1")
     assert rendered.reference is None
     assert rendered.constraint_options == [cnec_page.NO_SELECTION]
+
+
+def test_diagnostics_preserve_missing_geometry_and_contribution_reason():
+    geometry = mapped_elements().iloc[0:0]
+    rendered = cnec_page.render(inputs(), geometry, 0, "1")
+    assert rendered.diagnostics.coverage.mapped == 0
+    assert rendered.diagnostics.coverage.total == 2
+    assert "sending endpoint" in rendered.diagnostics.contribution_unavailable
+
+
+def test_diagnostics_accept_an_unselected_fully_mapped_view():
+    rendered = cnec_page.render(inputs(), mapped_elements(), 0, None)
+    assert rendered.diagnostics.coverage.mapped == rendered.diagnostics.coverage.total == 2
+    assert rendered.diagnostics.contribution_unavailable is None

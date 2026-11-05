@@ -1,5 +1,6 @@
 """HTTP contracts for independently loaded CNEC map layers and enrichment."""
 
+from coppersushi.data_model.cnec_price_map import MapDiagnostics
 from datetime import date
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, StrictInt
@@ -47,6 +48,7 @@ class LayerResponse(Contract):
     figure: PlotlyFigure
     options: list[ConstraintOption]
     reference: str | None
+    diagnostics: MapDiagnostics
 
 
 class DayResponse(Contract):

@@ -8,6 +8,7 @@ can publish several named Y-line legs under one EIC. An unresolved element keeps
 so the map reports true coverage.
 """
 
+from pydantic import BaseModel, ConfigDict, Field
 import pandera.pandas as pa
 from pandera.typing import Series
 
@@ -37,3 +38,17 @@ class MappedCnecElements(pa.DataFrameModel):
         strict = False
         coerce = True
         unique = ["eic", "tso", "name"]
+
+
+class MappingCoverage(BaseModel):
+    """Published physical rows with and without usable map geometry."""
+    model_config = ConfigDict(extra="forbid")
+    mapped: int = Field(ge=0)
+    total: int = Field(ge=0)
+
+
+class MapDiagnostics(BaseModel):
+    """Availability of the displayed layer, separate from its presentation text."""
+    model_config = ConfigDict(extra="forbid")
+    coverage: MappingCoverage | None
+    contribution_unavailable: str | None

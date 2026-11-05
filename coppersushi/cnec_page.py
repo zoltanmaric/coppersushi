@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 from pandera.typing import DataFrame
 
 from coppersushi import cnec_attribution, cnec_market, cnec_price_map, map_style, market
-from coppersushi.data_model.cnec_price_map import MappedCnecElements
+from coppersushi.data_model.cnec_price_map import MappedCnecElements, MapDiagnostics
 from coppersushi.data_model.jao import (
     ActiveConstraints,
     ConstraintPtdfs,
@@ -38,6 +38,7 @@ class Rendered(NamedTuple):
     figure: go.Figure
     constraint_options: list[dict]
     reference: str | None
+    diagnostics: MapDiagnostics
 
 
 def local_today() -> str:
@@ -118,4 +119,6 @@ def render(
         ),
         constraint_options=options,
         reference=snapshot.reference,
+        diagnostics=MapDiagnostics(coverage=cnec_price_map.mapping_coverage(active, mapped_elements),
+            contribution_unavailable=(snapshot.note or "Contribution unavailable") if snapshot.selected_id is not None and snapshot.contribution is None else None),
     )

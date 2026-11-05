@@ -199,15 +199,74 @@
             }
           ],
           "title": "Reference"
+        },
+        "diagnostics": {
+          "$ref": "#/$defs/MapDiagnostics"
         }
       },
       "required": [
         "request",
         "figure",
         "options",
-        "reference"
+        "reference",
+        "diagnostics"
       ],
       "title": "LayerResponse",
+      "type": "object"
+    },
+    "MapDiagnostics": {
+      "additionalProperties": false,
+      "description": "Availability of the displayed layer, separate from its presentation text.",
+      "properties": {
+        "coverage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MappingCoverage"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "contribution_unavailable": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Contribution Unavailable"
+        }
+      },
+      "required": [
+        "coverage",
+        "contribution_unavailable"
+      ],
+      "title": "MapDiagnostics",
+      "type": "object"
+    },
+    "MappingCoverage": {
+      "additionalProperties": false,
+      "description": "Published physical rows with and without usable map geometry.",
+      "properties": {
+        "mapped": {
+          "minimum": 0,
+          "title": "Mapped",
+          "type": "integer"
+        },
+        "total": {
+          "minimum": 0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "mapped",
+        "total"
+      ],
+      "title": "MappingCoverage",
       "type": "object"
     },
     "PlotlyFigure": {
