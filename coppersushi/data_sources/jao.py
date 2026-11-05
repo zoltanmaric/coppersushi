@@ -29,6 +29,7 @@ from typing import NamedTuple
 
 import pandas as pd
 import pandera.pandas as pa
+from botocore.exceptions import BotoCoreError, ClientError
 from pandera.typing import DataFrame
 
 from coppersushi import cnecs
@@ -332,7 +333,7 @@ def seed_element_ends(days: list[str]) -> Path:
 
 
 def load_element_ends(interval: pd.Timestamp, required: pd.DataFrame) -> DataFrame[ElementEnds]:
-    """Use the seed, fetching only the viewed hour when an active element is absent.
+    """Use available ends and fetch the viewed hour when an active element is absent.
 
     The image carries the seed. Each durable hourly entry contains all the endpoints
     returned by that hour, never just one instance's missing subset.
@@ -347,30 +348,58 @@ def load_element_ends(interval: pd.Timestamp, required: pd.DataFrame) -> DataFra
         return ends
     # Work in UTC: flooring a local DST-change hour can be ambiguous.
     hour = interval.tz_convert("UTC").floor("h")
-    try:
-        directory = JAO_DIR / "endpoints" / hour.strftime("%Y%m%dT%HZ")
-        key = f"jao/endpoints/{hour.strftime('%Y%m%dT%HZ')}"
-        name = "element-ends.csv"
-        if not (directory / name).exists():
-            cache.restore(key, directory, (name,))
+    combined = ends
+    directory = JAO_DIR / "endpoints" / hour.strftime("%Y%m%dT%HZ")
+    key = f"jao/endpoints/{hour.strftime('%Y%m%dT%HZ')}"
+    name = "element-ends.csv"
+    failures = (OSError, ValueError, RuntimeError, KeyError, BotoCoreError, ClientError, pa.errors.SchemaError)
+    if not (directory / name).exists():
         try:
-            fetched = pd.read_csv(directory / name).pipe(lambda f: _restore_blanks(f, ElementEnds)).pipe(ElementEnds.validate)
-            _require_element_ends(required, pd.concat([complete, fetched], ignore_index=True))
-        except (OSError, ValueError, pa.errors.SchemaError, InvalidDomainCache):
-            rows = _get("finalComputation", hour, hour + pd.Timedelta(hours=1), timeout=25)
-            fetched = cnecs.element_ends(rows)
-            _require_element_ends(required, pd.concat([ends, fetched], ignore_index=True))
-            cache.atomic_text(directory / name, fetched.to_csv(index=False))
-            cache.publish(key, directory, (name,))
-        combined = pd.concat([ends, fetched], ignore_index=True).drop_duplicates(
+            cache.restore(key, directory, (name,))
+        except failures:
+            logger.warning("Endpoint cache restore failed for %s", hour, exc_info=True)
+    try:
+        cached = pd.read_csv(directory / name).pipe(lambda f: _restore_blanks(f, ElementEnds)).pipe(ElementEnds.validate)
+        usable = cached.loc[cached.substation_from.fillna('').ne('') & cached.substation_to.fillna('').ne('')]
+        combined = pd.concat([combined, usable], ignore_index=True).drop_duplicates(
             ["eic", "tso", "name"], keep="last"
-        )
-        _require_element_ends(required, combined)
-        write_element_ends(combined)
-    except Exception as error:
-        logger.exception("jao: endpoint fetch failed for %s", hour)
-        raise RuntimeError("Could not load line locations. Please retry.") from error
+        ).pipe(ElementEnds.validate)
+    except failures:
+        logger.warning("Ignoring unusable hourly endpoint cache for %s", hour, exc_info=True)
+    downloaded = None
+    complete = combined.loc[combined.substation_from.fillna('').ne('') & combined.substation_to.fillna('').ne('')]
+    if not _missing_element_ends(required, complete).empty:
+        try:
+            rows = _get("finalComputation", hour, hour + pd.Timedelta(hours=1), timeout=25)
+            fetched = cnecs.element_ends(rows, skip_conflicts=True)
+            usable = fetched.loc[fetched.substation_from.fillna('').ne('') & fetched.substation_to.fillna('').ne('')]
+            combined = pd.concat([combined, usable], ignore_index=True).drop_duplicates(
+                ["eic", "tso", "name"], keep="last"
+            ).pipe(ElementEnds.validate)
+            downloaded = fetched
+        except failures:
+            logger.warning("Location discovery failed for %s; keeping available locations", hour, exc_info=True)
+    complete = combined.loc[combined.substation_from.fillna('').ne('') & combined.substation_to.fillna('').ne('')]
+    missing = _missing_element_ends(required, complete)
+    if not missing.empty:
+        logger.warning("Location metadata missing for %d publication(s) at %s", len(missing), hour)
+    if not combined.equals(ends):
+        try:
+            write_element_ends(combined)
+        except failures:
+            logger.warning("Local endpoint save failed for %s", hour, exc_info=True)
+    if downloaded is not None and missing.empty:
+        try:
+            cache.atomic_text(directory / name, downloaded.to_csv(index=False))
+        except failures:
+            logger.warning("Hourly endpoint save failed for %s", hour, exc_info=True)
+        else:
+            try:
+                cache.publish(key, directory, (name,))
+            except failures:
+                logger.warning("Endpoint cache publish failed for %s", hour, exc_info=True)
     return combined
+
 
 
 def load_active_day(day: str, refresh: bool = False) -> ActiveDay:

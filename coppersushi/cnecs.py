@@ -29,6 +29,8 @@ Field meanings:
 `wiki/literature/jao-core-publication-handbook.md`.
 """
 
+import logging
+
 import pandas as pd
 from pandera.typing import DataFrame
 
@@ -176,13 +178,14 @@ def elements(rows: list[dict]) -> DataFrame[Elements]:
     )
 
 
-def element_ends(rows: list[dict]) -> DataFrame[ElementEnds]:
+def element_ends(rows: list[dict], *, skip_conflicts: bool = False) -> DataFrame[ElementEnds]:
     """Each TSO's own ends of every presolved physical element.
 
     `elements` folds the TSOs of a shared element together, yet each TSO's DIRECT runs from
     its own `substation_from`: APG's and ČEPS's DIRECT rows on one tie-line carry PTDFs of
     opposite sign. An EIC can also name several elements from one TSO, as on a three-terminal
-    line, so the published element name completes the identity.
+    line, so the published element name completes the identity. Discovery may skip
+    conflicting identities; the day-domain parser remains strict.
     """
     frame = _physical(_frame(rows))
     presolved = frame[frame.presolved]
@@ -199,9 +202,11 @@ def element_ends(rows: list[dict]) -> DataFrame[ElementEnds]:
             .sort_values(["eic", "tso", "name"])
             .itertuples(index=False)
         )
-        raise ValueError(
-            f"one named element published more than one substation pair: {identities}"
-        )
+        message = f"one named element published more than one substation pair: {identities}"
+        if not skip_conflicts:
+            raise ValueError(message)
+        logging.getLogger(__name__).warning("Skipping conflicting geometry: %s", message)
+        ends = ends[~ends.duplicated(["eic", "tso", "name"], keep=False)]
     return ends.pipe(ElementEnds.validate)
 
 

@@ -69,7 +69,10 @@ select another snapshot. Known publications use validated site connections.
 New identities and publications missing endpoint metadata use the viewed-hour JAO
 fetch and live locator. Recorded conflicts, ambiguous sites and unresolved site names
 remain authoritative. Discovery does not overwrite the reviewed snapshot; rebuild it
-to audit and incorporate new observations. A missing or invalid catalog is an error.
+to audit and incorporate new observations. If endpoint discovery fails or returns a
+partial response, the map keeps known locations and leaves only unresolved rows
+unmapped. Partial discoveries do not create a complete-hour cache entry, so later
+requests can retry. Conflicting endpoint pairs are skipped per publication. A missing or invalid catalog is an error.
 The image build validates it before shipping.
 
 ## Assessments

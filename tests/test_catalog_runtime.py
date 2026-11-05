@@ -34,3 +34,14 @@ def test_runtime_does_not_bypass_a_recorded_unresolved_site(tmp_path, monkeypatc
     monkeypatch.setattr(jao,'load_element_ends',forbidden)
     result=element_catalog.resolve(pd.Timestamp('2026-01-01',tz='UTC'),required,tmp_path).set_index('name')
     assert result.loc['Westhaven-Unknown'].match_status == 'no_substation'
+
+
+def test_locator_failure_keeps_catalog_geometry(monkeypatch):
+    required = pd.read_csv(FIXTURE/'required.csv')
+    monkeypatch.setattr(jao, 'load_element_ends', lambda *_: pd.read_csv(FIXTURE/'discovered-ends.csv'))
+    def unavailable():
+        raise OSError('locator unavailable')
+    monkeypatch.setattr(osm_locator, 'read_csvs', unavailable)
+    result = element_catalog.resolve(pd.Timestamp('2026-01-01',tz='UTC'),required,FIXTURE).set_index('name')
+    assert result.loc['Westhaven-Eastfield'].match_status == 'matched'
+    assert result.loc['Westhaven-Unknown'].match_status == 'no_substation'
