@@ -23,6 +23,8 @@
 .cnec-map-container {height:calc(100dvh - 48px);min-height:480px}
 .cnec-progress {top:120px}
 @media(max-width:650px){
+  .cnec-map-container {height:calc(100dvh - 76px)}
+  .cnec-tick-major:not([data-hour="00"]):not([data-hour="06"]):not([data-hour="12"]):not([data-hour="18"]) .cnec-tick-label {display:none}
   .cnec-time-controls {grid-template-columns:1fr;gap:0;bottom:34px;left:12px;right:12px;background:rgba(18,18,18,.85);border-radius:5px}
   .cnec-time-controls .cnec-panel {background:transparent}
   .cnec-date-time {max-width:320px;width:100%;justify-self:center;box-sizing:border-box}

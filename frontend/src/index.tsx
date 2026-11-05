@@ -114,7 +114,6 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
       counts.set(name, ordinal + 1);
       trace.uid = `t${Array.from(name, c => c.codePointAt(0)!.toString(16)).join("-")}-${ordinal}`;
     }
-    copy.layout.annotations = [];
     copy.layout.clickanywhere = true;
     copy.layout.mapbox.style = basemap;
     copy.layout.mapbox.center = {lat: 50, lon: 10};
