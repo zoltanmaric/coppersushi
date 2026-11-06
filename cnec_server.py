@@ -20,7 +20,7 @@ def index(day: str | None = None) -> str | Response:
     if day is not None:
         try:
             if date.fromisoformat(day) < date.fromisoformat(FIRST_DAY):
-                return redirect('/cnec')
+                return Response(status=302, headers={'Location':'/cnec'})
         except ValueError:
             pass
     config = {'default_day': datetime.now(ZoneInfo('Europe/Brussels')).date().isoformat(),
