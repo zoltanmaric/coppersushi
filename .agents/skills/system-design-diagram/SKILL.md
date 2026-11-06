@@ -26,7 +26,8 @@ Use brief text below the diagram for the few behaviors the picture cannot convey
 Give each owned component a folder README when its internal architecture needs
 explaining. Expand only that component, preserving the parent diagram's interfaces.
 Link parent and child READMEs in both directions and link collaborating components.
-Make diagram nodes clickable with Mermaid links to component READMEs; provide a
+Make diagram nodes clickable with absolute GitHub links to component READMEs on
+the default branch (GitHub renders Mermaid in an iframe); provide a
 normal Markdown ownership list as a fallback and verify links in the rendered view.
 Keep each architectural fact in its owning README; link to the wiki for domain
 knowledge and decisions instead of copying them. Do not create empty component

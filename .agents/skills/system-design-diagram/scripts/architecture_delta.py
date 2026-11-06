@@ -25,6 +25,7 @@ def snapshot(revision: str) -> dict[str, str]:
 def linked(diagram: str, path: str, revision: str, repository: str) -> str:
     """PR bodies need commit-specific links, not README-relative links."""
     source = f'{repository}/blob/{revision}/{path}'
+    diagram = diagram.replace(f'{repository}/blob/main/', f'{repository}/blob/{revision}/')
     return re.sub(r'(\bclick\s+\w+\s+")([^"#]+)(")',
                   lambda match: match[1] + urljoin(source, match[2]) + match[3], diagram)
 
