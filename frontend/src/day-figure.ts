@@ -1,6 +1,7 @@
 import type {DayBundle, BindingRow, MarketInterval, ElementGeometry} from './contracts';
 import type {PlotlyFigure, ConstraintOption} from './figure';
 import type { CoreZone } from "./reference";
+import {layerAnchor} from './map-layer-order';
 
 type Trace = PlotlyFigure["data"][number];
 const purple = "#a72af5",
@@ -440,6 +441,11 @@ export function dayFigure(
       },
     ),
   );
-  for (const trace of traces) trace.uid = Array.from(String(trace.name), c => c.codePointAt(0)!.toString(16)).join('-');
+  const anchored = Array.isArray(layers) && layers.some(layer =>
+    (layer as {id?: unknown}).id === layerAnchor('published day-ahead price'));
+  for (const trace of traces) {
+    trace.uid = Array.from(String(trace.name), c => c.codePointAt(0)!.toString(16)).join('-');
+    if (anchored) trace.below = layerAnchor(String(trace.name), trace.mode);
+  }
   return { data: traces, layout };
 }

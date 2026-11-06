@@ -2,6 +2,7 @@ import React from 'react';
 import {createRoot} from 'react-dom/client';
 import Ajv from 'ajv';
 import {CnecView} from './index';
+import {orderedMapLayers} from './map-layer-order';
 
 interface Config {default_day: string; min_day: string; token: string}
 interface Basemap {layers: {id: string; type: string}[]; sources: Record<string, {url?: string}>; glyphs: string; sprite: string}
@@ -23,7 +24,7 @@ async function start() {
   if (!response.ok) throw new Error(`Basemap failed (${response.status})`);
   const style: unknown = await response.json();
   if (!validBasemap(style)) throw new Error('Invalid basemap style');
-  style.layers = style.layers.filter((layer: {type: string}) => layer.type !== 'symbol');
+  style.layers = orderedMapLayers(style.layers.filter(layer => layer.type !== 'symbol'));
   style.sprite = new URL('/assets/cnec-markers', window.location.href).href;
   style.glyphs = `https://api.mapbox.com/fonts/v1/${style.glyphs.replace('mapbox://fonts/', '')}?${query}`;
   for (const source of Object.values(style.sources) as {url?: string}[]) {
