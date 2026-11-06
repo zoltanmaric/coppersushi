@@ -98,6 +98,9 @@ flowchart LR
     prepared_day --> prepared_files
     static_browser["Standalone CNEC browser<br/>pure Plotly figures, native query-cache interval subscriptions"]
     prepared_files --> static_browser
+    static_edge["S3 + CloudFront<br/>private prepared-data and UI origins; edge page rewrite"]
+    prepared_files --> static_edge
+    static_edge --> static_browser
     native_glyphs["Map-owned CNEC glyphs<br/>owned transformer/triangle sprite; hover and selection"]
     selection_effects["Decorative SVG energy<br/>typed figure metadata; native Mapbox projection and lifecycle; north-up 2D adapter"]
     react_cnec --> native_glyphs

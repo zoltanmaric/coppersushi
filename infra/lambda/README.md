@@ -149,3 +149,31 @@ headers are unchanged. Page layouts and callback POSTs remain uncached.
 HTTPS is enforced for viewers and origin connections. CloudFront's 60-second
 origin read timeout can end a slow callback before Lambda's 120-second timeout.
 The direct Function URL remains accessible.
+
+## Prepared CNEC data
+
+Shared metadata and uniform interval objects live under `data/cnec/v2/` in the private cache bucket. The publisher writes immutable objects before replacing a manifest cached for 60 seconds. The browser loads the selected interval first and prefetches the rest in parallel through shared query keys. Dates without a prepared publication show an availability message.
+
+Publish a day with `python -m coppersushi.data_sources.cnec_bundles YYYY-MM-DD --bucket <cache_bucket>`. Use `--refresh` for a correction, or `--directory data/browser` for local static files. Publish built public assets and the shell with `python -m coppersushi.data_sources.cnec_static --bucket <cache_bucket>` before changing routing.
+
+## Handler separation
+
+CloudFront serves `/cnec*` and `/assets/*` from the published private S3 UI
+prefix. There is no production CNEC serving Lambda or interval API. OPF and Dash component routes stay on `app:server`.
+The CNEC shell imports neither Dash nor pandas. Data preparation runs only in the background producer. The frontend uses the official React Plotly
+component and a pinned Mapbox-only Plotly bundle.
+
+Publish the built shell and public assets with
+`python -m coppersushi.data_sources.cnec_static --bucket <cache_bucket>` before
+applying the static-route change. Invalidate `/cnec*`, `/assets/*` and
+`/data/cnec/v1/ui/*` after publishing changes. The browser computes the default
+market date locally; a cached shell cannot freeze it on its publication date.
+
+The supported delivery window starts on 1 November 2026. Backfill prepared day
+generations before moving that boundary earlier; the planned historical boundary
+is 5 November 2025. The frontend never starts an upstream fetch for a visitor.
+
+For local development, prepare a day with
+`python -m coppersushi.data_sources.cnec_bundles YYYY-MM-DD --directory data/browser`.
+The local shell serves the same static file format as CloudFront. No upstream fetch
+is initiated by browser navigation.
