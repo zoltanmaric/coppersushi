@@ -5,7 +5,7 @@ import shutil
 import pytest
 
 from coppersushi import REPO
-from coppersushi.data_sources import catalog_backfill
+from coppersushi.grid_catalog.data_sources import catalog_backfill
 
 FIXTURES = REPO/'tests/fixtures'
 SUPPLEMENT = FIXTURES/'catalog-sweep/supplement'
@@ -34,7 +34,7 @@ def test_invalid_cached_evidence_is_fetched_again(evidence_cache, monkeypatch, i
     monkeypatch.setattr(catalog_backfill.urllib.request, 'urlopen', download)
     catalog_backfill.fetch_site_evidence(evidence_cache)
     assert len(calls) == 1
-    from coppersushi.data_sources.catalog_sweep import substation_centroid
+    from coppersushi.grid_catalog.data_sources.catalog_sweep import substation_centroid
     import json
     assert substation_centroid(json.loads(path.read_text()), 'way', 424242).x == 5.1
     catalog_backfill.fetch_site_evidence(evidence_cache)

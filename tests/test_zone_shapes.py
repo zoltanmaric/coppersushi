@@ -4,8 +4,9 @@ import geopandas as gpd
 import pandas as pd
 import pytest
 
-from coppersushi import REPO, bidding_zones
-from coppersushi.data_sources import zone_shapes
+from coppersushi import REPO
+from coppersushi.grid_catalog import bidding_zones
+from coppersushi.grid_catalog.data_sources import zone_shapes
 
 
 def test_bundled_outlines_preserve_the_same_zone_polygons(tmp_path):

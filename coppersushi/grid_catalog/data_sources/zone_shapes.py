@@ -6,9 +6,10 @@ import pandas as pd
 from pandera.typing import DataFrame
 from shapely.geometry import mapping, shape
 
-from coppersushi import REPO, bidding_zones
+from coppersushi import REPO
+from coppersushi.grid_catalog import bidding_zones
 from coppersushi.data_model.network_views import BiddingZoneShapes
-from coppersushi.data_sources import networks
+from coppersushi.opf.data_sources import networks
 
 BUNDLE = REPO / "data" / "core-zone-shapes.geojson"
 

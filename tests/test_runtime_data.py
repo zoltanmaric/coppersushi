@@ -7,7 +7,11 @@ import pytest
 
 from coppersushi import REPO
 from coppersushi.market_day import MarketDay
-from coppersushi.data_sources import runtime_data, element_catalog, jao, osm_locator, zone_shapes
+from coppersushi.data_sources import runtime_data
+from coppersushi.grid_catalog.data_sources import element_catalog
+from coppersushi.data_sources import jao
+from coppersushi.grid_catalog.data_sources import osm_locator
+from coppersushi.grid_catalog.data_sources import zone_shapes
 
 FIXTURES = REPO/'tests/fixtures'
 

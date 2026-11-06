@@ -2,7 +2,7 @@ import pandas as pd
 import pypsa
 import pytest
 
-from coppersushi import shedding
+from coppersushi.opf import shedding
 
 
 def _network_with_shedder(shed_mw: float) -> pypsa.Network:

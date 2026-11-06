@@ -7,8 +7,10 @@ import pandas as pd
 import plotly.io as pio
 import plotly.graph_objects as go
 
-from coppersushi import REPO, map_style, power_flow
-from coppersushi.data_sources import networks
+from coppersushi import REPO
+from coppersushi import map_style
+from coppersushi.opf import power_flow
+from coppersushi.opf.data_sources import networks
 
 DIRECTORY = REPO / 'data' / 'opf-2024'
 

@@ -53,9 +53,11 @@ class ElementAssessment(BaseModel):
     orientation_evidence: str = Field(min_length=1)
 
 
-from coppersushi import REPO, cnec_geometry as geometry
+from coppersushi import REPO
+from coppersushi.grid_catalog import cnec_geometry as geometry
 from coppersushi.data_model.osm_locator import LocatedSubstations
-from coppersushi.data_sources import element_catalog, osm_locator
+from coppersushi.grid_catalog.data_sources import element_catalog
+from coppersushi.grid_catalog.data_sources import osm_locator
 
 logger = logging.getLogger(__name__)
 

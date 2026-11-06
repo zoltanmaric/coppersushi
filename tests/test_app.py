@@ -7,7 +7,8 @@ from dash.exceptions import PreventUpdate
 import app
 from coppersushi.market_day import MarketDay
 from coppersushi import REPO, cnec_page, cnecs
-from coppersushi.data_sources import jao, osm_locator
+from coppersushi.data_sources import jao
+from coppersushi.grid_catalog.data_sources import osm_locator
 from tests.test_cnec_page import inputs, mapped_elements
 
 

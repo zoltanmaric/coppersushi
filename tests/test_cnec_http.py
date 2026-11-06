@@ -101,7 +101,9 @@ def test_json_boundary_preserves_http_errors(content_type, body, status):
 
 
 def test_location_fetch_failure_keeps_known_line_and_constraint_choices(tmp_path, monkeypatch):
-    from coppersushi.data_sources import element_catalog, jao, osm_locator
+    from coppersushi.grid_catalog.data_sources import element_catalog
+    from coppersushi.data_sources import jao
+    from coppersushi.grid_catalog.data_sources import osm_locator
     from tests.test_cnec_page import inputs, mapped_elements
     from coppersushi import REPO
     day = inputs()

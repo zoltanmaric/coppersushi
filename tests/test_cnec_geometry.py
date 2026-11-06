@@ -11,7 +11,8 @@ shape, with one site recorded twice as the duplicated national templates record 
 import pandas as pd
 import pytest
 
-from coppersushi import REPO, cnec_geometry
+from coppersushi import REPO
+from coppersushi.grid_catalog import cnec_geometry
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
 from coppersushi.data_model.jao import ElementEnds, Elements
 from coppersushi.data_model.osm_locator import LocatedSubstations
@@ -174,7 +175,8 @@ def test_the_placed_table_validates_and_carries_one_row_per_named_publication(
 
 @pytest.mark.parametrize("direction,expected", [("DIRECT", "FR"), ("OPPOSITE", "FR")])
 def test_scoped_endpoint_corrections_restore_geometry_and_reference(direction, expected):
-    from coppersushi.data_sources import osm_locator, zone_shapes
+    from coppersushi.grid_catalog.data_sources import osm_locator
+    from coppersushi.grid_catalog.data_sources import zone_shapes
     from coppersushi.cnec_attribution import physical_reference
 
     # Invented sites retain the real failure: a generic endpoint has east/west sites,

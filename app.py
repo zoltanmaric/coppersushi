@@ -19,11 +19,21 @@ from dash.exceptions import PreventUpdate
 
 from coppersushi.cnec_component import CnecView
 from coppersushi.data_model.jao import ActiveConstraints
-from coppersushi import REPO, cnec_page, map_style, power_flow
+from coppersushi import REPO
+from coppersushi import cnec_page
+from coppersushi import map_style
+from coppersushi.opf import power_flow
 from coppersushi.data_model.network_views import BiddingZoneShapes
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
 from coppersushi.data_model.cnec_attribution import AttributionPayload, attribution_from_browser
-from coppersushi.data_sources import element_catalog, opf_bundle, zone_shapes, credentials, electricity_maps, jao, mapbox_styles, networks
+from coppersushi.grid_catalog.data_sources import element_catalog
+from coppersushi.opf.data_sources import opf_bundle
+from coppersushi.grid_catalog.data_sources import zone_shapes
+from coppersushi.data_sources import credentials
+from coppersushi.data_sources import electricity_maps
+from coppersushi.data_sources import jao
+from coppersushi.data_sources import mapbox_styles
+from coppersushi.opf.data_sources import networks
 from coppersushi.market_day import MARKET_TZ, MarketDay
 
 # Every page's controls live in one tree that the router swaps, so a callback whose

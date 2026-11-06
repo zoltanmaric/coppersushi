@@ -8,17 +8,17 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def synthetic_templates(monkeypatch):
-    from coppersushi.data_sources import osm_locator
+    from coppersushi.grid_catalog.data_sources import osm_locator
     monkeypatch.setattr(osm_locator, 'EXPECTED_TEMPLATES', frozenset({'AT'}))
 
 
 def test_sweep_is_repeatable_and_keeps_conflicting_source_names(tmp_path):
-    from coppersushi.data_sources.catalog_sweep import sweep
+    from coppersushi.grid_catalog.data_sources.catalog_sweep import sweep
     root = FIXTURE.parent / 'catalog-sweep'
     result = sweep(root/'cache', root/'backfill', tmp_path, root/'config')
     assert result['fully_resolved_elements'] == 1
     assert result['endpoint_statuses']['conflict'] == 1
-    from coppersushi.data_sources.element_catalog import snapshot
+    from coppersushi.grid_catalog.data_sources.element_catalog import snapshot
     pinned = snapshot(tmp_path)
     before = {name: (tmp_path/f'{name}.csv').read_bytes()
               for name in ('sites', 'site_names', 'elements', 'element_endpoints')}
@@ -30,7 +30,7 @@ def test_sweep_is_repeatable_and_keeps_conflicting_source_names(tmp_path):
 
 def test_backfill_includes_nonpresolved_physical_elements():
     import json
-    from coppersushi.data_sources.catalog_backfill import endpoints
+    from coppersushi.grid_catalog.data_sources.catalog_backfill import endpoints
     path = FIXTURE.parent/'synthetic-jao'/'final-computation-hour.json'
     frame = endpoints(json.loads(path.read_text())['data'])
     line = frame[frame.eic.eq('94T-220-0-N203AR')].iloc[0]
@@ -42,7 +42,8 @@ def test_backfill_advances_past_retained_hours_but_retries_transient_failures(tm
     import gzip
     import json
     import pandas as pd
-    from coppersushi.data_sources import catalog_backfill, jao
+    from coppersushi.grid_catalog.data_sources import catalog_backfill
+    from coppersushi.data_sources import jao
     annual=tmp_path/'cache/research/country-caps/annual-json'
     annual.mkdir(parents=True)
     with gzip.open(annual/'activeFbConstraints-synthetic.gz','wb') as stream:
@@ -65,8 +66,8 @@ def test_backfill_advances_past_retained_hours_but_retries_transient_failures(tm
 
 def test_verified_polygon_adds_a_site_absent_from_old_bus_cache(tmp_path):
     import shutil
-    from coppersushi.data_sources.catalog_sweep import sweep
-    from coppersushi.data_sources.element_catalog import load
+    from coppersushi.grid_catalog.data_sources.catalog_sweep import sweep
+    from coppersushi.grid_catalog.data_sources.element_catalog import load
     root = FIXTURE.parent/'catalog-sweep'
     shutil.copytree(root,tmp_path/'input')
     source = tmp_path/'input'
@@ -82,7 +83,7 @@ def test_missing_polygon_node_is_rejected_instead_of_using_partial_geometry(tmp_
     import shutil
     import json
     import pytest
-    from coppersushi.data_sources.catalog_sweep import sweep
+    from coppersushi.grid_catalog.data_sources.catalog_sweep import sweep
     root = FIXTURE.parent/'catalog-sweep'
     shutil.copytree(root,tmp_path/'input')
     source = tmp_path/'input'
@@ -96,8 +97,8 @@ def test_missing_polygon_node_is_rejected_instead_of_using_partial_geometry(tmp_
 
 def test_substation_site_relation_uses_complete_member_boundaries(tmp_path):
     import shutil
-    from coppersushi.data_sources.catalog_sweep import sweep
-    from coppersushi.data_sources.element_catalog import load
+    from coppersushi.grid_catalog.data_sources.catalog_sweep import sweep
+    from coppersushi.grid_catalog.data_sources.element_catalog import load
     root = FIXTURE.parent/'catalog-sweep'
     shutil.copytree(root,tmp_path/'input')
     source=tmp_path/'input'
@@ -113,8 +114,8 @@ def test_substation_site_relation_uses_complete_member_boundaries(tmp_path):
 def test_assessment_resolves_missing_sites_without_fabricating_publication(tmp_path):
     import csv
     import shutil
-    from coppersushi.data_sources.catalog_sweep import sweep
-    from coppersushi.data_sources.element_catalog import load, mapped_elements
+    from coppersushi.grid_catalog.data_sources.catalog_sweep import sweep
+    from coppersushi.grid_catalog.data_sources.element_catalog import load, mapped_elements
     root = FIXTURE.parent/'catalog-sweep'
     shutil.copytree(root,tmp_path/'input')
     source=tmp_path/'input'
@@ -143,8 +144,8 @@ def test_assessment_cannot_overwrite_a_resolved_published_pair(tmp_path):
     import csv
     import shutil
     import pytest
-    from coppersushi.data_sources.catalog_sweep import sweep
-    from coppersushi.data_sources.element_catalog import load
+    from coppersushi.grid_catalog.data_sources.catalog_sweep import sweep
+    from coppersushi.grid_catalog.data_sources.element_catalog import load
     root=FIXTURE.parent/'catalog-sweep'
     shutil.copytree(root,tmp_path/'input')
     source=tmp_path/'input'
@@ -160,7 +161,7 @@ def test_assessment_cannot_overwrite_a_resolved_published_pair(tmp_path):
 
 
 def test_orientation_assessment_applies_without_replacing_resolved_sites():
-    from coppersushi.data_sources.catalog_sweep import ElementAssessment, apply_assessments
+    from coppersushi.grid_catalog.data_sources.catalog_sweep import ElementAssessment, apply_assessments
     import pytest
     sites = {'s1': {'site_id': 's1', 'display_name': 'Alpha'},
              's2': {'site_id': 's2', 'display_name': 'Beta'}}
@@ -182,7 +183,7 @@ def test_orientation_assessment_applies_without_replacing_resolved_sites():
 def test_audit_credits_the_endpoint_evidence_actually_used(tmp_path):
     import csv
     import shutil
-    from coppersushi.data_sources.catalog_sweep import sweep
+    from coppersushi.grid_catalog.data_sources.catalog_sweep import sweep
     root=FIXTURE.parent/'catalog-sweep'
     shutil.copytree(root,tmp_path/'input')
     source=tmp_path/'input'
@@ -201,8 +202,8 @@ def test_audit_credits_the_endpoint_evidence_actually_used(tmp_path):
 def test_assessment_preserves_evidence_for_the_already_resolved_terminal(tmp_path):
     import csv
     import shutil
-    from coppersushi.data_sources.catalog_sweep import sweep
-    from coppersushi.data_sources.element_catalog import load
+    from coppersushi.grid_catalog.data_sources.catalog_sweep import sweep
+    from coppersushi.grid_catalog.data_sources.element_catalog import load
     root=FIXTURE.parent/'catalog-sweep'
     shutil.copytree(root,tmp_path/'input')
     source=tmp_path/'input'
@@ -223,7 +224,7 @@ def test_audit_counts_unknown_orientation_as_unmapped(tmp_path):
     import csv
     import gzip
     import shutil
-    from coppersushi.data_sources.catalog_sweep import sweep
+    from coppersushi.grid_catalog.data_sources.catalog_sweep import sweep
     root=FIXTURE.parent/'catalog-sweep'
     shutil.copytree(root,tmp_path/'input')
     source=tmp_path/'input'
@@ -245,8 +246,8 @@ def test_audit_counts_unknown_orientation_as_unmapped(tmp_path):
 
 def test_reviewed_mapping_bootstraps_without_annual_or_domain_observation(tmp_path):
     import shutil
-    from coppersushi.data_sources.catalog_sweep import sweep
-    from coppersushi.data_sources.element_catalog import load
+    from coppersushi.grid_catalog.data_sources.catalog_sweep import sweep
+    from coppersushi.grid_catalog.data_sources.element_catalog import load
     root = FIXTURE.parent/'catalog-sweep'
     shutil.copytree(root, tmp_path/'input')
     source = tmp_path/'input'
@@ -263,8 +264,8 @@ def test_reviewed_mapping_bootstraps_without_annual_or_domain_observation(tmp_pa
 @pytest.mark.parametrize('damage', ['missing', 'bad_header', 'truncated', 'broken_current'])
 def test_sweep_rebuilds_damaged_generated_catalog(tmp_path, damage):
     import shutil
-    from coppersushi.data_sources.catalog_sweep import sweep
-    from coppersushi.data_sources.element_catalog import load, snapshot
+    from coppersushi.grid_catalog.data_sources.catalog_sweep import sweep
+    from coppersushi.grid_catalog.data_sources.element_catalog import load, snapshot
     root = FIXTURE.parent/'catalog-sweep'
     output = tmp_path/'catalog'
     sweep(root/'cache', root/'backfill', output, root/'config')

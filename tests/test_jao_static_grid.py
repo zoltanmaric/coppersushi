@@ -1,8 +1,9 @@
 import pandas as pd
 import pytest
 
-from coppersushi import REPO, static_grid
-from coppersushi.data_sources import jao_static_grid
+from coppersushi import REPO
+from coppersushi.grid_catalog import static_grid
+from coppersushi.grid_catalog.data_sources import jao_static_grid
 
 FIXTURES = REPO / "tests" / "fixtures" / "static-grid"
 

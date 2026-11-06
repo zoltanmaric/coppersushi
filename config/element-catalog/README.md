@@ -27,9 +27,9 @@ representative hour per still-missing identity in each pass, with a request budg
 Run long backfills under the project's job-supervision procedure.
 
 ```sh
-python -m coppersushi.data_sources.catalog_backfill --cache-root data --output data/research/element-catalog --max-requests 40 --fetch-osm
-python -m coppersushi.data_sources.catalog_sweep --cache-root data --backfill data/research/element-catalog --output data/element-catalog
-python -m coppersushi.data_sources.element_catalog data/element-catalog
+python -m coppersushi.grid_catalog.data_sources.catalog_backfill --cache-root data --output data/research/element-catalog --max-requests 40 --fetch-osm
+python -m coppersushi.grid_catalog.data_sources.catalog_sweep --cache-root data --backfill data/research/element-catalog --output data/element-catalog
+python -m coppersushi.grid_catalog.data_sources.element_catalog data/element-catalog
 ```
 
 The sweep also writes coverage, contingency references, source hashes and a summary.

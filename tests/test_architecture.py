@@ -30,7 +30,7 @@ IO_CALLS = {
 
 
 def is_boundary(path: Path) -> bool:
-    return DATA_SOURCES in path.parents
+    return any(parent.name == "data_sources" for parent in path.relative_to(PACKAGE).parents)
 
 
 def direct_io_violations(path: Path) -> list[str]:

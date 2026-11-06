@@ -26,6 +26,25 @@ so git works from any shell or IDE, run `git lfs install` once to register the f
 files, then `git lfs pull`. The Pixi environment also includes `git-lfs` for commands run through `pixi run`.
 Clone with `GIT_LFS_SKIP_SMUDGE=1` to skip the files, e.g. to run only the tests.
 
+## System design
+
+```mermaid
+flowchart TB
+    market["JAO and Electricity Maps"] -->|Market inputs| server["Dash application on Lambda"]
+    catalog["Grid catalog"] -->|Located elements and zone outlines| server
+    opf["OPF preparation"] -->|Hourly figures| server
+    edge["CloudFront"] <-->|Pages and callbacks| server
+    browser["Browser: Dash, React and Plotly"] <-->|HTTPS| edge
+    maps["Mapbox"] -->|Styles and tiles| browser
+    click catalog "coppersushi/grid_catalog/README.md" "Grid catalog architecture"
+    click opf "coppersushi/opf/README.md" "OPF architecture"
+```
+
+Component details: [OPF](coppersushi/opf/README.md),
+[grid catalog](coppersushi/grid_catalog/README.md),
+[hosting](infra/lambda/README.md). The server owns the existing market-data and
+figure request path; the browser renders the resulting map.
+
 ## Working with Agents
 The repository is developed with coding agents (Claude Code and Codex), and the tooling for that is
 part of the repository:
@@ -127,7 +146,7 @@ fetched locally rather than committed. Fetch it once, plus at least one day's fi
 names each element's substations:
 
 ```bash
-pixi run --locked python -m coppersushi.data_sources.osm_locator fetch
+pixi run --locked python -m coppersushi.grid_catalog.data_sources.osm_locator fetch
 pixi run --locked python -m coppersushi.data_sources.jao fetch 2026-09-11
 pixi run --locked python -m coppersushi.data_sources.jao seed 2026-09-11
 ```
@@ -174,14 +193,14 @@ git clone https://github.com/PyPSA/pypsa-eur.git ../pypsa-eur  # the runner fetc
 ```
 Then, from this repository:
 ```bash
-pixi run --locked python -m coppersushi.data_sources.pypsa_eur solve
+pixi run --locked python -m coppersushi.opf.data_sources.pypsa_eur solve
 ```
 checks the sibling out at the pinned commit, runs the workflow (a first run downloads about
 20 GB and takes an hour on a fast connection; later runs take minutes) and writes the solved
 network to the gitignored `networks/candidates/opf-<day>-<pin>.nc`, viewable in the app at
 `/candidates/<file stem>` (after an app restart). Iterate as often as you like; when a solve is the one to keep,
 ```bash
-pixi run --locked python -m coppersushi.data_sources.pypsa_eur promote networks/candidates/opf-<day>-<pin>.nc
+pixi run --locked python -m coppersushi.opf.data_sources.pypsa_eur promote networks/candidates/opf-<day>-<pin>.nc
 ```
 copies it to `networks/opf-<day>.nc` and stages it — committing is the sanction, and each
 committed version is a Git LFS object kept forever. Set `PYPSA_EUR_DIR` to use a checkout elsewhere. Design: [`wiki/pypsa-eur-sibling.md`](wiki/pypsa-eur-sibling.md).

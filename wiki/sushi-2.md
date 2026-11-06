@@ -1,5 +1,6 @@
 # Copper Sushi 2 — optimal power flow on the 2025 grid
 
+[System overview](../README.md) · [OPF component](../coppersushi/opf/README.md) · [Grid catalog component](../coppersushi/grid_catalog/README.md)
 The in-place successor of [v1](copper-sushi-app.md). v1 visualized a *model's* optimal power flow on the 2013 GridKit grid ("the math is real, the data is not"). Sushi 2 keeps the OPF and moves it to **PyPSA-Eur as of 2026, on the 2025 OSM-based grid, for a 2024 day** — a working OPF first; truing it up to measured data comes after.
 
 ## Architecture (settled 2026-09-02)
@@ -21,7 +22,7 @@ flowchart LR
     net_power_map["net_power_map<br/>go.Figure (Dash app)"]
 
     pypsa_eur_pin["pypsa_eur_pin<br/>pypsa-eur.pin + config/coppersushi.yaml"]
-    pypsa_eur_run["pypsa_eur_run<br/>coppersushi.data_sources.pypsa_eur → Snakemake in ../pypsa-eur (HiGHS)"]
+    pypsa_eur_run["pypsa_eur_run<br/>coppersushi.opf.data_sources.pypsa_eur → Snakemake in ../pypsa-eur (HiGHS)"]
     solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
     jao_active_constraints["jao_active_constraints<br/>post-auction binding constraints, shadow prices and zonal PTDFs by market time unit"]
     jao_attribution["jao_attribution<br/>α, Polish allocation limits and net positions, guarded PL alternative prices"]

@@ -1,5 +1,7 @@
 """Validate the image’s bundled inputs and build its derived country outlines."""
-from coppersushi.data_sources import runtime_data, zone_shapes, opf_bundle
+from coppersushi.data_sources import runtime_data
+from coppersushi.grid_catalog.data_sources import zone_shapes
+from coppersushi.opf.data_sources import opf_bundle
 
 
 def prepare() -> None:
