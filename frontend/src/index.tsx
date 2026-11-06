@@ -175,7 +175,12 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
       </div>
 
       <aside className="cnec-progress" aria-live="polite">
-        {loading && <div role="status" aria-label="Map loading">{loading}</div>}
+        {loading && <div role="status" aria-label="Map loading">{loading}
+          {!mapCurrent && displayed?.day === day && calendar.data && <div>
+            Showing {calendar.data.labels[displayed.interval].split(' · ')[1]}
+            {displayed.selected !== null && ` · previous selection, reference ${displayed.reference}`}.
+          </div>}
+        </div>}
         {full?.notes.map(note => <div role="status" key={note}>{note}</div>)}
         {failures.map(([name, query]) => query.error && <div role="alert" key={name}>
           {name}: {query.error.message} <button onClick={() => void query.refetch()}>Retry</button>
