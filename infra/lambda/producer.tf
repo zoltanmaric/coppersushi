@@ -3,15 +3,14 @@ resource "aws_cloudwatch_log_group" "producer" {
   retention_in_days = 7
 }
 resource "aws_lambda_function" "producer" {
-  count                          = var.image_uri == null ? 0 : 1
-  function_name                  = "coppersushi-trial-producer"
-  role                           = aws_iam_role.app.arn
-  package_type                   = "Image"
-  image_uri                      = var.image_uri
-  architectures                  = ["x86_64"]
-  memory_size                    = 2048
-  timeout                        = 900
-  reserved_concurrent_executions = 1
+  count         = var.image_uri == null ? 0 : 1
+  function_name = "coppersushi-trial-producer"
+  role          = aws_iam_role.app.arn
+  package_type  = "Image"
+  image_uri     = var.image_uri
+  architectures = ["x86_64"]
+  memory_size   = 2048
+  timeout       = 900
   ephemeral_storage { size = 1024 }
   environment {
     variables = {
@@ -45,4 +44,11 @@ resource "aws_lambda_permission" "prepare" {
   action        = "lambda:InvokeFunction"
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.prepare.arn
+}
+
+resource "aws_lambda_function_event_invoke_config" "producer" {
+  count                        = var.image_uri == null ? 0 : 1
+  function_name                = aws_lambda_function.producer[0].function_name
+  maximum_retry_attempts       = 0
+  maximum_event_age_in_seconds = 3600
 }

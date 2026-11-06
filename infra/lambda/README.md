@@ -153,8 +153,8 @@ The direct Function URL remains accessible.
 ## Prepared CNEC data
 
 The scheduled producer uses the same image in a separate Lambda without a Function
-URL. It refreshes the current and next market day hourly, serially, with concurrency
-limited to one. Failed source loads leave the last published generation intact.
+URL. It refreshes the current and next market day hourly, serially. The hourly schedule exceeds the 15-minute runtime limit, and
+automatic invocation retries are disabled. Failed source loads leave the last published generation intact.
 
 Complete day bundles and their initial-interval slices live under `data/cnec/v1/`
 in the private cache bucket. CloudFront can read only that published prefix; raw
