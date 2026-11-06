@@ -1,3 +1,4 @@
+import './sprites.mjs';
 import {build} from 'esbuild';
 await build({entryPoints: ['src/index.tsx'], bundle: true, minify: true,
   format: 'iife', globalName: 'coppersushi_cnec', outfile: '../assets/cnec-view.js',

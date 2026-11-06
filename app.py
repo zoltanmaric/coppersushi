@@ -217,7 +217,7 @@ def show_page(pathname: str, root_view: str = ROOT_VIEW) -> html.Div:
         return html.Div(dcc.Location(id='cnec-redirect', href='/cnec', refresh=True))
     if is_cnec_path(pathname):
         return html.Div([navigation(),
-            CnecView(id='cnec-view', default_day=cnec_page.local_today(), min_day=CNEC_FIRST_DAY.isoformat(), token=mapbox_token(), basemap=basemap()),
+            CnecView(id='cnec-view', default_day=cnec_page.local_today(), min_day=CNEC_FIRST_DAY.isoformat(), token=mapbox_token(), basemap={**basemap(), "sprite": "/assets/cnec-markers"}),
         ])
     if network_key_from_path(pathname) is None:
         return html.Div([html.H1('Page not found'), html.A('2024 OPF', href='/opf-2024')])

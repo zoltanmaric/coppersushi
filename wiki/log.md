@@ -5,7 +5,7 @@ Entry format: `## [YYYY-MM-DD] <operation> | <title>`
 
 ## [2026-11-05] query | CNEC map renderer and progressive updates
 
-The CNEC controls already use React, while Plotly and Mapbox own map rendering. Independent API responses still refresh Plotly symbol layers; batching reduces redraws but delays progressive display. [Map rendering direction](copper-sushi-app.md#map-rendering-direction) records the observed interaction and rendering constraints for evaluating a replacement.
+The CNEC controls already use React, while Plotly and Mapbox own map rendering. Independent API responses still refresh Plotly symbol layers; batching reduces redraws but delays progressive display. [Map rendering direction](copper-sushi-app.md) records the observed interaction and rendering constraints for evaluating a replacement.
 
 ## [2026-09-10] query | Which way a published row binds
 
@@ -371,3 +371,11 @@ inputs. [Source provenance and setup](../config/element-catalog/README.md#source
 ## [2026-11-05] decision | Native API comparison in architecture review
 
 Verify supported APIs in the pinned dependency version and state behavior tradeoffs before endorsing custom integration code. The observed review gaps are recorded in [rule provenance](rule-provenance.md).
+
+## [2026-11-05] decision | Map ownership for animated effects
+
+Recorded [the shared camera/layer ownership limitation](copper-sushi-app.md) behind the custom selection overlay and independent-layer redraw problems. Native static strokes are simpler but lose the electric filaments; the animated appearance remains the chosen tradeoff.
+
+## [2026-11-06] query | Native camera ownership for electric decoration
+
+The camera review reproduced electricity hidden after an initial programmatic fit and identified drift under rotation/inertial movement. Plotly's progress and completion forwarding does not cover the full native camera lifecycle. [Map rendering direction](copper-sushi-app.md#map-rendering-direction) records why native projection/event observation removes the copied camera, and why the remaining private acquisition is evidence for direct map ownership rather than a need to change UI frameworks.

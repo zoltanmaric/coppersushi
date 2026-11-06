@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="24" viewBox="0 0 80 24">
+  <defs>
+    <g id="rings" fill="none"><circle cx="12" cy="12" r="6"/><circle cx="20" cy="12" r="6"/></g>
+  </defs>
+  <g stroke="#d4a3ff" opacity=".25" stroke-width="6"><use href="#rings"/><use href="#rings" x="32"/></g>
+  <g stroke="#d4a3ff" opacity=".5" stroke-width="3.5"><use href="#rings"/><use href="#rings" x="32"/></g>
+  <use href="#rings" stroke="#a72af5" stroke-width="1.8"/>
+  <use href="#rings" x="32" stroke="#fff7ff" stroke-width="1.8"/>
+  <path d="M72 7 L76.5 15.5 L67.5 15.5 Z" fill="#e5e8eb" stroke="#70449a" stroke-width="1" stroke-linejoin="round"/>
+</svg>

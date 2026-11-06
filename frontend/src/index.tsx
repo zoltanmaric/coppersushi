@@ -5,21 +5,29 @@ import {fetchCnec} from './api';
 import {Timeline} from './timeline';
 import {reduceSelection} from './state';
 import {mapSelection} from './map-selection';
+import {MapDecoration} from './map-decoration';
 import type {PlotlyFigure, LayerResponse} from './contracts';
 import {PriceLegend} from './price-legend';
+
+import {overlayModel} from './overlay-model';
+import type {OverlayModel} from './overlay-model';
 import './style.css';
 
 interface Props {id: string; day: string; min_day: string; token: string; basemap: PlotlyFigure['layout']['mapbox']['style']}
 interface GraphChange {clickData?: unknown}
-interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void}
+interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void; overlay: OverlayModel; hidden: boolean}
 // Reuse Dash's Graph component and its Plotly loader instead of shipping Plotly twice.
-const Graph = (props: GraphProps) => {
-  const Component = (window as unknown as {dash_core_components: {Graph: React.ComponentType<GraphProps>}}).dash_core_components.Graph;
+const Graph = ({overlay, hidden, ...props}: GraphProps) => {
+  const Component = (window as unknown as {dash_core_components: {Graph: React.ComponentType<Omit<GraphProps, 'overlay' | 'hidden'>>}}).dash_core_components.Graph;
+  const host = useRef<HTMLDivElement>(null);
   // Dash binds event listeners once; forward them to the current React handler.
   const handler = useRef(props.setProps);
   useLayoutEffect(() => {handler.current = props.setProps;}, [props.setProps]);
   const setProps = useCallback((change: GraphChange) => handler.current(change), []);
-  return <Component {...props} setProps={setProps}/>;
+  return <div ref={host} style={props.style}>
+    <Component {...props} style={{height: '100%'}} setProps={setProps}/>
+    <MapDecoration host={host} model={overlay} hidden={hidden}/>
+  </div>;
 };
 
 type HostProps = Omit<Props, 'day'> & {default_day: string};
@@ -45,12 +53,15 @@ export function CnecPage(props: Props & {navigate: (day: string) => void}) {
   const [client] = useState(() => new QueryClient({defaultOptions: {queries: {
     retry: false, staleTime: 300_000, refetchOnWindowFocus: false, refetchOnReconnect: false, refetchOnMount: false,
   }}}));
-  return <QueryClientProvider client={client}><View {...props}/></QueryClientProvider>;
+  // Mapbox requires absolute sprite URLs, including for same-origin assets.
+  const basemap = useMemo(() => props.basemap !== null && typeof props.basemap === 'object' && 'sprite' in props.basemap && typeof props.basemap.sprite === 'string'
+    ? {...props.basemap, sprite: new URL(props.basemap.sprite, window.location.href).href} : props.basemap, [props.basemap]);
+  return <QueryClientProvider client={client}><View {...props} basemap={basemap}/></QueryClientProvider>;
 }
 
 function shell(token: string, basemap: Props['basemap']): PlotlyFigure {
-  return {data: [{type: 'scattermapbox', lon: [], lat: []}], layout: {
-    mapbox: {style: basemap, accesstoken: token, center: {lat: 50, lon: 10}, zoom: 3.5},
+  return {data: [{type: 'scattermapbox', mode: 'lines', lon: [], lat: []}], layout: {
+    mapbox: {style: basemap, accesstoken: token, center: {lat: 50, lon: 10}, zoom: 3.5, bearing: 0, pitch: 0},
     clickanywhere: true, uirevision: 'cnec-camera', margin: {t: 0, b: 0, l: 0, r: 0}, showlegend: false,
     paper_bgcolor: '#1b1b1b',
   }};
@@ -60,7 +71,7 @@ function combine(token: string, basemap: Props['basemap'], prices?: LayerRespons
   const initial = shell(token, basemap);
   if (!prices && !constraints) return initial;
   const priceData = prices?.figure.data ?? [];
-  return {data: [...priceData.slice(0, 1), ...(constraints?.figure.data ?? []), ...(caps?.figure.data.filter(t => t.meta === 'country-cap') ?? []), ...priceData.slice(1)],
+  return {data: [...priceData.slice(0, 1), ...(constraints?.figure.data ?? []), ...(caps?.figure.data.filter(t => t.meta !== null && typeof t.meta === 'object' && 'role' in t.meta && t.meta.role === 'country-cap') ?? []), ...priceData.slice(1)],
     layout: {...(constraints?.figure.layout ?? prices?.figure.layout ?? initial.layout), uirevision: 'cnec-camera'}};
 }
 
@@ -71,6 +82,7 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
   const view = {day, interval, selected};
   const [scrubbing, setScrubbing] = useState(false);
   const inputSettled = !scrubbing;
+
   const calendar = useQuery({queryKey: ['calendar', day], queryFn: ({signal}) => fetchCnec('day', `day/${day}`, signal)});
   const validInterval = !!calendar.data && interval < calendar.data.labels.length;
   const prices = useQuery({queryKey: ['prices', day, interval], enabled: validInterval && inputSettled,
@@ -105,6 +117,8 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
     copy.layout.mapbox.style = basemap;
     copy.layout.mapbox.center = {lat: 50, lon: 10};
     copy.layout.mapbox.zoom = 3.5;
+    copy.layout.mapbox.bearing = 0;
+    copy.layout.mapbox.pitch = 0;
     return copy;
   }, [figure, basemap]);
   // Publish one interval update after its independently fetched layers settle.
@@ -157,14 +171,15 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
       <span>{selected === null ? '' : `Reference: ${enriched.isSuccess ? enriched.data.reference ?? 'unavailable' : enriched.isError || prices.isError || attribution.isError ? 'unavailable' : 'pending'}`}</span>
     </div>
     <div className="cnec-map-container">
-      <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick}
+      <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
         config={{responsive: true, displayModeBar: false, scrollZoom: true}} style={{height: '100%'}}/>
       <small className="cnec-sources">
-        Data: <a href="https://publicationtool.jao.eu/core/">JAO</a> · {' '}
-        <a href="https://www.electricitymaps.com/">Electricity Maps</a> · {' '}
-        <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>
+        Data: <a href="https://publicationtool.jao.eu/core/" target="_blank" rel="noopener noreferrer">JAO</a> · {' '}
+        <a href="https://www.electricitymaps.com/" target="_blank" rel="noopener noreferrer">Electricity Maps</a> · {' '}
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>
       </small>
       <PriceLegend figure={graphFigure}/>
+
       <aside className="cnec-progress" aria-live="polite">
         {loading && <div role="status" aria-label="Map loading">{loading}</div>}
         {full?.notes.map(note => <div role="status" key={note}>{note}</div>)}
