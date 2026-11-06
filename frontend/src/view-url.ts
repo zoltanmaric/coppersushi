@@ -9,6 +9,10 @@ function integer(value: string | null): number | null {
 
 /** Interval indices distinguish both occurrences of a daylight-saving hour. */
 export function viewFromUrl(day: string, search: string): Selection {
+  const parsedDay = new Date(`${day}T00:00:00Z`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !Number.isFinite(parsedDay.getTime()) || parsedDay.getUTCFullYear() < 1 || parsedDay.toISOString().slice(0, 10) !== day) {
+    throw new Error('Invalid delivery day');
+  }
   const params = new URLSearchParams(search);
   const interval = integer(params.get('interval'));
   const selected = integer(params.get('constraint'));

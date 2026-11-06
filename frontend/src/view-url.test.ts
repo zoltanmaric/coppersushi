@@ -24,3 +24,9 @@ test('day navigation preserves reference, clears stale selection and steps acros
   expect(viewSearch(next, '?constraint=-2')).not.toContain('constraint');
   expect(stepDay('2026-12-31', 1)).toBe('2027-01-01');
 });
+
+
+test.each(['not-a-date', '2026-02-30', '2026-13-01', '2026-1-03', '0000-01-01'])(
+  'rejects an invalid date route before calendar arithmetic: %s', day => {
+    expect(() => viewFromUrl(day, '')).toThrow('Invalid delivery day');
+  });
