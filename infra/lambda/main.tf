@@ -30,7 +30,7 @@ resource "aws_ecr_repository_policy" "lambda" {
   policy = jsonencode({ Version = "2012-10-17", Statement = [{
     Effect    = "Allow", Principal = { Service = "lambda.amazonaws.com" },
     Action    = ["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer"],
-    Condition = { StringLike = { "aws:sourceArn" = "arn:aws:lambda:${var.region}:${data.aws_caller_identity.current.account_id}:function:coppersushi-trial" } }
+    Condition = { StringLike = { "aws:sourceArn" = "arn:aws:lambda:${var.region}:${data.aws_caller_identity.current.account_id}:function:coppersushi-trial*" } }
   }] })
 }
 resource "aws_s3_bucket" "cache" { bucket_prefix = "coppersushi-lambda-cache-" }
@@ -49,11 +49,15 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "cache" {
 }
 resource "aws_s3_bucket_policy" "cache" {
   bucket = aws_s3_bucket.cache.id
-  policy = jsonencode({ Version = "2012-10-17", Statement = [{
+  policy = jsonencode({ Version = "2012-10-17", Statement = concat([{
     Effect    = "Deny", Principal = "*", Action = "s3:*",
     Resource  = [aws_s3_bucket.cache.arn, "${aws_s3_bucket.cache.arn}/*"],
     Condition = { Bool = { "aws:SecureTransport" = "false" } }
-  }] })
+    }], var.custom_domain == null ? [] : [{
+    Effect    = "Allow", Principal = { Service = "cloudfront.amazonaws.com" }, Action = "s3:GetObject",
+    Resource  = "${aws_s3_bucket.cache.arn}/data/cnec/*",
+    Condition = { StringEquals = { "AWS:SourceArn" = aws_cloudfront_distribution.app[0].arn } }
+  }]) })
 }
 # Only metadata is managed here. Secret values are set separately, never in state.
 resource "aws_secretsmanager_secret" "api" { name_prefix = "coppersushi-lambda-trial-" }

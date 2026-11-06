@@ -32,3 +32,6 @@ infra/lambda/*.tfplan
 
 121gigawatts
 
+assets/cnec-app.js
+assets/cnec-app.css
+assets/plotly-mapbox-*.min.js

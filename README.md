@@ -33,7 +33,9 @@ flowchart TB
     market["JAO and Electricity Maps"] -->|Market inputs| publication["Market-day publication"]
     catalog["Grid catalog"] -->|Located elements and outlines| publication
     publication -->|Immutable generation and manifest| prepared[("Prepared market files")]
-    prepared -->|Validated data| browser["CNEC browser: React and Plotly"]
+    prepared -->|Private S3 objects| edge["CloudFront"]
+    build["Static site build"] -->|Shell and assets in S3| edge
+    edge -->|Shell, assets and market data| browser["CNEC browser: React and Plotly"]
     opf["OPF preparation"] -->|Hourly figures| server["OPF Dash application"]
     server <-->|Pages and callbacks| opfbrowser["OPF browser"]
     maps["Mapbox"] -->|Styles and tiles| browser
@@ -46,8 +48,8 @@ flowchart TB
 
 Components: [CNEC browser](frontend/README.md), [publication](coppersushi/publication/README.md),
 [grid catalog](coppersushi/grid_catalog/README.md), [OPF](coppersushi/opf/README.md).
-Prepared CNEC data is independent of request-time Python calculations. The local
-Flask shell serves the browser and its prepared files; OPF retains Dash.
+Prepared CNEC data is independent of request-time Python calculations. CloudFront serves the static CNEC shell and prepared files from private S3; OPF retains Dash.
+The local Flask server previews those same files.
 
 ## Working with Agents
 The repository is developed with coding agents (Claude Code and Codex), and the tooling for that is
@@ -81,11 +83,10 @@ pixi run --locked setup
 
 Repeat the same command after pulling dependency changes. No credentials, solver runs,
 cloud resources or large datasets are needed for setup or tests.
-The CNEC view is a React/TypeScript component hosted by Dash; OPF retains Dash
-callbacks. `frontend/` owns selection and progressive loading, while Python returns
-validated map layers through `/api/cnec/`. The component reuses Dash's React and
-Graph/Plotly runtime. `setup` and `dev` build its assets with the locked npm dependencies.
-After changing frontend sources, run `pixi run frontend-build`; after changing HTTP
+The standalone [CNEC browser](frontend/README.md) owns selection, market arithmetic
+and map rendering. It loads prepared interval files; browsing never calls the
+upstream market APIs. `setup` and `dev` build its assets with locked npm dependencies.
+After changing frontend sources, run `pixi run frontend-build`; after changing wire
 models, run `pixi run frontend-contracts`. `pixi run frontend-test` checks contract
 drift, TypeScript and interaction behavior.
 
@@ -135,43 +136,18 @@ Once the server starts, the web app will be available at http://localhost:8050
 
 ### Market Data
 
-The CNEC view uses JAO's public active flow-based constraints and Electricity Maps' published day-ahead
-prices. Put an Electricity Maps key in `.secrets/.electricity_maps_api_key`, or export
-`ELECTRICITY_MAPS_API_KEY`. Fetch one delivery day into the gitignored local cache with:
+The CNEC view uses JAO constraints and Electricity Maps day-ahead prices. Put an
+Electricity Maps key in `.secrets/.electricity_maps_api_key`, or export
+`ELECTRICITY_MAPS_API_KEY`. Prepare a complete day before browsing:
 
-```bash
-pixi run --locked python -m coppersushi.data_sources.jao fetch-active 2026-09-11
-pixi run --locked python -m coppersushi.data_sources.electricity_maps fetch 2026-09-11
+```sh
+pixi run --locked python -m coppersushi.publication.data_sources.bundles 2026-11-03 --directory data/browser
 ```
 
-The map places JAO's elements by their published substation names on the OSM-locator substation
-list in [core-tso-data](https://github.com/fneum/core-tso-data), which is unlicensed and therefore
-fetched locally rather than committed. Fetch it once, plus at least one day's final domain, which
-names each element's substations:
-
-```bash
-pixi run --locked python -m coppersushi.grid_catalog.data_sources.osm_locator fetch
-pixi run --locked python -m coppersushi.data_sources.jao fetch 2026-09-11
-pixi run --locked python -m coppersushi.data_sources.jao seed 2026-09-11
-```
-
-The seed command validates the fetched domain day and writes `data/jao/element-ends.csv`.
-`setup-app` prepares this seed automatically; these commands are for explicit data refreshes.
-
-The physical-element catalog keeps sites, source names, published elements and oriented
-endpoints in four CSVs under ignored `data/element-catalog/`. See
-[the catalog schema and workflow](config/element-catalog/README.md). SQLite validates
-keys, references and endpoint states before the app reads it. The app uses
-`data/element-catalog` by default; `COPPERSUSHI_ELEMENT_CATALOG` selects another
-snapshot. New publications and missing endpoint metadata retain viewed-hour discovery;
-recorded conflicts and unresolved site names remain explicit.
-
-Supply several fetched days to combine their coverage; the latest day's endpoints win.
-The page reuses these endpoints across delivery days. If the viewed hour needs an element absent
-from the cache, it shows the loading indicator while fetching that hour and saves the additions.
-Failed fetches show an error: use **Retry** to try again, without restarting the server.
-An element whose endpoints are known but whose substations cannot be located remains explicitly
-unmapped; downloading the same endpoints again would not locate it.
+Preparation resolves elements through the [grid catalog](coppersushi/grid_catalog/README.md).
+Incomplete upstream publications remain unpublished; missing element locations are
+explicit in the prepared data. See [publication](coppersushi/publication/README.md)
+for the file contract and [deployment](infra/lambda/README.md) for S3 delivery.
 
 ## Running the Tests
 ```bash
