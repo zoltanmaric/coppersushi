@@ -19,7 +19,6 @@ import plotly.graph_objects as go
 from coppersushi import cnec_influence, map_style, market
 from coppersushi.cnec_market import Snapshot, daily_price_range
 from coppersushi.data_model.cnec_price_map import MATCHED, MappedCnecElements
-from coppersushi.market_day import MARKET_TZ
 
 COUNTRY_CHANNEL_HALF_WIDTH_M = 500  # Close inland-water channels up to 1 km wide in the display outline.
 
@@ -377,7 +376,7 @@ def figure(
     traces.extend(sorted(symbols, key=lambda t: bool(t.meta.get("effect"))))
     traces.append(labels)  # Last, so no dot or ray lands on a price
     fig = go.Figure(traces)
-    fig.layout = map_layout(zones, view.interval, mapbox_token, basemap)
+    fig.layout = map_layout(zones, mapbox_token, basemap)
     return fig
 
 
@@ -386,7 +385,7 @@ def price_figure(zones: DataFrame[BiddingZoneShapes], prices: DataFrame[ZonalPri
     """Price layer independent of constraint and attribution availability."""
     priced = _priced_zones(zones, ZonalPrices.validate(prices[prices.interval.eq(interval)]))
     return go.Figure(_price_traces(priced, _fill_anchor(basemap), daily_price_range(prices)),
-                     layout=map_layout(zones, interval, token, basemap))
+                     layout=map_layout(zones, token, basemap))
 
 
 def constraint_figure(zones: DataFrame[BiddingZoneShapes], constraints: DataFrame[ActiveConstraints],
@@ -396,10 +395,10 @@ def constraint_figure(zones: DataFrame[BiddingZoneShapes], constraints: DataFram
     """Binding lines and interfaces, available without prices or attribution inputs."""
     placed = _placed(constraints, geometries)
     traces = _constraint_traces(placed, _selected(placed, selected_id))
-    return go.Figure(traces, layout=map_layout(zones, interval, token, basemap))
+    return go.Figure(traces, layout=map_layout(zones, token, basemap))
 
 
-def map_layout(zones: DataFrame[BiddingZoneShapes], interval: pd.Timestamp, token: str | None,
+def map_layout(zones: DataFrame[BiddingZoneShapes], token: str | None,
                basemap: str | dict) -> go.Layout:
     """Shared stable camera and labels for independently arriving map layers."""
     return go.Layout(
@@ -410,12 +409,5 @@ def map_layout(zones: DataFrame[BiddingZoneShapes], interval: pd.Timestamp, toke
         mapbox=_view(zones),
         uirevision="cnec-camera",
         showlegend=False,
-        annotations=[
-            go.layout.Annotation(
-                text=f"<b>{interval.tz_convert(MARKET_TZ).strftime('%a %d %b %Y · %H:%M %Z')}</b>",
-                xref="paper", yref="paper", x=0.01, y=0.99, xanchor="left", yanchor="top",
-                showarrow=False, font=dict(size=15, color="white"),
-                bgcolor="rgba(0,0,0,0.65)", borderpad=6,
-            ),
-        ],
+
     )

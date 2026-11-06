@@ -3,6 +3,7 @@ import {QueryClient, QueryClientProvider, useQuery} from '@tanstack/react-query'
 import {BrowserRouter, Route, Routes, useLocation, useNavigate, useParams} from 'react-router-dom';
 import {fetchCnec} from './api';
 import {Timeline} from './timeline';
+import {DateTimeControls} from './date-time-controls';
 import {reduceSelection} from './state';
 import {mapSelection} from './map-selection';
 import {MapDecoration} from './map-decoration';
@@ -159,9 +160,6 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
 
   return <section id={id} className="cnec-react">
     <div className="cnec-controls">
-      <input aria-label="Delivery day" type="date" min={min_day} value={day} onChange={e => {
-        if (e.target.value >= min_day && e.target.value !== day) navigate(e.target.value);
-      }}/>
       <select aria-label="Binding constraint" value={selected === null ? '' : String(selected)}
         disabled={!constraints.data} onChange={e => select(e.target.value)}>
         {!options.length && <option value="">Select a binding row</option>}
@@ -187,14 +185,17 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
           {name}: {query.error.message} <button onClick={() => void query.refetch()}>Retry</button>
         </div>)}
       </aside>
-    </div>
     <div className="cnec-time-controls">
-      <button disabled={!validInterval || interval === 0} onClick={() => dispatch({type: 'interval', interval: interval - 1})}>Previous</button>
-      <button disabled={!validInterval || interval === (calendar.data?.labels.length ?? 0) - 1}
-        onClick={() => dispatch({type: 'interval', interval: interval + 1})}>Next</button>
-      <output>{calendar.data?.labels[interval]}</output>
+      <DateTimeControls day={day} minDay={min_day} time={calendar.data?.labels[interval]?.split(' · ')[1] ?? ''}
+        previousDisabled={!validInterval || interval === 0}
+        nextDisabled={!validInterval || interval === (calendar.data?.labels.length ?? 0) - 1}
+        onDay={navigate} onPrevious={() => dispatch({type: 'interval', interval: interval - 1})}
+        onNext={() => dispatch({type: 'interval', interval: interval + 1})}/>
+      <div className="cnec-slider-panel cnec-panel">
       <Timeline labels={calendar.data?.labels ?? []} interval={interval} disabled={!validInterval}
         onScrubbingChange={setScrubbing} onChange={interval => dispatch({type: 'interval', interval})}/>
+      </div>
+    </div>
     </div>
   </section>;
 }

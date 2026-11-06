@@ -38,6 +38,7 @@ export function Timeline({labels, interval, disabled, onChange, onScrubbingChang
       onChange={e => onChange(Number(e.target.value))}/>
     <div className="cnec-timeline-marks" aria-hidden="true">
       {timelineTicks(labels).map(tick => <span key={tick.index} title={tick.label}
+        data-hour={tick.time?.slice(0, 2)}
         className={`cnec-tick${tick.time ? ' cnec-tick-major' : ''}${tick.index === 0 ? ' cnec-tick-first' : ''}`}
         style={{left: `${tick.position}%`}}>
         {tick.time && <span className="cnec-tick-label">{tick.time}<small>{tick.zone}</small></span>}
