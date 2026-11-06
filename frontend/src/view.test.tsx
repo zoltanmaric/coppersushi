@@ -3,12 +3,15 @@ import React from 'react';
 import {act, cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 import {CnecPage} from './index';
+import {reduceSelection} from './state';
 import responses from './fixtures/responses.json';
 import type {PlotlyFigure} from './contracts';
 
-function CnecView(props: Omit<React.ComponentProps<typeof CnecPage>, 'navigate'>) {
-  const [day, navigate] = React.useState(props.day);
-  return <CnecPage {...props} day={day} navigate={navigate}/>;
+function CnecView(props: Omit<React.ComponentProps<typeof CnecPage>, 'selection' | 'onAction'> & {day: string}) {
+  const [selection, onAction] = React.useReducer(reduceSelection, {
+    day: props.day, interval: 0, reference: 'DE', selected: null, source: 'constraints',
+  });
+  return <CnecPage {...props} selection={selection} onAction={onAction}/>;
 }
 
 interface Pending {path: string; body?: {day: string; interval: number; selected: number | null}; resolve: (value: Response) => void}
