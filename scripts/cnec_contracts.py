@@ -6,10 +6,11 @@ from pydantic import BaseModel
 from coppersushi.data_model.cnec_api import DayResponse, LayerResponse, ApiError
 from coppersushi.data_model.cnec_attribution import AttributionPayload
 
-from coppersushi.data_model.cnec_bundle import DayBundle
+from coppersushi.data_model.cnec_bundle import DayBundle, DayManifest
 
 class CnecContracts(BaseModel):
     bundle: DayBundle
+    manifest: DayManifest
     day: DayResponse
     layer: LayerResponse
     attribution: AttributionPayload

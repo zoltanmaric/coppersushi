@@ -60,3 +60,9 @@ class DayBundle(Contract):
     elements: dict[str, ElementGeometry]
     intervals: list[MarketInterval]
     price_range: Coordinates
+
+class DayManifest(Contract):
+    """Atomic pointer to a complete immutable generation of a prepared day."""
+    version: Literal[1] = 1
+    day: date
+    generation: str = Field(pattern=r'^[0-9a-f]{24}$')

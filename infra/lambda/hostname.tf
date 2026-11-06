@@ -64,6 +64,22 @@ resource "aws_cloudfront_distribution" "app" {
     }
   }
 
+  origin {
+    domain_name              = aws_s3_bucket.cache.bucket_regional_domain_name
+    origin_id                = "prepared-data"
+    origin_access_control_id = aws_cloudfront_origin_access_control.prepared[0].id
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "/data/cnec/v1/*"
+    target_origin_id       = "prepared-data"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    cache_policy_id        = aws_cloudfront_cache_policy.prepared[0].id
+    compress               = true
+  }
+
   default_cache_behavior {
     target_origin_id         = "lambda"
     viewer_protocol_policy   = "redirect-to-https"
@@ -104,3 +120,25 @@ output "certificate_dns" {
 }
 output "hostname_target" { value = try(aws_cloudfront_distribution.app[0].domain_name, null) }
 output "custom_url" { value = var.custom_domain == null ? null : "https://${var.custom_domain}" }
+
+resource "aws_cloudfront_origin_access_control" "prepared" {
+  count                             = var.custom_domain == null ? 0 : 1
+  name                              = "coppersushi-prepared-data"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+resource "aws_cloudfront_cache_policy" "prepared" {
+  count       = var.custom_domain == null ? 0 : 1
+  name        = "coppersushi-prepared-data"
+  min_ttl     = 0
+  default_ttl = 60
+  max_ttl     = 31536000
+  parameters_in_cache_key_and_forwarded_to_origin {
+    enable_accept_encoding_gzip   = true
+    enable_accept_encoding_brotli = true
+    cookies_config { cookie_behavior = "none" }
+    headers_config { header_behavior = "none" }
+    query_strings_config { query_string_behavior = "none" }
+  }
+}

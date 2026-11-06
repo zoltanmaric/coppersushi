@@ -96,6 +96,11 @@ flowchart LR
     jao_active_constraints --> cnec_day_bundle
     cnec_attribution_context --> cnec_day_bundle
     cnec_day_bundle --> cnec_http
+    prepared_days["Prepared day artifacts<br/>immutable S3 generations, atomic manifest, CloudFront delivery"]
+    scheduled_producer["Scheduled day producer<br/>hourly refresh of current and next delivery day"]
+    scheduled_producer --> cnec_day_bundle
+    cnec_day_bundle --> prepared_days
+    prepared_days --> react_cnec
     browser_figure["Browser figure construction<br/>pure TypeScript contributions and Plotly traces; local interval/reference/selection"]
     cnec_day_bundle --> browser_figure
     browser_figure --> react_cnec

@@ -1,7 +1,7 @@
 import React, {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {QueryClient, QueryClientProvider, useQuery, useQueryClient} from '@tanstack/react-query';
 import {BrowserRouter, Link, Route, Routes, useLocation, useNavigate, useParams} from 'react-router-dom';
-import {fetchCnec} from './api';
+import {fetchBundle, fetchManifest} from './api';
 import {dayFigure, zoneFeatures, optionsFor, contributions} from './day-figure';
 import {Timeline} from './timeline';
 import {CORE_ZONES} from './reference';
@@ -92,11 +92,13 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
   const [initial, setInitial] = useState({day, interval});
   const initialInterval = initial.day === day ? initial.interval : interval;
   useEffect(() => {if (initial.day !== day) setInitial({day, interval});}, [day, interval, initial.day]);
-  const first = useQuery({queryKey: ['interval', day, initialInterval],
-    queryFn: ({signal}) => fetchCnec('bundle', `bundle/${day}?interval=${initialInterval}`, signal),
-    enabled: !client.getQueryData(['bundle', day])});
-  const wholeDay = useQuery({queryKey: ['bundle', day], enabled: first.isSuccess,
-    queryFn: ({signal}) => fetchCnec('bundle', `bundle/${day}`, signal)});
+  const publication = useQuery({queryKey: ['publication', day], queryFn: ({signal}) => fetchManifest(day, signal)});
+  const generation = publication.data?.generation ?? null;
+  const first = useQuery({queryKey: ['interval', day, generation, initialInterval],
+    queryFn: ({signal}) => fetchBundle(day, initialInterval, publication.data ?? null, signal),
+    enabled: publication.isSuccess && !client.getQueryData(['bundle', day, generation])});
+  const wholeDay = useQuery({queryKey: ['bundle', day, generation], enabled: first.isSuccess,
+    queryFn: ({signal}) => fetchBundle(day, null, publication.data ?? null, signal)});
   const bundle = wholeDay.data ? wholeDay : first;
   const labels = bundle.data?.labels ?? [];
   const validInterval = !!bundle.data && interval < labels.length && bundle.data.intervals.some(i=>i.index===interval);
@@ -145,7 +147,8 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
         {bundle.data && interval >= labels.length && <div role="alert">This interval is outside the selected day.{' '}
           <button onClick={() => dispatch({type: 'interval', interval: 0})}>Go to first interval</button>
         </div>}
-        {(!bundle.data || !validInterval) && (first.isFetching || wholeDay.isFetching) && <div role="status" aria-label="Map loading">Loading day…{bundle.data && !validInterval && <div>Showing {labels[displayInterval]?.split(' · ')[1]}.</div>}</div>}
+        {(!bundle.data || !validInterval) && (publication.isFetching || first.isFetching || wholeDay.isFetching) && <div role="status" aria-label="Map loading">Loading day…{bundle.data && !validInterval && <div>Showing {labels[displayInterval]?.split(' · ')[1]}.</div>}</div>}
+        {publication.error && <div role="alert">Publication: {publication.error.message} <button onClick={() => void publication.refetch()}>Retry</button></div>}
         {wholeDay.error && <div role="alert">Remaining intervals: {wholeDay.error.message}{!validInterval && ` Showing ${labels[displayInterval]?.split(' · ')[1]}.`} <button onClick={() => void wholeDay.refetch()}>Retry</button></div>}
         {notes.map(note => <div role="status" key={note}>{note}</div>)}
         {bundle.error && <div role="alert">Day: {bundle.error.message} <button onClick={() => {setInitial({day, interval: 0}); dispatch({type: 'interval', interval: 0});}}>Go to first interval</button> <button onClick={() => void bundle.refetch()}>Retry</button></div>}

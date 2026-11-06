@@ -149,3 +149,21 @@ headers are unchanged. Page layouts and callback POSTs remain uncached.
 HTTPS is enforced for viewers and origin connections. CloudFront's 60-second
 origin read timeout can end a slow callback before Lambda's 120-second timeout.
 The direct Function URL remains accessible.
+
+## Prepared CNEC data
+
+The scheduled producer uses the same image in a separate Lambda without a Function
+URL. It refreshes the current and next market day hourly, serially, with concurrency
+limited to one. Failed source loads leave the last published generation intact.
+
+Complete day bundles and their initial-interval slices live under `data/cnec/v1/`
+in the private cache bucket. CloudFront can read only that published prefix; raw
+source cache objects remain private. The producer uploads immutable generation
+objects before replacing a manifest cached for 60 seconds. A browser loads the
+requested interval first, then shares one background request for the whole day.
+Dates without prepared artifacts fall back to the data API.
+
+To publish a historical day, run `python -m coppersushi.data_sources.cnec_bundles
+YYYY-MM-DD --bucket <cache_bucket>` in the configured runtime environment. Add
+`--refresh` to refetch published inputs. Never upload the raw source-cache prefix
+as browser data.

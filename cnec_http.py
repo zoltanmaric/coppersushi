@@ -87,23 +87,24 @@ def parse[T: BaseModel](model: type[T], value: object) -> T:
 
 def register(server: Flask, services: Services) -> None:
     """Bind existing application services without changing OPF callback behavior."""
+    @server.get('/data/cnec/v1/<day>/manifest.json')
+    def unpublished(day: str):
+        return Response(status=404)
+
     @server.get('/api/cnec/bundle/<day>')
     @json_endpoint
     def bundle(day: str):
-        from coppersushi import cnec_bundle
-        from coppersushi.cnec_page import Day
+        from coppersushi.data_sources import cnec_bundles
         parsed = parse(ViewRequest, {'day': day, 'interval': 0, 'selected': None})
         delivery = MarketDay.on(parsed.day)
-        active = jao.load_active_day(day)
-        inputs = Day(delivery, services.core_zones(), active.constraints, active.ptdfs,
-                     electricity_maps.load_day(day), cnec_attribution.load_day(delivery))
         requested = request.args.get('interval')
-        indices = range(len(delivery.market_time_units())) if requested is None else [int(requested)]
-        if any(i < 0 or i >= len(delivery.market_time_units()) for i in indices):
+        try:
+            indices = None if requested is None else [int(requested)]
+        except ValueError as error:
+            raise BadRequest('Invalid interval') from error
+        if indices is not None and any(i < 0 or i >= len(delivery.market_time_units()) for i in indices):
             raise BadRequest('Interval is outside the selected market day')
-        geometries = {i: services.locate_constraints(t, active.constraints[active.constraints.interval.eq(t)])
-                      for i in indices for t in [delivery.market_time_units()[i]]}
-        return cnec_bundle.build(inputs, geometries)
+        return cnec_bundles.prepare(delivery, indices)
 
     api = Blueprint('cnec_api', __name__, url_prefix='/api/cnec')
 

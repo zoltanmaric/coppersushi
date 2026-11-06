@@ -143,6 +143,12 @@ def resolve(interval: pd.Timestamp, required: DataFrame[ActiveConstraints], dire
     from coppersushi import cnec_geometry
     from coppersushi.data_sources import jao, osm_locator
 
+    mapped, pending = resolution_inputs(directory)
+    return resolve_loaded(interval, required, mapped, pending)
+
+
+def resolution_inputs(directory: Path) -> tuple[DataFrame[MappedCnecElements], set[tuple]]:
+    """Read one catalog generation once for a batch of interval resolutions."""
     directory = snapshot(directory)
     mapped = mapped_elements(directory)
     with load(directory) as db:
@@ -153,6 +159,14 @@ def resolve(interval: pd.Timestamp, required: DataFrame[ActiveConstraints], dire
             HAVING sum(p.status='missing') > 0
                AND sum(p.status NOT IN ('missing','resolved')) = 0
         """)}
+    return mapped, pending
+
+
+def resolve_loaded(interval: pd.Timestamp, required: DataFrame[ActiveConstraints],
+                   mapped: DataFrame[MappedCnecElements], pending: set[tuple]) -> DataFrame[MappedCnecElements]:
+    """Resolve against the same validated catalog snapshot throughout a batch."""
+    from coppersushi import cnec_geometry
+    from coppersushi.data_sources import jao, osm_locator
     identity = ['eic', 'tso', 'name']
     authoritative = mapped.loc[[tuple(row) not in pending for row in mapped[identity].itertuples(index=False, name=None)]]
     known = pd.MultiIndex.from_frame(authoritative[identity])

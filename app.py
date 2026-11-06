@@ -320,6 +320,26 @@ cnec_http.register(server, cnec_http.Services(core_zones, mapbox_token, basemap,
                                             locate_constraints, enriched_view))
 
 
+# Only the scheduled producer deployment exposes this non-HTTP-event handler.
+if os.environ.get('COPPERSUSHI_BUNDLE_PRODUCER') == 'true':
+    @server.post('/events')
+    def prepare_published_days() -> tuple[dict[str, list[str]], int]:
+        from datetime import datetime, timedelta
+        from coppersushi.market_day import MARKET_TZ
+        from coppersushi.data_sources import cnec_bundles
+        today = datetime.now(MARKET_TZ).date()
+        bucket = os.environ['COPPERSUSHI_CACHE_BUCKET']
+        results = []
+        for offset in (0, 1):
+            day = MarketDay.on(today + timedelta(days=offset))
+            try:
+                generation = cnec_bundles.publish(cnec_bundles.prepare(day, refresh=True), bucket)
+                results.append(str(day.date) + ':' + generation)
+            except Exception:
+                logging.getLogger(__name__).exception('Day publication not ready: %s', day.date)
+        return {'published': results}, 200 if results else 503
+
+
 if __name__ == '__main__':
     from coppersushi.data_sources.runtime_data import check
     check()

@@ -357,6 +357,34 @@
       "title": "DayBundle",
       "type": "object"
     },
+    "DayManifest": {
+      "additionalProperties": false,
+      "description": "Atomic pointer to a complete immutable generation of a prepared day.",
+      "properties": {
+        "version": {
+          "const": 1,
+          "default": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "day": {
+          "format": "date",
+          "title": "Day",
+          "type": "string"
+        },
+        "generation": {
+          "pattern": "^[0-9a-f]{24}$",
+          "title": "Generation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "day",
+        "generation"
+      ],
+      "title": "DayManifest",
+      "type": "object"
+    },
     "DayResponse": {
       "additionalProperties": false,
       "description": "Market-time-unit labels computed in the market timezone, including DST folds.",
@@ -721,6 +749,9 @@
     "bundle": {
       "$ref": "#/$defs/DayBundle"
     },
+    "manifest": {
+      "$ref": "#/$defs/DayManifest"
+    },
     "day": {
       "$ref": "#/$defs/DayResponse"
     },
@@ -736,6 +767,7 @@
   },
   "required": [
     "bundle",
+    "manifest",
     "day",
     "layer",
     "attribution",

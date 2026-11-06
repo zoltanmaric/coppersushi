@@ -22,6 +22,7 @@ beforeEach(() => {
 
   pending = [];
   vi.stubGlobal('fetch', vi.fn((url: string, options: RequestInit) => new Promise<Response>(resolve => {
+    if (url.endsWith('/manifest.json')) {resolve(new Response(null, {status:404})); return;}
     pending.push({path: url, body: options.body ? JSON.parse(String(options.body)) : undefined, resolve});
   })));
   Object.assign(window, {dash_core_components: {Graph: (props: {figure: PlotlyFigure; setProps: typeof clickGraph}) => {
@@ -57,7 +58,7 @@ test('show first interval, share background request, then navigate locally', asy
   fireEvent.change(screen.getByLabelText('Reference country'), {target: {value: 'FR'}});
   fireEvent.click(screen.getByRole('button', {name: 'Previous interval'}));
   fireEvent.click(screen.getByRole('button', {name: 'Next interval'}));
-  expect(fetch).toHaveBeenCalledTimes(2);
+  expect(fetch).toHaveBeenCalledTimes(3);
 });
 
 test('background failure retains first interval and offers retry', async () => {
@@ -101,5 +102,5 @@ test('the mounted graph selects constraints using current interval options', asy
   fireEvent.click(screen.getByRole('button',{name:'Next interval'}));
   await act(async()=>clickGraph({clickData:{points:[{customdata:['42']}]}}));
   expect(graph.data.some(t=>t.name==='ray contributions')).toBe(true);
-  expect(fetch).toHaveBeenCalledTimes(2);
+  expect(fetch).toHaveBeenCalledTimes(3);
 });

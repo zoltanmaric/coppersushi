@@ -50,9 +50,12 @@ export type Intervals = MarketInterval[];
  * @maxItems 2
  */
 export type PriceRange = [number, number];
+export type Version1 = 1;
 export type Day1 = string;
-export type Labels1 = string[];
+export type Generation = string;
 export type Day2 = string;
+export type Labels1 = string[];
+export type Day3 = string;
 export type Interval = number;
 export type Selected = number | null;
 export type Reference = ("AT" | "BE" | "CZ" | "DE" | "FR" | "HR" | "HU" | "NL" | "PL" | "RO" | "SI" | "SK") | null;
@@ -67,7 +70,7 @@ export type Source = "constraints" | "attribution";
 export type Options = ConstraintOption[];
 export type Reference1 = string | null;
 export type Notes1 = string[];
-export type Day3 = string;
+export type Day4 = string;
 export type Complete = boolean;
 export type Interval1 = string;
 export type Alpha1 = number | null;
@@ -80,6 +83,7 @@ export type Error = string;
 
 export interface CnecContracts {
   bundle: DayBundle;
+  manifest: DayManifest;
   day: DayResponse;
   layer: LayerResponse;
   attribution: AttributionPayload;
@@ -161,10 +165,18 @@ export interface CountryCap {
   delta: Delta;
 }
 /**
+ * Atomic pointer to a complete immutable generation of a prepared day.
+ */
+export interface DayManifest {
+  version?: Version1;
+  day: Day1;
+  generation: Generation;
+}
+/**
  * Market-time-unit labels computed in the market timezone, including DST folds.
  */
 export interface DayResponse {
-  day: Day1;
+  day: Day2;
   labels: Labels1;
 }
 /**
@@ -181,7 +193,7 @@ export interface LayerResponse {
  * One explicit market-day view; selection is a published row identifier.
  */
 export interface ViewRequest {
-  day: Day2;
+  day: Day3;
   interval: Interval;
   selected: Selected;
   reference?: Reference;
@@ -213,7 +225,7 @@ export interface ConstraintOption {
  * Successfully loaded price-attribution inputs for one browser request.
  */
 export interface AttributionPayload {
-  day: Day3;
+  day: Day4;
   complete: Complete;
   rows: Rows;
 }
