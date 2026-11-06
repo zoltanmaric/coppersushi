@@ -40,3 +40,11 @@ Use the Mermaid skill for GitHub Markdown. Render the first working slice early,
 then inspect it at README width. Shorten labels, combine internal steps or change
 layout when readers must zoom to follow the main paths. Check arrows against the
 implementation and distinguish any explicitly requested plans from implemented parts.
+
+Generate the PR's Architecture delta section from committed README diagrams with
+`python .agents/skills/system-design-diagram/scripts/architecture_delta.py --base <pr-base> --head <pr-head>`.
+Use the PR's immediate base branch for a stack. Review the generated before/after
+Mermaid blocks and replace the existing section, preserving the rest of the PR body.
+The script reads Git only and prints Markdown; it does not publish or edit files.
+Explain code architecture changes separately if the diagrams do not capture them;
+unchanged diagrams alone do not prove there was no architecture change.
