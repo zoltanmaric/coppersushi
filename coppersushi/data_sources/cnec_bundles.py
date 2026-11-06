@@ -8,7 +8,7 @@ from pathlib import Path
 
 from coppersushi import REPO, cnec_bundle
 from coppersushi.cnec_bundle import Day
-from coppersushi.data_model.cnec_bundle import DayBundle
+from coppersushi.data_model.cnec_bundle import DayBundle, DayMetadata, DayManifest
 from coppersushi.data_model.market import ZonalPrices
 from coppersushi.data_sources import cache, cnec_attribution, electricity_maps, element_catalog, jao, zone_shapes
 from coppersushi.market_day import MarketDay
@@ -32,39 +32,48 @@ def prepare(day: MarketDay, indices: list[int] | None = None, refresh: bool = Fa
     return cnec_bundle.build(inputs, geometry)
 
 
+def is_published(day: MarketDay, bucket: str) -> bool:
+    """Completed publications stay static; explicit refresh can publish a correction."""
+    from botocore.exceptions import ClientError
+    try:
+        cache._client().head_object(Bucket=bucket, Key=f'data/cnec/v2/{day.date}/manifest.json')
+    except ClientError as error:
+        if error.response['Error']['Code'] in {'NoSuchKey', '404', 'NotFound'}:
+            return False
+        raise
+    return True
+
+
 def publish(bundle: DayBundle, bucket: str) -> str:
     """Write every immutable object before replacing the small day manifest."""
-    if [i.index for i in bundle.intervals] != list(range(len(bundle.labels))):
-        raise ValueError('Only complete days may be published')
-    payload = bundle.model_dump_json().encode()
-    generation = hashlib.sha256(payload).hexdigest()[:24]
-    prefix = f'data/cnec/v1/{bundle.day}/{generation}'
+    generation, files = cnec_bundle.publication_files(bundle)
     client = cache._client()
+    for key, content in files:
+        lifetime = 'public,max-age=60' if key.endswith('/manifest.json') else 'public,max-age=31536000,immutable'
+        client.put_object(Bucket=bucket,Key=key,Body=gzip.compress(content.encode(),mtime=0),
+                          ContentType='application/json',ContentEncoding='gzip',CacheControl=lifetime)
+    return generation
 
-    def put(key: str, body: bytes, lifetime: str) -> None:
-        client.put_object(Bucket=bucket, Key=key, Body=gzip.compress(body, mtime=0),
-                          ContentType='application/json', ContentEncoding='gzip', CacheControl=lifetime)
 
-    immutable = 'public,max-age=31536000,immutable'
-    put(f'{prefix}/day.json', payload, immutable)
-    for interval in bundle.intervals:
-        used = {r.geometry for r in interval.constraints if r.geometry is not None}
-        partial = bundle.model_copy(update={'intervals': [interval],
-                                            'elements': {k: v for k, v in bundle.elements.items() if k in used}})
-        put(f'{prefix}/{interval.index}.json', partial.model_dump_json().encode(), immutable)
-    manifest = json.dumps({'version': 1, 'day': str(bundle.day), 'generation': generation}).encode()
-    put(f'data/cnec/v1/{bundle.day}/manifest.json', manifest, 'public,max-age=60')
+def write_local(bundle: DayBundle, directory: Path) -> str:
+    """Serve the exact same publication format from a local development server."""
+    generation, files = cnec_bundle.publication_files(bundle)
+    for key, content in files:
+        cache.atomic_text(directory / key,content)
     return generation
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('day')
-    parser.add_argument('--bucket', required=True)
+    target = parser.add_mutually_exclusive_group(required=True)
+    target.add_argument('--bucket')
+    target.add_argument('--directory',type=Path)
     parser.add_argument('--refresh', action='store_true')
     args = parser.parse_args()
     day = MarketDay.on(args.day)
-    print(publish(prepare(day, refresh=args.refresh), args.bucket))
+    bundle = prepare(day,refresh=args.refresh)
+    print(publish(bundle,args.bucket) if args.bucket else write_local(bundle,args.directory))
 
 if __name__ == '__main__':
     main()

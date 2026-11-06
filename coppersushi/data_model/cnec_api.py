@@ -26,6 +26,3 @@ class ConstraintOption(Contract):
     value: str
     source: Literal["constraints", "attribution"]
 
-
-class ApiError(Contract):
-    error: str

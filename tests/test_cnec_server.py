@@ -13,7 +13,7 @@ def test_dates_before_publication_history_redirect_without_credentials():
     assert response.headers['Location'] == '/cnec'
 
 def test_unprepared_local_manifest_is_an_explicit_miss():
-    response = server.test_client().get('/data/cnec/v1/2026-11-03/manifest.json')
+    response = server.test_client().get('/data/cnec/v2/2099-01-01/manifest.json')
     assert response.status_code == 404
 
 def test_opf_does_not_auto_execute_the_standalone_frontend():

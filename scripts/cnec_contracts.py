@@ -3,16 +3,17 @@ import json
 import sys
 from pathlib import Path
 from pydantic import BaseModel
-from coppersushi.data_model.cnec_api import PlotlyFigure, ConstraintOption, ApiError
+from coppersushi.data_model.cnec_api import PlotlyFigure, ConstraintOption
 
-from coppersushi.data_model.cnec_bundle import DayBundle, DayManifest
+from coppersushi.data_model.cnec_bundle import DayBundle, DayManifest, DayMetadata, MarketInterval
 
 class CnecContracts(BaseModel):
     bundle: DayBundle
+    metadata: DayMetadata
+    interval: MarketInterval
     manifest: DayManifest
     figure: PlotlyFigure
     option: ConstraintOption
-    error: ApiError
 
 if __name__ == '__main__':
     target = Path(__file__).resolve().parents[1] / 'frontend/src/contracts.json'

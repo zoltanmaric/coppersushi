@@ -71,39 +71,13 @@ resource "aws_cloudfront_distribution" "app" {
   }
 
   ordered_cache_behavior {
-    path_pattern           = "/data/cnec/v1/*"
+    path_pattern           = "/data/cnec/*"
     target_origin_id       = "prepared-data"
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["GET", "HEAD", "OPTIONS"]
     cached_methods         = ["GET", "HEAD"]
     cache_policy_id        = aws_cloudfront_cache_policy.prepared[0].id
     compress               = true
-  }
-
-  origin {
-    domain_name = trimsuffix(trimprefix(aws_lambda_function_url.cnec[0].function_url, "https://"), "/")
-    origin_id   = "cnec"
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "https-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
-      origin_read_timeout    = 60
-    }
-  }
-
-  dynamic "ordered_cache_behavior" {
-    for_each = ["/api/cnec/*"]
-    content {
-      path_pattern             = ordered_cache_behavior.value
-      target_origin_id         = "cnec"
-      viewer_protocol_policy   = "redirect-to-https"
-      allowed_methods          = ["GET", "HEAD", "OPTIONS"]
-      cached_methods           = ["GET", "HEAD"]
-      cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
-      origin_request_policy_id = data.aws_cloudfront_origin_request_policy.lambda.id
-      compress                 = true
-    }
   }
 
   ordered_cache_behavior {

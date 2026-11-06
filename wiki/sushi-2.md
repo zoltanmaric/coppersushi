@@ -77,16 +77,14 @@ flowchart LR
     jao_attribution --> cnec_attribution_context
     react_cnec -->|chosen Core reference| browser_snapshot
     browser_snapshot --> browser_figure
-    react_cnec["Standalone React CNEC view<br/>React Router URL-owned day, interval, reference and constraint; pure selection reducer and TanStack Query; shared background day load"]
+    react_cnec["Standalone React CNEC view<br/>React Router URL-owned day, interval, reference and constraint; pure selection reducer and TanStack Query; parallel interval prefetch through shared query keys"]
     static_cnec["Static CNEC shell and frontend assets<br/>S3 + CloudFront; no Python invocation on prepared views"]
     static_cnec --> react_cnec
-    cnec_handler -->|unprepared-date fallback| react_cnec
-    cnec_day_bundle["Typed day bundle<br/>shared geometry, interval prices, binding rows, PTDFs and attribution context"]
+    cnec_day_bundle["Typed day bundle<br/>shared metadata plus per-interval prices, binding rows, PTDFs and attribution context"]
     cnec_geometry --> cnec_day_bundle
     day_ahead_prices --> cnec_day_bundle
     jao_active_constraints --> cnec_day_bundle
     cnec_attribution_context --> cnec_day_bundle
-    cnec_day_bundle --> cnec_handler
     prepared_days["Prepared day artifacts<br/>immutable S3 generations, atomic manifest, CloudFront delivery"]
     scheduled_producer["Scheduled day producer<br/>hourly refresh of current and next delivery day"]
     scheduled_producer --> cnec_day_bundle
@@ -94,7 +92,6 @@ flowchart LR
     prepared_days --> react_cnec
     cnec_day_bundle --> browser_snapshot
     browser_figure --> react_cnec
-    cnec_handler["Standalone CNEC handler<br/>light Flask shell, official React Plotly component, lazy data API"]
     native_glyphs["Map-owned CNEC glyphs<br/>owned transformer/triangle sprite; hover and selection"]
     selection_effects["Decorative SVG energy<br/>typed figure metadata; native Mapbox projection and lifecycle; north-up 2D adapter"]
     react_cnec --> native_glyphs
@@ -131,6 +128,6 @@ without the bundle retain on-demand figure construction.
 An optional CloudFront hostname fronts the Lambda deployment, with an ACM certificate
 and externally managed DNS; see [hosting](../infra/lambda/README.md#delivery).
 
-CloudFront serves prepared CNEC day generations from private S3. The standalone CNEC handler supplies the shell and fallback data; the browser constructs figures and handles interval/reference/constraint changes locally. OPF retains its separate Dash handler; see [hosting](../infra/lambda/README.md#delivery).
+CloudFront serves prepared CNEC day generations from private S3. S3 supplies the CNEC shell and prepared data; the browser constructs figures and handles interval/reference/constraint changes locally. OPF retains its separate Dash handler; see [hosting](../infra/lambda/README.md#delivery).
 
 For external-input resilience, see [JAO availability and response retention](jao-availability.md).

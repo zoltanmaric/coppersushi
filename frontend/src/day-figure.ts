@@ -127,7 +127,7 @@ export function optionsFor(interval: MarketInterval): ConstraintOption[] {
 }
 
 /** Stable geographic data, constructed once per loaded day. */
-export function zoneFeatures(bundle: DayBundle) {
+export function zoneFeatures(bundle: Pick<DayBundle, 'zones'>) {
   return {
     type: "FeatureCollection",
     features: bundle.zones.map((z) => ({

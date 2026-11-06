@@ -5,7 +5,7 @@
  * and run json-schema-to-typescript to regenerate this file.
  */
 
-export type Version = 1;
+export type Version = 2;
 export type Day = string;
 export type Labels = string[];
 export type Zone = "AT" | "BE" | "CZ" | "DE" | "FR" | "HR" | "HU" | "NL" | "PL" | "RO" | "SI" | "SK";
@@ -24,6 +24,11 @@ export type Kind = "line" | "transformer";
  * @maxItems 2
  */
 export type Endpoints = [[number, number], [number, number]];
+/**
+ * @minItems 2
+ * @maxItems 2
+ */
+export type PriceRange = [number, number];
 export type Index = number;
 export type Label = string;
 export type SourceId = number;
@@ -45,13 +50,17 @@ export type Delta = number;
 export type Caps = CountryCap[];
 export type Notes = string[];
 export type Intervals = MarketInterval[];
+export type Version1 = 2;
+export type Day1 = string;
+export type Labels1 = string[];
+export type Zones1 = ZoneGeometry[];
 /**
  * @minItems 2
  * @maxItems 2
  */
-export type PriceRange = [number, number];
-export type Version1 = 1;
-export type Day1 = string;
+export type PriceRange1 = [number, number];
+export type Version2 = 2;
+export type Day2 = string;
 export type Generation = string;
 export type JsonValue = unknown;
 export type Data = {
@@ -61,17 +70,17 @@ export type Uirevision = string;
 export type Label1 = string;
 export type Value = string;
 export type Source = "constraints" | "attribution";
-export type Error = string;
 
 export interface CnecContracts {
   bundle: DayBundle;
+  metadata: DayMetadata;
+  interval: MarketInterval;
   manifest: DayManifest;
   figure: PlotlyFigure;
   option: ConstraintOption;
-  error: ApiError;
 }
 /**
- * Versioned, token-free data for all interactions within a delivery day.
+ * Producer-side complete day; browser delivery uses separate interval objects.
  */
 export interface DayBundle {
   version?: Version;
@@ -79,8 +88,8 @@ export interface DayBundle {
   labels: Labels;
   zones: Zones;
   elements: Elements;
-  intervals: Intervals;
   price_range: PriceRange;
+  intervals: Intervals;
 }
 /**
  * Display boundary and interior label anchor shared by every interval.
@@ -146,11 +155,25 @@ export interface CountryCap {
   delta: Delta;
 }
 /**
+ * Versioned, token-free data for all interactions within a delivery day.
+ */
+export interface DayMetadata {
+  version?: Version1;
+  day: Day1;
+  labels: Labels1;
+  zones: Zones1;
+  elements: Elements1;
+  price_range: PriceRange1;
+}
+export interface Elements1 {
+  [k: string]: ElementGeometry;
+}
+/**
  * Atomic pointer to a complete immutable generation of a prepared day.
  */
 export interface DayManifest {
-  version?: Version1;
-  day: Day1;
+  version?: Version2;
+  day: Day2;
   generation: Generation;
 }
 /**
@@ -175,7 +198,4 @@ export interface ConstraintOption {
   label: Label1;
   value: Value;
   source: Source;
-}
-export interface ApiError {
-  error: Error;
 }

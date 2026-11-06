@@ -68,3 +68,25 @@ def build(day: Day, geometries: dict[int, DataFrame[MappedCnecElements]]) -> Day
             notes=list(view.notes)))
     return DayBundle(day=day.market_day.date, labels=[t.tz_convert(MARKET_TZ).strftime('%a %d %b %Y · %H:%M %Z') for t in times], zones=zones, elements=elements, intervals=intervals,
                      price_range=list(cnec_market.daily_price_range(day.prices)))
+
+
+def validate_publication(bundle: DayBundle) -> None:
+    """A missing feed must never become a completed, immutable market day."""
+    if [i.index for i in bundle.intervals] != list(range(len(bundle.labels))):
+        raise ValueError('Only complete days may be published')
+    if any(i.alpha is None or not 0 <= i.alpha <= 1 or i.notes for i in bundle.intervals):
+        raise ValueError('Attribution publication is incomplete; retain the previous generation')
+
+
+def publication_files(bundle: DayBundle) -> tuple[str, list[tuple[str, str]]]:
+    """Immutable objects first, atomic manifest last; shared by S3 and local previews."""
+    import hashlib
+    from coppersushi.data_model.cnec_bundle import DayMetadata, DayManifest
+    validate_publication(bundle)
+    generation = hashlib.sha256(bundle.model_dump_json().encode()).hexdigest()[:24]
+    prefix = f'data/cnec/v2/{bundle.day}'
+    metadata = DayMetadata.model_validate(bundle.model_dump(exclude={'intervals'}))
+    files = [(f'{prefix}/{generation}/metadata.json', metadata.model_dump_json())]
+    files.extend((f'{prefix}/{generation}/{i.index}.json', i.model_dump_json()) for i in bundle.intervals)
+    files.append((f'{prefix}/manifest.json', DayManifest(day=bundle.day,generation=generation).model_dump_json()))
+    return generation, files

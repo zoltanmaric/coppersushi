@@ -51,18 +51,22 @@ class MarketInterval(Contract):
     caps: list[CountryCap]
     notes: list[str]
 
-class DayBundle(Contract):
+class DayMetadata(Contract):
     """Versioned, token-free data for all interactions within a delivery day."""
-    version: Literal[1] = 1
+    version: Literal[2] = 2
     day: date
     labels: list[str]
     zones: list[ZoneGeometry]
     elements: dict[str, ElementGeometry]
-    intervals: list[MarketInterval]
     price_range: Coordinates
+
+class DayBundle(DayMetadata):
+    """Producer-side complete day; browser delivery uses separate interval objects."""
+    intervals: list[MarketInterval]
+
 
 class DayManifest(Contract):
     """Atomic pointer to a complete immutable generation of a prepared day."""
-    version: Literal[1] = 1
+    version: Literal[2] = 2
     day: date
     generation: str = Field(pattern=r'^[0-9a-f]{24}$')

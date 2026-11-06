@@ -1,19 +1,5 @@
 {
   "$defs": {
-    "ApiError": {
-      "additionalProperties": false,
-      "properties": {
-        "error": {
-          "title": "Error",
-          "type": "string"
-        }
-      },
-      "required": [
-        "error"
-      ],
-      "title": "ApiError",
-      "type": "object"
-    },
     "BindingRow": {
       "additionalProperties": false,
       "description": "One physical binding publication with its country sensitivities.",
@@ -190,11 +176,11 @@
     },
     "DayBundle": {
       "additionalProperties": false,
-      "description": "Versioned, token-free data for all interactions within a delivery day.",
+      "description": "Producer-side complete day; browser delivery uses separate interval objects.",
       "properties": {
         "version": {
-          "const": 1,
-          "default": 1,
+          "const": 2,
+          "default": 2,
           "title": "Version",
           "type": "integer"
         },
@@ -224,13 +210,6 @@
           "title": "Elements",
           "type": "object"
         },
-        "intervals": {
-          "items": {
-            "$ref": "#/$defs/MarketInterval"
-          },
-          "title": "Intervals",
-          "type": "array"
-        },
         "price_range": {
           "items": {
             "type": "number"
@@ -239,6 +218,13 @@
           "minItems": 2,
           "title": "Price Range",
           "type": "array"
+        },
+        "intervals": {
+          "items": {
+            "$ref": "#/$defs/MarketInterval"
+          },
+          "title": "Intervals",
+          "type": "array"
         }
       },
       "required": [
@@ -246,8 +232,8 @@
         "labels",
         "zones",
         "elements",
-        "intervals",
-        "price_range"
+        "price_range",
+        "intervals"
       ],
       "title": "DayBundle",
       "type": "object"
@@ -257,8 +243,8 @@
       "description": "Atomic pointer to a complete immutable generation of a prepared day.",
       "properties": {
         "version": {
-          "const": 1,
-          "default": 1,
+          "const": 2,
+          "default": 2,
           "title": "Version",
           "type": "integer"
         },
@@ -278,6 +264,62 @@
         "generation"
       ],
       "title": "DayManifest",
+      "type": "object"
+    },
+    "DayMetadata": {
+      "additionalProperties": false,
+      "description": "Versioned, token-free data for all interactions within a delivery day.",
+      "properties": {
+        "version": {
+          "const": 2,
+          "default": 2,
+          "title": "Version",
+          "type": "integer"
+        },
+        "day": {
+          "format": "date",
+          "title": "Day",
+          "type": "string"
+        },
+        "labels": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Labels",
+          "type": "array"
+        },
+        "zones": {
+          "items": {
+            "$ref": "#/$defs/ZoneGeometry"
+          },
+          "title": "Zones",
+          "type": "array"
+        },
+        "elements": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ElementGeometry"
+          },
+          "title": "Elements",
+          "type": "object"
+        },
+        "price_range": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Price Range",
+          "type": "array"
+        }
+      },
+      "required": [
+        "day",
+        "labels",
+        "zones",
+        "elements",
+        "price_range"
+      ],
+      "title": "DayMetadata",
       "type": "object"
     },
     "ElementGeometry": {
@@ -514,6 +556,12 @@
     "bundle": {
       "$ref": "#/$defs/DayBundle"
     },
+    "metadata": {
+      "$ref": "#/$defs/DayMetadata"
+    },
+    "interval": {
+      "$ref": "#/$defs/MarketInterval"
+    },
     "manifest": {
       "$ref": "#/$defs/DayManifest"
     },
@@ -522,17 +570,15 @@
     },
     "option": {
       "$ref": "#/$defs/ConstraintOption"
-    },
-    "error": {
-      "$ref": "#/$defs/ApiError"
     }
   },
   "required": [
     "bundle",
+    "metadata",
+    "interval",
     "manifest",
     "figure",
-    "option",
-    "error"
+    "option"
   ],
   "title": "CnecContracts",
   "type": "object"

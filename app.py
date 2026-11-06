@@ -29,12 +29,11 @@ app = Dash(
 
 server = app.server
 # Local full-app navigation shares the standalone shell; production routes CNEC separately.
-from cnec_server import index as standalone_cnec, unpublished as standalone_unpublished, bundle as standalone_bundle
+from cnec_server import index as standalone_cnec, local_data as standalone_data
 server.add_url_rule('/cnec', 'standalone_cnec', standalone_cnec)
 server.add_url_rule('/cnec/', 'standalone_cnec_slash', standalone_cnec)
 server.add_url_rule('/cnec/<day>', 'standalone_cnec_day', standalone_cnec)
-server.add_url_rule('/data/cnec/v1/<day>/manifest.json', 'standalone_unpublished', standalone_unpublished)
-server.add_url_rule('/api/cnec/bundle/<day>', 'standalone_bundle', standalone_bundle)
+server.add_url_rule('/data/cnec/v2/<path:filename>', 'standalone_data', standalone_data)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -51,7 +50,7 @@ ROOT_VIEW = os.environ.get('ROOT_VIEW', 'embed')
 if ROOT_VIEW not in {'embed', 'full'}:
     raise ValueError('ROOT_VIEW must be embed or full')
 
-CNEC_FIRST_DAY = date(2025, 11, 5)
+from coppersushi.cnec_support import FIRST_DAY as CNEC_FIRST_DAY
 CNEC_ROUTE = 'cnec'  # /cnec, or /cnec/<delivery day> to open on one day
 _cache: dict[str, tuple[go.Figure, pd.Index]] = {}
 _basemap: dict[str, dict] = {}
@@ -258,6 +257,9 @@ if os.environ.get('COPPERSUSHI_BUNDLE_PRODUCER') == 'true':
         for offset in (0, 1):
             day = MarketDay.on(today + timedelta(days=offset))
             try:
+                if cnec_bundles.is_published(day, bucket):
+                    results.append(str(day.date) + ':already-published')
+                    continue
                 generation = cnec_bundles.publish(cnec_bundles.prepare(day, refresh=True), bucket)
                 results.append(str(day.date) + ':' + generation)
             except Exception:

@@ -153,15 +153,15 @@ The direct Function URL remains accessible.
 ## Prepared CNEC data
 
 The scheduled producer uses the same image in a separate Lambda without a Function
-URL. It refreshes the current and next market day hourly, serially. The hourly schedule exceeds the 15-minute runtime limit, and
+URL. It checks the current and next market day hourly, preparing missing publications serially. Completed days remain static; use explicit refresh to publish corrections. The hourly schedule exceeds the 15-minute runtime limit, and
 automatic invocation retries are disabled. Failed source loads leave the last published generation intact.
 
-Complete day bundles and their initial-interval slices live under `data/cnec/v1/`
+Shared day metadata and uniform interval objects live under `data/cnec/v2/`
 in the private cache bucket. CloudFront can read only that published prefix; raw
 source cache objects remain private. The producer uploads immutable generation
-objects before replacing a manifest cached for 60 seconds. A browser loads the
-requested interval first, then shares one background request for the whole day.
-Dates without prepared artifacts fall back to the data API.
+objects before replacing a manifest cached for 60 seconds. A browser loads shared metadata and the selected interval, then starts all remaining
+interval requests in the background. Selection joins the same query-cache promise.
+Dates without prepared artifacts show an explicit availability message.
 
 To publish a historical day, run `python -m coppersushi.data_sources.cnec_bundles
 YYYY-MM-DD --bucket <cache_bucket>` in the configured runtime environment. Add
@@ -171,9 +171,8 @@ as browser data.
 ## Handler separation
 
 CloudFront serves `/cnec*` and `/assets/*` from the published private S3 UI
-prefix. `/api/cnec/*` goes to the lightweight `cnec_server:server` fallback handler. OPF and Dash component routes stay on `app:server`.
-The CNEC shell imports neither Dash nor pandas. Preparation dependencies load only
-for dates missing from prepared data. The frontend uses the official React Plotly
+prefix. There is no production CNEC serving Lambda or interval API. OPF and Dash component routes stay on `app:server`.
+The CNEC shell imports neither Dash nor pandas. Data preparation runs only in the background producer. The frontend uses the official React Plotly
 component and a pinned Mapbox-only Plotly bundle.
 
 Publish the built shell and public assets with
@@ -181,3 +180,12 @@ Publish the built shell and public assets with
 applying the static-route change. Invalidate `/cnec*`, `/assets/*` and
 `/data/cnec/v1/ui/*` after publishing changes. The browser computes the default
 market date locally; a cached shell cannot freeze it on its publication date.
+
+The supported delivery window starts on 1 November 2026. Backfill prepared day
+generations before moving that boundary earlier; the planned historical boundary
+is 5 November 2025. The frontend never starts an upstream fetch for a visitor.
+
+For local development, prepare a day with
+`python -m coppersushi.data_sources.cnec_bundles YYYY-MM-DD --directory data/browser`.
+The local shell serves the same static file format as CloudFront. No upstream fetch
+is initiated by browser navigation.

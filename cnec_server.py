@@ -3,10 +3,10 @@ import json
 from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
-from flask import Flask, Response, render_template_string, request, redirect
+from flask import Flask, Response, render_template_string, request, redirect, send_from_directory
 from coppersushi.data_sources import credentials
 
-FIRST_DAY = '2025-11-05'
+from coppersushi.cnec_support import FIRST_DAY
 server = Flask(__name__, static_folder='assets', static_url_path='/assets')
 
 @server.get('/')
@@ -19,12 +19,12 @@ def health() -> str:
 def index(day: str | None = None) -> str | Response:
     if day is not None:
         try:
-            if date.fromisoformat(day) < date.fromisoformat(FIRST_DAY):
+            if date.fromisoformat(day) < FIRST_DAY:
                 return Response(status=302, headers={'Location':'/cnec'})
         except ValueError:
             pass
     config = {'default_day': datetime.now(ZoneInfo('Europe/Brussels')).date().isoformat(),
-              'min_day': FIRST_DAY,
+              'min_day': FIRST_DAY.isoformat(),
               'token': credentials.token('MAPBOX_TOKEN', Path('.secrets/.mapbox_token'))}
     return render_template_string('''<!doctype html><html lang="en"><head>
       <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -34,29 +34,6 @@ def index(day: str | None = None) -> str | Response:
       <main id="cnec-root"></main><script id="cnec-config" type="application/json">{{config|tojson}}</script>
       <script src="/assets/plotly-mapbox-3.7.0.min.js"></script><script src="/assets/cnec-app.js"></script></body></html>''', config=config)
 
-@server.get('/data/cnec/v1/<day>/manifest.json')
-def unpublished(day: str) -> Response:
-    # Production intercepts this prefix at CloudFront's private S3 origin.
-    return Response(status=404)
-
-@server.get('/api/cnec/bundle/<day>')
-def bundle(day: str) -> Response | tuple[Response, int]:
-    # Preparation dependencies load only for dates absent from published S3 data.
-    from coppersushi.data_sources import cnec_bundles
-    from coppersushi.market_day import MarketDay
-    try:
-        if date.fromisoformat(day) < date.fromisoformat(FIRST_DAY):
-            raise ValueError('Delivery day precedes supported publication history')
-        delivery = MarketDay.on(day)
-        value = request.args.get('interval')
-        indices = None if value is None else [int(value)]
-        if indices is not None and any(i < 0 or i >= len(delivery.market_time_units()) for i in indices):
-            raise ValueError('Interval is outside the selected market day')
-    except ValueError as error:
-        return Response(json.dumps({'error': str(error)}), status=400, mimetype='application/json')
-    try:
-        result = cnec_bundles.prepare(delivery, indices)
-    except Exception as error:
-        server.logger.exception('Day preparation failed: %s', day)
-        return Response(json.dumps({'error': str(error)}), status=503, mimetype='application/json')
-    return Response(result.model_dump_json(), mimetype='application/json', headers={'Cache-Control': 'no-store'})
+@server.get('/data/cnec/v2/<path:filename>')
+def local_data(filename: str) -> Response:
+    return send_from_directory(Path(__file__).parent / 'data/browser/data/cnec/v2',filename)

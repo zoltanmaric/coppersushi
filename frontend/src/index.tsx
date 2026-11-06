@@ -1,7 +1,7 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {QueryClient, QueryClientProvider, useQuery, useQueryClient} from '@tanstack/react-query';
+import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate, useParams} from 'react-router-dom';
-import {fetchBundle, fetchManifest} from './api';
+import {useDayData, IntervalPrefetch} from './day-data';
 import {dayFigure, zoneFeatures, optionsFor, contributions} from './day-figure';
 import {Timeline} from './timeline';
 import {Plot} from './plot';
@@ -86,31 +86,26 @@ function shell(token: string, basemap: Props['basemap'], camera: ReturnType<type
 
 function View({id, min_day, token, basemap, selection, onAction: dispatch}: PageProps) {
   const {day, interval, selected, reference} = selection;
-  const client = useQueryClient();
 
 
   const [initialCamera] = useState(() => initialCoreCamera(window.innerWidth, window.innerHeight));
   const [initial, setInitial] = useState({day, interval});
   const initialInterval = initial.day === day ? initial.interval : interval;
   useEffect(() => {if (initial.day !== day) setInitial({day, interval});}, [day, interval, initial.day]);
-  const publication = useQuery({queryKey: ['publication', day], queryFn: ({signal}) => fetchManifest(day, signal)});
-  const generation = publication.data?.generation ?? null;
-  const first = useQuery({queryKey: ['interval', day, generation, initialInterval],
-    queryFn: ({signal}) => fetchBundle(day, initialInterval, publication.data ?? null, signal),
-    enabled: publication.isSuccess && !client.getQueryData(['bundle', day, generation])});
-  const wholeDay = useQuery({queryKey: ['bundle', day, generation], enabled: first.isSuccess,
-    queryFn: ({signal}) => fetchBundle(day, null, publication.data ?? null, signal)});
-  const bundle = wholeDay.data ? wholeDay : first;
-  const labels = bundle.data?.labels ?? [];
-  const validInterval = !!bundle.data && interval < labels.length && bundle.data.intervals.some(i=>i.index===interval);
-  const geography = useMemo(() => bundle.data ? zoneFeatures(bundle.data) : null, [bundle.data]);
-  const emptyFigure = useMemo(() => shell(token, basemap, initialCamera), [token, basemap, initialCamera]);
-  const displayInterval = validInterval ? interval : initialInterval;
-  const graphFigure = useMemo(() => bundle.data && geography && bundle.data.intervals.length > 0
-    ? dayFigure(bundle.data, displayInterval, validInterval ? selected : null, reference, emptyFigure.layout, geography) : emptyFigure,
-    [bundle.data, validInterval, geography, displayInterval, selected, reference, emptyFigure]);
-  const mapCurrent = validInterval;
-  const current = validInterval ? bundle.data!.intervals.find(i=>i.index===interval)! : null;
+  const {publication,metadata,first,current: intervalQuery,labels,generation} = useDayData(day,interval,initialInterval);
+  const data = intervalQuery.data ?? first.data;
+  const validInterval = !!metadata.data && interval >= 0 && interval < labels.length;
+  useEffect(()=>{
+    if(metadata.data && initialInterval >= labels.length && validInterval)
+      setInitial({day,interval});
+  },[metadata.data,initialInterval,labels.length,validInterval,day,interval]);
+  const mapCurrent = validInterval && data?.index === interval && !intervalQuery.isPlaceholderData;
+  const geography = useMemo(() => metadata.data ? zoneFeatures(metadata.data) : null,[metadata.data]);
+  const emptyFigure = useMemo(() => shell(token,basemap,initialCamera),[token,basemap,initialCamera]);
+  const graphFigure = useMemo(() => metadata.data && data && geography
+    ? dayFigure({...metadata.data,intervals:[data]},data.index,mapCurrent ? selected : null,reference,emptyFigure.layout,geography)
+    : emptyFigure,[metadata.data,data,geography,mapCurrent,selected,reference,emptyFigure]);
+  const current = mapCurrent ? data : null;
   const options = current ? optionsFor(current) : [];
   useEffect(() => {
     if (current && selected !== null && !options.some(o => o.value === String(selected)))
@@ -126,6 +121,7 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
   }
 
   return <section id={id} className="cnec-react">
+    <IntervalPrefetch day={day} generation={generation} count={labels.length} enabled={first.isSuccess}/>
     <div className="cnec-map-container">
       <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
         config={{responsive: true, displayModeBar: false, scrollZoom: true}} style={{height: '100%'}}/>
@@ -145,14 +141,13 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
       </div>
 
       <aside className="cnec-progress" aria-live="polite">
-        {bundle.data && interval >= labels.length && <div role="alert">This interval is outside the selected day.{' '}
-          <button onClick={() => dispatch({type: 'interval', interval: 0})}>Go to first interval</button>
+        {metadata.data && !validInterval && <div role="alert">This interval is outside the selected day.{' '}
+          <button onClick={() => {setInitial({day,interval:0});dispatch({type:'interval',interval:0});}}>Go to first interval</button>
         </div>}
-        {(!bundle.data || !validInterval) && (publication.isFetching || first.isFetching || wholeDay.isFetching) && <div role="status" aria-label="Map loading">Loading day…{bundle.data && !validInterval && <div>Showing {labels[displayInterval]?.split(' · ')[1]}.</div>}</div>}
-        {publication.error && <div role="alert">Publication: {publication.error.message} <button onClick={() => void publication.refetch()}>Retry</button></div>}
-        {wholeDay.error && <div role="alert">Remaining intervals: {wholeDay.error.message}{!validInterval && ` Showing ${labels[displayInterval]?.split(' · ')[1]}.`} <button onClick={() => void wholeDay.refetch()}>Retry</button></div>}
+        {(publication.isFetching || metadata.isFetching || (!mapCurrent && (first.isFetching || intervalQuery.isFetching))) && <div role="status" aria-label="Map loading">Loading interval…{data && !mapCurrent && <div>Showing {data.label.split(' · ')[1]}.</div>}</div>}
+        {publication.isSuccess && !publication.data && <div role="status">This day has not been prepared yet. <button onClick={() => void publication.refetch()}>Check again</button></div>}
         {notes.map(note => <div role="status" key={note}>{note}</div>)}
-        {bundle.error && <div role="alert">Day: {bundle.error.message} <button onClick={() => {setInitial({day, interval: 0}); dispatch({type: 'interval', interval: 0});}}>Go to first interval</button> <button onClick={() => void bundle.refetch()}>Retry</button></div>}
+        {([['Publication',publication],['Metadata',metadata],['First interval',first],...(interval === initialInterval ? [] : [['Interval',intervalQuery] as const])] as const).map(([name,query])=>query.error && <div role="alert" key={name}>{name}: {query.error.message}{data && !mapCurrent && ` Showing ${data.label.split(' · ')[1]}.`} <button onClick={()=>void query.refetch()}>Retry</button></div>)}
       </aside>
     <div className="cnec-time-controls">
       <DateTimeControls day={day} minDay={min_day} time={labels[interval]?.split(' · ')[1] ?? ''}
