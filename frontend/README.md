@@ -15,10 +15,10 @@ flowchart LR
     controls["URL and controls"] --> data
     controls --> map
     map -->|Selection intent| controls
-    click data "src/data/README.md" "Data component"
-    click market "src/market/README.md" "Market component"
-    click map "src/map/README.md" "Map component"
-    click controls "src/controls/README.md" "Controls component"
+    click data "https://github.com/zoltanmaric/coppersushi/blob/main/frontend/src/data/README.md" "Data component"
+    click market "https://github.com/zoltanmaric/coppersushi/blob/main/frontend/src/market/README.md" "Market component"
+    click map "https://github.com/zoltanmaric/coppersushi/blob/main/frontend/src/map/README.md" "Map component"
+    click controls "https://github.com/zoltanmaric/coppersushi/blob/main/frontend/src/controls/README.md" "Controls component"
 ```
 
 Components: [data](src/data/README.md), [market](src/market/README.md),
