@@ -36,12 +36,17 @@ flowchart TB
     edge["CloudFront"] <-->|Pages and callbacks| server
     browser["Browser: Dash, React and Plotly"] <-->|HTTPS| edge
     maps["Mapbox"] -->|Styles and tiles| browser
+    market -->|Prepare complete day| publication["Market-day publication"]
+    catalog -->|Located elements| publication
+    publication -->|Immutable generation and manifest| prepared[("Prepared market files")]
+    click publication "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/publication/README.md" "Publication architecture"
     click catalog "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/grid_catalog/README.md" "Grid catalog architecture"
     click opf "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/opf/README.md" "OPF architecture"
 ```
 
 Component details: [OPF](coppersushi/opf/README.md),
 [grid catalog](coppersushi/grid_catalog/README.md),
+[market-day publication](coppersushi/publication/README.md),
 [hosting](infra/lambda/README.md). The server owns the existing market-data and
 figure request path; the browser renders the resulting map.
 

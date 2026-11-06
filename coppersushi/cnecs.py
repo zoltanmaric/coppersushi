@@ -237,6 +237,8 @@ def active_constraints(rows: list[dict]) -> DataFrame[ActiveConstraints]:
     interval, so the contingency is part of the key. Collapsing to the element grain
     would discard a distinct market constraint and its own PTDF vector.
     """
+    if not rows:
+        return ActiveConstraints.empty()
     frame = _physical(_frame(rows)).rename(columns={"hour": "interval"})
     frame = frame.assign(tso=normalise_tso(frame.tso))
     columns = [
@@ -253,6 +255,8 @@ def active_constraints(rows: list[dict]) -> DataFrame[ActiveConstraints]:
 
 def constraint_ptdfs(rows: list[dict]) -> DataFrame[ConstraintPtdfs]:
     """Every physical active row’s country PTDF vector in long form."""
+    if not rows:
+        return ConstraintPtdfs.empty()
     frame = _physical(_frame(rows)).rename(columns={"hour": "interval"})
     hub_columns = {column: column[4:] for column in frame.columns if isinstance(column, str) and column in {f"hub_{zone}" for zone in CORE_ZONES}}
     missing = sorted({f"hub_{zone}" for zone in CORE_ZONES} - set(frame.columns))
