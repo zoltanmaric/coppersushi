@@ -19,7 +19,7 @@ __pycache__/
 /wiki/.obsidian/
 *.code-workspace
 
-# Unsanctioned solves; `python -m coppersushi.data_sources.pypsa_eur promote <file>` moves one into networks/ (LFS).
+# Unsanctioned solves; `python -m coppersushi.opf.data_sources.pypsa_eur promote <file>` moves one into networks/ (LFS).
 networks/candidates/
 
 # Implementation plans are working documents, not deliverables: they are amended as the work

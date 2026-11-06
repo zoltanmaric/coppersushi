@@ -5,7 +5,6 @@ from pathlib import Path
 
 from coppersushi import PACKAGE
 
-DATA_SOURCES = PACKAGE / "data_sources"  # modules living here are the only ones allowed to touch the world
 ILLEGAL_TRANSFORM = Path(__file__).parent / "fixtures" / "io-boundary" / "illegal_transform.py"
 NAIVE_TIME = Path(__file__).parent / "fixtures" / "naive-time" / "naive_time.py"
 
