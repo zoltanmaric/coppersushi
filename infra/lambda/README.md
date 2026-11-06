@@ -35,8 +35,8 @@ no longer tracked; preserve the authoritative state and inputs.
    encoding and cache metadata:
 
    ```sh
-   aws s3 sync s3://<cache_bucket>/data/cnec/v1/ui/ \
-     s3://<cache_bucket>/ui-rollback/<previous-release>/ --copy-props default
+   aws s3 cp s3://<cache_bucket>/data/cnec/v1/ui/ \
+     s3://<cache_bucket>/ui-rollback/<previous-release>/ --recursive --copy-props default
    ```
 
    Record that prefix alongside the previous image digest in ignored deployment
@@ -72,12 +72,12 @@ apply a saved plan against the same authoritative state. Restore the archived UI
 with S3-to-S3 copy so compression, MIME types and cache headers survive:
 
 ```sh
-aws s3 sync s3://<cache_bucket>/ui-rollback/<previous-release>/ \
-  s3://<cache_bucket>/data/cnec/v1/ui/ --copy-props default --delete
+aws s3 cp s3://<cache_bucket>/ui-rollback/<previous-release>/ \
+  s3://<cache_bucket>/data/cnec/v1/ui/ --recursive --copy-props default
 ```
 
-`--delete` is limited to the UI prefix; never apply it to prepared days or raw
-caches. Repeat step 7 and the browser checks from step 8. Restoring only the Lambda
+Use `cp`, rather than timestamp-based `sync`, so same-size older assets are also
+restored. Repeat step 7 and the browser checks from step 8. Restoring only the Lambda
 image does not roll back the S3-owned CNEC or OPF assets.
 
 ## GHCR authentication
