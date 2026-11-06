@@ -30,7 +30,9 @@ Clone with `GIT_LFS_SKIP_SMUDGE=1` to skip the files, e.g. to run only the tests
 
 ```mermaid
 flowchart TB
-    market["JAO and Electricity Maps"] -->|Market inputs| publication["Market-day publication"]
+    schedule["EventBridge schedule"] --> workflow["Step Functions"]
+    workflow -->|Retryable attempt| publication
+    market["JAO and Electricity Maps"] -->|Market inputs| publication["Native Lambda market-day publisher"]
     catalog["Grid catalog"] -->|Located elements and outlines| publication
     publication -->|Immutable generation and manifest| prepared[("Prepared market files")]
     prepared -->|Private S3 objects| edge["CloudFront"]

@@ -9,7 +9,7 @@ Run commands from the repository root. Tracked `infra/lambda/` holds the Terrafo
 source; the existing production working directory is ignored
 `.secrets/aws-production/`. Its `terraform.tfstate` is authoritative and
 `terraform.tfvars.json` holds the deployment inputs. Read its `README.local.txt`
-before use. Keep the previous `image_uri` digest for rollback.
+before use. Keep the previous `image_uri` and `producer_image_uri` digests for rollback.
 
 Ignored deployment files do not follow Git worktrees. If this directory is absent,
 locate the primary checkout with `git worktree list` and check there before asking
@@ -23,8 +23,9 @@ no longer tracked; preserve the authoritative state and inputs.
    setup used for local development and needs no data from another worktree.
    Downloads remain outside Docker; the image build validates its bundled inputs
    and precomputes hourly OPF maps. See the [catalog workflow](../../config/element-catalog/README.md).
-2. Build the Lambda target with a new image tag:
+2. Build the OPF `lambda` target and native `publisher` target with separate tags:
    `docker build --platform linux/amd64 --provenance=false --target lambda -t <image> .`
+   `docker build --platform linux/amd64 --provenance=false --target publisher -t <publisher-image> .`
    For a GHCR token error, see [GHCR authentication](#ghcr-authentication).
 3. Authenticate Docker to ECR using the configured AWS profile. Tag and push the
    image to the `repository_url` Terraform output. ECR tags are immutable: use a
@@ -46,8 +47,8 @@ no longer tracked; preserve the authoritative state and inputs.
    `pixi run --locked python -m frontend.publish --bucket <cache_bucket>`.
    This step is required on every frontend/shared-asset update, not just the first
    routing cutover. CI builds and checks assets; it does not publish them.
-6. Set `image_uri` in the ignored variables file to the pushed image's **digest
-   URI**, then review and apply a saved plan:
+6. Set `image_uri` and `producer_image_uri` in the ignored variables file to the
+   corresponding image **digest URIs**, then review and apply a saved plan:
 
    ```sh
    terraform -chdir=.secrets/aws-production init
@@ -151,9 +152,12 @@ read-only. Complete validated cache bundles persist in private S3; related
 tables publish together and endpoint discoveries merge without lost concurrent
 writes. Failed fetches remain retryable.
 
-The `bundle-builder` stage uses the `build` environment to precompute zone outlines
-and 24 hourly OPF figures without credentials. The final image uses `runtime`,
-which omits PyPSA and its solver dependencies.
+The OPF `bundle-builder` uses `build` to precompute 24 hourly figures. Its runtime
+contains those figures, with no catalog inputs or solved networks. The separate
+`publisher` target validates and bundles prepared catalog inputs and outlines; it
+uses the official AWS Runtime Interface Client, not Flask, Gunicorn or Web Adapter.
+Both environments omit PyPSA and its solver dependencies. Python package dependencies
+are shared for now, but the entry points, bundled data and image digests are independent.
 Runtime reads the selected hour and adds the Mapbox token. Local OPF views without
 bundles render on demand; country outlines require `pixi run --locked build-zone-shapes`.
 Lambda initialization and first-use data loading are separate costs. Buffered synchronous responses must fit Lambda's 6 MB limit.

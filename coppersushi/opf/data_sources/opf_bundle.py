@@ -46,3 +46,7 @@ def build() -> None:
     fig = power_flow.colored_network_figure(network, 'net_power')
     fig.update_layout(mapbox=map_style.OPF_CAMERA)
     write(fig, network.snapshots, DIRECTORY)
+
+
+if __name__ == '__main__':
+    build()

@@ -17,5 +17,5 @@ flowchart LR
 
 `data_sources/pypsa_eur.py` runs and promotes solves; `networks.py` loads them.
 `snapshot.py`, `shedding.py` and `power_flow.py` derive the view.
-`data_sources/opf_bundle.py` prepares the serving bundle. The shared
-[grid catalog](../grid_catalog/README.md) owns geographic source preparation.
+`data_sources/opf_bundle.py` prepares the serving bundle. Its image contains only this precomputed data; OPF startup does not load or validate
+the [grid catalog](../grid_catalog/README.md).
