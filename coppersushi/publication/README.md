@@ -14,7 +14,7 @@ flowchart LR
     ready --> bundle
     bundle --> files["Immutable metadata and intervals"]
     files --> manifest["Atomic day manifest"]
-    click catalog "../grid_catalog/README.md" "Grid catalog architecture"
+    click catalog "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/grid_catalog/README.md" "Grid catalog architecture"
 ```
 
 Run `python -m coppersushi.publication.data_sources.bundles YYYY-MM-DD --directory data/browser`
