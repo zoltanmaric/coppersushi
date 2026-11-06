@@ -122,7 +122,7 @@ def cnec_day(day: MarketDay) -> cnec_page.Day:
             zones=timed("zone_shapes", core_zones),
             constraints=active.constraints,
             ptdfs=active.ptdfs,
-            prices=timed("prices", electricity_maps.load_day, day.date.isoformat()),
+            prices=ZonalPrices.validate(timed("prices", electricity_maps.load_day, day.date.isoformat())),
         )
     return _cnec_days[day]
 
@@ -308,7 +308,7 @@ def render_cnec(day: MarketDay, interval_index: int, selected: str | None, attri
 # HTTP requests and React own CNEC coordination; Dash still owns OPF callbacks.
 import cnec_http
 from coppersushi.data_model.cnec_api import EnrichedRequest
-from coppersushi.data_model.market import CoreZone
+from coppersushi.data_model.market import CoreZone, ZonalPrices
 
 
 def enriched_view(view: EnrichedRequest) -> cnec_page.Rendered:
