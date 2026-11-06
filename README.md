@@ -36,8 +36,8 @@ flowchart TB
     edge["CloudFront"] <-->|Pages and callbacks| server
     browser["Browser: Dash, React and Plotly"] <-->|HTTPS| edge
     maps["Mapbox"] -->|Styles and tiles| browser
-    click catalog "coppersushi/grid_catalog/README.md" "Grid catalog architecture"
-    click opf "coppersushi/opf/README.md" "OPF architecture"
+    click catalog "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/grid_catalog/README.md" "Grid catalog architecture"
+    click opf "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/opf/README.md" "OPF architecture"
 ```
 
 Component details: [OPF](coppersushi/opf/README.md),
