@@ -44,7 +44,7 @@ def test_a_whole_day_at_its_market_time_unit_is_complete():
 
 def test_a_missing_market_time_unit_is_refused():
     prices = market.day_ahead_prices(hourly_day()).iloc[:-1]
-    with pytest.raises(ValueError, match="1 zone market time units missing"):
+    with pytest.raises(market.IncompletePrices, match="1 zone market time units missing"):
         market.check_complete(prices, MarketDay.on("2024-08-29"), ("AT",))
 
 

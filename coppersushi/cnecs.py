@@ -37,7 +37,6 @@ from pandera.typing import DataFrame
 from coppersushi.data_model.jao import (
     ActiveConstraints,
     Contingencies,
-    ConstraintContributions,
     ConstraintPtdfs,
     ElementEnds,
     Elements,
@@ -270,43 +269,6 @@ def constraint_ptdfs(rows: list[dict]) -> DataFrame[ConstraintPtdfs]:
     )
     ptdfs = ptdfs.assign(zone=ptdfs.hub_column.map(hub_columns)).drop(columns="hub_column")
     return ptdfs.sort_values(["interval", "source_id", "zone"], ignore_index=True).pipe(ConstraintPtdfs.validate)
-
-
-def price_contributions(
-    constraint: pd.Series,
-    ptdfs: DataFrame[ConstraintPtdfs],
-    reference_zone: str,
-    alpha: float,
-) -> DataFrame[ConstraintContributions]:
-    """A binding row's zonal price contribution relative to ``reference_zone``.
-
-    EUPHEMIA's congestion duals do not contain the common energy-price component.
-    The selected row therefore explains only relative prices:
-    ``-shadow_price * (PTDF_z - PTDF_reference) / alpha``.
-    This normalized-FB term is not an exhaustive decomposition of FB plus LTA welfare.
-    """
-    if reference_zone not in CORE_ZONES:
-        raise ValueError(f"reference zone must be one of {CORE_ZONES}: {reference_zone}")
-    if not 0 < alpha <= 1:
-        raise ValueError("normalized FB attribution requires 0 < alpha <= 1")
-    selected = ptdfs[ptdfs.zone.isin(CORE_ZONES)]
-    for key in ACTIVE_KEYS:
-        selected = selected[selected[key].eq(constraint[key])]
-    if len(selected) != len(CORE_ZONES):
-        raise ValueError(f"selected constraint has {len(selected)} PTDFs, expected {len(CORE_ZONES)}")
-    reference = selected.loc[selected.zone.eq(reference_zone), "ptdf"]
-    if len(reference) != 1:
-        raise ValueError(f"selected constraint has {len(reference)} PTDFs for {reference_zone}")
-    difference = selected.ptdf - reference.iloc[0]
-    return (
-        selected.assign(
-            reference_zone=reference_zone,
-            ptdf_difference=difference,
-            contribution=-float(constraint.shadow_price) * difference / alpha,
-        )
-        .reset_index(drop=True)
-        .pipe(ConstraintContributions.validate)
-    )
 
 
 def external_constraints(rows: list[dict]) -> DataFrame[ExternalConstraints]:

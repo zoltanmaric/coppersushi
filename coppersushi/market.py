@@ -37,6 +37,10 @@ def day_ahead_prices(payloads: list[ElectricityMapsPriceResponse]) -> DataFrame[
     return frame[columns].sort_values(["interval", "zone"], ignore_index=True).pipe(DayAheadPrices.validate)
 
 
+class IncompletePrices(ValueError):
+    """Expected zone intervals have not all been published yet."""
+
+
 def check_complete(prices: DataFrame[DayAheadPrices], day: MarketDay, zones: tuple[str, ...]) -> None:
     """Raise unless ``prices`` holds every zone at every market time unit of ``day``, and nothing else.
 
@@ -50,7 +54,8 @@ def check_complete(prices: DataFrame[DayAheadPrices], day: MarketDay, zones: tup
     missing = expected.difference(actual)
     extra = actual.difference(expected)
     if len(missing) or len(extra):
-        raise ValueError(
+        error = IncompletePrices if len(missing) and not len(extra) else ValueError
+        raise error(
             f"prices for {day.date}: {len(missing)} zone market time units missing, "
             f"{len(extra)} outside the day or its zones"
         )

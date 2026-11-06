@@ -198,27 +198,3 @@ class ConstraintPtdfs(pa.DataFrameModel):
     class Config:
         strict = False
         coerce = True
-
-
-class PriceContributions(pa.DataFrameModel):
-    """One selected constraint's price effect per zone relative to an explicit reference."""
-
-    source_id: Series[int]
-    zone: Series[str]
-    reference_zone: Series[str]
-    contribution: Series[float]  # EUR/MWh
-
-    class Config:
-        strict = False
-        coerce = True
-        unique = ["source_id", "zone"]
-
-
-class ConstraintContributions(ConstraintPtdfs, PriceContributions):
-    """One selected row's relative zonal price contribution under an explicit reference."""
-
-    ptdf_difference: Series[float]  # contribution = -shadow_price * ptdf_difference / alpha
-
-    class Config:
-        strict = False
-        coerce = True

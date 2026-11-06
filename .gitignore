@@ -45,3 +45,6 @@ dist/
 
 /assets/cnec-markers*.png
 /assets/cnec-markers*.json
+/assets/cnec-app.js
+/assets/cnec-app.css
+/assets/plotly-mapbox-*.min.js

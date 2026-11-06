@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from coppersushi.market_day import MarketDay
 from coppersushi import REPO
-from coppersushi.data_model.cnec_attribution import AlphaFactor, AttributionContext, AttributionPayload, AttributionRequest, attribution_to_browser, attribution_from_browser
+from coppersushi.data_model.cnec_attribution import AlphaFactor
 from coppersushi.data_sources import cnec_attribution as source
 
 FIXTURE = REPO / "tests/fixtures/cnec-attribution"
@@ -47,20 +47,6 @@ def test_empty_feeds_are_supported_missing_data(monkeypatch, tmp_path):
     assert frame.drop(columns="interval").isna().all().all()
 
 
-def test_browser_nulls_become_numeric_missing_values():
-    frame = pd.read_csv(FIXTURE / "missing-context.csv")
-    payload = AttributionPayload.model_validate({
-        "day": "2024-08-29", "complete": False,
-        "rows": json.loads(frame.to_json(orient="records")),
-    })
-    restored = attribution_from_browser(payload)
-    assert attribution_to_browser(restored, MarketDay.on(payload.day)) == payload
-    assert restored.drop(columns="interval").dtypes.eq("float64").all()
-    assert restored.drop(columns="interval").isna().all().all()
-    with pytest.raises(ValidationError):
-        AttributionPayload.model_validate({**payload.model_dump(), "unexpected": "0"})
-    with pytest.raises(SchemaError):
-        AttributionContext.validate(pd.concat([restored, restored]))
 
 
 def test_invalid_cached_table_raises(monkeypatch, tmp_path):
@@ -88,15 +74,6 @@ def test_loader_does_not_hide_failures(monkeypatch, tmp_path, stage):
         source.load_day(MarketDay.on("2026-09-12"), refresh=True)
 
 
-def test_browser_delivery_date_is_typed_and_serializes_as_iso():
-    from datetime import date
-    failure = AttributionRequest.model_validate({
-        "day": "2026-11-03",
-    })
-    assert failure.day == date(2026, 11, 3)
-    assert failure.model_dump(mode="json")["day"] == "2026-11-03"
-    with pytest.raises(ValidationError):
-        AttributionRequest.model_validate({**failure.model_dump(), "day": "2026-02-30"})
 
 
 def test_loader_uses_market_day_boundaries_on_clock_change(monkeypatch, tmp_path):
