@@ -8,7 +8,7 @@ const order = [
   'selected CNEC', 'binding country cap glow', 'binding country cap', 'select country cap',
   ...CORE_ZONES.map(zone => `${zone} ray`),
   'ray contributions', 'binding rows', 'binding transformers and PSTs',
-  'selected CNEC marker', 'zone prices',
+  'selected CNEC marker',
 ];
 
 export const layerAnchor = (name: string, mode?: unknown) =>

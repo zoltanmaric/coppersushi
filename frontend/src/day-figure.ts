@@ -406,7 +406,9 @@ export function dayFigure(
         hovers.push(text);
         backgrounds.push(bg);
       }
-    traces.push(
+    // Plotly cannot dispose an unrendered symbol layer when selection expires.
+    // Do not introduce a temporary empty label trace between those two states.
+    if (labels.length) traces.push(
       scatter("ray contributions", labelX, labelY, {
         mode: "text",
         text: labels,
@@ -423,24 +425,7 @@ export function dayFigure(
       }),
     );
   }
-  traces.push(
-    ...symbols,
-    scatter(
-      "zone prices",
-      zones.map((z) => z.centre[0]),
-      zones.map((z) => z.centre[1]),
-      {
-        mode: "text",
-        text: zones.map(
-          (z) => `${z.name}<br>€${number(interval.prices[z.zone]!)}`,
-        ),
-        customdata: zones.map((z) => ["zone", z.zone]),
-        hoverinfo: "none",
-        marker: { symbol: "circle" },
-        textfont: { color: "white", size: 14 },
-      },
-    ),
-  );
+  traces.push(...symbols);
   const anchored = Array.isArray(layers) && layers.some(layer =>
     (layer as {id?: unknown}).id === layerAnchor('published day-ahead price'));
   for (const trace of traces) {

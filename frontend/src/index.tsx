@@ -18,12 +18,14 @@ import {PriceLegend} from './price-legend';
 
 import {overlayModel} from './overlay-model';
 import type {OverlayModel} from './overlay-model';
+import type {CountryLabel} from './country-labels';
+import type {CoreZone} from './reference';
 import './style.css';
 
 interface Props {id: string; day: string; min_day: string; token: string; basemap: PlotlyFigure['layout']['mapbox']['style']}
 interface GraphChange {clickData?: unknown}
-interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void; overlay: OverlayModel; hidden: boolean}
-const Graph = ({overlay, hidden, figure, id, config, style, setProps}: GraphProps) => {
+interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void; overlay: OverlayModel; hidden: boolean; countries: CountryLabel[]; onReference: (zone: CoreZone) => void}
+const Graph = ({overlay, hidden, figure, id, config, style, setProps, countries, onReference}: GraphProps) => {
   const host = useRef<HTMLDivElement>(null);
   const data = useMemo(() => structuredClone(figure.data), [figure.data]);
   // Mapbox mutates its style (including removing empty layer layouts). Keep this
@@ -34,7 +36,7 @@ const Graph = ({overlay, hidden, figure, id, config, style, setProps}: GraphProp
     <Plot divId={id} data={data} layout={layout} config={config}
       style={{height:'100%',width:'100%'}} useResizeHandler
       onAfterPlot={() => setError(null)} onClick={(clickData: unknown) => setProps({clickData})} onError={error=>setError(error.message)}/>
-    <MapDecoration host={host} model={overlay} hidden={hidden}/>
+    <MapDecoration host={host} model={overlay} hidden={hidden} countries={countries} onReference={onReference}/>
     {error && <div role="alert">Map: {error}</div>}
   </div>;
 };
@@ -106,6 +108,10 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
   },[metadata.data,initialInterval,labels.length,validInterval,day,interval]);
   const mapCurrent = validInterval && data?.index === interval && !intervalQuery.isPlaceholderData;
   const geography = useMemo(() => metadata.data ? zoneFeatures(metadata.data) : null,[metadata.data]);
+  const countries = useMemo(() => (metadata.data?.zones ?? []).flatMap(zone => {
+    const price = data?.prices[zone.zone];
+    return price === undefined ? [] : [{zone:zone.zone,name:zone.name,centre:zone.centre,price}];
+  }),[metadata.data,data]);
   const emptyFigure = useMemo(() => shell(token,basemap,initialCamera),[token,basemap,initialCamera]);
   const graphFigure = useMemo(() => metadata.data && data && geography
     ? dayFigure({...metadata.data,intervals:[data]},data.index,mapCurrent ? selected : null,reference,emptyFigure.layout,geography)
@@ -129,6 +135,7 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
     <IntervalPrefetch day={day} generation={generation} count={labels.length} enabled={first.isSuccess}/>
     <div className="cnec-map-container">
       <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
+        countries={countries} onReference={reference=>dispatch({type:'reference',reference})}
         config={plotConfig} style={{height: '100%'}}/>
       <small className="cnec-sources">
         Data: <a href="https://publicationtool.jao.eu/core/" target="_blank" rel="noopener noreferrer">JAO</a> · {' '}

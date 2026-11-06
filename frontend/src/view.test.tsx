@@ -35,7 +35,7 @@ beforeEach(() => {
 afterEach(() => {cleanup(); vi.unstubAllGlobals();});
 
 const interval = {index: 0, label: 'Thu 29 Aug 2024 · 00:00 CEST', prices: {DE: 100, FR: 90}, constraints: [], alpha: 1, caps: [], notes: []};
-const first = {version: 2, day: '2024-08-29', labels: [interval.label, 'Thu 29 Aug 2024 · 00:15 CEST'], zones: [], elements: {}, intervals: [interval], price_range: [90, 100]};
+const first = {version: 2, day: '2024-08-29', labels: [interval.label, 'Thu 29 Aug 2024 · 00:15 CEST'], zones: [{zone:'DE',name:'Germany',centre:[10,50],rings:[[[9,49],[11,49],[11,51],[9,49]]]},{zone:'FR',name:'France',centre:[2,47],rings:[[[1,46],[3,46],[3,48],[1,46]]]}], elements: {}, intervals: [interval], price_range: [90, 100]};
 const full = {...first, intervals: [interval, {...interval, index: 1, label: first.labels[1]}]};
 async function reply(path: string, data: object, status = 200) {
   await waitFor(() => expect(pending.some(p => p.path.endsWith(path))).toBe(true));

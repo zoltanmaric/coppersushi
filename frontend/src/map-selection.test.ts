@@ -38,10 +38,3 @@ test('a non-constraint first point does not hide later constraint hits', () => {
   expect(mapSelection(event, options, null, true)).toEqual({type: 'select', selected: 1, source: 'constraints'});
   expect(mapSelection(event, options, -2, true)).toBeNull();
 });
-
-
-test('a country label chooses the reference without clearing the selected constraint', () => {
-  expect(mapSelection(click(['zone', 'BE']), options, 1, true)).toEqual({type: 'reference', reference: 'BE'});
-  expect(mapSelection(click(['zone', 'NO']), options, 1, true)).toEqual(clear);
-  expect(mapSelection(click(['zone', 'BE']), options, 1, false)).toBeNull();
-});

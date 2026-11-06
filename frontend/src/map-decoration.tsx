@@ -1,8 +1,12 @@
 import React, {useEffect, useReducer, useRef} from 'react';
+import {createPortal} from 'react-dom';
 import {ConstraintOverlay} from './constraint-overlay';
 import {lockMapOrientation, mapInstance} from './mapbox-adapter';
 import type {MapboxMap} from './mapbox-adapter';
 import type {OverlayModel} from './overlay-model';
+import {CountryLabels} from './country-labels';
+import type {CountryLabel} from './country-labels';
+import type {CoreZone} from './reference';
 
 interface PlotElement extends HTMLElement {
   on(event: 'plotly_afterplot', handler: () => void): void;
@@ -10,8 +14,9 @@ interface PlotElement extends HTMLElement {
 }
 
 /** Native camera events redraw only decoration, never the parent figure or request state. */
-export function MapDecoration({host, model, hidden}: {
+export function MapDecoration({host, model, hidden, countries, onReference}: {
   host: React.RefObject<HTMLDivElement>; model: OverlayModel; hidden: boolean;
+  countries: CountryLabel[]; onReference: (zone: CoreZone) => void;
 }) {
   const activeMap = useRef<MapboxMap | null>(null);
   const [, redraw] = useReducer(n => n + 1, 0);
@@ -21,7 +26,7 @@ export function MapDecoration({host, model, hidden}: {
     const detach = () => {
       const map = activeMap.current;
       if (!map) return;
-      for (const event of ['movestart', 'moveend', 'resize']) map.off(event, refresh);
+      for (const event of ['move', 'movestart', 'moveend', 'resize']) map.off(event, refresh);
       map.off('remove', removed);
       activeMap.current = null;
     };
@@ -32,7 +37,7 @@ export function MapDecoration({host, model, hidden}: {
         detach();
         activeMap.current = map;
         if (map) {
-          for (const event of ['movestart', 'moveend', 'resize']) map.on(event, refresh);
+          for (const event of ['move', 'movestart', 'moveend', 'resize']) map.on(event, refresh);
           map.on('remove', removed);
         }
       }
@@ -62,8 +67,10 @@ export function MapDecoration({host, model, hidden}: {
   // One flat, canonical world: native symbols still render in unsupported decoration views.
   const visible = !hidden && map && !map.isMoving() && map.getPitch() === 0 && map.getBearing() === 0 &&
     bounds && bounds.getWest() >= -180 && bounds.getEast() <= 180;
-  return <ConstraintOverlay model={model} project={visible ? point => {
+  const project = map ? (point: Parameters<typeof map.project>[0]): [number,number] => {
     const {x, y} = map.project(point);
     return [x, y];
-  } : null}/>;
+  } : null;
+  return <><ConstraintOverlay model={model} project={visible ? project : null}/>
+    {map && createPortal(<CountryLabels labels={countries} project={project} onReference={onReference}/>,map.getCanvasContainer())}</>;
 }

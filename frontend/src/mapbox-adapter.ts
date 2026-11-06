@@ -5,6 +5,7 @@ export interface MapboxMap {
   touchZoomRotate: {disableRotation(): void};
   touchPitch: {disable(): void};
   keyboard: {disableRotation(): void};
+  getCanvasContainer(): HTMLElement;
   project(point: LngLat): {x: number; y: number};
   isMoving(): boolean;
   getPitch(): number;

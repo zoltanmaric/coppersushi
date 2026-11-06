@@ -160,7 +160,7 @@ test('interval and selection updates retain distinct stable map insertion points
     const targets=figure.data.map(trace=>trace.below);
     expect(new Set(targets).size).toBe(targets.length);
     expect(targets.every(target=>layers.some(layer=>layer.id===target))).toBe(true);
-    for (const name of ['published day-ahead price','zone prices','binding rows']) {
+    for (const name of ['published day-ahead price','binding rows']) {
       const trace=figure.data.find(trace=>trace.name===name)!;
       const previous=before.data.find(trace=>trace.name===name)!;
       expect([trace.uid,trace.below]).toEqual([previous.uid,previous.below]);
@@ -169,4 +169,9 @@ test('interval and selection updates retain distinct stable map insertion points
   }
   const countryAnchor=String(before.data[0].below);
   expect(layers.findIndex(layer=>layer.id===countryAnchor)).toBeLessThan(layers.findIndex(layer=>layer.id==='boundaries'));
+});
+
+test('an expired selection emits no temporary empty ray-label trace',()=>{
+  const figure=draw(999);
+  expect(figure.data.some(trace=>trace.name==='ray contributions')).toBe(false);
 });
