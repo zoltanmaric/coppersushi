@@ -48,7 +48,7 @@ flowchart LR
     zone_shapes --> startup_check
     cnec_geometry["cnec_geometry<br/>each named element and publisher placed by its published substations"]
     zone_shapes["zone_shapes<br/>Core bidding-zone polygons derived from solved_network at image build; small bundled GeoJSON read at runtime"]
-    mapbox_basemap["mapbox_basemap<br/>Mapbox's dark style fetched per process, label layers removed"]
+    mapbox_basemap["mapbox_basemap<br/>Mapbox dark style fetched in the browser, label layers removed"]
 
     jao_static_grid["jao_static_grid<br/>JAO's Core Static Grid Model, fetched per release: real ratings and R/X/B/G per element EIC"]
 

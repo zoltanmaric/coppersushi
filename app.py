@@ -1,6 +1,3 @@
-from datetime import date
-from flask import redirect, request
-from werkzeug.wrappers import Response
 import logging
 from functools import partial
 import os
@@ -9,12 +6,12 @@ from pathlib import Path
 import pandas as pd
 
 import plotly.graph_objects as go
-from dash import Dash, dcc, html, Input, Output, State, Patch, ctx, no_update
+from dash import Dash, dcc, html, Input, Output, Patch, ctx, no_update
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 
 from coppersushi import map_style, power_flow
-from coppersushi.data_sources import opf_bundle, credentials, mapbox_styles, networks
+from coppersushi.data_sources import opf_bundle, credentials, networks
 from coppersushi.market_day import MARKET_TZ
 
 # Every page's controls live in one tree that the router swaps, so a callback whose
@@ -50,22 +47,13 @@ ROOT_VIEW = os.environ.get('ROOT_VIEW', 'embed')
 if ROOT_VIEW not in {'embed', 'full'}:
     raise ValueError('ROOT_VIEW must be embed or full')
 
-from coppersushi.cnec_support import FIRST_DAY as CNEC_FIRST_DAY
 CNEC_ROUTE = 'cnec'  # /cnec, or /cnec/<delivery day> to open on one day
 _cache: dict[str, tuple[go.Figure, pd.Index]] = {}
-_basemap: dict[str, dict] = {}
 
 
 def mapbox_token() -> str:
     """From the environment (deploys) or the gitignored secrets file (README: Mapbox token)."""
     return credentials.token('MAPBOX_TOKEN', Path('.secrets/.mapbox_token'))
-
-
-def basemap() -> dict:
-    """Mapbox's dark style without its labels, fetched once per process."""
-    if 'dark' not in _basemap:
-        _basemap['dark'] = map_style.without_labels(mapbox_styles.fetch(mapbox_token()))
-    return _basemap['dark']
 
 
 def figure_for(network_key: str) -> tuple[go.Figure, pd.Index]:
@@ -96,31 +84,6 @@ def navigation() -> html.Nav:
         html.A('2024 OPF on the 2025 grid', href='/opf-2024'),
         html.A('Prices and binding CNECs', href=f'/{CNEC_ROUTE}'),
     ], className='app-navigation')
-
-
-def cnec_day_from_path(pathname: str) -> str | None:
-    """The delivery day a `/cnec/<day>` path opens on, or None when it names no day."""
-    parts = (pathname or '').strip('/').split('/')
-    return parts[1] if len(parts) > 1 and parts[0] == CNEC_ROUTE else None
-
-
-
-def unsupported_cnec_path(pathname: str) -> bool:
-    day = cnec_day_from_path(pathname)
-    try:
-        return day is not None and date.fromisoformat(day) < CNEC_FIRST_DAY
-    except ValueError:
-        return False
-
-
-@server.before_request
-def redirect_unsupported_cnec_day() -> Response | None:
-    if request.method == 'GET' and unsupported_cnec_path(request.path):
-        return redirect('/cnec')
-    return None
-
-def is_cnec_path(pathname: str) -> bool:
-    return (pathname or '').strip('/').split('/')[0] == CNEC_ROUTE
 
 
 def network_layout(token: str | None = None) -> html.Div:
@@ -159,16 +122,11 @@ def network_layout(token: str | None = None) -> html.Div:
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh='callback-nav'),
-    dcc.Store(id='active-page'),
     html.Div(id='page'),
 ])
 
 
 def show_page(pathname: str, root_view: str = ROOT_VIEW) -> html.Div:
-    if unsupported_cnec_path(pathname):
-        return html.Div(dcc.Location(id='cnec-redirect', href='/cnec', refresh=True))
-    if is_cnec_path(pathname):
-        return html.Div(dcc.Location(href=pathname, refresh=True))
     if network_key_from_path(pathname) is None:
         return html.Div([html.H1('Page not found'), html.A('2024 OPF', href='/opf-2024')])
     return html.Div([
@@ -177,15 +135,9 @@ def show_page(pathname: str, root_view: str = ROOT_VIEW) -> html.Div:
     ], className='app-page')
 
 
-@app.callback(Output('page', 'children'), Output('active-page', 'data'),
-              Input('url', 'pathname'), State('active-page', 'data'))
-def route_page(pathname: str, active_page: str | None) -> tuple:
-    """Dash owns page-kind transitions; React owns dates within the mounted CNEC page."""
-    kind = 'cnec' if is_cnec_path(pathname) and not unsupported_cnec_path(pathname) else 'other'
-    if kind == active_page == 'cnec':
-        return no_update, no_update
-    return show_page(pathname), kind
-
+@app.callback(Output('page', 'children'), Input('url', 'pathname'))
+def route_page(pathname: str) -> html.Div:
+    return show_page(pathname)
 
 
 def render(pathname: str, snapshot_index: int, slider_moved: bool) -> tuple:
@@ -227,7 +179,6 @@ def opf_snapshot_state(snapshots: pd.Index, snapshot_index: int, slider_moved: b
     }
     label = local[snapshot_index].strftime('%d %b %Y · %H:%M %Z')
     return len(snapshots) - 1, marks, snapshot_index, label
-
 
 
 @app.callback(

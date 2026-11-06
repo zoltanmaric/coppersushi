@@ -8,7 +8,7 @@ import { contributions } from "./day-figure";
 import type { MarketInterval } from "./contracts";
 import { CORE_ZONES } from "./reference";
 
-// The public JAO/SMARD observations also drive the Python reconciliation tests.
+// Independently published JAO/SMARD observations verify the browser-owned calculation.
 
 function csv(content: string): Record<string, string>[] {
   const rows = content

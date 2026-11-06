@@ -22,22 +22,10 @@ def test_failed_load_becomes_banner(monkeypatch):
     assert is_open and "git lfs pull" in message
 
 
-
-
 def test_the_cnec_link_names_no_day_so_the_page_opens_on_today(monkeypatch):
     monkeypatch.setattr(app, "mapbox_token", lambda: "token")
-    monkeypatch.setattr(app, "basemap", lambda: {"version": 8, "sources": {}, "layers": []})
     links = (c for c in _components(app.show_page("/opf-2024")) if isinstance(c, html.A))
     assert next(link for link in links if link.children == "Prices and binding CNECs").href == "/cnec"
-
-
-
-
-
-
-
-
-
 
 
 def _components(component):
@@ -55,14 +43,9 @@ def _ids(component):
     return (c for c in _components(component) if getattr(c, "id", None))
 
 
-
-
-
-
 @pytest.mark.parametrize("mode", ['embed', 'full'])
 def test_root_rollout_keeps_permanent_urls_stable(mode, monkeypatch):
     monkeypatch.setattr(app, "mapbox_token", lambda: "token")
-    monkeypatch.setattr(app, "basemap", lambda: {"version": 8, "sources": {}, "layers": []})
     assert app.is_embed_path('/', mode) is (mode == 'embed')
     assert app.is_embed_path('/embed/opf-2024', mode)
     assert not app.is_embed_path('/opf-2024', mode)
@@ -106,27 +89,6 @@ def test_page_shell_does_not_load_the_opf_runtime():
     assert result.returncode == 0, result.stderr
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def test_unsupported_cnec_dates_redirect_to_undated_view(monkeypatch):
     monkeypatch.setenv("MAPBOX_TOKEN", "test-public-token")
     client = app.server.test_client()
@@ -134,6 +96,3 @@ def test_unsupported_cnec_dates_redirect_to_undated_view(monkeypatch):
     assert response.status_code == 302
     assert response.headers['Location'] == '/cnec'
     assert client.get('/cnec/2026-11-01').status_code == 200
-    redirect_component = app.show_page('/cnec/2025-11-04').children
-    assert redirect_component.href == '/cnec'
-    assert not app.unsupported_cnec_path('/opf-2024')

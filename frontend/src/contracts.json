@@ -102,34 +102,6 @@
       "title": "BindingRow",
       "type": "object"
     },
-    "ConstraintOption": {
-      "additionalProperties": false,
-      "properties": {
-        "label": {
-          "title": "Label",
-          "type": "string"
-        },
-        "value": {
-          "title": "Value",
-          "type": "string"
-        },
-        "source": {
-          "enum": [
-            "constraints",
-            "attribution"
-          ],
-          "title": "Source",
-          "type": "string"
-        }
-      },
-      "required": [
-        "label",
-        "value",
-        "source"
-      ],
-      "title": "ConstraintOption",
-      "type": "object"
-    },
     "CountryCap": {
       "additionalProperties": false,
       "description": "Inferred Polish cap and its signed effect on the Polish price.",
@@ -361,7 +333,6 @@
       "title": "ElementGeometry",
       "type": "object"
     },
-    "JsonValue": {},
     "MarketInterval": {
       "additionalProperties": false,
       "description": "Published values for one UTC interval, labelled in market local time.",
@@ -443,54 +414,6 @@
       "title": "MarketInterval",
       "type": "object"
     },
-    "PlotlyFigure": {
-      "additionalProperties": false,
-      "description": "Plotly's extensible JSON figure; Plotly validates its trace/layout schemas.",
-      "properties": {
-        "data": {
-          "items": {
-            "additionalProperties": {
-              "$ref": "#/$defs/JsonValue"
-            },
-            "type": "object"
-          },
-          "title": "Data",
-          "type": "array"
-        },
-        "layout": {
-          "$ref": "#/$defs/PlotlyLayout"
-        }
-      },
-      "required": [
-        "data",
-        "layout"
-      ],
-      "title": "PlotlyFigure",
-      "type": "object"
-    },
-    "PlotlyLayout": {
-      "additionalProperties": true,
-      "description": "A map layout with Plotly-owned extensions and an explicit camera object.",
-      "properties": {
-        "mapbox": {
-          "additionalProperties": {
-            "$ref": "#/$defs/JsonValue"
-          },
-          "title": "Mapbox",
-          "type": "object"
-        },
-        "uirevision": {
-          "title": "Uirevision",
-          "type": "string"
-        }
-      },
-      "required": [
-        "mapbox",
-        "uirevision"
-      ],
-      "title": "PlotlyLayout",
-      "type": "object"
-    },
     "ZoneGeometry": {
       "additionalProperties": false,
       "description": "Display boundary and interior label anchor shared by every interval.",
@@ -564,21 +487,13 @@
     },
     "manifest": {
       "$ref": "#/$defs/DayManifest"
-    },
-    "figure": {
-      "$ref": "#/$defs/PlotlyFigure"
-    },
-    "option": {
-      "$ref": "#/$defs/ConstraintOption"
     }
   },
   "required": [
     "bundle",
     "metadata",
     "interval",
-    "manifest",
-    "figure",
-    "option"
+    "manifest"
   ],
   "title": "CnecContracts",
   "type": "object"

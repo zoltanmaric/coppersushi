@@ -1,6 +1,6 @@
 import {expect, test} from 'vitest';
 import {overlayModel} from './overlay-model';
-import type {PlotlyFigure} from './contracts';
+import type {PlotlyFigure} from './figure';
 
 const figure = (data: PlotlyFigure['data']) => ({data} as PlotlyFigure);
 

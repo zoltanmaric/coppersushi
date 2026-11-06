@@ -4,7 +4,7 @@ import {act, cleanup, fireEvent, render, screen, waitFor} from '@testing-library
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 import {CnecPage} from './index';
 import {reduceSelection} from './state';
-import type {PlotlyFigure} from './contracts';
+import type {PlotlyFigure} from './figure';
 
 function CnecView(props: Omit<React.ComponentProps<typeof CnecPage>, 'selection' | 'onAction'> & {day: string; interval?: number}) {
   const [selection, onAction] = React.useReducer(reduceSelection, {

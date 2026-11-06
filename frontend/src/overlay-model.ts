@@ -1,4 +1,4 @@
-import type {PlotlyFigure} from './contracts';
+import type {PlotlyFigure} from './figure';
 
 export type LngLat = readonly [lon: number, lat: number];
 export type SelectionEffect = {kind: 'line'; endpoints: readonly [LngLat, LngLat]} |

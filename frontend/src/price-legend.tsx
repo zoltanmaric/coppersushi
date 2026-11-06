@@ -1,5 +1,5 @@
 import React from 'react';
-import type {PlotlyFigure} from './contracts';
+import type {PlotlyFigure} from './figure';
 
 export function PriceLegend({figure}: {figure: PlotlyFigure}) {
   const fill = figure.data.find(trace => trace.type === 'choroplethmapbox');

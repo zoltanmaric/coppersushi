@@ -62,22 +62,12 @@ export type PriceRange1 = [number, number];
 export type Version2 = 2;
 export type Day2 = string;
 export type Generation = string;
-export type JsonValue = unknown;
-export type Data = {
-  [k: string]: JsonValue;
-}[];
-export type Uirevision = string;
-export type Label1 = string;
-export type Value = string;
-export type Source = "constraints" | "attribution";
 
 export interface CnecContracts {
   bundle: DayBundle;
   metadata: DayMetadata;
   interval: MarketInterval;
   manifest: DayManifest;
-  figure: PlotlyFigure;
-  option: ConstraintOption;
 }
 /**
  * Producer-side complete day; browser delivery uses separate interval objects.
@@ -175,27 +165,4 @@ export interface DayManifest {
   version?: Version2;
   day: Day2;
   generation: Generation;
-}
-/**
- * Plotly's extensible JSON figure; Plotly validates its trace/layout schemas.
- */
-export interface PlotlyFigure {
-  data: Data;
-  layout: PlotlyLayout;
-}
-/**
- * A map layout with Plotly-owned extensions and an explicit camera object.
- */
-export interface PlotlyLayout {
-  mapbox: Mapbox;
-  uirevision: Uirevision;
-  [k: string]: unknown;
-}
-export interface Mapbox {
-  [k: string]: JsonValue;
-}
-export interface ConstraintOption {
-  label: Label1;
-  value: Value;
-  source: Source;
 }

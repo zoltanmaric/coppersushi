@@ -13,7 +13,7 @@ import {viewFromUrl, viewSearch} from './view-url';
 import {mapSelection} from './map-selection';
 import {MapDecoration} from './map-decoration';
 import {initialCoreCamera} from './initial-camera';
-import type {PlotlyFigure} from './contracts';
+import type {PlotlyFigure} from './figure';
 import {PriceLegend} from './price-legend';
 
 import {overlayModel} from './overlay-model';
@@ -157,7 +157,7 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
         onNext={() => dispatch({type: 'interval', interval: interval + 1})}/>
       <div className="cnec-slider-panel cnec-panel">
       <Timeline labels={labels} interval={interval} disabled={!labels.length}
-        onScrubbingChange={() => {}} onChange={interval => dispatch({type: 'interval', interval})}/>
+        onChange={interval => dispatch({type: 'interval', interval})}/>
       </div>
     </div>
     </div>

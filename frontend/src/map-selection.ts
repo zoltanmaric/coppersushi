@@ -1,4 +1,4 @@
-import type {ConstraintOption} from './contracts';
+import type {ConstraintOption} from './figure';
 import {coreZone} from './reference';
 import type {Action} from './state';
 

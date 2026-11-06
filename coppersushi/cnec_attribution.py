@@ -1,6 +1,5 @@
 """Validated normalized-FB attribution inputs."""
 
-from typing import NamedTuple
 from collections.abc import Sequence
 
 import numpy as np
@@ -58,27 +57,9 @@ def context(day: MarketDay, alpha_rows: list[AlphaFactor], cap_rows: list[Alloca
     return AttributionContext.validate(result)
 
 
-class PriceSpread(NamedTuple):
-    """Signed €/MWh terms for other-zone price minus reference-zone price."""
-
-    observed: float
-    selected: float
-    remainder: float
-
-
 def country_cap_effect(country_price: float, adjusted_price: float) -> float:
     """The cap's signed effect on its country's price; retain source precision."""
     return country_price - adjusted_price
-
-
-def price_spread(reference_price: float, other_price: float, contribution: float) -> PriceSpread:
-    """Separate the observed spread from one selected term, without rounding either.
-
-    The remainder includes other constraints and discrepancies between price publications.
-    A selected term need not equal, or be smaller than, the observed spread.
-    """
-    observed = other_price - reference_price
-    return PriceSpread(observed, contribution, observed - contribution)
 
 
 # Published positions can differ from a binding limit by 0.1 MW.

@@ -1,11 +1,5 @@
-import type {
-  DayBundle,
-  BindingRow,
-  MarketInterval,
-  PlotlyFigure,
-  ElementGeometry,
-  ConstraintOption,
-} from "./contracts";
+import type {DayBundle, BindingRow, MarketInterval, ElementGeometry} from './contracts';
+import type {PlotlyFigure, ConstraintOption} from './figure';
 import type { CoreZone } from "./reference";
 
 type Trace = PlotlyFigure["data"][number];

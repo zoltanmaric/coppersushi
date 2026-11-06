@@ -55,12 +55,6 @@ def test_binding_export_cap_contributes_to_all_spreads_relative_to_poland():
     caps = attribution.country_caps(context(), prices, interval)
     assert caps.source_id.tolist() == [-2]
     assert caps.delta.iloc[0] == -20
-    view = cnec_market.snapshot(phys, ptdfs, prices, interval,
-                               cnec_market.ConstraintKey(-2), context=context(), alpha=.5)
-    contribution = view.contribution.set_index('zone').contribution
-    assert view.reference == 'PL'
-    assert contribution.PL == 0
-    assert contribution.DE == 20
     slack = context().assign(polish_position=-100)
     assert attribution.country_caps(slack, prices, interval).empty
     no_dual = prices.copy()
@@ -92,48 +86,12 @@ def test_import_cap_sign_and_capacity():
     assert caps.delta.iloc[0] == 20
 
 
-@pytest.mark.parametrize('alpha', [.1, .5, 1])
-def test_normalized_physical_contribution_scales_and_changes_reference_without_changing_spread(alpha):
-    phys, ptdfs, *_ = tables()
-    be = cnecs.price_contributions(phys.iloc[0], ptdfs, 'BE', alpha).set_index('zone').contribution
-    de = cnecs.price_contributions(phys.iloc[0], ptdfs, 'DE', alpha).set_index('zone').contribution
-    assert be.DE == pytest.approx(5 / alpha)
-    assert de.BE == pytest.approx(-5 / alpha)
-    for z in be.index:
-        assert be[z] - be.DE == pytest.approx(de[z])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-@pytest.mark.parametrize("country, adjusted, other, effect, observed, remainder", [
-    (170.53, 189.83, 189.82, -19.30, 19.29, -0.01),
-    (189.83, 170.53, 170.54, 19.30, -19.29, 0.01),
-    (100.0, 120.0, 110.0, -20.0, 10.0, -10.0),
-    (120.0, 120.0, 120.0, 0.0, 0.0, 0.0),
+@pytest.mark.parametrize(('price', 'alternative', 'effect'), [
+    (170.53, 189.83, -19.30), (189.83, 170.53, 19.30),
+    (100.0, 120.0, -20.0), (120.0, 120.0, 0.0),
 ])
-def test_pure_country_cap_spread_preserves_cents_and_other_terms(
-        country, adjusted, other, effect, observed, remainder):
-    cap_effect = attribution.country_cap_effect(country, adjusted)
-    spread = attribution.price_spread(country, other, -cap_effect)
-    assert cap_effect == pytest.approx(effect)
-    assert spread.observed == pytest.approx(observed)
-    assert spread.selected == pytest.approx(-effect)
-    assert spread.remainder == pytest.approx(remainder)
-    assert spread.selected + spread.remainder == pytest.approx(spread.observed)
-    assert f"{spread.observed:.2f}" == f"{observed:.2f}"
-    assert f"{spread.selected:.2f}" == f"{-effect:.2f}"
+def test_country_cap_effect_preserves_cents(price, alternative, effect):
+    assert attribution.country_cap_effect(price, alternative) == pytest.approx(effect)
 
 
 @pytest.mark.parametrize(('position', 'import_limit', 'export_limit', 'alternative', 'unavailable'), [
@@ -165,5 +123,5 @@ def test_missing_price_makes_binding_cap_attribution_unavailable(polish_price):
 def test_missing_polish_price_is_reported_for_saturated_cap():
     phys, ptdfs, prices = tables()
     no_poland = prices[prices.zone.ne('PL')]
-    view = cnec_market.snapshot(phys, ptdfs, no_poland, prices.interval.iloc[0], context=context())
+    view = cnec_market.snapshot(phys, no_poland, prices.interval.iloc[0], context=context())
     assert 'Poland cap attribution unavailable for this interval.' in view.notes

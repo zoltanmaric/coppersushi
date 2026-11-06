@@ -1,6 +1,6 @@
 import {expect, test} from 'vitest';
 import {mapSelection} from './map-selection';
-import type {ConstraintOption} from './contracts';
+import type {ConstraintOption} from './figure';
 
 const options: ConstraintOption[] = [
   {label: 'No constraint', value: '', source: 'constraints'},

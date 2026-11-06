@@ -41,7 +41,7 @@ def build(day: Day, geometries: dict[int, DataFrame[MappedCnecElements]]) -> Day
     intervals = []
     for index, geometry in geometries.items():
         timestamp = times[index]
-        view = cnec_market.snapshot(day.constraints, day.ptdfs, day.prices, timestamp, context=day.context)
+        view = cnec_market.snapshot(day.constraints, day.prices, timestamp, context=day.context)
         located = {(r.eic, r.tso, r.name): r for r in geometry.itertuples()}
         rows = []
         for row in view.constraints.itertuples():
