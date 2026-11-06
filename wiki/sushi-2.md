@@ -104,6 +104,8 @@ flowchart LR
     browser_figure["Browser figure construction<br/>pure TypeScript contributions and Plotly traces; local interval/reference/selection"]
     cnec_day_bundle --> browser_figure
     browser_figure --> react_cnec
+    cnec_handler["Standalone CNEC handler<br/>light Flask shell, official React Plotly component, lazy data API"]
+    cnec_handler --> react_cnec
     native_glyphs["Map-owned CNEC glyphs<br/>owned transformer/triangle sprite; hover and selection"]
     selection_effects["Decorative SVG energy<br/>typed figure metadata; native Mapbox projection and lifecycle; north-up 2D adapter"]
     react_cnec --> native_glyphs

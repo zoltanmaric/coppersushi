@@ -167,3 +167,11 @@ To publish a historical day, run `python -m coppersushi.data_sources.cnec_bundle
 YYYY-MM-DD --bucket <cache_bucket>` in the configured runtime environment. Add
 `--refresh` to refetch published inputs. Never upload the raw source-cache prefix
 as browser data.
+
+## Handler separation
+
+CloudFront sends `/cnec*`, `/api/cnec/*` and `/assets/*` to the lightweight
+`cnec_server:server` handler. OPF and Dash component routes stay on `app:server`.
+The CNEC shell imports neither Dash nor pandas. Preparation dependencies load only
+for dates missing from prepared data. The frontend uses the official React Plotly
+component and a pinned Mapbox-only Plotly bundle.

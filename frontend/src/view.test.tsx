@@ -17,6 +17,11 @@ interface Pending {path: string; body?: {day: string; interval: number; selected
 let pending: Pending[];
 let graph: PlotlyFigure;
 let clickGraph: (change: {clickData: {points: {customdata: string[]}[]}}) => void;
+vi.mock('./plot', () => ({Plot: (props: {data: PlotlyFigure['data']; layout: PlotlyFigure['layout']; onClick: (click: unknown) => void}) => {
+  graph = {data: props.data, layout: props.layout};
+  clickGraph = change => props.onClick(change.clickData);
+  return <div aria-label="Map">{props.data.map(t=>t.name).join(',')}</div>;
+}}));
 beforeEach(() => {
   window.history.replaceState(null, "", "/cnec/2024-08-29");
 
@@ -25,11 +30,7 @@ beforeEach(() => {
     if (url.endsWith('/manifest.json')) {resolve(new Response(null, {status:404})); return;}
     pending.push({path: url, body: options.body ? JSON.parse(String(options.body)) : undefined, resolve});
   })));
-  Object.assign(window, {dash_core_components: {Graph: (props: {figure: PlotlyFigure; setProps: typeof clickGraph}) => {
-    clickGraph = props.setProps;
-    graph = props.figure;
-    return <div aria-label="Map">{props.figure.data.map(t => t.name).join(',')}</div>;
-  }}});
+
 });
 afterEach(() => {cleanup(); vi.unstubAllGlobals();});
 

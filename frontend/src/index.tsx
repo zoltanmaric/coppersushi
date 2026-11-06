@@ -1,9 +1,10 @@
-import React, {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {QueryClient, QueryClientProvider, useQuery, useQueryClient} from '@tanstack/react-query';
 import {BrowserRouter, Link, Route, Routes, useLocation, useNavigate, useParams} from 'react-router-dom';
 import {fetchBundle, fetchManifest} from './api';
 import {dayFigure, zoneFeatures, optionsFor, contributions} from './day-figure';
 import {Timeline} from './timeline';
+import {Plot} from './plot';
 import {CORE_ZONES} from './reference';
 import {DateTimeControls} from './date-time-controls';
 import {reduceSelection} from './state';
@@ -22,17 +23,16 @@ import './style.css';
 interface Props {id: string; day: string; min_day: string; token: string; basemap: PlotlyFigure['layout']['mapbox']['style']}
 interface GraphChange {clickData?: unknown}
 interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void; overlay: OverlayModel; hidden: boolean}
-// Reuse Dash's Graph component and its Plotly loader instead of shipping Plotly twice.
-const Graph = ({overlay, hidden, ...props}: GraphProps) => {
-  const Component = (window as unknown as {dash_core_components: {Graph: React.ComponentType<Omit<GraphProps, 'overlay' | 'hidden'>>}}).dash_core_components.Graph;
+const Graph = ({overlay, hidden, figure, id, config, style, setProps}: GraphProps) => {
   const host = useRef<HTMLDivElement>(null);
-  // Dash binds event listeners once; forward them to the current React handler.
-  const handler = useRef(props.setProps);
-  useLayoutEffect(() => {handler.current = props.setProps;}, [props.setProps]);
-  const setProps = useCallback((change: GraphChange) => handler.current(change), []);
-  return <div ref={host} style={props.style}>
-    <Component {...props} style={{height: '100%'}} setProps={setProps}/>
+  const drawing = useMemo(() => structuredClone(figure), [figure]);
+  const [error, setError] = useState<string | null>(null);
+  return <div ref={host} style={style}>
+    <Plot divId={id} data={drawing.data} layout={drawing.layout} config={config}
+      style={{height:'100%',width:'100%'}} useResizeHandler
+      onAfterPlot={() => setError(null)} onClick={(clickData: unknown) => setProps({clickData})} onError={error=>setError(error.message)}/>
     <MapDecoration host={host} model={overlay} hidden={hidden}/>
+    {error && <div role="alert">Map: {error}</div>}
   </div>;
 };
 

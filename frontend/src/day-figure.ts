@@ -446,5 +446,6 @@ export function dayFigure(
       },
     ),
   );
+  for (const trace of traces) trace.uid = Array.from(String(trace.name), c => c.codePointAt(0)!.toString(16)).join('-');
   return { data: traces, layout };
 }
