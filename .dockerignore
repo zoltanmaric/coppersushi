@@ -32,5 +32,3 @@ infra/lambda/*.tfplan
 
 121gigawatts
 
-assets/cnec-view.js
-assets/cnec-view.css

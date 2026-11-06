@@ -13,99 +13,31 @@ The in-place successor of [v1](copper-sushi-app.md). v1 visualized a *model's* o
 
 ## Dataflow
 
-Solid nodes and edges are implemented; **dashed (class `planned`) are planned** and turn solid in the PR that lands them. Node IDs are stable domain-artifact identities; each arrow means "required to produce." PyPSA-Eur's internal rule chain is upstream's topology and is drawn on [pypsa-eur-sibling](pypsa-eur-sibling.md), not here.
+The [root system diagram](../README.md#system-design) owns runtime components and
+serving boundaries. Component details live with [OPF](../coppersushi/opf/README.md),
+[grid catalog](../coppersushi/grid_catalog/README.md),
+[publication](../coppersushi/publication/README.md) and the [browser](../frontend/README.md).
 
 ```mermaid
 flowchart LR
-    classDef planned stroke-dasharray: 5 5,stroke:#888,fill:none
-
-    net_power_map["net_power_map<br/>go.Figure (Dash app)"]
-
-    pypsa_eur_pin["pypsa_eur_pin<br/>pypsa-eur.pin + config/coppersushi.yaml"]
-    pypsa_eur_run["pypsa_eur_run<br/>coppersushi.opf.data_sources.pypsa_eur → Snakemake in ../pypsa-eur (HiGHS)"]
-    solved_network["solved_network<br/>networks/opf-&lt;day&gt;.nc, Git LFS"]
-    jao_active_constraints["jao_active_constraints<br/>post-auction binding constraints, shadow prices and zonal PTDFs by market time unit"]
-    jao_attribution["jao_attribution<br/>α, Polish allocation limits and net positions, guarded PL alternative prices"]
-    cnec_attribution_context["cnec_attribution_context<br/>typed day-scoped response loaded quietly after constraints"]
-    jao_domain["jao_domain<br/>final flow-based domain: monitored elements with their substation names, PTDFs and RAM"]
-    jao_endpoint_cache["jao_endpoint_cache<br/>validated seed bundled in the image; viewed-hour misses fetched and cached locally"]
-    osm_locator["osm_locator<br/>core-tso-data's OSM-locator substation coordinates, unlicensed, fetched locally"]
-    element_catalog["Physical-element catalog<br/>sites, source names, publications and assessed A/B terminals: four CSVs"]
-    validated_catalog["Validated catalog<br/>SQLite keys, references, states and exact site joins"]
-    catalog_sweep["Catalog compiler<br/>cached JAO seed/observations, tracked reviewed mappings and independent orientation evidence"]
-    setup_data["Application data setup<br/>cached downloads, catalog compilation and country outlines"]
-    setup_data --> jao_endpoint_cache
-    setup_data --> osm_locator
-    setup_data --> catalog_sweep
-    jao_endpoint_cache --> catalog_sweep
-    jao_active_constraints --> catalog_sweep
-    osm_locator --> catalog_sweep
-    osm_site_geometry["Verified OSM substation polygons<br/>complete retained boundaries for sites absent from bus cache"]
-    osm_site_geometry --> catalog_sweep
-    catalog_assessments["Reviewed endpoint and direction hypotheses<br/>basis and evidence retained; normal map appearance"] --> catalog_sweep
-    catalog_sweep --> element_catalog
-    element_catalog --> validated_catalog
-    validated_catalog --> startup_check["Startup readiness<br/>nonempty validated catalog, endpoint seed, locator, outlines and solved network"]
-    zone_shapes --> startup_check
-    cnec_geometry["cnec_geometry<br/>each named element and publisher placed by its published substations"]
-    zone_shapes["zone_shapes<br/>Core bidding-zone polygons derived from solved_network at image build; small bundled GeoJSON read at runtime"]
-    mapbox_basemap["mapbox_basemap<br/>Mapbox's dark style fetched per process, label layers removed"]
-
-    jao_static_grid["jao_static_grid<br/>JAO's Core Static Grid Model, fetched per release: real ratings and R/X/B/G per element EIC"]
-
-    day_ahead_prices["day_ahead_prices<br/>published zonal clearing prices by market time unit"]
-    cnec_market_snapshot["cnec_market_snapshot<br/>one market time unit: zonal prices, active rows, selected relative contribution"]
-    cnec_price_figure["cnec_price_figure<br/>go.Figure: price choropleth with daily bounds, market-binding CNECs and the selected row's reference-country rays"]
-    jao_map["jao_map<br/>/cnec/&lt;day&gt;: cleared zonal prices, active CNECs and selected PTDF contribution"]
-
-    pypsa_eur_pin --> pypsa_eur_run
-    pypsa_eur_run --> solved_network
-    opf_full["opf_full<br/>/ and /opf-2024: OPF with app navigation"]
-    opf_embed["opf_embed<br/>/embed/opf-2024: map and hourly controls"]
-    net_power_map --> opf_full
-    net_power_map --> opf_embed
-    opf_bundle["opf_bundle<br/>24 hourly figures generated with PyPSA in the build environment"]
-    solved_network --> opf_bundle
-    opf_bundle -->|Lambda runtime: no solver dependencies| net_power_map
-    solved_network -->|local development fallback| net_power_map
-    solved_network --> zone_shapes
-    zone_shapes --> cnec_price_figure
-    jao_domain --> jao_endpoint_cache
-    jao_active_constraints --> jao_endpoint_cache
-    jao_endpoint_cache -->|partial location discovery; keep known lines on failure| cnec_geometry
-    osm_locator -->|live discovery only| cnec_geometry
-    validated_catalog -->|reviewed publications first| cnec_geometry
-    cnec_geometry --> cnec_price_figure
-    mapbox_basemap --> cnec_price_figure
-    jao_attribution --> cnec_attribution_context
-    cnec_attribution_context -->|enrich interval figure| cnec_market_snapshot
-    react_cnec -->|chosen Core reference via HTTP; geometry fallback for automatic callers| cnec_market_snapshot
-    cnec_geometry --> cnec_market_snapshot
-    zone_shapes --> cnec_market_snapshot
-    jao_active_constraints --> cnec_market_snapshot
-    day_ahead_prices --> cnec_market_snapshot
-    cnec_market_snapshot --> cnec_price_figure
-    cnec_http["CNEC HTTP API<br/>price and constraint layers; enrichment figures and attribution status"]
-    react_cnec["React CNEC view hosted by Dash<br/>React Router URL-owned day, interval, reference and constraint; pure selection reducer and TanStack Query; view-bound settled figures"]
-    day_ahead_prices -->|price layer| cnec_http
-    cnec_geometry -->|constraint layer| cnec_http
-    cnec_price_figure -->|enriched view| cnec_http
-    cnec_http --> react_cnec
-    prepared_day["Prepared market day<br/>validated prices, PTDFs, alpha, cap terms and shared geometry"]
-    cnec_geometry --> prepared_day
-    day_ahead_prices --> prepared_day
-    cnec_attribution_context --> prepared_day
-    prepared_files["Static publication files<br/>shared metadata, uniform intervals, atomic manifest"]
-    prepared_day --> prepared_files
-    native_glyphs["Map-owned CNEC glyphs<br/>owned transformer/triangle sprite; hover and selection"]
-    selection_effects["Decorative SVG energy<br/>typed figure metadata; native Mapbox projection and lifecycle; north-up 2D adapter"]
-    react_cnec --> native_glyphs
-    react_cnec --> selection_effects
-    native_glyphs --> jao_map
-    selection_effects --> jao_map
+    solve["Pinned PyPSA-Eur solve"] --> network["Solved network"]
+    network --> opf["Hourly optimal-power-flow figures"]
+    network --> outlines["Core bidding-zone outlines"]
+    evidence["JAO names, OSM sites and reviewed orientation evidence"] --> catalog["Located physical elements"]
+    prices["Published day-ahead prices"] --> day["Validated complete market day"]
+    binding["Binding rows, shadow prices and zonal PTDFs"] --> day
+    context["Alpha, Polish allocation limits, net positions and alternative prices"] --> day
+    catalog --> day
+    outlines --> day
+    day --> files["Immutable metadata and interval files"]
+    files --> browser["Country prices and selected spread attribution"]
 ```
 
-Code is one package, `coppersushi/`, organised by domain noun; `io-boundary` in `coppersushi/AGENTS.md` names the two modules that touch the world.
+The catalog keeps source evidence, endpoint identity and orientation assessments
+separate from price attribution. Unknown locations remain explicit. Publication
+resolves missing endpoints before writing the day; browser navigation does not
+fetch upstream data or ask Python to render figures. The browser applies the chosen
+reference country and constraint to the published coefficients.
 
 ## Future chapters
 
@@ -116,9 +48,8 @@ in Europe/Brussels time. The AWS deployment uses `ROOT_VIEW=full`: `/` and
 `/opf-2024` show both product links; `/embed/opf-2024` shows the map without
 navigation. Both 2013 app models are removed.
 
-The [production Lambda deployment](../infra/lambda/README.md) runs the same Dash
-server behind AWS Web Adapter (OPF responses carry only the selected hour’s four traces), with complete dynamic-cache bundles in private S3 and
-API keys read from a dedicated secret. Rendering, S3 reuse and cross-origin framing are verified; measured startup
+The [production Lambda deployment](../infra/lambda/README.md) runs the OPF Dash server behind AWS Web Adapter. OPF responses carry only the
+selected hour’s four traces; API keys come from a dedicated secret. Rendering, S3 reuse and cross-origin framing are verified; measured startup
 limits are recorded in the deployment README.
 
 The OPF page first displays its basemap and camera, then adds the network when the
