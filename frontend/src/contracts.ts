@@ -53,12 +53,6 @@ export type PriceRange = [number, number];
 export type Version1 = 1;
 export type Day1 = string;
 export type Generation = string;
-export type Day2 = string;
-export type Labels1 = string[];
-export type Day3 = string;
-export type Interval = number;
-export type Selected = number | null;
-export type Reference = ("AT" | "BE" | "CZ" | "DE" | "FR" | "HR" | "HU" | "NL" | "PL" | "RO" | "SI" | "SK") | null;
 export type JsonValue = unknown;
 export type Data = {
   [k: string]: JsonValue;
@@ -67,26 +61,13 @@ export type Uirevision = string;
 export type Label1 = string;
 export type Value = string;
 export type Source = "constraints" | "attribution";
-export type Options = ConstraintOption[];
-export type Reference1 = string | null;
-export type Notes1 = string[];
-export type Day4 = string;
-export type Complete = boolean;
-export type Interval1 = string;
-export type Alpha1 = number | null;
-export type ImportLimit = number | null;
-export type ExportLimit = number | null;
-export type PolishPosition = number | null;
-export type PolishAlt = number | null;
-export type Rows = AttributionRow[];
 export type Error = string;
 
 export interface CnecContracts {
   bundle: DayBundle;
   manifest: DayManifest;
-  day: DayResponse;
-  layer: LayerResponse;
-  attribution: AttributionPayload;
+  figure: PlotlyFigure;
+  option: ConstraintOption;
   error: ApiError;
 }
 /**
@@ -173,32 +154,6 @@ export interface DayManifest {
   generation: Generation;
 }
 /**
- * Market-time-unit labels computed in the market timezone, including DST folds.
- */
-export interface DayResponse {
-  day: Day2;
-  labels: Labels1;
-}
-/**
- * One ready visual layer scoped to the exact view that requested it.
- */
-export interface LayerResponse {
-  request: ViewRequest;
-  figure: PlotlyFigure;
-  options: Options;
-  reference: Reference1;
-  notes: Notes1;
-}
-/**
- * One explicit market-day view; selection is a published row identifier.
- */
-export interface ViewRequest {
-  day: Day3;
-  interval: Interval;
-  selected: Selected;
-  reference?: Reference;
-}
-/**
  * Plotly's extensible JSON figure; Plotly validates its trace/layout schemas.
  */
 export interface PlotlyFigure {
@@ -220,32 +175,6 @@ export interface ConstraintOption {
   label: Label1;
   value: Value;
   source: Source;
-}
-/**
- * Successfully loaded price-attribution inputs for one browser request.
- */
-export interface AttributionPayload {
-  day: Day4;
-  complete: Complete;
-  rows: Rows;
-}
-/**
- * Inputs for explaining why electricity prices differ between bidding zones.
- *
- * Attribution calculates how much each binding grid or import/export limit
- * contributes to that price difference, in EUR/MWh. This row holds the scaling
- * factor and Polish cap inputs for one market interval, encoded as browser JSON.
- * Null means an input is unavailable.
- *
- * See wiki/flow-based-market-coupling.md#attribution for an example and limits.
- */
-export interface AttributionRow {
-  interval: Interval1;
-  alpha: Alpha1;
-  import_limit: ImportLimit;
-  export_limit: ExportLimit;
-  polish_position: PolishPosition;
-  polish_alt: PolishAlt;
 }
 export interface ApiError {
   error: Error;

@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 
 from coppersushi import REPO, cnec_bundle
-from coppersushi.cnec_page import Day
+from coppersushi.cnec_bundle import Day
 from coppersushi.data_model.cnec_bundle import DayBundle
 from coppersushi.data_model.market import ZonalPrices
 from coppersushi.data_sources import cache, cnec_attribution, electricity_maps, element_catalog, jao, zone_shapes

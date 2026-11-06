@@ -14,111 +14,6 @@
       "title": "ApiError",
       "type": "object"
     },
-    "AttributionPayload": {
-      "additionalProperties": false,
-      "description": "Successfully loaded price-attribution inputs for one browser request.",
-      "properties": {
-        "day": {
-          "format": "date",
-          "title": "Day",
-          "type": "string"
-        },
-        "complete": {
-          "title": "Complete",
-          "type": "boolean"
-        },
-        "rows": {
-          "items": {
-            "$ref": "#/$defs/AttributionRow"
-          },
-          "title": "Rows",
-          "type": "array"
-        }
-      },
-      "required": [
-        "day",
-        "complete",
-        "rows"
-      ],
-      "title": "AttributionPayload",
-      "type": "object"
-    },
-    "AttributionRow": {
-      "additionalProperties": false,
-      "description": "Inputs for explaining why electricity prices differ between bidding zones.\n\nAttribution calculates how much each binding grid or import/export limit\ncontributes to that price difference, in EUR/MWh. This row holds the scaling\nfactor and Polish cap inputs for one market interval, encoded as browser JSON.\nNull means an input is unavailable.\n\nSee wiki/flow-based-market-coupling.md#attribution for an example and limits.",
-      "properties": {
-        "interval": {
-          "format": "date-time",
-          "title": "Interval",
-          "type": "string"
-        },
-        "alpha": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Alpha"
-        },
-        "import_limit": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Import Limit"
-        },
-        "export_limit": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Export Limit"
-        },
-        "polish_position": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Polish Position"
-        },
-        "polish_alt": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Polish Alt"
-        }
-      },
-      "required": [
-        "interval",
-        "alpha",
-        "import_limit",
-        "export_limit",
-        "polish_position",
-        "polish_alt"
-      ],
-      "title": "AttributionRow",
-      "type": "object"
-    },
     "BindingRow": {
       "additionalProperties": false,
       "description": "One physical binding publication with its country sensitivities.",
@@ -385,30 +280,6 @@
       "title": "DayManifest",
       "type": "object"
     },
-    "DayResponse": {
-      "additionalProperties": false,
-      "description": "Market-time-unit labels computed in the market timezone, including DST folds.",
-      "properties": {
-        "day": {
-          "format": "date",
-          "title": "Day",
-          "type": "string"
-        },
-        "labels": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Labels",
-          "type": "array"
-        }
-      },
-      "required": [
-        "day",
-        "labels"
-      ],
-      "title": "DayResponse",
-      "type": "object"
-    },
     "ElementGeometry": {
       "additionalProperties": false,
       "description": "Resolved physical element in its publisher's orientation.",
@@ -449,52 +320,6 @@
       "type": "object"
     },
     "JsonValue": {},
-    "LayerResponse": {
-      "additionalProperties": false,
-      "description": "One ready visual layer scoped to the exact view that requested it.",
-      "properties": {
-        "request": {
-          "$ref": "#/$defs/ViewRequest"
-        },
-        "figure": {
-          "$ref": "#/$defs/PlotlyFigure"
-        },
-        "options": {
-          "items": {
-            "$ref": "#/$defs/ConstraintOption"
-          },
-          "title": "Options",
-          "type": "array"
-        },
-        "reference": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Reference"
-        },
-        "notes": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Notes",
-          "type": "array"
-        }
-      },
-      "required": [
-        "request",
-        "figure",
-        "options",
-        "reference",
-        "notes"
-      ],
-      "title": "LayerResponse",
-      "type": "object"
-    },
     "MarketInterval": {
       "additionalProperties": false,
       "description": "Published values for one UTC interval, labelled in market local time.",
@@ -624,66 +449,6 @@
       "title": "PlotlyLayout",
       "type": "object"
     },
-    "ViewRequest": {
-      "additionalProperties": false,
-      "description": "One explicit market-day view; selection is a published row identifier.",
-      "properties": {
-        "day": {
-          "format": "date",
-          "title": "Day",
-          "type": "string"
-        },
-        "interval": {
-          "minimum": 0,
-          "title": "Interval",
-          "type": "integer"
-        },
-        "selected": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Selected"
-        },
-        "reference": {
-          "anyOf": [
-            {
-              "enum": [
-                "AT",
-                "BE",
-                "CZ",
-                "DE",
-                "FR",
-                "HR",
-                "HU",
-                "NL",
-                "PL",
-                "RO",
-                "SI",
-                "SK"
-              ],
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Reference"
-        }
-      },
-      "required": [
-        "day",
-        "interval",
-        "selected"
-      ],
-      "title": "ViewRequest",
-      "type": "object"
-    },
     "ZoneGeometry": {
       "additionalProperties": false,
       "description": "Display boundary and interior label anchor shared by every interval.",
@@ -752,14 +517,11 @@
     "manifest": {
       "$ref": "#/$defs/DayManifest"
     },
-    "day": {
-      "$ref": "#/$defs/DayResponse"
+    "figure": {
+      "$ref": "#/$defs/PlotlyFigure"
     },
-    "layer": {
-      "$ref": "#/$defs/LayerResponse"
-    },
-    "attribution": {
-      "$ref": "#/$defs/AttributionPayload"
+    "option": {
+      "$ref": "#/$defs/ConstraintOption"
     },
     "error": {
       "$ref": "#/$defs/ApiError"
@@ -768,9 +530,8 @@
   "required": [
     "bundle",
     "manifest",
-    "day",
-    "layer",
-    "attribution",
+    "figure",
+    "option",
     "error"
   ],
   "title": "CnecContracts",

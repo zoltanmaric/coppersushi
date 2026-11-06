@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import pandas as pd
 from coppersushi import cnec_bundle
-from coppersushi.cnec_page import Day
+from coppersushi.cnec_bundle import Day
 from coppersushi.data_model.cnec_bundle import DayBundle
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
 from coppersushi.data_model.cnec_attribution import AttributionContext

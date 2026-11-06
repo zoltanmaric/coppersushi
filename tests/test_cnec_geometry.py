@@ -172,25 +172,6 @@ def test_the_placed_table_validates_and_carries_one_row_per_named_publication(
     assert not located.duplicated(identity).any()
 
 
-@pytest.mark.parametrize("direction,expected", [("DIRECT", "FR"), ("OPPOSITE", "FR")])
-def test_scoped_endpoint_corrections_restore_geometry_and_reference(direction, expected):
-    from coppersushi.data_sources import osm_locator, zone_shapes
-    from coppersushi.cnec_attribution import physical_reference
-
-    # Invented sites retain the real failure: a generic endpoint has east/west sites,
-    # and a second circuit misspells the other endpoint.
-    ends = pd.read_csv(FIXTURES / "scoped-ends.csv").pipe(ElementEnds.validate)
-    sites = pd.read_csv(FIXTURES / "scoped-sites.csv").pipe(LocatedSubstations.validate)
-    aliases = osm_locator.load_element_aliases(FIXTURES / "scoped-aliases.csv")
-    mapped = cnec_geometry.locate_elements(ends, sites, element_aliases=aliases)
-    assert mapped.match_status.tolist() == ["matched", "matched"] + ["no_substation"] * 4
-    assert mapped.iloc[0].branch_id == mapped.iloc[1].branch_id
-    assert (mapped.iloc[0].x0, mapped.iloc[0].x1) == (3., 4.)
-    zones = zone_shapes.read(FIXTURES / "scoped-zones.geojson")
-    row = ends.iloc[0].copy()
-    row["direction"] = direction
-    assert physical_reference(row, mapped, zones, pd.DataFrame()) == expected
-    assert physical_reference(row, cnec_geometry.locate_elements(ends, sites), zones, pd.DataFrame()) is None
 
 
 def test_equipment_suffix_and_alias_compose(substations):
@@ -200,3 +181,14 @@ def test_equipment_suffix_and_alias_compose(substations):
     assert hit is not None
     assert hit[1] == [NORDKAMP]
     assert hit[2] == cnec_geometry.TRIMMED
+
+
+def test_scoped_endpoint_corrections_restore_geometry():
+    from coppersushi.data_sources import osm_locator
+    ends = pd.read_csv(FIXTURES / "scoped-ends.csv").pipe(ElementEnds.validate)
+    sites = pd.read_csv(FIXTURES / "scoped-sites.csv").pipe(LocatedSubstations.validate)
+    aliases = osm_locator.load_element_aliases(FIXTURES / "scoped-aliases.csv")
+    mapped = cnec_geometry.locate_elements(ends, sites, element_aliases=aliases)
+    assert mapped.match_status.tolist() == ["matched", "matched"] + ["no_substation"] * 4
+    assert mapped.iloc[0].branch_id == mapped.iloc[1].branch_id
+    assert (mapped.iloc[0].x0, mapped.iloc[0].x1) == (3., 4.)

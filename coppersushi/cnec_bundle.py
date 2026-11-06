@@ -1,11 +1,27 @@
 """Pure conversion from validated market inputs to the browser's day contract."""
 import math
+from dataclasses import dataclass
+from coppersushi.market_day import MarketDay
+from coppersushi.data_model.network_views import BiddingZoneShapes
+from coppersushi.data_model.jao import ActiveConstraints, ConstraintPtdfs
+from coppersushi.data_model.market import ZonalPrices
+from coppersushi.data_model.cnec_attribution import AttributionContext
 from pandera.typing import DataFrame
-from coppersushi import cnec_market, cnec_price_map, market
-from coppersushi.cnec_page import Day
+from coppersushi import cnec_market, country_outline, market
 from coppersushi.data_model.cnec_bundle import DayBundle, ZoneGeometry, ElementGeometry, BindingRow, CountryCap, MarketInterval
 from coppersushi.data_model.cnec_price_map import MappedCnecElements
 from coppersushi.market_day import MARKET_TZ
+
+
+@dataclass(frozen=True)
+class Day:
+    """Validated market inputs used to prepare browser data, without presentation state."""
+    market_day: MarketDay
+    zones: DataFrame[BiddingZoneShapes]
+    constraints: DataFrame[ActiveConstraints]
+    ptdfs: DataFrame[ConstraintPtdfs]
+    prices: DataFrame[ZonalPrices]
+    context: DataFrame[AttributionContext] | None = None
 
 
 def finite(value: float) -> float | None:
@@ -19,7 +35,7 @@ def build(day: Day, geometries: dict[int, DataFrame[MappedCnecElements]]) -> Day
     for zone, shape in zip(day.zones.zone, day.zones.geometry):
         centre = shape.representative_point()
         zones.append(ZoneGeometry.model_validate(dict(zone=zone, name=market.ZONE_NAMES[zone],
-            rings=[list(ring.coords) for ring in cnec_price_map._country_rings(shape)],
+            rings=[list(ring.coords) for ring in country_outline.country_rings(shape)],
             centre=[centre.x, centre.y])))
     elements: dict[str, ElementGeometry] = {}
     intervals = []
@@ -33,7 +49,7 @@ def build(day: Day, geometries: dict[int, DataFrame[MappedCnecElements]]) -> Day
             key = None
             if mapped is not None and mapped.match_status == 'matched':
                 element = ElementGeometry.model_validate(dict(branch_id=mapped.branch_id,
-                    kind='transformer' if mapped.element_type in cnec_price_map.POINT_TYPES else 'line',
+                    kind='transformer' if mapped.element_type in ("Transformer", "PST") else 'line',
                     endpoints=[[mapped.x0, mapped.y0], [mapped.x1, mapped.y1]]))
                 # Compact references while retaining direction changes across publications.
                 existing = next((k for k, v in elements.items() if v == element), None)

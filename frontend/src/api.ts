@@ -9,9 +9,6 @@ ajv.addSchema(schema, 'cnec');
 const validators = {
   manifest: ajv.compile<CnecContracts['manifest']>({$ref: 'cnec#/$defs/DayManifest'}),
   bundle: ajv.compile<CnecContracts['bundle']>({$ref: 'cnec#/$defs/DayBundle'}),
-  day: ajv.compile<CnecContracts['day']>({$ref: 'cnec#/$defs/DayResponse'}),
-  layer: ajv.compile<CnecContracts['layer']>({$ref: 'cnec#/$defs/LayerResponse'}),
-  attribution: ajv.compile<CnecContracts['attribution']>({$ref: 'cnec#/$defs/AttributionPayload'}),
 };
 
 export async function fetchCnec<K extends keyof typeof validators>(

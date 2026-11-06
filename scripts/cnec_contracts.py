@@ -3,17 +3,15 @@ import json
 import sys
 from pathlib import Path
 from pydantic import BaseModel
-from coppersushi.data_model.cnec_api import DayResponse, LayerResponse, ApiError
-from coppersushi.data_model.cnec_attribution import AttributionPayload
+from coppersushi.data_model.cnec_api import PlotlyFigure, ConstraintOption, ApiError
 
 from coppersushi.data_model.cnec_bundle import DayBundle, DayManifest
 
 class CnecContracts(BaseModel):
     bundle: DayBundle
     manifest: DayManifest
-    day: DayResponse
-    layer: LayerResponse
-    attribution: AttributionPayload
+    figure: PlotlyFigure
+    option: ConstraintOption
     error: ApiError
 
 if __name__ == '__main__':
