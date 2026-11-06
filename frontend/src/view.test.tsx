@@ -165,3 +165,17 @@ test('an invalid deep link recovers when the slider chooses a valid interval',as
   await waitFor(()=>expect(graph.data.some(t=>t.name==='published day-ahead price')).toBe(true));
   expect(screen.queryByRole('alert')).toBeNull();
 });
+
+test('an unavailable day is rechecked automatically, then polling stops after publication', async () => {
+  vi.useFakeTimers();
+  try {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(null,{status:404}));
+    render(<CnecView id="cnec" day="2024-08-29" min_day="2024-01-01" token="token" basemap="dark"/>);
+    await act(async () => {await vi.advanceTimersByTimeAsync(1);});
+    const before = vi.mocked(fetch).mock.calls.filter(([url])=>String(url).endsWith('/manifest.json')).length;
+    await act(async () => {await vi.advanceTimersByTimeAsync(60_000);});
+    expect(vi.mocked(fetch).mock.calls.filter(([url])=>String(url).endsWith('/manifest.json'))).toHaveLength(before+1);
+    await act(async () => {await vi.advanceTimersByTimeAsync(120_000);});
+    expect(vi.mocked(fetch).mock.calls.filter(([url])=>String(url).endsWith('/manifest.json'))).toHaveLength(before+1);
+  } finally {cleanup(); vi.useRealTimers();}
+});

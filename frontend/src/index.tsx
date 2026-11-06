@@ -158,7 +158,7 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
           <button onClick={() => {setInitial({day,interval:0});dispatch({type:'interval',interval:0});}}>Go to first interval</button>
         </div>}
         {(publication.isFetching || metadata.isFetching || (!mapCurrent && (first.isFetching || intervalQuery.isFetching))) && <div role="status" aria-label="Map loading">Loading interval…{data && !mapCurrent && <div>Showing {data.label.split(' · ')[1]}.</div>}</div>}
-        {publication.isSuccess && !publication.data && <div role="status">This day has not been prepared yet. <button onClick={() => void publication.refetch()}>Check again</button></div>}
+        {publication.isSuccess && !publication.data && <div role="status">This day has not been prepared yet. Checking automatically every minute. <button onClick={() => void publication.refetch()}>Check again</button></div>}
         {notes.map(note => <div role="status" key={note}>{note}</div>)}
         {([['Publication',publication],['Metadata',metadata],['First interval',first],...(interval === initialInterval ? [] : [['Interval',intervalQuery] as const])] as const).map(([name,query])=>query.error && <div role="alert" key={name}>{name}: {query.error.message}{data && !mapCurrent && ` Showing ${data.label.split(' · ')[1]}.`} <button onClick={()=>void query.refetch()}>Retry</button></div>)}
       </aside>

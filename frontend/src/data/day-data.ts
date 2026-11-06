@@ -16,7 +16,14 @@ export function IntervalPrefetch({day,generation,count,enabled}:{day:string;gene
 
 /** Selection and prefetch subscribe to the same interval query keys. */
 export function useDayData(day: string, interval: number, firstInterval: number) {
-  const publication = useQuery({queryKey:['publication',day],queryFn:({signal})=>fetchManifest(day,signal)});
+  const publication = useQuery({
+    queryKey:['publication',day], queryFn:({signal})=>fetchManifest(day,signal),
+    // Only absent publications poll; immutable day parts keep their existing cache policy.
+    refetchInterval: query => query.state.data === null ? 60_000 : false,
+    refetchOnWindowFocus: query => query.state.data === null,
+    refetchOnReconnect: query => query.state.data === null,
+    refetchOnMount: query => query.state.data === null,
+  });
   const generation = publication.data?.generation ?? '';
   const metadata = useQuery({queryKey:['metadata',day,generation],enabled:!!generation,
     queryFn:({signal})=>fetchDayPart('metadata',day,generation,0,signal)});
