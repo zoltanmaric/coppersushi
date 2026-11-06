@@ -1,14 +1,10 @@
 """Published zonal prices and market-binding CNECs in one Plotly map."""
 
 import math
-from functools import lru_cache
 
 import numpy as np
 import pandas as pd
-from pyproj import Transformer
-from shapely import transform
 from shapely.geometry import LinearRing, MultiPolygon, Polygon
-from shapely.geometry.base import BaseGeometry
 from pandera.typing import DataFrame
 from coppersushi.data_model.cnec_attribution import CountryCaps
 from coppersushi.data_model.network_views import BiddingZoneShapes
@@ -17,6 +13,7 @@ from coppersushi.data_model.jao import ActiveConstraints
 import plotly.graph_objects as go
 
 from coppersushi import cnec_influence, map_style, market
+from coppersushi.country_outline import country_rings as _country_rings
 from coppersushi.cnec_market import Snapshot, daily_price_range
 from coppersushi.data_model.cnec_price_map import MATCHED, MappedCnecElements
 
@@ -279,28 +276,6 @@ def _line_hit_targets(rows: pd.DataFrame) -> go.Scattermapbox:
         marker=dict(size=16, color="rgba(128,80,255,0.01)"), customdata=data,
         text=hover, hoverinfo="text", hoverlabel=map_style.BINDING_HOVERLABEL, showlegend=False)
 
-
-@lru_cache(maxsize=32)
-def _country_rings(geometry: Polygon | MultiPolygon) -> tuple[LinearRing, ...]:
-    """A schematic country boundary, excluding narrow water channels and inland holes.
-
-    Land polygons follow riverbanks inland from the coast. Close those narrow cuts in
-    metric coordinates before outlining or filling, without joining separate islands.
-    """
-    to_metres = Transformer.from_crs(4326, 3035, always_xy=True)
-    to_lonlat = Transformer.from_crs(3035, 4326, always_xy=True)
-
-    def project[G: BaseGeometry](geometry: G, projection: Transformer) -> G:
-        return transform(geometry, lambda xy: np.column_stack(projection.transform(xy[:, 0], xy[:, 1])))
-
-    polygons = list(geometry.geoms) if isinstance(geometry, MultiPolygon) else [geometry]
-    rings: list[LinearRing] = []
-    for polygon in polygons:
-        closed = project(polygon, to_metres).buffer(COUNTRY_CHANNEL_HALF_WIDTH_M, join_style="mitre").buffer(
-            -COUNTRY_CHANNEL_HALF_WIDTH_M, join_style="mitre")
-        parts = list(closed.geoms) if isinstance(closed, MultiPolygon) else [closed]
-        rings.extend(project(part.exterior, to_lonlat) for part in parts if not part.is_empty)
-    return tuple(rings)
 
 
 def _cap_traces(zones: DataFrame[BiddingZoneShapes], caps: DataFrame[CountryCaps], selected_id: int | None) -> list:
