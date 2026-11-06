@@ -12,15 +12,15 @@ from coppersushi.data_model.cnec_bundle import DayBundle, DayMetadata, DayManife
 from coppersushi.data_model.market import ZonalPrices
 from coppersushi.data_sources import cache, cnec_attribution, electricity_maps, element_catalog, jao, zone_shapes
 from coppersushi.market_day import MarketDay
-
-
-class PublicationNotReady(RuntimeError):
-    """Expected market publication is still incomplete and should be retried."""
+from coppersushi.publication import PublicationNotReady, PublicationReceipt, require_received
 
 
 def prepare(day: MarketDay, indices: list[int] | None = None, refresh: bool = False) -> DayBundle:
     """Construct domain data without importing or invoking the web application's renderer."""
     key = day.date.isoformat()
+    receipts = jao._get('monitoring', day.start_time_utc, day.end_time_utc,
+                        base_url='https://publicationtool.jao.eu/core/api/system')
+    require_received(day, [PublicationReceipt.model_validate(row) for row in receipts])
     context = cnec_attribution.load_day(day, refresh=refresh)
     if not context.notna().all().all():
         raise PublicationNotReady(f'Attribution feeds are incomplete for {day.date}')
