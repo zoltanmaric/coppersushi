@@ -26,7 +26,7 @@ export function MapDecoration({host, model, hidden, countries, onReference}: {
     const detach = () => {
       const map = activeMap.current;
       if (!map) return;
-      for (const event of ['move', 'movestart', 'moveend', 'resize']) map.off(event, refresh);
+      for (const event of ['movestart', 'moveend', 'resize']) map.off(event, refresh);
       map.off('remove', removed);
       activeMap.current = null;
     };
@@ -37,7 +37,7 @@ export function MapDecoration({host, model, hidden, countries, onReference}: {
         detach();
         activeMap.current = map;
         if (map) {
-          for (const event of ['move', 'movestart', 'moveend', 'resize']) map.on(event, refresh);
+          for (const event of ['movestart', 'moveend', 'resize']) map.on(event, refresh);
           map.on('remove', removed);
         }
       }
@@ -72,5 +72,5 @@ export function MapDecoration({host, model, hidden, countries, onReference}: {
     return [x, y];
   } : null;
   return <><ConstraintOverlay model={model} project={visible ? project : null}/>
-    {map && createPortal(<CountryLabels labels={countries} project={project} onReference={onReference}/>,map.getCanvasContainer())}</>;
+    {map && createPortal(<CountryLabels labels={countries} map={map} onReference={onReference}/>,map.getCanvasContainer())}</>;
 }

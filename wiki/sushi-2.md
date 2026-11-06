@@ -94,7 +94,7 @@ flowchart LR
     browser_figure --> react_cnec
     native_glyphs["Map-owned CNEC glyphs<br/>owned transformer/triangle sprite; hover and selection"]
     selection_effects["Decorative SVG energy<br/>typed figure metadata; native Mapbox projection and lifecycle; north-up 2D adapter"]
-    country_labels["Persistent React country labels<br/>prices updated in place; native Mapbox projection; click chooses reference"]
+    country_labels["Persistent React country labels<br/>prices updated in place; synchronous native movement/projection; click chooses reference"]
     react_cnec --> country_labels
     country_labels --> jao_map
     react_cnec --> native_glyphs
