@@ -6,6 +6,11 @@ None
 
 ## Unusually complex changes requiring reviewer attention
 
-<!-- Reconsider unusually complex parts before completing this section: simplify them, or identify the code, explain why the complexity is needed, and name the simpler alternative and its tradeoff. Reviewers should challenge that choice. Write "None" after checking when nothing needs special attention. -->
+<!-- Ask before retaining unusually complex changes:
+- Is there a simpler way to do this, including a supported library/framework feature?
+- Does the requirement justify the complexity it introduces?
+- Would relaxing or deleting the requirement produce a simpler, cleaner, more coherent system?
+Simplify first where appropriate. For retained complexity, identify the code, explain the requirement and tradeoff, and give reviewers the simpler alternative to consider. Recommend requirement changes explicitly; do not silently drop agreed behavior. Write "None" when nothing needs special attention.
+-->
 
 None
