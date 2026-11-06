@@ -375,3 +375,7 @@ Verify supported APIs in the pinned dependency version and state behavior tradeo
 ## [2026-11-05] decision | Map ownership for animated effects
 
 Recorded [the shared camera/layer ownership limitation](copper-sushi-app.md) behind the custom selection overlay and independent-layer redraw problems. Native static strokes are simpler but lose the electric filaments; the animated appearance remains the chosen tradeoff.
+
+## [2026-11-06] query | Native camera ownership for electric decoration
+
+The camera review reproduced electricity hidden after an initial programmatic fit and identified drift under rotation/inertial movement. Plotly's progress and completion forwarding does not cover the full native camera lifecycle. [Map rendering direction](copper-sushi-app.md#map-rendering-direction) records why native projection/event observation removes the copied camera, and why the remaining private acquisition is evidence for direct map ownership rather than a need to change UI frameworks.
