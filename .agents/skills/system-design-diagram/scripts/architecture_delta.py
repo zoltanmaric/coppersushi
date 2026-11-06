@@ -4,6 +4,7 @@ import argparse
 from pathlib import PurePosixPath
 import re
 import subprocess
+from urllib.parse import urljoin
 
 
 def git(*args: str) -> str:
@@ -21,14 +22,22 @@ def snapshot(revision: str) -> dict[str, str]:
             for path in paths if PurePosixPath(path).name == 'README.md'}
 
 
-def section(before: dict[str, str], after: dict[str, str]) -> str:
+def linked(diagram: str, path: str, revision: str, repository: str) -> str:
+    """PR bodies need commit-specific links, not README-relative links."""
+    source = f'{repository}/blob/{revision}/{path}'
+    return re.sub(r'(\bclick\s+\w+\s+")([^"#]+)(")',
+                  lambda match: match[1] + urljoin(source, match[2]) + match[3], diagram)
+
+
+def section(before: dict[str, str], after: dict[str, str],
+            base: str, head: str, repository: str) -> str:
     parts = ['## Architecture delta']
     for path in sorted(before.keys() | after.keys()):
         old, new = before.get(path, ''), after.get(path, '')
         if old == new:
             continue
-        parts.extend([f'### {path}', '**Before**', old or '_No diagram._',
-                      '**After**', new or '_No diagram._'])
+        parts.extend([f'### {path}', '**Before**', linked(old, path, base, repository) or '_No diagram._',
+                      '**After**', linked(new, path, head, repository) or '_No diagram._'])
     if len(parts) == 1:
         parts.append('None — README diagrams are unchanged.')
     return '\n\n'.join(parts) + '\n'
@@ -41,7 +50,9 @@ def main() -> None:
     args = parser.parse_args()
     head = git('rev-parse', '--verify', f'{args.head}^{{commit}}').strip()
     base = git('merge-base', args.base, head).strip()
-    print(section(snapshot(base), snapshot(head)), end='')
+    remote = git('remote', 'get-url', 'origin').strip().removesuffix('.git')
+    repository = re.sub(r'^git@([^:]+):', r'https://\1/', remote)
+    print(section(snapshot(base), snapshot(head), base, head, repository), end='')
 
 
 if __name__ == '__main__':
