@@ -7,23 +7,28 @@ const ajv = new Ajv();
 addFormats(ajv);
 ajv.addSchema(schema, 'cnec');
 const validators = {
-  day: ajv.compile<CnecContracts['day']>({$ref: 'cnec#/$defs/DayResponse'}),
-  layer: ajv.compile<CnecContracts['layer']>({$ref: 'cnec#/$defs/LayerResponse'}),
-  attribution: ajv.compile<CnecContracts['attribution']>({$ref: 'cnec#/$defs/AttributionPayload'}),
+  manifest: ajv.compile<CnecContracts['manifest']>({$ref: 'cnec#/$defs/DayManifest'}),
+  metadata: ajv.compile<CnecContracts['metadata']>({$ref:'cnec#/$defs/DayMetadata'}),
+  interval: ajv.compile<CnecContracts['interval']>({$ref:'cnec#/$defs/MarketInterval'}),
 };
 
-export async function fetchCnec<K extends keyof typeof validators>(
-  kind: K, path: string, signal: AbortSignal, body?: object,
-): Promise<CnecContracts[K]> {
-  const response = await fetch(`/api/cnec/${path}`, {
-    signal, ...(body ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)} : {}),
-  });
+export async function fetchManifest(day: string, signal: AbortSignal): Promise<CnecContracts['manifest'] | null> {
+  const response = await fetch(`/data/cnec/v2/${day}/manifest.json`, {signal});
+  // Private S3 returns 403 for absent keys without bucket-list permission.
+  if (response.status === 404 || response.status === 403) return null;
+  if (!response.ok) throw new Error(`Publication request failed (${response.status})`);
   const payload: unknown = await response.json();
-  if (!response.ok) {
-    const error = ajv.compile<CnecContracts['error']>({$ref: 'cnec#/$defs/ApiError'});
-    throw new Error(error(payload) ? payload.error : `Request failed (${response.status})`);
-  }
-  if (!validators[kind](payload)) throw new Error(`Invalid ${kind} response: ${ajv.errorsText(validators[kind].errors)}`);
-  // The validator is selected by K and validates the same indexed contract.
+  if (!validators.manifest(payload) || payload.day !== day) throw new Error('Invalid day manifest');
+  return payload;
+}
+
+export async function fetchDayPart<K extends 'metadata' | 'interval'>(kind: K, day: string, generation: string, index: number, signal: AbortSignal): Promise<CnecContracts[K]> {
+  const file = kind === 'metadata' ? 'metadata' : index;
+  const response = await fetch(`/data/cnec/v2/${day}/${generation}/${file}.json`, {signal});
+  if (!response.ok) throw new Error(`Prepared data request failed (${response.status})`);
+  const payload: unknown = await response.json();
+  if (!validators[kind](payload)) throw new Error(`Invalid ${kind} response`);
+  if (kind === 'metadata' && (payload as CnecContracts['metadata']).day !== day) throw new Error('Metadata belongs to another day');
+  if (kind === 'interval' && (payload as CnecContracts['interval']).index !== index) throw new Error('Interval identity does not match its request');
   return payload as CnecContracts[K];
 }

@@ -31,11 +31,17 @@ from coppersushi.market_day import MARKET_TZ, MarketDay
 app = Dash(
     __name__,
     title='Copper Sushi 🍣',
+    assets_ignore=r'(cnec-(app|view)\.(js|css)|plotly-mapbox-.*\.js)',
     external_stylesheets=[dbc.themes.DARKLY],
     suppress_callback_exceptions=True,
 )
 
 server = app.server
+from cnec_server import index as standalone_cnec, local_data as standalone_data
+server.add_url_rule('/cnec', 'standalone_cnec', standalone_cnec)
+server.add_url_rule('/cnec/', 'standalone_cnec_slash', standalone_cnec)
+server.add_url_rule('/cnec/<day>', 'standalone_cnec_day', standalone_cnec)
+server.add_url_rule('/data/cnec/v2/<path:filename>', 'standalone_data', standalone_data)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 

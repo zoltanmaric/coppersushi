@@ -5,65 +5,176 @@
  * and run json-schema-to-typescript to regenerate this file.
  */
 
+export type Version = 2;
 export type Day = string;
 export type Labels = string[];
+export type Zone = "AT" | "BE" | "CZ" | "DE" | "FR" | "HR" | "HU" | "NL" | "PL" | "RO" | "SI" | "SK";
+export type Name = string;
+export type Rings = [number, number][][];
+/**
+ * @minItems 2
+ * @maxItems 2
+ */
+export type Centre = [number, number];
+export type Zones = ZoneGeometry[];
+export type BranchId = string;
+export type Kind = "line" | "transformer";
+/**
+ * @minItems 2
+ * @maxItems 2
+ */
+export type Endpoints = [[number, number], [number, number]];
+/**
+ * @minItems 2
+ * @maxItems 2
+ */
+export type PriceRange = [number, number];
+export type Index = number;
+export type Label = string;
+export type SourceId = number;
+export type Name1 = string;
+export type Direction = string;
+export type Contingency = string | null;
+export type ShadowPrice = number;
+export type Ram = number | null;
+export type Capacity = number | null;
+export type Geometry = string | null;
+export type Constraints = BindingRow[];
+export type Alpha = number | null;
+export type SourceId1 = -1 | -2;
+export type Name2 = string;
+export type Direction1 = string;
+export type Capacity1 = number;
+export type ShadowPrice1 = number;
+export type Delta = number;
+export type Caps = CountryCap[];
+export type Notes = string[];
+export type Intervals = MarketInterval[];
+export type Version1 = 2;
 export type Day1 = string;
-export type Interval = number;
-export type Selected = number | null;
-export type Reference = ("AT" | "BE" | "CZ" | "DE" | "FR" | "HR" | "HU" | "NL" | "PL" | "RO" | "SI" | "SK") | null;
+export type Labels1 = string[];
+export type Zones1 = ZoneGeometry[];
+/**
+ * @minItems 2
+ * @maxItems 2
+ */
+export type PriceRange1 = [number, number];
+export type Version2 = 2;
+export type Day2 = string;
+export type Generation = string;
 export type JsonValue = unknown;
 export type Data = {
   [k: string]: JsonValue;
 }[];
 export type Uirevision = string;
-export type Label = string;
+export type Label1 = string;
 export type Value = string;
 export type Source = "constraints" | "attribution";
-export type Options = ConstraintOption[];
-export type Reference1 = string | null;
-export type Notes = string[];
-export type Day2 = string;
-export type Complete = boolean;
-export type Interval1 = string;
-export type Alpha = number | null;
-export type ImportLimit = number | null;
-export type ExportLimit = number | null;
-export type PolishPosition = number | null;
-export type PolishAlt = number | null;
-export type Rows = AttributionRow[];
-export type Error = string;
 
 export interface CnecContracts {
-  day: DayResponse;
-  layer: LayerResponse;
-  attribution: AttributionPayload;
-  error: ApiError;
+  bundle: DayBundle;
+  metadata: DayMetadata;
+  interval: MarketInterval;
+  manifest: DayManifest;
+  figure: PlotlyFigure;
+  option: ConstraintOption;
 }
 /**
- * Market-time-unit labels computed in the market timezone, including DST folds.
+ * Producer-side complete day; browser delivery uses separate interval objects.
  */
-export interface DayResponse {
+export interface DayBundle {
+  version?: Version;
   day: Day;
   labels: Labels;
+  zones: Zones;
+  elements: Elements;
+  price_range: PriceRange;
+  intervals: Intervals;
 }
 /**
- * One ready visual layer scoped to the exact view that requested it.
+ * Display boundary and interior label anchor shared by every interval.
  */
-export interface LayerResponse {
-  request: ViewRequest;
-  figure: PlotlyFigure;
-  options: Options;
-  reference: Reference1;
+export interface ZoneGeometry {
+  zone: Zone;
+  name: Name;
+  rings: Rings;
+  centre: Centre;
+}
+export interface Elements {
+  [k: string]: ElementGeometry;
+}
+/**
+ * Resolved physical element in its publisher's orientation.
+ */
+export interface ElementGeometry {
+  branch_id: BranchId;
+  kind: Kind;
+  endpoints: Endpoints;
+}
+/**
+ * Published values for one UTC interval, labelled in market local time.
+ */
+export interface MarketInterval {
+  index: Index;
+  label: Label;
+  prices: Prices;
+  constraints: Constraints;
+  alpha: Alpha;
+  caps: Caps;
   notes: Notes;
 }
+export interface Prices {
+  [k: string]: number;
+}
 /**
- * One explicit market-day view; selection is a published row identifier.
+ * One physical binding publication with its country sensitivities.
  */
-export interface ViewRequest {
+export interface BindingRow {
+  source_id: SourceId;
+  name: Name1;
+  direction: Direction;
+  contingency: Contingency;
+  shadow_price: ShadowPrice;
+  ram: Ram;
+  capacity: Capacity;
+  geometry: Geometry;
+  ptdfs: Ptdfs;
+}
+export interface Ptdfs {
+  [k: string]: number;
+}
+/**
+ * Inferred Polish cap and its signed effect on the Polish price.
+ */
+export interface CountryCap {
+  source_id: SourceId1;
+  name: Name2;
+  direction: Direction1;
+  capacity: Capacity1;
+  shadow_price: ShadowPrice1;
+  delta: Delta;
+}
+/**
+ * Versioned, token-free data for all interactions within a delivery day.
+ */
+export interface DayMetadata {
+  version?: Version1;
   day: Day1;
-  interval: Interval;
-  selected: Selected;
-  reference?: Reference;
+  labels: Labels1;
+  zones: Zones1;
+  elements: Elements1;
+  price_range: PriceRange1;
+}
+export interface Elements1 {
+  [k: string]: ElementGeometry;
+}
+/**
+ * Atomic pointer to a complete immutable generation of a prepared day.
+ */
+export interface DayManifest {
+  version?: Version2;
+  day: Day2;
+  generation: Generation;
 }
 /**
  * Plotly's extensible JSON figure; Plotly validates its trace/layout schemas.
@@ -84,36 +195,7 @@ export interface Mapbox {
   [k: string]: JsonValue;
 }
 export interface ConstraintOption {
-  label: Label;
+  label: Label1;
   value: Value;
   source: Source;
-}
-/**
- * Successfully loaded price-attribution inputs for one browser request.
- */
-export interface AttributionPayload {
-  day: Day2;
-  complete: Complete;
-  rows: Rows;
-}
-/**
- * Inputs for explaining why electricity prices differ between bidding zones.
- *
- * Attribution calculates how much each binding grid or import/export limit
- * contributes to that price difference, in EUR/MWh. This row holds the scaling
- * factor and Polish cap inputs for one market interval, encoded as browser JSON.
- * Null means an input is unavailable.
- *
- * See wiki/flow-based-market-coupling.md#attribution for an example and limits.
- */
-export interface AttributionRow {
-  interval: Interval1;
-  alpha: Alpha;
-  import_limit: ImportLimit;
-  export_limit: ExportLimit;
-  polish_position: PolishPosition;
-  polish_alt: PolishAlt;
-}
-export interface ApiError {
-  error: Error;
 }

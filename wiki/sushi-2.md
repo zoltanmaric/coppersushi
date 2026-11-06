@@ -96,6 +96,8 @@ flowchart LR
     cnec_attribution_context --> prepared_day
     prepared_files["Static publication files<br/>shared metadata, uniform intervals, atomic manifest"]
     prepared_day --> prepared_files
+    static_browser["Standalone CNEC browser<br/>pure Plotly figures, native query-cache interval subscriptions"]
+    prepared_files --> static_browser
     native_glyphs["Map-owned CNEC glyphs<br/>owned transformer/triangle sprite; hover and selection"]
     selection_effects["Decorative SVG energy<br/>typed figure metadata; native Mapbox projection and lifecycle; north-up 2D adapter"]
     react_cnec --> native_glyphs

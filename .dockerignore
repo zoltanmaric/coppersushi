@@ -34,3 +34,7 @@ infra/lambda/*.tfplan
 
 assets/cnec-view.js
 assets/cnec-view.css
+
+assets/cnec-app.js
+assets/cnec-app.css
+assets/plotly-mapbox-*.min.js

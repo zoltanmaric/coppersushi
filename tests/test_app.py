@@ -239,12 +239,13 @@ def test_cnec_mount_uses_react_component_and_has_no_loading_callback_chain(monke
     assert all('cnec-' not in callback['output'] for callback in dependencies)
 
 
-def test_unsupported_cnec_dates_redirect_to_undated_view():
+def test_unsupported_cnec_dates_redirect_to_undated_view(monkeypatch):
+    monkeypatch.setenv("MAPBOX_TOKEN", "test-public-token")
     client = app.server.test_client()
     response = client.get('/cnec/2025-11-04')
     assert response.status_code == 302
     assert response.headers['Location'] == '/cnec'
-    assert client.get('/cnec/2025-11-05').status_code == 200
+    assert client.get('/cnec/2026-11-01').status_code == 200
     redirect_component = app.show_page('/cnec/2025-11-04').children
     assert redirect_component.href == '/cnec'
     assert not app.unsupported_cnec_path('/opf-2024')

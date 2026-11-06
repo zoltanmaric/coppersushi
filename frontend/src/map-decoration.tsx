@@ -39,7 +39,7 @@ export function MapDecoration({host, model, hidden}: {
       if (map) lockMapOrientation(map);
       refresh();
     };
-    // Dash mounts Plotly asynchronously; afterplot also catches native map replacement.
+    // React mounts Plotly asynchronously; afterplot also catches native map replacement.
     const attach = () => {
       const node = host.current?.querySelector<PlotElement>('.js-plotly-plot');
       if (!node || typeof node.on !== 'function') return;
