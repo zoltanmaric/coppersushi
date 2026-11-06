@@ -92,7 +92,7 @@ resource "aws_iam_role_policy" "publication_schedule" {
 resource "aws_scheduler_schedule" "publication" {
   count                        = var.image_uri == null ? 0 : 1
   name                         = "coppersushi-publish-day"
-  schedule_expression          = "cron(0 13 * * ? *)"
+  schedule_expression          = "cron(50 15 * * ? *)"
   schedule_expression_timezone = "Europe/Brussels"
   flexible_time_window { mode = "OFF" }
   target {

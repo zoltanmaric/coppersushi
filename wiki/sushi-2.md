@@ -90,7 +90,7 @@ flowchart LR
     cnec_geometry -->|constraint layer| cnec_http
     cnec_price_figure -->|enriched view| cnec_http
     cnec_http --> react_cnec
-    publication_workflow["Daily publication workflow<br/>13:00 Europe/Brussels; retry after 2 minutes until complete, at most 5 hours"]
+    publication_workflow["Daily publication workflow<br/>15:50 Europe/Brussels; retry after 2 minutes until complete, at most 5 hours"]
     publication_workflow --> prepared_day
     prepared_day["Prepared market day<br/>validated prices, PTDFs, alpha, cap terms and shared geometry"]
     cnec_geometry --> prepared_day

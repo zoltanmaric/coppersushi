@@ -180,6 +180,6 @@ is initiated by browser navigation.
 
 ### Daily publication
 
-EventBridge Scheduler starts a Step Functions Standard execution at 13:00 Europe/Brussels. The scheduled instant pins tomorrow’s delivery date, including across DST. A dedicated publisher checks attribution readiness before fetching the larger datasets. Complete days are skipped. Missing publications and transient upstream failures wait two minutes before another attempt; the execution stops after five hours. Unexpected failures get three short retries, then fail visibly in the execution history. Lambda only runs during an attempt.
+EventBridge Scheduler starts a Step Functions Standard execution at 15:50 Europe/Brussels. The scheduled instant pins tomorrow’s delivery date, including across DST. A dedicated publisher checks attribution readiness before fetching the larger datasets. Complete days are skipped. Missing publications and transient upstream failures wait two minutes before another attempt; the execution stops after five hours. Unexpected failures get three short retries, then fail visibly in the execution history. Lambda only runs during an attempt.
 
 JAO’s [Core handbook](https://publicationtool.jao.eu/PublicationHandbook/Core_PublicationTool_Handbook_v2.2.pdf) lists active constraints at 13:30 D−1 and alpha/net positions at 15:50 D−1. All required feeds must be complete before the manifest is exposed.
