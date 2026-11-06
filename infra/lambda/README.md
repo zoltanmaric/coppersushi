@@ -65,6 +65,11 @@ no longer tracked; preserve the authoritative state and inputs.
    `/cnec/<day>` through the public hostname. Exercise time controls, reference and
    constraint selection, and inspect browser errors after loading completes.
 
+Frontend-only changes can reuse the deployed Lambda image: build and test the
+frontend, then follow steps 4–5 and 7–8. Record the frontend Git revision with the
+unchanged image digest. Prepared data and frontend assets are served independently
+of the Python image; no Terraform apply is needed when its inputs are unchanged.
+
 ### Rollback
 
 Restore the previous Terraform source revision and image digest, then review and

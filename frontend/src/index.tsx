@@ -25,16 +25,21 @@ interface GraphChange {clickData?: unknown}
 interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void; overlay: OverlayModel; hidden: boolean}
 const Graph = ({overlay, hidden, figure, id, config, style, setProps}: GraphProps) => {
   const host = useRef<HTMLDivElement>(null);
-  const drawing = useMemo(() => structuredClone(figure), [figure]);
+  const data = useMemo(() => structuredClone(figure.data), [figure.data]);
+  // Mapbox mutates its style (including removing empty layer layouts). Keep this
+  // owned layout until the actual layout input changes, or Plotly reloads the style.
+  const layout = useMemo(() => structuredClone(figure.layout), [figure.layout]);
   const [error, setError] = useState<string | null>(null);
   return <div ref={host} style={style}>
-    <Plot divId={id} data={drawing.data} layout={drawing.layout} config={config}
+    <Plot divId={id} data={data} layout={layout} config={config}
       style={{height:'100%',width:'100%'}} useResizeHandler
       onAfterPlot={() => setError(null)} onClick={(clickData: unknown) => setProps({clickData})} onError={error=>setError(error.message)}/>
     <MapDecoration host={host} model={overlay} hidden={hidden}/>
     {error && <div role="alert">Map: {error}</div>}
   </div>;
 };
+
+const plotConfig = {responsive: true, displayModeBar: false, scrollZoom: true};
 
 type HostProps = Omit<Props, 'day'> & {default_day: string};
 
@@ -124,7 +129,7 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
     <IntervalPrefetch day={day} generation={generation} count={labels.length} enabled={first.isSuccess}/>
     <div className="cnec-map-container">
       <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
-        config={{responsive: true, displayModeBar: false, scrollZoom: true}} style={{height: '100%'}}/>
+        config={plotConfig} style={{height: '100%'}}/>
       <small className="cnec-sources">
         Data: <a href="https://publicationtool.jao.eu/core/" target="_blank" rel="noopener noreferrer">JAO</a> · {' '}
         <a href="https://www.electricitymaps.com/" target="_blank" rel="noopener noreferrer">Electricity Maps</a> · {' '}

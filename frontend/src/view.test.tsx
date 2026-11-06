@@ -43,10 +43,12 @@ async function reply(path: string, data: object, status = 200) {
   await act(async () => {pending.splice(index, 1)[0].resolve(new Response(JSON.stringify(data), {status}));});
 }
 async function open() {
-  render(<CnecView id="cnec" day="2024-08-29" min_day="2024-01-01" token="token" basemap={{version: 8, sources: {}, layers: []}}/>);
+  const basemap={version:8,sources:{},layers:[]};
+  render(<CnecView id="cnec" day="2024-08-29" min_day="2024-01-01" token="token" basemap={basemap}/>);
   const {intervals,...metadata}=first;
   await reply('/metadata.json',metadata);
   await reply('/0.json',interval);
+  return basemap;
 }
 
 test('show first interval, share background request, then navigate locally', async () => {
@@ -62,6 +64,22 @@ test('show first interval, share background request, then navigate locally', asy
   fireEvent.click(screen.getByRole('button', {name: 'Previous interval'}));
   fireEvent.click(screen.getByRole('button', {name: 'Next interval'}));
   expect(fetch).toHaveBeenCalledTimes(4);
+});
+
+test('Mapbox style mutations survive data updates without mutating the input layout', async () => {
+  const input=await open();
+  const layout=graph.layout;
+  const style=layout.mapbox.style as {layers: {id:string;type:string;layout?:object}[]};
+  // Mapbox removes empty layer layouts while loading a style. Reintroducing them
+  // on the next interval makes Plotly call setStyle and clear all data layers.
+  style.layers.push({id:'retained-base-layer',type:'background',layout:{}});
+  delete style.layers[0].layout;
+  await reply('/1.json',full.intervals[1]);
+  fireEvent.click(screen.getByRole('button',{name:'Next interval'}));
+  await waitFor(()=>expect(screen.getByRole('slider').getAttribute('aria-valuetext')).toContain('00:15'));
+  expect(graph.layout).toBe(layout);
+  expect((graph.layout.mapbox.style as typeof style).layers[0].layout).toBeUndefined();
+  expect(input.layers).toEqual([]);
 });
 
 test('background failure retains first interval and offers retry', async () => {
