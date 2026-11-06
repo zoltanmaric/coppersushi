@@ -59,9 +59,9 @@ pixi run --locked setup
 Repeat the same command after pulling dependency changes. No credentials, solver runs,
 cloud resources or large datasets are needed for setup or tests.
 The CNEC view is a standalone React/TypeScript frontend using Plotly. OPF retains
-Dash callbacks. `frontend/` constructs figures and subscribes to prepared interval
-files through a shared query cache. The local shell serves the same static data
-format used in production. `setup` and `dev` build its assets with the locked npm dependencies.
+its separate Dash handler and callbacks. `frontend/` constructs figures and owns
+selection and progressive day loading. Python validates and prepares day data,
+served through S3/CloudFront. There is no serving API for prepared views. `setup` and `dev` build its assets with the locked npm dependencies.
 After changing frontend sources, run `pixi run frontend-build`; after changing HTTP
 models, run `pixi run frontend-contracts`. `pixi run frontend-test` checks contract
 drift, TypeScript and interaction behavior.

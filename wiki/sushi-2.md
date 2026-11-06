@@ -53,8 +53,8 @@ flowchart LR
     jao_static_grid["jao_static_grid<br/>JAO's Core Static Grid Model, fetched per release: real ratings and R/X/B/G per element EIC"]
 
     day_ahead_prices["day_ahead_prices<br/>published zonal clearing prices by market time unit"]
-    cnec_market_snapshot["cnec_market_snapshot<br/>one market time unit: zonal prices, active rows, selected relative contribution"]
-    cnec_price_figure["cnec_price_figure<br/>go.Figure: price choropleth with daily bounds, market-binding CNECs and the selected row's reference-country rays"]
+    browser_snapshot["browser_snapshot<br/>browser interval state: prices, binding rows and selected relative contribution"]
+    browser_figure["browser_figure<br/>pure TypeScript Plotly figure with daily bounds, binding elements and reference-country rays"]
     jao_map["jao_map<br/>/cnec/&lt;day&gt;: cleared zonal prices, active CNECs and selected PTDF contribution"]
 
     pypsa_eur_pin --> pypsa_eur_run
@@ -68,41 +68,30 @@ flowchart LR
     opf_bundle -->|Lambda runtime: no solver dependencies| net_power_map
     solved_network -->|local development fallback| net_power_map
     solved_network --> zone_shapes
-    zone_shapes --> cnec_price_figure
     jao_domain --> jao_endpoint_cache
     jao_active_constraints --> jao_endpoint_cache
     jao_endpoint_cache -->|partial location discovery; keep known lines on failure| cnec_geometry
     osm_locator -->|live discovery only| cnec_geometry
     validated_catalog -->|reviewed publications first| cnec_geometry
-    cnec_geometry --> cnec_price_figure
-    mapbox_basemap --> cnec_price_figure
+    mapbox_basemap --> browser_figure
     jao_attribution --> cnec_attribution_context
-    cnec_attribution_context -->|enrich interval figure| cnec_market_snapshot
-    react_cnec -->|chosen Core reference via HTTP; geometry fallback for automatic callers| cnec_market_snapshot
-    cnec_geometry --> cnec_market_snapshot
-    zone_shapes --> cnec_market_snapshot
-    jao_active_constraints --> cnec_market_snapshot
-    day_ahead_prices --> cnec_market_snapshot
-    cnec_market_snapshot --> cnec_price_figure
-    cnec_http["CNEC HTTP API<br/>price and constraint layers; enrichment figures and attribution status"]
-    react_cnec["React CNEC view hosted by Dash<br/>React Router URL-owned day, interval, reference and constraint; pure selection reducer and TanStack Query; view-bound settled figures"]
-    day_ahead_prices -->|price layer| cnec_http
-    cnec_geometry -->|constraint layer| cnec_http
-    cnec_price_figure -->|enriched view| cnec_http
-    cnec_http --> react_cnec
-    publication_workflow["Daily publication workflow<br/>15:50 Europe/Brussels; JAO receipt gate; retry after 2 minutes until complete, at most 5 hours"]
-    publication_workflow --> prepared_day
-    prepared_day["Prepared market day<br/>validated prices, PTDFs, alpha, cap terms and shared geometry"]
-    cnec_geometry --> prepared_day
-    day_ahead_prices --> prepared_day
-    cnec_attribution_context --> prepared_day
-    prepared_files["Static publication files<br/>shared metadata, uniform intervals, atomic manifest"]
-    prepared_day --> prepared_files
-    static_browser["Standalone CNEC browser<br/>pure Plotly figures, native query-cache interval subscriptions"]
-    prepared_files --> static_browser
-    static_edge["S3 + CloudFront<br/>private prepared-data and UI origins; edge page rewrite"]
-    prepared_files --> static_edge
-    static_edge --> static_browser
+    react_cnec -->|chosen Core reference| browser_snapshot
+    browser_snapshot --> browser_figure
+    react_cnec["Standalone React CNEC view<br/>React Router URL-owned day, interval, reference and constraint; pure selection reducer and TanStack Query; parallel interval prefetch through shared query keys"]
+    static_cnec["Static CNEC shell and frontend assets<br/>S3 + CloudFront; no Python invocation on prepared views"]
+    static_cnec --> react_cnec
+    cnec_day_bundle["Typed day bundle<br/>shared metadata plus per-interval prices, binding rows, PTDFs and attribution context"]
+    cnec_geometry --> cnec_day_bundle
+    day_ahead_prices --> cnec_day_bundle
+    jao_active_constraints --> cnec_day_bundle
+    cnec_attribution_context --> cnec_day_bundle
+    prepared_days["Prepared day artifacts<br/>immutable S3 generations, atomic manifest, CloudFront delivery"]
+    scheduled_producer["Scheduled day producer<br/>15:50 Europe/Brussels workflow with JAO receipt gate; retry incomplete next-day publication after 2 minutes, at most 5 hours"]
+    scheduled_producer --> cnec_day_bundle
+    cnec_day_bundle --> prepared_days
+    prepared_days --> react_cnec
+    cnec_day_bundle --> browser_snapshot
+    browser_figure --> react_cnec
     native_glyphs["Map-owned CNEC glyphs<br/>owned transformer/triangle sprite; hover and selection"]
     selection_effects["Decorative SVG energy<br/>typed figure metadata; native Mapbox projection and lifecycle; north-up 2D adapter"]
     react_cnec --> native_glyphs
@@ -139,7 +128,6 @@ without the bundle retain on-demand figure construction.
 An optional CloudFront hostname fronts the Lambda deployment, with an ACM certificate
 and externally managed DNS; see [hosting](../infra/lambda/README.md#delivery).
 
-CloudFront caches only static asset routes. OPF retains Dash callbacks; the CNEC React view requests independent layers from
-the same Python server, retaining the last settled figure while the next loads; see [hosting](../infra/lambda/README.md#delivery).
+CloudFront serves prepared CNEC day generations from private S3. S3 supplies the CNEC shell and prepared data; the browser constructs figures and handles interval/reference/constraint changes locally. OPF retains its separate Dash handler; see [hosting](../infra/lambda/README.md#delivery).
 
 For external-input resilience, see [JAO availability and response retention](jao-availability.md).
