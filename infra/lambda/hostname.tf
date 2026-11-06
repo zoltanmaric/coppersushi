@@ -93,7 +93,7 @@ resource "aws_cloudfront_distribution" "app" {
   }
 
   dynamic "ordered_cache_behavior" {
-    for_each = ["/cnec*", "/api/cnec/*"]
+    for_each = ["/api/cnec/*"]
     content {
       path_pattern             = ordered_cache_behavior.value
       target_origin_id         = "cnec"
@@ -103,6 +103,20 @@ resource "aws_cloudfront_distribution" "app" {
       cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
       origin_request_policy_id = data.aws_cloudfront_origin_request_policy.lambda.id
       compress                 = true
+    }
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "/cnec*"
+    target_origin_id       = "prepared-data"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    cache_policy_id        = aws_cloudfront_cache_policy.prepared[0].id
+    compress               = true
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.cnec_static[0].arn
     }
   }
 
@@ -120,12 +134,19 @@ resource "aws_cloudfront_distribution" "app" {
     for_each = ["/assets/*", "/_dash-component-suites/*"]
     content {
       path_pattern           = ordered_cache_behavior.value
-      target_origin_id       = ordered_cache_behavior.value == "/assets/*" ? "cnec" : "lambda"
+      target_origin_id       = ordered_cache_behavior.value == "/assets/*" ? "prepared-data" : "lambda"
       viewer_protocol_policy = "redirect-to-https"
       allowed_methods        = ["GET", "HEAD", "OPTIONS"]
       cached_methods         = ["GET", "HEAD"]
       cache_policy_id        = aws_cloudfront_cache_policy.static[0].id
-      compress               = true
+      dynamic "function_association" {
+        for_each = ordered_cache_behavior.value == "/assets/*" ? [1] : []
+        content {
+          event_type   = "viewer-request"
+          function_arn = aws_cloudfront_function.cnec_static[0].arn
+        }
+      }
+      compress = true
     }
   }
 
@@ -167,4 +188,20 @@ resource "aws_cloudfront_cache_policy" "prepared" {
     headers_config { header_behavior = "none" }
     query_strings_config { query_string_behavior = "none" }
   }
+}
+
+resource "aws_cloudfront_function" "cnec_static" {
+  count   = var.custom_domain == null ? 0 : 1
+  name    = "coppersushi-cnec-static"
+  runtime = "cloudfront-js-2.0"
+  publish = true
+  code    = <<-JS
+    function handler(event) {
+      var request = event.request;
+      request.uri = request.uri.indexOf('/assets/') === 0
+        ? '/data/cnec/v1/ui' + request.uri
+        : '/data/cnec/v1/ui/index.html';
+      return request;
+    }
+  JS
 }

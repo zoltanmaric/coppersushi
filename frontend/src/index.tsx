@@ -1,6 +1,6 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {QueryClient, QueryClientProvider, useQuery, useQueryClient} from '@tanstack/react-query';
-import {BrowserRouter, Link, Route, Routes, useLocation, useNavigate, useParams} from 'react-router-dom';
+import {BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate, useParams} from 'react-router-dom';
 import {fetchBundle, fetchManifest} from './api';
 import {dayFigure, zoneFeatures, optionsFor, contributions} from './day-figure';
 import {Timeline} from './timeline';
@@ -54,6 +54,7 @@ function RoutedCnecPage({default_day, ...props}: HostProps) {
   } catch {
     return <section role="alert">Invalid delivery day. <Link to="/cnec" replace>Open the current day</Link>.</section>;
   }
+  if (selection.day < props.min_day) return <Navigate to="/cnec" replace/>;
   const onAction = (action: Action) => {
     const next = reduceSelection(selection, action);
     if (next === selection) return;

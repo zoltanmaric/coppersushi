@@ -78,7 +78,9 @@ flowchart LR
     react_cnec -->|chosen Core reference| browser_snapshot
     browser_snapshot --> browser_figure
     react_cnec["Standalone React CNEC view<br/>React Router URL-owned day, interval, reference and constraint; pure selection reducer and TanStack Query; shared background day load"]
-    cnec_handler --> react_cnec
+    static_cnec["Static CNEC shell and frontend assets<br/>S3 + CloudFront; no Python invocation on prepared views"]
+    static_cnec --> react_cnec
+    cnec_handler -->|unprepared-date fallback| react_cnec
     cnec_day_bundle["Typed day bundle<br/>shared geometry, interval prices, binding rows, PTDFs and attribution context"]
     cnec_geometry --> cnec_day_bundle
     day_ahead_prices --> cnec_day_bundle

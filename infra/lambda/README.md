@@ -170,8 +170,14 @@ as browser data.
 
 ## Handler separation
 
-CloudFront sends `/cnec*`, `/api/cnec/*` and `/assets/*` to the lightweight
-`cnec_server:server` handler. OPF and Dash component routes stay on `app:server`.
+CloudFront serves `/cnec*` and `/assets/*` from the published private S3 UI
+prefix. `/api/cnec/*` goes to the lightweight `cnec_server:server` fallback handler. OPF and Dash component routes stay on `app:server`.
 The CNEC shell imports neither Dash nor pandas. Preparation dependencies load only
 for dates missing from prepared data. The frontend uses the official React Plotly
 component and a pinned Mapbox-only Plotly bundle.
+
+Publish the built shell and public assets with
+`python -m coppersushi.data_sources.cnec_static --bucket <cache_bucket>` before
+applying the static-route change. Invalidate `/cnec*`, `/assets/*` and
+`/data/cnec/v1/ui/*` after publishing changes. The browser computes the default
+market date locally; a cached shell cannot freeze it on its publication date.
