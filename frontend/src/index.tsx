@@ -1,7 +1,8 @@
 import React, {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {QueryClient, QueryClientProvider, useQuery} from '@tanstack/react-query';
+import {QueryClient, QueryClientProvider, useQuery, useQueryClient} from '@tanstack/react-query';
 import {BrowserRouter, Link, Route, Routes, useLocation, useNavigate, useParams} from 'react-router-dom';
 import {fetchCnec} from './api';
+import {dayFigure, zoneFeatures, optionsFor, contributions} from './day-figure';
 import {Timeline} from './timeline';
 import {CORE_ZONES} from './reference';
 import {DateTimeControls} from './date-time-controls';
@@ -11,7 +12,7 @@ import {viewFromUrl, viewSearch} from './view-url';
 import {mapSelection} from './map-selection';
 import {MapDecoration} from './map-decoration';
 import {initialCoreCamera} from './initial-camera';
-import type {PlotlyFigure, LayerResponse} from './contracts';
+import type {PlotlyFigure} from './contracts';
 import {PriceLegend} from './price-legend';
 
 import {overlayModel} from './overlay-model';
@@ -82,86 +83,40 @@ function shell(token: string, basemap: Props['basemap'], camera: ReturnType<type
   }};
 }
 
-function combine(token: string, basemap: Props['basemap'], camera: ReturnType<typeof initialCoreCamera>, prices?: LayerResponse, constraints?: LayerResponse, caps?: LayerResponse): PlotlyFigure {
-  const initial = shell(token, basemap, camera);
-  if (!prices && !constraints) return initial;
-  const priceData = prices?.figure.data ?? [];
-  return {data: [...priceData.slice(0, 1), ...(constraints?.figure.data ?? []), ...(caps?.figure.data.filter(t => t.meta !== null && typeof t.meta === 'object' && 'role' in t.meta && t.meta.role === 'country-cap') ?? []), ...priceData.slice(1)],
-    layout: {...(constraints?.figure.layout ?? prices?.figure.layout ?? initial.layout), uirevision: 'cnec-camera'}};
-}
-
 function View({id, min_day, token, basemap, selection, onAction: dispatch}: PageProps) {
-  const {day, interval, selected, source, reference} = selection;
-  const view = {day, interval, selected, reference};
-  const [scrubbing, setScrubbing] = useState(false);
-  const inputSettled = !scrubbing;
+  const {day, interval, selected, reference} = selection;
+  const client = useQueryClient();
+
 
   const [initialCamera] = useState(() => initialCoreCamera(window.innerWidth, window.innerHeight));
-  const calendar = useQuery({queryKey: ['calendar', day], queryFn: ({signal}) => fetchCnec('day', `day/${day}`, signal)});
-  const validInterval = !!calendar.data && interval < calendar.data.labels.length;
-  const prices = useQuery({queryKey: ['prices', day, interval], enabled: validInterval && inputSettled,
-    queryFn: ({signal}) => fetchCnec('layer', 'prices', signal, {day, interval, selected: null})});
-  const constraints = useQuery({queryKey: ['constraints', day, interval], enabled: validInterval && inputSettled,
-    queryFn: ({signal}) => fetchCnec('layer', 'constraints', signal, {day, interval, selected: null})});
-  const attribution = useQuery({queryKey: ['attribution', day], enabled: constraints.isSuccess,
-    queryFn: ({signal}) => fetchCnec('attribution', `attribution/${day}`, signal)});
-  const caps = useQuery({queryKey: ['enriched', day, interval, null, attribution.dataUpdatedAt],
-    enabled: inputSettled && prices.isSuccess && constraints.isSuccess && attribution.isSuccess,
-    queryFn: ({signal}) => fetchCnec('layer', 'enriched', signal, {day, interval, selected: null, attribution: attribution.data})});
-  const highlight = useQuery({queryKey: ['highlight', day, interval, selected],
-    enabled: inputSettled && selected !== null && constraints.isSuccess,
-    queryFn: ({signal}) => fetchCnec('layer', 'constraints', signal, view)});
-  const enriched = useQuery({queryKey: ['enriched', day, interval, selected, reference, attribution.dataUpdatedAt],
-    enabled: inputSettled && selected !== null && prices.isSuccess && constraints.isSuccess && attribution.isSuccess,
-    queryFn: ({signal}) => fetchCnec('layer', 'enriched', signal, {...view, attribution: attribution.data})});
-  const full = selected === null ? caps.data : enriched.data;
-  const figure = useMemo(() => full?.figure ?? combine(token, basemap, initialCamera, prices.data, highlight.data ?? constraints.data, caps.data),
-    [token, basemap, initialCamera, full, prices.data, highlight.data, constraints.data, caps.data]);
-  const candidate = useMemo(() => {
-    const copy = structuredClone(figure);
-    // Keep camera inputs stable even when a newly arrived layer suggests different bounds.
-    const counts = new Map<string, number>();
-    for (const trace of copy.data) {
-      const name = String(trace.name ?? trace.type);
-      const ordinal = counts.get(name) ?? 0;
-      counts.set(name, ordinal + 1);
-      trace.uid = `t${Array.from(name, c => c.codePointAt(0)!.toString(16)).join("-")}-${ordinal}`;
-    }
-    copy.layout.clickanywhere = true;
-    copy.layout.mapbox.style = basemap;
-    copy.layout.mapbox.center = initialCamera.center;
-    copy.layout.mapbox.zoom = initialCamera.zoom;
-    copy.layout.mapbox.bearing = 0;
-    copy.layout.mapbox.pitch = 0;
-    return copy;
-  }, [figure, basemap, initialCamera]);
-  // Publish one interval update after its independently fetched layers settle.
-  // The retained figure carries its own timestamp while the controls request a new interval.
-  const settled = validInterval && !prices.isPending && !constraints.isPending &&
-    (prices.isError || constraints.isError || attribution.isError || (attribution.isSuccess && !caps.isPending)) &&
-    (selected === null || prices.isError || constraints.isError || attribution.isError || enriched.isSuccess || enriched.isError);
-  const [displayed, setDisplayed] = useState<{day: string; interval: number; selected: number | null; reference: string; figure: PlotlyFigure} | null>(null);
-  useEffect(() => {
-    if (settled) setDisplayed({day, interval, selected, reference, figure: candidate});
-  }, [settled, day, interval, selected, reference, candidate]);
+  const [initial, setInitial] = useState({day, interval});
+  const initialInterval = initial.day === day ? initial.interval : interval;
+  useEffect(() => {if (initial.day !== day) setInitial({day, interval});}, [day, interval, initial.day]);
+  const first = useQuery({queryKey: ['interval', day, initialInterval],
+    queryFn: ({signal}) => fetchCnec('bundle', `bundle/${day}?interval=${initialInterval}`, signal),
+    enabled: !client.getQueryData(['bundle', day])});
+  const wholeDay = useQuery({queryKey: ['bundle', day], enabled: first.isSuccess,
+    queryFn: ({signal}) => fetchCnec('bundle', `bundle/${day}`, signal)});
+  const bundle = wholeDay.data ? wholeDay : first;
+  const labels = bundle.data?.labels ?? [];
+  const validInterval = !!bundle.data && interval < labels.length && bundle.data.intervals.some(i=>i.index===interval);
+  const geography = useMemo(() => bundle.data ? zoneFeatures(bundle.data) : null, [bundle.data]);
   const emptyFigure = useMemo(() => shell(token, basemap, initialCamera), [token, basemap, initialCamera]);
-  const graphFigure = displayed?.day === day ? displayed.figure : settled ? candidate : emptyFigure;
-  const mapCurrent = displayed?.day === day && displayed.interval === interval && displayed.selected === selected && displayed.reference === reference;
-  const options = full?.options ?? caps.data?.options ?? constraints.data?.options ?? [];
+  const displayInterval = validInterval ? interval : initialInterval;
+  const graphFigure = useMemo(() => bundle.data && geography && bundle.data.intervals.length > 0
+    ? dayFigure(bundle.data, displayInterval, validInterval ? selected : null, reference, emptyFigure.layout, geography) : emptyFigure,
+    [bundle.data, validInterval, geography, displayInterval, selected, reference, emptyFigure]);
+  const mapCurrent = validInterval;
+  const current = validInterval ? bundle.data!.intervals.find(i=>i.index===interval)! : null;
+  const options = current ? optionsFor(current) : [];
   useEffect(() => {
-    const readyOptions = source === 'constraints' ? constraints.data?.options : caps.data?.options;
-    if (selected !== null && readyOptions && !readyOptions.some(o => o.value === String(selected))) {
+    if (current && selected !== null && !options.some(o => o.value === String(selected)))
       dispatch({type: 'select', selected: null, source: 'constraints'});
-    }
-  }, [selected, source, constraints.data, caps.data]);
-  const failures = [
-    ['Calendar', calendar], ['Prices', prices], ['Constraints', constraints],
-    ['Attribution', attribution], ['Country caps', caps], ['Selection', highlight],
-    ...(selected === null ? [] : [['Contributions', enriched] as const]),
-  ] as const;
-  const loading = validInterval && !inputSettled && !mapCurrent ? 'Loading interval…' : !calendar.data && calendar.isFetching ? 'Loading market intervals…' : !prices.data && prices.isFetching ? 'Loading prices…' :
-    !constraints.data && constraints.isFetching ? 'Loading constraints…' :
-    (attribution.isFetching || caps.isFetching || enriched.isFetching) ? 'Loading price contributions…' : '';
+  }, [current, selected]);
+  const notes = [...(current?.notes ?? [])];
+  if (current && selected !== null && current.constraints.some(r => r.source_id === selected) &&
+      contributions(current, selected, reference) === null)
+    notes.push('Contribution unavailable: missing or zero FB scaling factor α.');
   function mapClick(change: GraphChange) {
     const action = mapSelection(change.clickData, options, selected, mapCurrent);
     if (action) dispatch(action);
@@ -187,29 +142,23 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
       </div>
 
       <aside className="cnec-progress" aria-live="polite">
-        {calendar.data && !validInterval && <div role="alert">This interval is outside the selected day.{' '}
+        {bundle.data && interval >= labels.length && <div role="alert">This interval is outside the selected day.{' '}
           <button onClick={() => dispatch({type: 'interval', interval: 0})}>Go to first interval</button>
         </div>}
-        {loading && <div role="status" aria-label="Map loading">{loading}
-          {!mapCurrent && displayed?.day === day && calendar.data && <div>
-            Showing {calendar.data.labels[displayed.interval].split(' · ')[1]}
-            {displayed.selected !== null && ` · previous selection, reference ${displayed.reference}`}.
-          </div>}
-        </div>}
-        {full?.notes.map(note => <div role="status" key={note}>{note}</div>)}
-        {failures.map(([name, query]) => query.error && <div role="alert" key={name}>
-          {name}: {query.error.message} <button onClick={() => void query.refetch()}>Retry</button>
-        </div>)}
+        {(!bundle.data || !validInterval) && (first.isFetching || wholeDay.isFetching) && <div role="status" aria-label="Map loading">Loading day…{bundle.data && !validInterval && <div>Showing {labels[displayInterval]?.split(' · ')[1]}.</div>}</div>}
+        {wholeDay.error && <div role="alert">Remaining intervals: {wholeDay.error.message}{!validInterval && ` Showing ${labels[displayInterval]?.split(' · ')[1]}.`} <button onClick={() => void wholeDay.refetch()}>Retry</button></div>}
+        {notes.map(note => <div role="status" key={note}>{note}</div>)}
+        {bundle.error && <div role="alert">Day: {bundle.error.message} <button onClick={() => {setInitial({day, interval: 0}); dispatch({type: 'interval', interval: 0});}}>Go to first interval</button> <button onClick={() => void bundle.refetch()}>Retry</button></div>}
       </aside>
     <div className="cnec-time-controls">
-      <DateTimeControls day={day} minDay={min_day} time={calendar.data?.labels[interval]?.split(' · ')[1] ?? ''}
-        previousDisabled={!validInterval || interval === 0}
-        nextDisabled={!validInterval || interval === (calendar.data?.labels.length ?? 0) - 1}
+      <DateTimeControls day={day} minDay={min_day} time={labels[interval]?.split(' · ')[1] ?? ''}
+        previousDisabled={!labels.length || interval === 0}
+        nextDisabled={!labels.length || interval === labels.length - 1}
         onDay={day => dispatch({type: 'day', day})} onPrevious={() => dispatch({type: 'interval', interval: interval - 1})}
         onNext={() => dispatch({type: 'interval', interval: interval + 1})}/>
       <div className="cnec-slider-panel cnec-panel">
-      <Timeline labels={calendar.data?.labels ?? []} interval={interval} disabled={!validInterval}
-        onScrubbingChange={setScrubbing} onChange={interval => dispatch({type: 'interval', interval})}/>
+      <Timeline labels={labels} interval={interval} disabled={!labels.length}
+        onScrubbingChange={() => {}} onChange={interval => dispatch({type: 'interval', interval})}/>
       </div>
     </div>
     </div>

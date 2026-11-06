@@ -96,6 +96,9 @@ flowchart LR
     jao_active_constraints --> cnec_day_bundle
     cnec_attribution_context --> cnec_day_bundle
     cnec_day_bundle --> cnec_http
+    browser_figure["Browser figure construction<br/>pure TypeScript contributions and Plotly traces; local interval/reference/selection"]
+    cnec_day_bundle --> browser_figure
+    browser_figure --> react_cnec
     native_glyphs["Map-owned CNEC glyphs<br/>owned transformer/triangle sprite; hover and selection"]
     selection_effects["Decorative SVG energy<br/>typed figure metadata; native Mapbox projection and lifecycle; north-up 2D adapter"]
     react_cnec --> native_glyphs

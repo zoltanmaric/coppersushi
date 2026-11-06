@@ -7,6 +7,7 @@ const ajv = new Ajv();
 addFormats(ajv);
 ajv.addSchema(schema, 'cnec');
 const validators = {
+  bundle: ajv.compile<CnecContracts['bundle']>({$ref: 'cnec#/$defs/DayBundle'}),
   day: ajv.compile<CnecContracts['day']>({$ref: 'cnec#/$defs/DayResponse'}),
   layer: ajv.compile<CnecContracts['layer']>({$ref: 'cnec#/$defs/LayerResponse'}),
   attribution: ajv.compile<CnecContracts['attribution']>({$ref: 'cnec#/$defs/AttributionPayload'}),
