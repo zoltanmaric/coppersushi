@@ -26,6 +26,48 @@ so git works from any shell or IDE, run `git lfs install` once to register the f
 files, then `git lfs pull`. The Pixi environment also includes `git-lfs` for commands run through `pixi run`.
 Clone with `GIT_LFS_SKIP_SMUDGE=1` to skip the files, e.g. to run only the tests.
 
+## System design
+
+The OPF and critical network element (CNEC) service has two delivery paths.
+Arrows show requests, data transfers or job triggers, as labelled.
+
+```mermaid
+flowchart TB
+    market["Market data APIs<br/>JAO constraints + Electricity Maps prices"]
+    schedule["Publication scheduler<br/>EventBridge + Step Functions"]
+    catalog[("Grid catalog<br/>OSM substations + reviewed element endpoints")]
+    publisher["Market-data publisher<br/>Python on AWS Lambda"]
+    static[("Private S3<br/>CNEC app + prepared market days")]
+    solve["PyPSA-Eur<br/>Offline power-flow solve"]
+    build["Application data build<br/>Hourly OPF figures + zone outlines"]
+    opf["OPF server<br/>Dash on Lambda + bundled figures"]
+    edge["CloudFront<br/>Route requests + cache static files"]
+    browser["Browser<br/>CNEC: React + Plotly<br/>OPF: Dash + Plotly"]
+    maps["Mapbox<br/>Basemap styles + tiles"]
+
+    market -->|Market publications| publisher
+    schedule -->|Daily run and retries| publisher
+    catalog -->|Locate monitored elements| publisher
+    publisher -->|Publish complete market days| static
+    solve -->|Solved network| build
+    build -->|Bundle hourly figures| opf
+    build -->|Zone outlines| publisher
+    static <-->|CNEC files| edge
+    opf <-->|OPF pages and callbacks| edge
+    edge <-->|HTTPS| browser
+    maps -->|Styles and tiles| browser
+```
+
+CNEC renders maps and calculates selected constraints' price contributions in the
+browser. Its publisher validates a complete day before exposing it in S3; changing
+the interval or selection does not run Python. OPF serves precomputed hourly
+figures from Lambda; its solver runs during preparation.
+
+Code ownership: [browser](frontend/), [Python preparation and OPF](coppersushi/),
+[hosting and scheduling](infra/lambda/), [reviewed catalog inputs](config/element-catalog/).
+These are logical components; several still share the Python package.
+[The detailed dataflow](wiki/sushi-2.md) records their internal artifacts.
+
 ## Working with Agents
 The repository is developed with coding agents (Claude Code and Codex), and the tooling for that is
 part of the repository:
