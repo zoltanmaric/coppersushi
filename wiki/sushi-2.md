@@ -91,7 +91,7 @@ flowchart LR
     cnec_price_figure -->|enriched view| cnec_http
     cnec_http --> react_cnec
     native_glyphs["Map-owned CNEC glyphs<br/>owned transformer/triangle sprite; hover and selection"]
-    selection_effects["Decorative SVG energy<br/>typed figure metadata; renderer camera events; north-up 2D gesture adapter"]
+    selection_effects["Decorative SVG energy<br/>typed figure metadata; native Mapbox projection and lifecycle; north-up 2D adapter"]
     react_cnec --> native_glyphs
     react_cnec --> selection_effects
     native_glyphs --> jao_map

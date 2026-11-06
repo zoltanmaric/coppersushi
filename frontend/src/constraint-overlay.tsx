@@ -1,54 +1,25 @@
-import React, {useEffect, useId, useRef, useState} from 'react';
-import {supportsDecoration} from './overlay-model';
-import type {Camera, OverlayModel} from './overlay-model';
+import React, {useId} from 'react';
+import type {LngLat, OverlayModel} from './overlay-model';
 
 const RING_RADIUS = 6;
 const RING_OFFSET = 4;
 
 
-/** Project a longitude/latitude into the unpitched Mapbox viewport. */
-export function project(lon: number, lat: number, camera: Camera, width: number, height: number): [number, number] {
-  const mercator = (x: number, y: number) => {
-    const rad = Math.max(-85.051129, Math.min(85.051129, y)) * Math.PI / 180;
-    return [(x + 180) / 360, (1 - Math.asinh(Math.tan(rad)) / Math.PI) / 2];
-  };
-  const [x, y] = mercator(lon, lat);
-  const [cx, cy] = mercator(camera.lon, camera.lat);
-  const scale = 512 * 2 ** camera.zoom;
-  const angle = -camera.bearing * Math.PI / 180;
-  const dx = (x - cx) * scale, dy = (y - cy) * scale;
-  return [width / 2 + dx * Math.cos(angle) - dy * Math.sin(angle),
-          height / 2 + dx * Math.sin(angle) + dy * Math.cos(angle)];
-}
-
-/** Decorative energy only; essential symbols belong to the native map. */
-export function ConstraintOverlay({model, camera, hidden}: {model: OverlayModel; camera: Camera; hidden: boolean}) {
+/** Decorative energy only; all geographic projection belongs to the native map. */
+export function ConstraintOverlay({model, project}: {model: OverlayModel; project: ((point: LngLat) => [number, number]) | null}) {
   const filterId = `energy-${useId().replace(/:/g, "")}`;
-  const container = useRef<SVGSVGElement>(null);
-  const [size, setSize] = useState({width: 0, height: 0});
-  useEffect(() => {
-    const parent = container.current?.parentElement;
-    if (!parent) return;
-    const measure = () => setSize({width: parent.clientWidth, height: parent.clientHeight});
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(parent);
-    return () => observer.disconnect();
-  }, []);
-  const visible = !hidden && supportsDecoration(camera, size.width, size.height);
-  const selection = visible ? model.selection : null;
+  const selection = project ? model.selection : null;
   const transformer = selection?.kind === 'transformer';
-  const ambient = visible ? model.ambient.map(points => points.map(([x, y]) =>
-    project(x, y, camera, size.width, size.height).join(',')).join(' ')) : [];
+  const ambient = project ? model.ambient.map(points => points.map(point => project(point).join(',')).join(' ')) : [];
   let bolts: {main: string; fork: string}[] = [];
   let blades: string[] = [];
   let maskCenter: [number, number] | null = null;
-  if (selection) {
+  if (selection && project) {
     const ends = selection.kind === 'line' ? selection.endpoints : [selection.center, selection.center];
-    const a = project(...ends[0], camera, size.width, size.height);
-    const b = project(...ends[1], camera, size.width, size.height);
+    const a = project(ends[0]);
+    const b = project(ends[1]);
     if (selection.kind === 'line') maskCenter = project(
-      (ends[0][0] + ends[1][0]) / 2, (ends[0][1] + ends[1][1]) / 2, camera, size.width, size.height);
+      [(ends[0][0] + ends[1][0]) / 2, (ends[0][1] + ends[1][1]) / 2]);
     const dx = b[0] - a[0], dy = b[1] - a[1];
     const length = Math.hypot(dx, dy);
     const ux = length > 3 ? dx / length : 1, uy = length > 3 ? dy / length : 0;
@@ -63,8 +34,7 @@ export function ConstraintOverlay({model, camera, hidden}: {model: OverlayModel;
           .65 * Math.sin(angle * 11 + variant * 4) + .35 * Math.sin(angle * 23 + variant);
         const radius = RING_RADIUS + jag;
         const x = offset + Math.cos(angle) * radius, y = Math.sin(angle) * radius;
-        const bearing = -camera.bearing * Math.PI / 180;
-        return `${(cx + x * Math.cos(bearing) - y * Math.sin(bearing)).toFixed(2)},${(cy + x * Math.sin(bearing) + y * Math.cos(bearing)).toFixed(2)}`;
+        return `${(cx + x).toFixed(2)},${(cy + y).toFixed(2)}`;
       }).join(' ');
       blades = [-RING_OFFSET, RING_OFFSET].map(offset => ring(offset));
       bolts = [0, 1, 2].flatMap(variant => [-RING_OFFSET, RING_OFFSET].map(offset => ({main: ring(offset, variant), fork: ''})));
@@ -84,7 +54,7 @@ export function ConstraintOverlay({model, camera, hidden}: {model: OverlayModel;
       });
     }
   }
-  return <svg ref={container} className="cnec-spark" aria-hidden="true">
+  return <svg className="cnec-spark" aria-hidden="true">
     <defs><filter id={filterId} x="-100%" y="-100%" width="300%" height="300%" colorInterpolationFilters="sRGB">
       <feGaussianBlur stdDeviation="3.5"/>
     </filter></defs>

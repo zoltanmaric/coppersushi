@@ -5,55 +5,29 @@ import {fetchCnec} from './api';
 import {Timeline} from './timeline';
 import {reduceSelection} from './state';
 import {mapSelection} from './map-selection';
-import {lockMapOrientation} from './map-orientation';
+import {MapDecoration} from './map-decoration';
 import type {PlotlyFigure, LayerResponse} from './contracts';
 import {PriceLegend} from './price-legend';
 
-import {ConstraintOverlay} from './constraint-overlay';
-import {overlayModel, updateCamera} from './overlay-model';
-import type {Camera} from './overlay-model';
+import {overlayModel} from './overlay-model';
+import type {OverlayModel} from './overlay-model';
 import './style.css';
 
 interface Props {id: string; day: string; min_day: string; token: string; basemap: PlotlyFigure['layout']['mapbox']['style']}
-interface GraphChange {clickData?: unknown; relayoutData?: Record<string, unknown>}
-interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void; onCameraMove: () => void}
+interface GraphChange {clickData?: unknown}
+interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void; overlay: OverlayModel; hidden: boolean}
 // Reuse Dash's Graph component and its Plotly loader instead of shipping Plotly twice.
-interface PlotElement extends HTMLElement {
-  on: (event: 'plotly_relayouting' | 'plotly_afterplot', handler: () => void) => void;
-  removeListener?: (event: 'plotly_relayouting' | 'plotly_afterplot', handler: () => void) => void;
-}
-
-const Graph = ({onCameraMove, ...props}: GraphProps) => {
-  const Component = (window as unknown as {dash_core_components: {Graph: React.ComponentType<Omit<GraphProps, 'onCameraMove'>>}}).dash_core_components.Graph;
+const Graph = ({overlay, hidden, ...props}: GraphProps) => {
+  const Component = (window as unknown as {dash_core_components: {Graph: React.ComponentType<Omit<GraphProps, 'overlay' | 'hidden'>>}}).dash_core_components.Graph;
   const host = useRef<HTMLDivElement>(null);
-  // Dash binds event listeners once; forward them to the current React handlers.
-  const handlers = useRef({setProps: props.setProps, onCameraMove});
-  useLayoutEffect(() => {handlers.current = {setProps: props.setProps, onCameraMove};}, [props.setProps, onCameraMove]);
-  const setProps = useCallback((change: GraphChange) => handlers.current.setProps(change), []);
-  useEffect(() => {
-    let plot: PlotElement | null = null;
-    const moving = () => handlers.current.onCameraMove();
-    const lockOrientation = () => {if (plot) lockMapOrientation(plot);};
-    // Dash loads Plotly asynchronously. Subscribe when its public event emitter is mounted.
-    const attach = () => {
-      const node = host.current?.querySelector<PlotElement>('.js-plotly-plot');
-      if (!node || typeof node.on !== 'function') return;
-      plot = node;
-      plot.on('plotly_relayouting', moving);
-      plot.on('plotly_afterplot', lockOrientation);
-      lockOrientation();
-      observer.disconnect();
-    };
-    const observer = new MutationObserver(attach);
-    observer.observe(host.current!, {childList: true, subtree: true});
-    attach();
-    return () => {
-      observer.disconnect();
-      plot?.removeListener?.('plotly_relayouting', moving);
-      plot?.removeListener?.('plotly_afterplot', lockOrientation);
-    };
-  }, []);
-  return <div ref={host} style={props.style}><Component {...props} style={{height: '100%'}} setProps={setProps}/></div>;
+  // Dash binds event listeners once; forward them to the current React handler.
+  const handler = useRef(props.setProps);
+  useLayoutEffect(() => {handler.current = props.setProps;}, [props.setProps]);
+  const setProps = useCallback((change: GraphChange) => handler.current(change), []);
+  return <div ref={host} style={props.style}>
+    <Component {...props} style={{height: '100%'}} setProps={setProps}/>
+    <MapDecoration host={host} model={overlay} hidden={hidden}/>
+  </div>;
 };
 
 type HostProps = Omit<Props, 'day'> & {default_day: string};
@@ -109,8 +83,6 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
   const [scrubbing, setScrubbing] = useState(false);
   const inputSettled = !scrubbing;
 
-  const [camera, setCamera] = useState<Camera>({lat: 50, lon: 10, zoom: 3.5, bearing: 0, pitch: 0});
-  const [moving, setMoving] = useState(false);
   const calendar = useQuery({queryKey: ['calendar', day], queryFn: ({signal}) => fetchCnec('day', `day/${day}`, signal)});
   const validInterval = !!calendar.data && interval < calendar.data.labels.length;
   const prices = useQuery({queryKey: ['prices', day, interval], enabled: validInterval && inputSettled,
@@ -181,12 +153,6 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
     if (option) dispatch({type: 'select', selected: value === '' ? null : Number(value), source: option.source});
   }
   function mapClick(change: GraphChange) {
-    if (change.relayoutData) {
-      const update = change.relayoutData;
-      setCamera(previous => updateCamera(previous, update));
-      setMoving(false);
-    }
-
     const action = mapSelection(change.clickData, options, selected, mapCurrent);
     if (action) dispatch(action);
   }
@@ -205,7 +171,7 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
       <span>{selected === null ? '' : `Reference: ${enriched.isSuccess ? enriched.data.reference ?? 'unavailable' : enriched.isError || prices.isError || attribution.isError ? 'unavailable' : 'pending'}`}</span>
     </div>
     <div className="cnec-map-container">
-      <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick} onCameraMove={() => setMoving(true)}
+      <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
         config={{responsive: true, displayModeBar: false, scrollZoom: true}} style={{height: '100%'}}/>
       <small className="cnec-sources">
         Data: <a href="https://publicationtool.jao.eu/core/" target="_blank" rel="noopener noreferrer">JAO</a> · {' '}
@@ -214,7 +180,6 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
       </small>
       <PriceLegend figure={graphFigure}/>
 
-      <ConstraintOverlay model={overlayModel(graphFigure)} camera={camera} hidden={moving || !mapCurrent}/>
       <aside className="cnec-progress" aria-live="polite">
         {loading && <div role="status" aria-label="Map loading">{loading}</div>}
         {full?.notes.map(note => <div role="status" key={note}>{note}</div>)}
