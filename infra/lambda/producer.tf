@@ -100,7 +100,10 @@ resource "aws_scheduler_schedule" "publication" {
   target {
     arn      = aws_sfn_state_machine.publication[0].arn
     role_arn = aws_iam_role.publication_schedule.arn
-    input    = jsonencode({ started_at = "<aws.scheduler.scheduled-time>" })
+    # Scheduler substitutes literal brackets; jsonencode escapes them before substitution.
+    input = <<-JSON
+      {"started_at":"<aws.scheduler.scheduled-time>"}
+    JSON
     retry_policy {
       maximum_event_age_in_seconds = 300
       maximum_retry_attempts       = 2
