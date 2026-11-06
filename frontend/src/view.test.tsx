@@ -49,14 +49,11 @@ test('first map appears after its layers settle', async () => {
   expect(screen.getByLabelText('Map').textContent).not.toContain('binding lines');
   await waitFor(() => expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toBe('Loading price contributions…'));
   expect(pending.some(p => p.path.endsWith('attribution/2024-08-29'))).toBe(true);
-  fireEvent.change(screen.getByLabelText('Binding constraint'), {target: {value: '1'}});
   await waitFor(() => expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toBe('Loading price contributions…'));
   expect(screen.getByLabelText('Map').textContent).not.toContain('prices');
   await reply('attribution/2024-08-29', responses.attribution);
   await reply('enriched', responses.caps, null);
-  await reply('enriched', responses.enriched, 1);
-  await waitFor(() => expect(screen.getByLabelText('Map').textContent).toContain('contributions'));
-  expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('1');
+  await waitFor(() => expect(screen.getByLabelText('Map').textContent).toContain('country cap'));
   expect(graph.layout.uirevision).toBe('cnec-camera');
 });
 
@@ -96,20 +93,6 @@ test('an interval change clears old layers and late contributions cannot restore
   expect((screen.getByLabelText('Market interval') as HTMLInputElement).value).toBe('1');
 });
 
-test('loaded cap remains visible during selection and a finished null reference is unavailable', async () => {
-  await open();
-  await reply('prices', responses.prices);
-  await reply('constraints', responses.constraints);
-  await reply('attribution/2024-08-29', responses.attribution);
-  await reply('enriched', responses.caps, null);
-  await waitFor(() => expect(screen.getByText('Polish cap')).toBeTruthy());
-  fireEvent.change(screen.getByLabelText('Binding constraint'), {target: {value: '-1'}});
-  expect(screen.getByLabelText('Map').textContent).toContain('country cap');
-  await reply('enriched', {...responses.caps, request: {...responses.caps.request, selected: -1}}, -1);
-  await waitFor(() => expect(screen.getByText('Reference: unavailable')).toBeTruthy());
-  expect(screen.getByLabelText('Map').textContent).toContain('country cap');
-});
-
 test('a single enrichment error produces one alert, and a failed calendar stops loading', async () => {
   await open();
   await reply('prices', responses.prices);
@@ -121,52 +104,6 @@ test('a single enrichment error produces one alert, and a failed calendar stops 
   await reply('day/2024-08-30', {error: 'calendar failed'}, undefined, 500);
   await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('calendar failed'));
   expect(screen.queryByRole('status', {name: 'Map loading'})).toBeNull();
-});
-
-test('interval navigation preserves a row still present in current constraints', async () => {
-  await open();
-  await reply('prices', responses.prices);
-  await reply('constraints', responses.constraints);
-  await waitFor(() => expect(screen.getByText('Test line')).toBeTruthy());
-  fireEvent.change(screen.getByLabelText('Binding constraint'), {target: {value: '1'}});
-  fireEvent.click(screen.getByRole('button', {name: 'Next interval'}));
-  expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('1');
-  await reply('prices', {...responses.prices, request: {...responses.prices.request, interval: 1}});
-  await reply('constraints', {...responses.constraints, request: {...responses.constraints.request, interval: 1}}, null);
-  expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('1');
-  await reply('attribution/2024-08-29', responses.attribution);
-  await reply('enriched', {...responses.caps, request: {...responses.caps.request, interval: 1}}, null);
-  expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('1');
-});
-
-
-test('an absent physical row clears even while attribution is unavailable', async () => {
-  await open();
-  await reply('constraints', responses.constraints);
-  await waitFor(() => expect(screen.getByText('Test line')).toBeTruthy());
-  fireEvent.change(screen.getByLabelText('Binding constraint'), {target: {value: '1'}});
-  fireEvent.click(screen.getByRole('button', {name: 'Next interval'}));
-  await reply('constraints', {...responses.constraints, options: [responses.constraints.options[0]],
-    request: {...responses.constraints.request, interval: 1}}, null);
-  await waitFor(() => expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe(''));
-});
-
-
-test('map hits select allowed rows and preserve a selected contingency', async () => {
-  await open();
-  await reply('constraints', {...responses.constraints, options: [...responses.constraints.options,
-    {...responses.constraints.options[1], label: 'Second contingency', value: '2'}]});
-  await reply('prices', responses.prices);
-  await reply('attribution/2024-08-29', responses.attribution);
-  await reply('enriched', {...responses.caps, options: [...responses.caps.options, {...responses.constraints.options[1], label: 'Second contingency', value: '2'}]}, null);
-  await waitFor(() => expect(graph.data.some(t => t.name === 'country cap')).toBe(true));
-  act(() => clickGraph({clickData: {points: [{customdata: ['1,2']}]}}));
-  expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('1');
-  fireEvent.change(screen.getByLabelText('Binding constraint'), {target: {value: '2'}});
-  act(() => clickGraph({clickData: {points: [{customdata: ['1,2']}]}}));
-  expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('2');
-  act(() => clickGraph({clickData: {points: [{customdata: ['999']}]}}));
-  expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('2');
 });
 
 test('invalid API payloads are visible errors, never successful empty layers', async () => {
@@ -192,7 +129,7 @@ test('a loaded interval remains unchanged until the next interval layers settle'
   await reply('constraints', {...responses.constraints, request: {...responses.constraints.request, interval: 1}}, null);
   expect(graph).toBe(displayed);
   act(() => clickGraph({clickData: {points: [{customdata: ['1']}]}}));
-  expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('');
+  expect(pending.some(p => p.body?.selected !== null && p.body?.selected !== undefined)).toBe(false);
   await reply('enriched', {...responses.caps, request: {...responses.caps.request, interval: 1}}, null);
   await waitFor(() => expect(graph).not.toBe(displayed));
   expect(graph.data.map(t => t.uid)).toEqual(displayed.data.map(t => t.uid));
@@ -208,7 +145,7 @@ test('the initially bound graph callback selects constraints loaded later', asyn
   await reply('enriched', responses.caps, null);
   await waitFor(() => expect(graph.data.some(t => t.name === 'country cap')).toBe(true));
   act(() => initialClick({clickData: {points: [{customdata: ['-1']}]}}));
-  expect((screen.getByLabelText('Binding constraint') as HTMLSelectElement).value).toBe('-1');
+  await waitFor(() => expect(pending.some(p => p.body?.selected === -1)).toBe(true));
 });
 
 

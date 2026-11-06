@@ -1,11 +1,15 @@
 import type {ConstraintOption} from './contracts';
+import {coreZone} from './reference';
 import type {Action} from './state';
 
-type Select = Extract<Action, {type: 'select'}>;
-
 /** Translate a renderer click into selection intent for the displayed view. */
-export function mapSelection(click: unknown, options: ConstraintOption[], selected: number | null, current: boolean): Select | null {
+export function mapSelection(click: unknown, options: ConstraintOption[], selected: number | null, current: boolean): Action | null {
   if (!current || !click || typeof click !== 'object' || !('points' in click) || !Array.isArray(click.points)) return null;
+  for (const point of click.points) {
+    const data = point && typeof point === 'object' && 'customdata' in point ? point.customdata : null;
+    const zone = Array.isArray(data) && data[0] === 'zone' ? coreZone(data[1]) : null;
+    if (zone) return {type: 'reference', reference: zone};
+  }
   const candidates = click.points.flatMap(point => {
     const data = point && typeof point === 'object' && 'customdata' in point ? point.customdata : null;
     return Array.isArray(data) && typeof data[0] === 'string' ? data[0].split(',') : [];

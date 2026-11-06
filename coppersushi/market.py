@@ -3,10 +3,9 @@
 import pandas as pd
 from pandera.typing import DataFrame
 
-from coppersushi.data_model.market import DayAheadPrices, ElectricityMapsPriceResponse
+from coppersushi.data_model.market import CORE_ZONES as CORE_ZONES, DayAheadPrices, ElectricityMapsPriceResponse
 from coppersushi.market_day import MarketDay
 
-CORE_ZONES = ("AT", "BE", "CZ", "DE", "FR", "HR", "HU", "NL", "PL", "RO", "SI", "SK")
 ZONE_NAMES = {
     "AT": "Austria",
     "BE": "Belgium",

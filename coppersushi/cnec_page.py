@@ -1,5 +1,6 @@
 """Pure page state for exploring one day of prices and active constraints."""
 
+from coppersushi.data_model.market import CoreZone
 from dataclasses import dataclass
 from datetime import datetime
 from typing import NamedTuple
@@ -74,6 +75,7 @@ def render(
     selected_source_id: str | int | None,
     mapbox_token: str | None = None,
     basemap: str | dict = map_style.MAP_STYLE,
+    reference: CoreZone | None = None,
 ) -> Rendered:
     """Render one coherent map/control state from already-loaded day inputs."""
     intervals = day.market_day.market_time_units()
@@ -91,7 +93,7 @@ def render(
     selected = (
         cnec_market.ConstraintKey(int(selected_value)) if selected_value is not None else None
     )
-    reference_zone = None
+    reference_zone: str | None = reference
     note = ""
     alpha = None
     if day.context is not None:
@@ -100,7 +102,7 @@ def render(
             alpha = float(scaling.alpha.iloc[0])
     if selected is not None and selected.source_id in active.source_id.values:
         row = active[active.source_id.eq(selected.source_id)].iloc[0]
-        reference_zone = cnec_attribution.physical_reference(row, mapped_elements, day.zones, day.prices)
+        reference_zone = reference or cnec_attribution.physical_reference(row, mapped_elements, day.zones, day.prices)
         if reference_zone is None:
             note = "Contribution unavailable: no unambiguous Core reference is available."
     if note:

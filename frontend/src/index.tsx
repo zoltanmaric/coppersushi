@@ -3,6 +3,7 @@ import {QueryClient, QueryClientProvider, useQuery} from '@tanstack/react-query'
 import {BrowserRouter, Route, Routes, useLocation, useNavigate, useParams} from 'react-router-dom';
 import {fetchCnec} from './api';
 import {Timeline} from './timeline';
+import {CORE_ZONES} from './reference';
 import {DateTimeControls} from './date-time-controls';
 import {reduceSelection} from './state';
 import {mapSelection} from './map-selection';
@@ -77,10 +78,10 @@ function combine(token: string, basemap: Props['basemap'], prices?: LayerRespons
 }
 
 function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {navigate: (day: string) => void}) {
-  const [selection, dispatch] = useReducer(reduceSelection, {day: routeDay, interval: 0, selected: null, source: "constraints"});
+  const [selection, dispatch] = useReducer(reduceSelection, {reference: 'DE', day: routeDay, interval: 0, selected: null, source: "constraints"});
   useEffect(() => {dispatch({type: 'day', day: routeDay});}, [routeDay]);
-  const {day, interval, selected, source} = selection;
-  const view = {day, interval, selected};
+  const {day, interval, selected, source, reference} = selection;
+  const view = {day, interval, selected, reference};
   const [scrubbing, setScrubbing] = useState(false);
   const inputSettled = !scrubbing;
 
@@ -98,7 +99,7 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
   const highlight = useQuery({queryKey: ['highlight', day, interval, selected],
     enabled: inputSettled && selected !== null && constraints.isSuccess,
     queryFn: ({signal}) => fetchCnec('layer', 'constraints', signal, view)});
-  const enriched = useQuery({queryKey: ['enriched', day, interval, selected, attribution.dataUpdatedAt],
+  const enriched = useQuery({queryKey: ['enriched', day, interval, selected, reference, attribution.dataUpdatedAt],
     enabled: inputSettled && selected !== null && prices.isSuccess && constraints.isSuccess && attribution.isSuccess,
     queryFn: ({signal}) => fetchCnec('layer', 'enriched', signal, {...view, attribution: attribution.data})});
   const full = selected === null ? caps.data : enriched.data;
@@ -127,13 +128,13 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
   const settled = validInterval && !prices.isPending && !constraints.isPending &&
     (prices.isError || constraints.isError || attribution.isError || (attribution.isSuccess && !caps.isPending)) &&
     (selected === null || prices.isError || constraints.isError || attribution.isError || enriched.isSuccess || enriched.isError);
-  const [displayed, setDisplayed] = useState<{day: string; interval: number; selected: number | null; figure: PlotlyFigure} | null>(null);
+  const [displayed, setDisplayed] = useState<{day: string; interval: number; selected: number | null; reference: string; figure: PlotlyFigure} | null>(null);
   useEffect(() => {
-    if (settled) setDisplayed({day, interval, selected, figure: candidate});
-  }, [settled, day, interval, selected, candidate]);
+    if (settled) setDisplayed({day, interval, selected, reference, figure: candidate});
+  }, [settled, day, interval, selected, reference, candidate]);
   const emptyFigure = useMemo(() => shell(token, basemap), [token, basemap]);
   const graphFigure = displayed?.day === day ? displayed.figure : settled ? candidate : emptyFigure;
-  const mapCurrent = displayed?.day === day && displayed.interval === interval && displayed.selected === selected;
+  const mapCurrent = displayed?.day === day && displayed.interval === interval && displayed.selected === selected && displayed.reference === reference;
   const options = full?.options ?? caps.data?.options ?? constraints.data?.options ?? [];
   useEffect(() => {
     const readyOptions = source === 'constraints' ? constraints.data?.options : caps.data?.options;
@@ -149,25 +150,12 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
   const loading = validInterval && !inputSettled && !mapCurrent ? 'Loading interval…' : !calendar.data && calendar.isFetching ? 'Loading market intervals…' : !prices.data && prices.isFetching ? 'Loading prices…' :
     !constraints.data && constraints.isFetching ? 'Loading constraints…' :
     (attribution.isFetching || caps.isFetching || enriched.isFetching) ? 'Loading price contributions…' : '';
-  function select(value: string) {
-    const option = options.find(o => o.value === value);
-    if (option) dispatch({type: 'select', selected: value === '' ? null : Number(value), source: option.source});
-  }
   function mapClick(change: GraphChange) {
     const action = mapSelection(change.clickData, options, selected, mapCurrent);
     if (action) dispatch(action);
   }
 
   return <section id={id} className="cnec-react">
-    <div className="cnec-controls">
-      <select aria-label="Binding constraint" value={selected === null ? '' : String(selected)}
-        disabled={!constraints.data} onChange={e => select(e.target.value)}>
-        {!options.length && <option value="">Select a binding row</option>}
-        {selected !== null && !options.some(o => o.value === String(selected)) && <option value={selected}>Selected row {selected}</option>}
-        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-      <span>{selected === null ? '' : `Reference: ${enriched.isSuccess ? enriched.data.reference ?? 'unavailable' : enriched.isError || prices.isError || attribution.isError ? 'unavailable' : 'pending'}`}</span>
-    </div>
     <div className="cnec-map-container">
       <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
         config={{responsive: true, displayModeBar: false, scrollZoom: true}} style={{height: '100%'}}/>
@@ -176,10 +164,23 @@ function View({id, day: routeDay, min_day, token, basemap, navigate}: Props & {n
         <a href="https://www.electricitymaps.com/" target="_blank" rel="noopener noreferrer">Electricity Maps</a> · {' '}
         <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>
       </small>
-      <PriceLegend figure={graphFigure}/>
+      <div className="cnec-map-tools">
+        <PriceLegend figure={graphFigure}/>
+        <label className="cnec-reference cnec-panel">Reference
+          <select aria-label="Reference country" value={reference}
+            onChange={e => dispatch({type: 'reference', reference: CORE_ZONES.find(zone => zone === e.target.value)!})}>
+            {CORE_ZONES.map(zone => <option key={zone} value={zone}>{zone}</option>)}
+          </select>
+        </label>
+      </div>
 
       <aside className="cnec-progress" aria-live="polite">
-        {loading && <div role="status" aria-label="Map loading">{loading}</div>}
+        {loading && <div role="status" aria-label="Map loading">{loading}
+          {!mapCurrent && displayed?.day === day && calendar.data && <div>
+            Showing {calendar.data.labels[displayed.interval].split(' · ')[1]}
+            {displayed.selected !== null && ` · previous selection, reference ${displayed.reference}`}.
+          </div>}
+        </div>}
         {full?.notes.map(note => <div role="status" key={note}>{note}</div>)}
         {failures.map(([name, query]) => query.error && <div role="alert" key={name}>
           {name}: {query.error.message} <button onClick={() => void query.refetch()}>Retry</button>
