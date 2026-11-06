@@ -90,6 +90,12 @@ flowchart LR
     cnec_geometry -->|constraint layer| cnec_http
     cnec_price_figure -->|enriched view| cnec_http
     cnec_http --> react_cnec
+    cnec_day_bundle["Typed day bundle<br/>shared geometry, interval prices, binding rows, PTDFs and attribution context"]
+    cnec_geometry --> cnec_day_bundle
+    day_ahead_prices --> cnec_day_bundle
+    jao_active_constraints --> cnec_day_bundle
+    cnec_attribution_context --> cnec_day_bundle
+    cnec_day_bundle --> cnec_http
     native_glyphs["Map-owned CNEC glyphs<br/>owned transformer/triangle sprite; hover and selection"]
     selection_effects["Decorative SVG energy<br/>typed figure metadata; native Mapbox projection and lifecycle; north-up 2D adapter"]
     react_cnec --> native_glyphs

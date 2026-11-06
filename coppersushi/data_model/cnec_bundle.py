@@ -1,0 +1,62 @@
+"""Day-scoped domain data consumed by the browser renderer."""
+from datetime import date
+from typing import Literal, Annotated
+from pydantic import Field, JsonValue
+from coppersushi.data_model.cnec_api import Contract
+from coppersushi.data_model.market import CoreZone
+
+Coordinates = Annotated[list[float], Field(min_length=2, max_length=2)]
+
+class ZoneGeometry(Contract):
+    """Display boundary and interior label anchor shared by every interval."""
+    zone: CoreZone
+    name: str
+    rings: list[list[Coordinates]]
+    centre: Coordinates
+
+class ElementGeometry(Contract):
+    """Resolved physical element in its publisher's orientation."""
+    branch_id: str
+    kind: Literal['line', 'transformer']
+    endpoints: Annotated[list[Coordinates], Field(min_length=2, max_length=2)]
+
+class BindingRow(Contract):
+    """One physical binding publication with its country sensitivities."""
+    source_id: int
+    name: str
+    direction: str
+    contingency: str | None
+    shadow_price: float
+    ram: float | None
+    capacity: float | None
+    geometry: str | None
+    ptdfs: dict[CoreZone, float]
+
+class CountryCap(Contract):
+    """Inferred Polish cap and its signed effect on the Polish price."""
+    source_id: Literal[-1, -2]
+    name: str
+    direction: str
+    capacity: float
+    shadow_price: float
+    delta: float
+
+class MarketInterval(Contract):
+    """Published values for one UTC interval, labelled in market local time."""
+    index: int = Field(ge=0)
+    label: str
+    prices: dict[CoreZone, float]
+    constraints: list[BindingRow]
+    alpha: float | None
+    caps: list[CountryCap]
+    notes: list[str]
+
+class DayBundle(Contract):
+    """Versioned, token-free data for all interactions within a delivery day."""
+    version: Literal[1] = 1
+    day: date
+    labels: list[str]
+    zones: list[ZoneGeometry]
+    elements: dict[str, ElementGeometry]
+    intervals: list[MarketInterval]
+    price_range: Coordinates

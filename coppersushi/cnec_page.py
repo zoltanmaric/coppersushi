@@ -16,7 +16,7 @@ from coppersushi.data_model.jao import (
     ActiveConstraints,
     ConstraintPtdfs,
 )
-from coppersushi.data_model.market import DayAheadPrices
+from coppersushi.data_model.market import ZonalPrices
 from coppersushi.data_model.network_views import BiddingZoneShapes
 from coppersushi.market_day import MARKET_TZ, MarketDay
 
@@ -29,7 +29,7 @@ class Day:
     zones: DataFrame[BiddingZoneShapes]
     constraints: DataFrame[ActiveConstraints]
     ptdfs: DataFrame[ConstraintPtdfs]
-    prices: DataFrame[DayAheadPrices]
+    prices: DataFrame[ZonalPrices]
     context: DataFrame[AttributionContext] | None = None
 
 

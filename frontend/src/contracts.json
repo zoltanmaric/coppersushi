@@ -119,6 +119,108 @@
       "title": "AttributionRow",
       "type": "object"
     },
+    "BindingRow": {
+      "additionalProperties": false,
+      "description": "One physical binding publication with its country sensitivities.",
+      "properties": {
+        "source_id": {
+          "title": "Source Id",
+          "type": "integer"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "direction": {
+          "title": "Direction",
+          "type": "string"
+        },
+        "contingency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Contingency"
+        },
+        "shadow_price": {
+          "title": "Shadow Price",
+          "type": "number"
+        },
+        "ram": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Ram"
+        },
+        "capacity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Capacity"
+        },
+        "geometry": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Geometry"
+        },
+        "ptdfs": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "propertyNames": {
+            "enum": [
+              "AT",
+              "BE",
+              "CZ",
+              "DE",
+              "FR",
+              "HR",
+              "HU",
+              "NL",
+              "PL",
+              "RO",
+              "SI",
+              "SK"
+            ]
+          },
+          "title": "Ptdfs",
+          "type": "object"
+        }
+      },
+      "required": [
+        "source_id",
+        "name",
+        "direction",
+        "contingency",
+        "shadow_price",
+        "ram",
+        "capacity",
+        "geometry",
+        "ptdfs"
+      ],
+      "title": "BindingRow",
+      "type": "object"
+    },
     "ConstraintOption": {
       "additionalProperties": false,
       "properties": {
@@ -147,6 +249,114 @@
       "title": "ConstraintOption",
       "type": "object"
     },
+    "CountryCap": {
+      "additionalProperties": false,
+      "description": "Inferred Polish cap and its signed effect on the Polish price.",
+      "properties": {
+        "source_id": {
+          "enum": [
+            -1,
+            -2
+          ],
+          "title": "Source Id",
+          "type": "integer"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "direction": {
+          "title": "Direction",
+          "type": "string"
+        },
+        "capacity": {
+          "title": "Capacity",
+          "type": "number"
+        },
+        "shadow_price": {
+          "title": "Shadow Price",
+          "type": "number"
+        },
+        "delta": {
+          "title": "Delta",
+          "type": "number"
+        }
+      },
+      "required": [
+        "source_id",
+        "name",
+        "direction",
+        "capacity",
+        "shadow_price",
+        "delta"
+      ],
+      "title": "CountryCap",
+      "type": "object"
+    },
+    "DayBundle": {
+      "additionalProperties": false,
+      "description": "Versioned, token-free data for all interactions within a delivery day.",
+      "properties": {
+        "version": {
+          "const": 1,
+          "default": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "day": {
+          "format": "date",
+          "title": "Day",
+          "type": "string"
+        },
+        "labels": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Labels",
+          "type": "array"
+        },
+        "zones": {
+          "items": {
+            "$ref": "#/$defs/ZoneGeometry"
+          },
+          "title": "Zones",
+          "type": "array"
+        },
+        "elements": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ElementGeometry"
+          },
+          "title": "Elements",
+          "type": "object"
+        },
+        "intervals": {
+          "items": {
+            "$ref": "#/$defs/MarketInterval"
+          },
+          "title": "Intervals",
+          "type": "array"
+        },
+        "price_range": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Price Range",
+          "type": "array"
+        }
+      },
+      "required": [
+        "day",
+        "labels",
+        "zones",
+        "elements",
+        "intervals",
+        "price_range"
+      ],
+      "title": "DayBundle",
+      "type": "object"
+    },
     "DayResponse": {
       "additionalProperties": false,
       "description": "Market-time-unit labels computed in the market timezone, including DST folds.",
@@ -169,6 +379,45 @@
         "labels"
       ],
       "title": "DayResponse",
+      "type": "object"
+    },
+    "ElementGeometry": {
+      "additionalProperties": false,
+      "description": "Resolved physical element in its publisher's orientation.",
+      "properties": {
+        "branch_id": {
+          "title": "Branch Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "line",
+            "transformer"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "endpoints": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Endpoints",
+          "type": "array"
+        }
+      },
+      "required": [
+        "branch_id",
+        "kind",
+        "endpoints"
+      ],
+      "title": "ElementGeometry",
       "type": "object"
     },
     "JsonValue": {},
@@ -216,6 +465,87 @@
         "notes"
       ],
       "title": "LayerResponse",
+      "type": "object"
+    },
+    "MarketInterval": {
+      "additionalProperties": false,
+      "description": "Published values for one UTC interval, labelled in market local time.",
+      "properties": {
+        "index": {
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "prices": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "propertyNames": {
+            "enum": [
+              "AT",
+              "BE",
+              "CZ",
+              "DE",
+              "FR",
+              "HR",
+              "HU",
+              "NL",
+              "PL",
+              "RO",
+              "SI",
+              "SK"
+            ]
+          },
+          "title": "Prices",
+          "type": "object"
+        },
+        "constraints": {
+          "items": {
+            "$ref": "#/$defs/BindingRow"
+          },
+          "title": "Constraints",
+          "type": "array"
+        },
+        "alpha": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Alpha"
+        },
+        "caps": {
+          "items": {
+            "$ref": "#/$defs/CountryCap"
+          },
+          "title": "Caps",
+          "type": "array"
+        },
+        "notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "index",
+        "label",
+        "prices",
+        "constraints",
+        "alpha",
+        "caps",
+        "notes"
+      ],
+      "title": "MarketInterval",
       "type": "object"
     },
     "PlotlyFigure": {
@@ -325,9 +655,72 @@
       ],
       "title": "ViewRequest",
       "type": "object"
+    },
+    "ZoneGeometry": {
+      "additionalProperties": false,
+      "description": "Display boundary and interior label anchor shared by every interval.",
+      "properties": {
+        "zone": {
+          "enum": [
+            "AT",
+            "BE",
+            "CZ",
+            "DE",
+            "FR",
+            "HR",
+            "HU",
+            "NL",
+            "PL",
+            "RO",
+            "SI",
+            "SK"
+          ],
+          "title": "Zone",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "rings": {
+          "items": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "type": "array"
+          },
+          "title": "Rings",
+          "type": "array"
+        },
+        "centre": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Centre",
+          "type": "array"
+        }
+      },
+      "required": [
+        "zone",
+        "name",
+        "rings",
+        "centre"
+      ],
+      "title": "ZoneGeometry",
+      "type": "object"
     }
   },
   "properties": {
+    "bundle": {
+      "$ref": "#/$defs/DayBundle"
+    },
     "day": {
       "$ref": "#/$defs/DayResponse"
     },
@@ -342,6 +735,7 @@
     }
   },
   "required": [
+    "bundle",
     "day",
     "layer",
     "attribution",
