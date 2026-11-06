@@ -95,6 +95,10 @@ def _stamp(moment: datetime) -> str:
     return moment.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
+class RateLimited(RuntimeError):
+    """The publisher's cooldown has not expired; retry outside this invocation."""
+
+
 class RequestPacer:
     """One process's shared JAO request-start budget and server-directed cooldown."""
 
@@ -109,7 +113,7 @@ class RequestPacer:
                 now = time.monotonic()
                 if now < self._blocked_until:
                     seconds = math.ceil(self._blocked_until - now)
-                    raise RuntimeError(f"JAO rate limit: retry in {seconds} seconds.")
+                    raise RateLimited(f"JAO rate limit: retry in {seconds} seconds.")
                 delay = self._next_start - now
                 if delay <= 0:
                     self._next_start = now + 1.5

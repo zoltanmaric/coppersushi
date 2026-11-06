@@ -21,10 +21,10 @@ class PublicationNotReady(RuntimeError):
 def prepare(day: MarketDay, indices: list[int] | None = None, refresh: bool = False) -> DayBundle:
     """Construct domain data without importing or invoking the web application's renderer."""
     key = day.date.isoformat()
-    active = jao.load_active_day(key, refresh=refresh)
     context = cnec_attribution.load_day(day, refresh=refresh)
     if not context.notna().all().all():
         raise PublicationNotReady(f'Attribution feeds are incomplete for {day.date}')
+    active = jao.load_active_day(key, refresh=refresh)
     prices = electricity_maps.load_day(key, refresh=refresh)
     inputs = Day(day, zone_shapes.load(), active.constraints, active.ptdfs,
                  ZonalPrices.validate(prices), context)

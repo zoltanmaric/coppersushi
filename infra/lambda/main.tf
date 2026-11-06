@@ -30,7 +30,7 @@ resource "aws_ecr_repository_policy" "lambda" {
   policy = jsonencode({ Version = "2012-10-17", Statement = [{
     Effect    = "Allow", Principal = { Service = "lambda.amazonaws.com" },
     Action    = ["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer"],
-    Condition = { StringLike = { "aws:sourceArn" = "arn:aws:lambda:${var.region}:${data.aws_caller_identity.current.account_id}:function:coppersushi-trial" } }
+    Condition = { StringLike = { "aws:sourceArn" = "arn:aws:lambda:${var.region}:${data.aws_caller_identity.current.account_id}:function:coppersushi-trial*" } }
   }] })
 }
 resource "aws_s3_bucket" "cache" { bucket_prefix = "coppersushi-lambda-cache-" }
