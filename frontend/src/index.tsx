@@ -10,6 +10,7 @@ import type {Selection, Action} from './state';
 import {viewFromUrl, viewSearch} from './view-url';
 import {mapSelection} from './map-selection';
 import {MapDecoration} from './map-decoration';
+import {initialCoreCamera} from './initial-camera';
 import type {PlotlyFigure, LayerResponse} from './contracts';
 import {PriceLegend} from './price-legend';
 
@@ -73,16 +74,16 @@ export function CnecPage(props: PageProps) {
   return <QueryClientProvider client={client}><View {...props} basemap={basemap}/></QueryClientProvider>;
 }
 
-function shell(token: string, basemap: Props['basemap']): PlotlyFigure {
+function shell(token: string, basemap: Props['basemap'], camera: ReturnType<typeof initialCoreCamera>): PlotlyFigure {
   return {data: [{type: 'scattermapbox', mode: 'lines', lon: [], lat: []}], layout: {
-    mapbox: {style: basemap, accesstoken: token, center: {lat: 50, lon: 10}, zoom: 3.5, bearing: 0, pitch: 0},
+    mapbox: {style: basemap, accesstoken: token, ...camera},
     clickanywhere: true, uirevision: 'cnec-camera', margin: {t: 0, b: 0, l: 0, r: 0}, showlegend: false,
     paper_bgcolor: '#1b1b1b',
   }};
 }
 
-function combine(token: string, basemap: Props['basemap'], prices?: LayerResponse, constraints?: LayerResponse, caps?: LayerResponse): PlotlyFigure {
-  const initial = shell(token, basemap);
+function combine(token: string, basemap: Props['basemap'], camera: ReturnType<typeof initialCoreCamera>, prices?: LayerResponse, constraints?: LayerResponse, caps?: LayerResponse): PlotlyFigure {
+  const initial = shell(token, basemap, camera);
   if (!prices && !constraints) return initial;
   const priceData = prices?.figure.data ?? [];
   return {data: [...priceData.slice(0, 1), ...(constraints?.figure.data ?? []), ...(caps?.figure.data.filter(t => t.meta !== null && typeof t.meta === 'object' && 'role' in t.meta && t.meta.role === 'country-cap') ?? []), ...priceData.slice(1)],
@@ -95,6 +96,7 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
   const [scrubbing, setScrubbing] = useState(false);
   const inputSettled = !scrubbing;
 
+  const [initialCamera] = useState(() => initialCoreCamera(window.innerWidth, window.innerHeight));
   const calendar = useQuery({queryKey: ['calendar', day], queryFn: ({signal}) => fetchCnec('day', `day/${day}`, signal)});
   const validInterval = !!calendar.data && interval < calendar.data.labels.length;
   const prices = useQuery({queryKey: ['prices', day, interval], enabled: validInterval && inputSettled,
@@ -113,8 +115,8 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
     enabled: inputSettled && selected !== null && prices.isSuccess && constraints.isSuccess && attribution.isSuccess,
     queryFn: ({signal}) => fetchCnec('layer', 'enriched', signal, {...view, attribution: attribution.data})});
   const full = selected === null ? caps.data : enriched.data;
-  const figure = useMemo(() => full?.figure ?? combine(token, basemap, prices.data, highlight.data ?? constraints.data, caps.data),
-    [token, basemap, full, prices.data, highlight.data, constraints.data, caps.data]);
+  const figure = useMemo(() => full?.figure ?? combine(token, basemap, initialCamera, prices.data, highlight.data ?? constraints.data, caps.data),
+    [token, basemap, initialCamera, full, prices.data, highlight.data, constraints.data, caps.data]);
   const candidate = useMemo(() => {
     const copy = structuredClone(figure);
     // Keep camera inputs stable even when a newly arrived layer suggests different bounds.
@@ -127,12 +129,12 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
     }
     copy.layout.clickanywhere = true;
     copy.layout.mapbox.style = basemap;
-    copy.layout.mapbox.center = {lat: 50, lon: 10};
-    copy.layout.mapbox.zoom = 3.5;
+    copy.layout.mapbox.center = initialCamera.center;
+    copy.layout.mapbox.zoom = initialCamera.zoom;
     copy.layout.mapbox.bearing = 0;
     copy.layout.mapbox.pitch = 0;
     return copy;
-  }, [figure, basemap]);
+  }, [figure, basemap, initialCamera]);
   // Publish one interval update after its independently fetched layers settle.
   // The retained figure carries its own timestamp while the controls request a new interval.
   const settled = validInterval && !prices.isPending && !constraints.isPending &&
@@ -142,7 +144,7 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
   useEffect(() => {
     if (settled) setDisplayed({day, interval, selected, reference, figure: candidate});
   }, [settled, day, interval, selected, reference, candidate]);
-  const emptyFigure = useMemo(() => shell(token, basemap), [token, basemap]);
+  const emptyFigure = useMemo(() => shell(token, basemap, initialCamera), [token, basemap, initialCamera]);
   const graphFigure = displayed?.day === day ? displayed.figure : settled ? candidate : emptyFigure;
   const mapCurrent = displayed?.day === day && displayed.interval === interval && displayed.selected === selected && displayed.reference === reference;
   const options = full?.options ?? caps.data?.options ?? constraints.data?.options ?? [];
