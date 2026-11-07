@@ -32,6 +32,7 @@ export type PriceRange = [number, number];
 export type Index = number;
 export type Label = string;
 export type SourceId = number;
+export type Eic = string;
 export type Name1 = string;
 export type Direction = string;
 export type Contingency = string | null;
@@ -121,6 +122,7 @@ export interface Prices {
  */
 export interface BindingRow {
   source_id: SourceId;
+  eic: Eic;
   name: Name1;
   direction: Direction;
   contingency: Contingency;

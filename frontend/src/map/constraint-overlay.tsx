@@ -1,12 +1,12 @@
 import React, {useId} from 'react';
-import type {LngLat, OverlayModel} from './overlay-model';
+import type {LngLat, OverlayModel, SelectionEffect} from './overlay-model';
 
 const RING_RADIUS = 6;
 const RING_OFFSET = 4;
 
 
 /** Decorative energy only; all geographic projection belongs to the native map. */
-export function ConstraintOverlay({model, project}: {model: OverlayModel; project: ((point: LngLat) => [number, number]) | null}) {
+function SingleConstraintOverlay({model, project}: {model: {ambient: LngLat[][];selection:SelectionEffect|null}; project: ((point: LngLat) => [number, number]) | null}) {
   const filterId = `energy-${useId().replace(/:/g, "")}`;
   const selection = project ? model.selection : null;
   const transformer = selection?.kind === 'transformer';
@@ -75,4 +75,9 @@ export function ConstraintOverlay({model, project}: {model: OverlayModel; projec
     </g>)}
     </g>
   </svg>;
+}
+
+export function ConstraintOverlay({model,project}:{model:OverlayModel;project:((point:LngLat)=>[number,number])|null}) {
+  return <>{(model.selections.length ? model.selections : [null]).map((selection,i)=>
+    <SingleConstraintOverlay key={i} model={{ambient:i === 0 ? model.ambient : [],selection}} project={project}/>)}</>;
 }

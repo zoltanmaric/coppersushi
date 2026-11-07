@@ -111,14 +111,12 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
     : emptyFigure,[metadata.data,data,geography,mapCurrent,selected,reference,emptyFigure]);
   const current = mapCurrent ? data : null;
   const options = current ? optionsFor(current) : [];
-  useEffect(() => {
-    if (current && selected !== null && !options.some(o => o.value === String(selected)))
-      dispatch({type: 'select', selected: null, source: 'constraints'});
-  }, [current, selected]);
   const notes = [...(current?.notes ?? [])];
-  if (current && selected !== null && current.constraints.some(r => r.source_id === selected) &&
+  if (current && selected !== null && current.constraints.some(r => r.eic === selected) &&
       contributions(current, selected, reference) === null)
-    notes.push('Contribution unavailable: missing or zero FB scaling factor α.');
+    notes.push('Contribution unavailable: missing FB scaling factor or country sensitivities.');
+  if (current && selected !== null && !options.some(o => o.value === selected))
+    notes.push(`Selected element ${selected} is not binding in this interval.`);
   function mapClick(change: GraphChange) {
     const action = mapSelection(change.clickData, options, selected, mapCurrent);
     if (action) dispatch(action);

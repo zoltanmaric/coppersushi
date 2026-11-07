@@ -15,10 +15,11 @@ export function viewFromUrl(day: string, search: string): Selection {
   }
   const params = new URLSearchParams(search);
   const interval = integer(params.get('interval'));
-  const selected = integer(params.get('constraint'));
+  const raw = params.get('constraint');
+  const selected = raw && (/^[A-Z0-9-]{16}$/.test(raw) || raw === 'cap:PL') ? raw : null;
   return {day, interval: interval !== null && interval >= 0 ? interval : 0,
     reference: coreZone(params.get('reference')) ?? 'DE', selected,
-    source: selected !== null && selected < 0 ? 'attribution' : 'constraints'};
+    source: selected === 'cap:PL' ? 'attribution' : 'constraints'};
 }
 
 export function viewSearch(view: Selection, search: string): string {

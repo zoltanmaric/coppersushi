@@ -56,7 +56,7 @@ def build(day: Day, geometries: dict[int, DataFrame[MappedCnecElements]]) -> Day
                 key = existing if existing is not None else str(len(elements))
                 elements[key] = element
             ptdfs = day.ptdfs[day.ptdfs.source_id.eq(row.source_id) & day.ptdfs.interval.eq(timestamp)]
-            rows.append(BindingRow.model_validate(dict(source_id=row.source_id, name=row.name, direction=row.direction,
+            rows.append(BindingRow.model_validate(dict(source_id=row.source_id, eic=row.eic, name=row.name, direction=row.direction,
                 contingency=None if not isinstance(row.cont_name, str) else row.cont_name,
                 shadow_price=row.shadow_price, ram=None if row.ram != row.ram else row.ram, capacity=None if row.capacity != row.capacity else row.capacity,
                 geometry=key, ptdfs=dict(zip(ptdfs.zone, ptdfs.ptdf)))))
