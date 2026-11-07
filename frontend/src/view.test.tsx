@@ -17,9 +17,15 @@ interface Pending {path: string; body?: {day: string; interval: number; selected
 let pending: Pending[];
 let graph: PlotlyFigure;
 let clickGraph: (change: {clickData: {points: {customdata: string[]}[]}}) => void;
-vi.mock('./map/plot', () => ({Plot: (props: {data: PlotlyFigure['data']; layout: PlotlyFigure['layout']; onClick: (click: unknown) => void}) => {
+vi.mock('./map/plot', () => ({Plot: (props: {data: PlotlyFigure['data']; layout: PlotlyFigure['layout']; onClick: (click: unknown) => void; onInitialized:()=>void; onUpdate:(figure:PlotlyFigure)=>void}) => {
+  const installedClick = React.useRef(props.onClick);
+  // The pinned wrapper refreshes native handlers only when the figure updates.
+  React.useEffect(()=>{
+    installedClick.current=props.onClick;
+    props.onUpdate({data:props.data,layout:props.layout});
+  },[props.data,props.layout]);
   graph = {data: props.data, layout: props.layout};
-  clickGraph = change => props.onClick(change.clickData);
+  clickGraph = change => installedClick.current(change.clickData);
   return <div aria-label="Map">{props.data.map(t=>t.name).join(',')}</div>;
 }}));
 beforeEach(() => {
@@ -123,8 +129,10 @@ test('the mounted graph selects constraints using current interval options', asy
   await reply('/1.json', {...full.intervals[1],constraints:[row]});
   await waitFor(()=>expect(pending).toHaveLength(0));
   fireEvent.click(screen.getByRole('button',{name:'Next interval'}));
-  await act(async()=>clickGraph({clickData:{points:[{customdata:['11T0-0000-0984-D']}]}}));
-  expect(graph.data.some(t=>t.name==='ray contributions')).toBe(true);
+  await waitFor(async()=>{
+    await act(async()=>clickGraph({clickData:{points:[{customdata:['11T0-0000-0984-D']}]}}));
+    expect(graph.data.some(t=>t.name==='ray contributions')).toBe(true);
+  });
   expect(fetch).toHaveBeenCalledTimes(4);
 });
 

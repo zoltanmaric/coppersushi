@@ -1,11 +1,12 @@
 import {contributions} from './market/contributions';
-import React, {useEffect, useMemo, useRef, useState} from 'react';
+import React, {useEffect, useLayoutEffect, useCallback, useMemo, useRef, useState, useReducer} from 'react';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate, useParams} from 'react-router-dom';
 import {useDayData, IntervalPrefetch} from './data/day-data';
 import {dayFigure, zoneFeatures, selectionIds} from './map/day-figure';
 import {Timeline} from './controls/timeline';
 import {Plot} from './map/plot';
+import {reduceRender} from './map/render-state';
 import {CORE_ZONES} from './market/reference';
 import {DateTimeControls} from './controls/date-time-controls';
 import {reduceSelection} from './controls/state';
@@ -26,7 +27,29 @@ import './style.css';
 interface Props {id: string; day: string; min_day: string; token: string; basemap: PlotlyFigure['layout']['mapbox']['style']}
 interface GraphChange {clickData?: unknown}
 interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void; overlay: OverlayModel; hidden: boolean; countries: CountryLabel[]; onReference: (zone: CoreZone) => void}
-const Graph = ({overlay, hidden, figure, id, config, style, setProps, countries, onReference}: GraphProps) => {
+const Graph = (props: GraphProps) => {
+  const [render,dispatch] = useReducer(reduceRender<GraphProps>,{active:props,pending:null,busy:true});
+  useEffect(()=>{dispatch({type:'request',value:props});},[props]);
+  const {overlay, hidden, figure, id, config, style, setProps, countries, onReference} = render.active;
+  const interactive = !render.busy && props.figure === figure;
+  const interaction = useRef({interactive,setProps});
+  useLayoutEffect(()=>{interaction.current={interactive,setProps};},[interactive,setProps]);
+  // Plotly retains native handlers between figure updates; read committed state.
+  const onClick = useCallback((clickData:unknown)=>{
+    if (interaction.current.interactive) interaction.current.setProps({clickData});
+  },[]);
+  const completionFrame = useRef<number | null>(null);
+  useEffect(()=>()=>{if (completionFrame.current !== null) cancelAnimationFrame(completionFrame.current);},[]);
+  const complete = () => {
+    if (completionFrame.current !== null) return;
+    // Give input and a paint a turn before starting another expensive map update.
+    completionFrame.current = requestAnimationFrame(()=>{
+      completionFrame.current = requestAnimationFrame(()=>{
+        completionFrame.current = null;
+        dispatch({type:'complete',figure});
+      });
+    });
+  };
   const host = useRef<HTMLDivElement>(null);
   const data = useMemo(() => structuredClone(figure.data), [figure.data]);
   // Mapbox mutates its style (including removing empty layer layouts). Keep this
@@ -36,8 +59,11 @@ const Graph = ({overlay, hidden, figure, id, config, style, setProps, countries,
   return <div ref={host} style={style}>
     <Plot divId={id} data={data} layout={layout} config={config}
       style={{height:'100%',width:'100%'}} useResizeHandler
-      onAfterPlot={() => setError(null)} onClick={(clickData: unknown) => setProps({clickData})} onError={error=>setError(error.message)}/>
-    <MapDecoration host={host} model={overlay} hidden={hidden} countries={countries} onReference={onReference}/>
+      onInitialized={() => {setError(null);complete();}}
+      onUpdate={updated => {if (updated.data === data) {setError(null);complete();}}}
+      onClick={onClick}
+      onError={error=>{setError(error.message);complete();}}/>
+    <MapDecoration host={host} model={overlay} hidden={hidden} countries={countries} onReference={zone=>{if (interactive) onReference(zone);}}/>
     {error && <div role="alert">Map: {error}</div>}
   </div>;
 };
