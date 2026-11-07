@@ -8,7 +8,7 @@ import type {PlotlyFigure} from './map/figure';
 
 function CnecView(props: Omit<React.ComponentProps<typeof CnecPage>, 'selection' | 'onAction'> & {day: string; interval?: number}) {
   const [selection, onAction] = React.useReducer(reduceSelection, {
-    day: props.day, interval: props.interval ?? 0, reference: 'DE', selected: null, source: 'constraints',
+    day: props.day, interval: props.interval ?? 0, reference: 'DE', selected: null,
   });
   return <CnecPage {...props} selection={selection} onAction={onAction}/>;
 }
@@ -119,11 +119,11 @@ test('invalid bundle is rejected at the browser boundary', async () => {
 
 test('the mounted graph selects constraints using current interval options', async () => {
   await open();
-  const row={source_id:42,name:'Published line',direction:'DIRECT',contingency:null,shadow_price:10,ram:100,capacity:200,geometry:null,ptdfs:{DE:0,FR:0.1}};
+  const row={source_id:42,eic:'11T0-0000-0984-D',name:'Published line',direction:'DIRECT',contingency:null,shadow_price:10,ram:100,capacity:200,geometry:null,ptdfs:{DE:0,FR:0.1}};
   await reply('/1.json', {...full.intervals[1],constraints:[row]});
   await waitFor(()=>expect(pending).toHaveLength(0));
   fireEvent.click(screen.getByRole('button',{name:'Next interval'}));
-  await act(async()=>clickGraph({clickData:{points:[{customdata:['42']}]}}));
+  await act(async()=>clickGraph({clickData:{points:[{customdata:['11T0-0000-0984-D']}]}}));
   expect(graph.data.some(t=>t.name==='ray contributions')).toBe(true);
   expect(fetch).toHaveBeenCalledTimes(4);
 });

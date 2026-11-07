@@ -27,6 +27,7 @@ class ElementGeometry(Contract):
 class BindingRow(Contract):
     """One physical binding publication with its country sensitivities."""
     source_id: int
+    eic: str = Field(pattern=r"^[A-Z0-9-]{16}$")
     name: str
     direction: str
     contingency: str | None

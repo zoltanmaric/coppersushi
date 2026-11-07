@@ -61,7 +61,7 @@ for (const time of times)
       constraints: physical
         .filter((r) => same(r.interval, time))
         .map((r) => ({
-          source_id: Number(r.source_id),
+          source_id: Number(r.source_id), eic: r.eic,
           name: r.name,
           direction: r.direction,
           contingency: r.cont_name,
@@ -93,9 +93,9 @@ for (const time of times)
     for (const reference of CORE_ZONES)
       test(`published pair spreads reconcile with reference ${reference}`, () => {
         const total: Record<string, number> = {};
-        for (const row of [...interval.constraints, ...interval.caps])
+        for (const id of new Set([...interval.constraints.map(r=>r.eic), ...(interval.caps.length ? ['cap:PL'] : [])]))
           for (const [zone, value] of Object.entries(
-            contributions(interval, row.source_id, reference)!,
+            contributions(interval, id, reference)!,
           ))
             total[zone] = (total[zone] ?? 0) + value;
         for (const a of Object.keys(observed))

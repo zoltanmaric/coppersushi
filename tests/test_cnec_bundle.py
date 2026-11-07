@@ -37,6 +37,7 @@ def test_bundle_preserves_published_coefficients_and_explicit_interval_identity(
     for row in decoded.intervals[0].constraints:
         expected = ptdfs[ptdfs.interval.eq(timestamp) & ptdfs.source_id.eq(row.source_id)]
         assert row.ptdfs == dict(zip(expected.zone, expected.ptdf))
+        assert row.eic == constraints.loc[constraints.source_id.eq(row.source_id), "eic"].iloc[0]
         assert row.geometry is None
     assert decoded.intervals[0].alpha == context[context.interval.eq(timestamp)].alpha.iloc[0]
 

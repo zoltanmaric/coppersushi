@@ -8,6 +8,11 @@
           "title": "Source Id",
           "type": "integer"
         },
+        "eic": {
+          "pattern": "^[A-Z0-9-]{16}$",
+          "title": "Eic",
+          "type": "string"
+        },
         "name": {
           "title": "Name",
           "type": "string"
@@ -90,6 +95,7 @@
       },
       "required": [
         "source_id",
+        "eic",
         "name",
         "direction",
         "contingency",

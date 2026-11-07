@@ -13,7 +13,7 @@ flowchart TB
     workflow -->|Scheduled timestamp| handler["Native Lambda handler"]
     handler --> ready
     sources["JAO and Electricity Maps"] --> ready["Receipt and completeness validation"]
-    catalog["Grid catalog"] --> bundle["Typed complete-day bundle"]
+    catalog["Grid catalog"] --> bundle["Typed complete-day bundle with element EICs"]
     ready --> bundle
     bundle --> files["Immutable metadata and intervals"]
     files --> manifest["Atomic day manifest"]
@@ -31,3 +31,5 @@ workflow waits two minutes between incomplete publications, for at most five hou
 A complete manifest skips re-publication. Unexpected errors remain visible failures.
 The `publisher` image includes catalog inputs and outlines, without solved networks,
 OPF figures or a web server. It uses AWS's official Runtime Interface Client.
+
+Every physical binding row carries its required published EIC. Asset selection and aggregation use EIC; publication row IDs identify individual constraints and their PTDFs. Regenerate prepared days when this contract changes.

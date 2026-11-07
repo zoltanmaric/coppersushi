@@ -3,7 +3,7 @@
 [System overview](../README.md) · [Publication contract](../coppersushi/publication/README.md)
 
 A standalone React application constructs the map and calculates contributions
-from prepared market-day files. Selection lives in the URL; query keys share
+from prepared market-day files. EIC asset selection lives in the URL and persists when an asset is not binding; query keys share
 selected-interval and background requests. No interaction requests a Python figure.
 
 ```mermaid

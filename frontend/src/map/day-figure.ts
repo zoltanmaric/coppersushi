@@ -1,6 +1,6 @@
 import {contributions} from '../market/contributions';
 import type {DayBundle, BindingRow, MarketInterval, ElementGeometry} from '../data/contracts';
-import type {PlotlyFigure, ConstraintOption} from './figure';
+import type {PlotlyFigure} from './figure';
 import type { CoreZone } from "../market/reference";
 import {layerAnchor} from './map-layer-order';
 
@@ -75,20 +75,8 @@ const bearing = (g: ElementGeometry) => {
 const hover = (r: BindingRow) =>
   `<b>${r.name}</b><br>Binding under: ${r.contingency ?? "Base case (no contingency)"}<br>Direction: ${r.direction}<br>RAM: ${r.ram === null ? "n/a" : number(r.ram, 0) + " MW"}<br>Capacity: ${r.capacity === null ? "n/a" : number(r.capacity, 0) + " MW"}<br>Shadow price: ${number(r.shadow_price)} €/MWh`;
 
-export function optionsFor(interval: MarketInterval): ConstraintOption[] {
-  return [
-    ...interval.constraints.map((r) => ({
-      ...r,
-      source: "constraints" as const,
-    })),
-    ...interval.caps.map((r) => ({ ...r, source: "attribution" as const })),
-  ]
-    .sort((a, b) => b.shadow_price - a.shadow_price)
-    .map((r) => ({
-      value: String(r.source_id),
-      source: r.source,
-      label: r.name,
-    }));
+export function selectionIds(interval: MarketInterval): string[] {
+  return [...new Set([...interval.constraints.map(r=>r.eic), ...interval.caps.map(()=>'cap:PL')])];
 }
 
 /** Stable geographic data, constructed once per loaded day. */
@@ -107,7 +95,7 @@ export function zoneFeatures(bundle: Pick<DayBundle, 'zones'>) {
 export function dayFigure(
   bundle: DayBundle,
   index: number,
-  selected: number | null,
+  selected: string | null,
   reference: CoreZone,
   layout: PlotlyFigure["layout"],
   geojson: ReturnType<typeof zoneFeatures>,
@@ -146,6 +134,10 @@ export function dayFigure(
       showscale: false,
     },
   ];
+  const assetHover = (rows: BindingRow[]) => {
+    const ids = new Set(rows.map(r=>r.eic));
+    return interval.constraints.filter(r=>ids.has(r.eic)).map(hover).join('<br><br>');
+  };
   const rows = interval.constraints.filter((r) => r.geometry !== null);
   const lines = rows.filter(
     (r) => bundle.elements[r.geometry!].kind === "line",
@@ -195,8 +187,8 @@ export function dayFigure(
       const t = i / 40;
       hitX.push(g.endpoints[0][0] * (1 - t) + g.endpoints[1][0] * t);
       hitY.push(g.endpoints[0][1] * (1 - t) + g.endpoints[1][1] * t);
-      hitIds.push([group.map((r) => r.source_id).join(",")]);
-      hitText.push(group.map(hover).join("<br><br>"));
+      hitIds.push([[...new Set(group.map((r) => r.eic))].join(",")]);
+      hitText.push(assetHover(group));
     }
   }
   traces.push(
@@ -232,9 +224,9 @@ export function dayFigure(
         {
           mode: "markers",
           meta: { role: "binding-symbol" },
-          text: values.map((rs) => rs.map(hover).join("<br><br>")),
+          text: values.map((rs) => assetHover(rs)),
           customdata: values.map((rs) => [
-            rs.map((r) => r.source_id).join(","),
+            [...new Set(rs.map((r) => r.eic))].join(","),
           ]),
           hoverinfo: "text",
           hoverlabel,
@@ -249,36 +241,22 @@ export function dayFigure(
       ),
     );
   }
-  const chosen = rows.find((r) => r.source_id === selected);
-  if (chosen) {
+  const chosenRows = [...new Map(rows.filter(r => r.eic === selected).map(r => [r.geometry,r])).values()];
+  const selectedX: (number|null)[] = [], selectedY: (number|null)[] = [];
+  const transformerX: number[] = [], transformerY: number[] = [];
+  for (const chosen of chosenRows) {
     const g = bundle.elements[chosen.geometry!];
-    if (g.kind === "line")
-      traces.push(
-        line(
-          "selected CNEC",
-          g.endpoints.map((p) => p[0]),
-          g.endpoints.map((p) => p[1]),
-          4,
-          { effect: "line" },
-        ),
-      );
-    else {
-      const p = point(g);
-      symbols.push(
-        scatter("selected CNEC", [p[0]], [p[1]], {
-          mode: "markers",
-          marker: {
-            symbol: "transformer-selected",
-            size: 10,
-            angle: 0,
-            allowoverlap: true,
-          },
-          hoverinfo: "skip",
-          meta: { role: "binding-symbol", effect: "transformer" },
-        }),
-      );
+    if (g.kind === "line") {
+      selectedX.push(...g.endpoints.map(p=>p[0]),null);
+      selectedY.push(...g.endpoints.map(p=>p[1]),null);
     }
+    else {const p = point(g);transformerX.push(p[0]);transformerY.push(p[1]);}
   }
+  if (transformerX.length) symbols.push(scatter('selected CNEC',transformerX,transformerY,{
+    mode:'markers',marker:{symbol:'transformer-selected',size:10,angle:0,allowoverlap:true},
+    hoverinfo:'skip',meta:{role:'binding-symbol',effect:'transformer'},
+  }));
+  if (selectedX.length) traces.push(line('selected CNEC',selectedX,selectedY,4,{effect:'line'}));
   for (const cap of interval.caps) {
     const pl = bundle.zones.find((z) => z.zone === "PL");
     if (!pl) continue;
@@ -304,7 +282,7 @@ export function dayFigure(
       "binding country cap",
       x,
       y,
-      selected === cap.source_id ? 4 : 2.5,
+      selected === 'cap:PL' ? 4 : 2.5,
       { role: "country-cap", ambient: true },
     );
     traces.push(
@@ -313,7 +291,7 @@ export function dayFigure(
       scatter("select country cap", x, y, {
         mode: "markers",
         marker: { size: 14, color: "rgba(128,80,255,0.01)" },
-        customdata: x.map(() => [String(cap.source_id)]),
+        customdata: x.map(() => ['cap:PL']),
         text: x.map(
           () =>
             `${cap.name}<br>Net ${cap.direction} limit: ${number(cap.capacity, 0)} MW<br>Cap shadow price: ${number(cap.shadow_price)} €/MWh`,
@@ -353,7 +331,7 @@ export function dayFigure(
           ys.push((1 - t) ** 2 * y0 + 2 * (1 - t) * t * cy + t * t * y1);
         }
         const observed = interval.prices[z.zone]! - interval.prices[reference]!;
-        const text = `<b>Spread: ${z.zone} − ${reference}</b><br>This constraint’s contribution: ${signed(value)} /MWh<br>Total observed spread: ${signed(observed)} /MWh<br>Remainder (other constraints / source precision): ${signed(observed - value)} /MWh`;
+        const text = `<b>Spread: ${z.zone} − ${reference}</b><br>Selected element’s combined contribution: ${signed(value)} /MWh<br>Total observed spread: ${signed(observed)} /MWh<br>Remainder (other constraints / source precision): ${signed(observed - value)} /MWh`;
         const color = value < 0 ? teal : purple,
           bg = value < 0 ? String(scale[0][1]) : lavender;
         traces.push(

@@ -3,7 +3,7 @@ import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate, useParams} from 'react-router-dom';
 import {useDayData, IntervalPrefetch} from './data/day-data';
-import {dayFigure, zoneFeatures, optionsFor} from './map/day-figure';
+import {dayFigure, zoneFeatures, selectionIds} from './map/day-figure';
 import {Timeline} from './controls/timeline';
 import {Plot} from './map/plot';
 import {CORE_ZONES} from './market/reference';
@@ -110,15 +110,13 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
     ? dayFigure({...metadata.data,intervals:[data]},data.index,mapCurrent ? selected : null,reference,emptyFigure.layout,geography)
     : emptyFigure,[metadata.data,data,geography,mapCurrent,selected,reference,emptyFigure]);
   const current = mapCurrent ? data : null;
-  const options = current ? optionsFor(current) : [];
-  useEffect(() => {
-    if (current && selected !== null && !options.some(o => o.value === String(selected)))
-      dispatch({type: 'select', selected: null, source: 'constraints'});
-  }, [current, selected]);
+  const options = current ? selectionIds(current) : [];
   const notes = [...(current?.notes ?? [])];
-  if (current && selected !== null && current.constraints.some(r => r.source_id === selected) &&
+  if (current && selected !== null && current.constraints.some(r => r.eic === selected) &&
       contributions(current, selected, reference) === null)
-    notes.push('Contribution unavailable: missing or zero FB scaling factor α.');
+    notes.push('Contribution unavailable: missing FB scaling factor or country sensitivities.');
+  if (current && selected !== null && !options.includes(selected))
+    notes.push(`Selected element ${selected} is not binding in this interval.`);
   function mapClick(change: GraphChange) {
     const action = mapSelection(change.clickData, options, selected, mapCurrent);
     if (action) dispatch(action);
