@@ -18,9 +18,14 @@ let pending: Pending[];
 let graph: PlotlyFigure;
 let clickGraph: (change: {clickData: {points: {customdata: string[]}[]}}) => void;
 vi.mock('./map/plot', () => ({Plot: (props: {data: PlotlyFigure['data']; layout: PlotlyFigure['layout']; onClick: (click: unknown) => void; onInitialized:()=>void; onUpdate:(figure:PlotlyFigure)=>void}) => {
-  React.useEffect(()=>{props.onUpdate({data:props.data,layout:props.layout});},[props.data,props.layout]);
+  const installedClick = React.useRef(props.onClick);
+  // The pinned wrapper refreshes native handlers only when the figure updates.
+  React.useEffect(()=>{
+    installedClick.current=props.onClick;
+    props.onUpdate({data:props.data,layout:props.layout});
+  },[props.data,props.layout]);
   graph = {data: props.data, layout: props.layout};
-  clickGraph = change => props.onClick(change.clickData);
+  clickGraph = change => installedClick.current(change.clickData);
   return <div aria-label="Map">{props.data.map(t=>t.name).join(',')}</div>;
 }}));
 beforeEach(() => {

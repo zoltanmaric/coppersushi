@@ -1,5 +1,5 @@
 import {contributions} from './market/contributions';
-import React, {useEffect, useMemo, useRef, useState, useReducer} from 'react';
+import React, {useEffect, useLayoutEffect, useCallback, useMemo, useRef, useState, useReducer} from 'react';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate, useParams} from 'react-router-dom';
 import {useDayData, IntervalPrefetch} from './data/day-data';
@@ -32,6 +32,12 @@ const Graph = (props: GraphProps) => {
   useEffect(()=>{dispatch({type:'request',value:props});},[props]);
   const {overlay, hidden, figure, id, config, style, setProps, countries, onReference} = render.active;
   const interactive = !render.busy && props.figure === figure;
+  const interaction = useRef({interactive,setProps});
+  useLayoutEffect(()=>{interaction.current={interactive,setProps};},[interactive,setProps]);
+  // Plotly retains native handlers between figure updates; read committed state.
+  const onClick = useCallback((clickData:unknown)=>{
+    if (interaction.current.interactive) interaction.current.setProps({clickData});
+  },[]);
   const completionFrame = useRef<number | null>(null);
   useEffect(()=>()=>{if (completionFrame.current !== null) cancelAnimationFrame(completionFrame.current);},[]);
   const complete = () => {
@@ -55,7 +61,7 @@ const Graph = (props: GraphProps) => {
       style={{height:'100%',width:'100%'}} useResizeHandler
       onInitialized={() => {setError(null);complete();}}
       onUpdate={updated => {if (updated.data === data) {setError(null);complete();}}}
-      onClick={(clickData: unknown) => {if (interactive) setProps({clickData});}}
+      onClick={onClick}
       onError={error=>{setError(error.message);complete();}}/>
     <MapDecoration host={host} model={overlay} hidden={hidden} countries={countries} onReference={zone=>{if (interactive) onReference(zone);}}/>
     {error && <div role="alert">Map: {error}</div>}
