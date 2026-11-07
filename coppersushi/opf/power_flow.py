@@ -17,7 +17,7 @@ from coppersushi.data_model.network_views import (
     BusCoordinates,
     NodeInfoForSnapshot,
 )
-from coppersushi.snapshot import NetworkSnapshot
+from coppersushi.opf.snapshot import NetworkSnapshot
 
 # For each snapshot, a figure has 4 traces
 # (the nodes, the loaded lines, the non-loaded lines,

@@ -99,7 +99,7 @@ def load(directory: Path) -> Iterator[sqlite3.Connection]:
 def mapped_elements(directory: Path) -> DataFrame[MappedCnecElements]:
     """Project a validated catalog into the map's existing oriented geometry contract."""
     import pandas as pd
-    from coppersushi import cnec_geometry as geometry
+    from coppersushi.grid_catalog import cnec_geometry as geometry
     from coppersushi.data_model.cnec_price_map import MappedCnecElements
 
     with load(directory) as db:
@@ -140,8 +140,9 @@ def resolve(interval: pd.Timestamp, required: DataFrame[ActiveConstraints], dire
     missing endpoint metadata remain eligible for discovery.
     """
     import pandas as pd
-    from coppersushi import cnec_geometry
-    from coppersushi.data_sources import jao, osm_locator
+    from coppersushi.grid_catalog import cnec_geometry
+    from coppersushi.data_sources import jao
+    from coppersushi.grid_catalog.data_sources import osm_locator
 
     directory = snapshot(directory)
     mapped = mapped_elements(directory)

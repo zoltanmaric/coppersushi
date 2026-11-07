@@ -15,7 +15,7 @@ This module is a reader and nothing more. One name reaches several templates —
 far end appears in both TSOs' files, and the French 225 kV template repeats whole substations
 of the 400 kV one — and every such row is returned verbatim. Deciding that two spellings are
 one substation, and refusing the pairs that are not, is matching, which lives once in the
-pure matcher (`coppersushi/cnec_geometry.py`) because it depends on the key being matched on.
+pure matcher (`coppersushi/grid_catalog/cnec_geometry.py`) because it depends on the key being matched on.
 """
 
 import csv

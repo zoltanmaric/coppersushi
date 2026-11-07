@@ -32,7 +32,8 @@ from typing import NamedTuple
 import pandas as pd
 from pandera.typing import DataFrame
 
-from coppersushi import REPO, static_grid
+from coppersushi import REPO
+from coppersushi.grid_catalog import static_grid
 from coppersushi.data_model.static_grid import Branches, Transformers
 
 logger = logging.getLogger(__name__)

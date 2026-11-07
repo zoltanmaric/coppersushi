@@ -11,9 +11,13 @@ import pandera.pandas as pa
 
 from coppersushi import REPO
 from coppersushi.market_day import MarketDay
-from coppersushi.data_sources import (
-    catalog_backfill, catalog_sweep, element_catalog, jao, networks, osm_locator, zone_shapes,
-)
+from coppersushi.grid_catalog.data_sources import catalog_backfill
+from coppersushi.grid_catalog.data_sources import catalog_sweep
+from coppersushi.grid_catalog.data_sources import element_catalog
+from coppersushi.data_sources import jao
+from coppersushi.opf.data_sources import networks
+from coppersushi.grid_catalog.data_sources import osm_locator
+from coppersushi.grid_catalog.data_sources import zone_shapes
 
 logger = logging.getLogger(__name__)
 SETUP_COMMAND = 'pixi run --locked setup-app'

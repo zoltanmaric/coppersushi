@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 
 from coppersushi import REPO
-from coppersushi.data_sources import osm_locator
+from coppersushi.grid_catalog.data_sources import osm_locator
 
 FIXTURES = REPO / "tests" / "fixtures" / "synthetic-osm-locator"
 

@@ -5,7 +5,7 @@ import sqlite3
 import pytest
 
 from coppersushi import REPO
-from coppersushi.data_sources.element_catalog import InvalidCatalog, load
+from coppersushi.grid_catalog.data_sources.element_catalog import InvalidCatalog, load
 
 FIXTURE = REPO / 'tests' / 'fixtures' / 'element-catalog'
 
@@ -44,7 +44,7 @@ def test_loader_rejects_incomplete_endpoint_pair(tmp_path):
 
 
 def test_catalog_projects_publisher_orientation_and_missing_geometry():
-    from coppersushi.data_sources.element_catalog import mapped_elements
+    from coppersushi.grid_catalog.data_sources.element_catalog import mapped_elements
     frame = mapped_elements(FIXTURE).set_index('name')
     line = frame.loc['Westhaven-Eastfield']
     assert (line.x0, line.y0, line.x1, line.y1) == (3., 46., 4., 46.)
@@ -53,7 +53,7 @@ def test_catalog_projects_publisher_orientation_and_missing_geometry():
 
 
 def test_orientation_is_independent_of_assignment_basis():
-    from coppersushi.data_sources.element_catalog import mapped_elements
+    from coppersushi.grid_catalog.data_sources.element_catalog import mapped_elements
     import tempfile
     from pathlib import Path
     with tempfile.TemporaryDirectory() as directory:
@@ -80,7 +80,7 @@ def test_sql_rejects_false_orientation_and_assignment_claims():
 
 def test_legacy_snapshot_preserves_sites_and_projection(tmp_path):
     import csv
-    from coppersushi.data_sources.element_catalog import mapped_elements
+    from coppersushi.grid_catalog.data_sources.element_catalog import mapped_elements
     shutil.copytree(FIXTURE,tmp_path,dirs_exist_ok=True)
     for table in ('elements','element_endpoints'):
         path=tmp_path/f'{table}.csv'

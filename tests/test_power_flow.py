@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import pytest
 from pytest import approx
 
-from coppersushi import power_flow as ppf
+from coppersushi.opf import power_flow as ppf
 
 
 class TestPlotPowerFlow:
@@ -99,7 +99,7 @@ class TestPlotPowerFlow:
             ppf.show_snapshot(fig, index)
 
     def test_precomputed_hours_preserve_figures_without_baking_credentials(self, n, tmp_path):
-        from coppersushi.data_sources import opf_bundle
+        from coppersushi.opf.data_sources import opf_bundle
         fig = ppf.colored_network_figure(n, 'net_power', mapbox_token='build-token')
         opf_bundle.write(fig, n.snapshots, tmp_path)
         assert opf_bundle.snapshots(tmp_path).equals(n.snapshots.tz_localize('UTC'))
@@ -117,7 +117,7 @@ class TestPlotPowerFlow:
         import app
         from dash import Patch
         from coppersushi import map_style
-        from coppersushi.data_sources import opf_bundle
+        from coppersushi.opf.data_sources import opf_bundle
 
         fig = ppf.colored_network_figure(n, 'net_power')
         fig.update_layout(mapbox=map_style.OPF_CAMERA)

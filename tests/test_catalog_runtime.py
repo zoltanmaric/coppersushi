@@ -2,7 +2,9 @@
 import shutil
 import pandas as pd
 from coppersushi import REPO
-from coppersushi.data_sources import element_catalog, jao, osm_locator
+from coppersushi.grid_catalog.data_sources import element_catalog
+from coppersushi.data_sources import jao
+from coppersushi.grid_catalog.data_sources import osm_locator
 
 FIXTURE = REPO/'tests/fixtures/element-catalog'
 

@@ -5,7 +5,8 @@ import pandas as pd
 import pytest
 from shapely.geometry import shape
 
-from coppersushi import REPO, bidding_zones
+from coppersushi import REPO
+from coppersushi.grid_catalog import bidding_zones
 
 FIXTURE = REPO / "tests" / "fixtures" / "bidding-zones" / "zone-shapes.geojson"
 

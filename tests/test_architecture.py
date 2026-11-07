@@ -5,7 +5,6 @@ from pathlib import Path
 
 from coppersushi import PACKAGE
 
-DATA_SOURCES = PACKAGE / "data_sources"  # modules living here are the only ones allowed to touch the world
 ILLEGAL_TRANSFORM = Path(__file__).parent / "fixtures" / "io-boundary" / "illegal_transform.py"
 NAIVE_TIME = Path(__file__).parent / "fixtures" / "naive-time" / "naive_time.py"
 
@@ -30,7 +29,7 @@ IO_CALLS = {
 
 
 def is_boundary(path: Path) -> bool:
-    return DATA_SOURCES in path.parents
+    return any(parent.name == "data_sources" for parent in path.relative_to(PACKAGE).parents)
 
 
 def direct_io_violations(path: Path) -> list[str]:

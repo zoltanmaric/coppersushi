@@ -18,7 +18,7 @@ import pandas as pd
 
 from coppersushi import REPO, cnecs
 from coppersushi.data_sources import cache, jao
-from coppersushi.data_sources.catalog_sweep import stamp, substation_centroid
+from coppersushi.grid_catalog.data_sources.catalog_sweep import stamp, substation_centroid
 
 
 def endpoints(rows: list[dict]) -> pd.DataFrame:
