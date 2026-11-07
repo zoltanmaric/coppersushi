@@ -5,7 +5,7 @@ export function timelineTicks(labels: string[]) {
   return labels.map((label, index) => {
     const time = label.match(/(\d{2}):(\d{2}) (\S+)$/);
     if (!time) throw new Error(`Invalid market interval label: ${label}`);
-    const major = Number(time[1]) % 2 === 0 && time[2] === '00';
+    const major = Number(time[1]) % 3 === 0 && time[2] === '00';
     return {index, position: labels.length > 1 ? 100 * index / (labels.length - 1) : 0,
       label, time: major ? `${time[1]}:${time[2]}` : null, zone: time[3]};
   });
@@ -22,7 +22,7 @@ export function Timeline({labels, interval, disabled, onChange}: Props) {
         data-hour={tick.time?.slice(0, 2)}
         className={`cnec-tick${tick.time ? ' cnec-tick-major' : ''}${tick.index === 0 ? ' cnec-tick-first' : ''}`}
         style={{left: `${tick.position}%`}}>
-        {tick.time && <span className="cnec-tick-label">{tick.time}<small>{tick.zone}</small></span>}
+        {tick.time && <span className="cnec-tick-label">{tick.time}</span>}
       </span>)}
     </div>
   </div></div>;

@@ -199,3 +199,18 @@ test.each(['pending','failed'])('selection can leave a %s initial interval', asy
   await waitFor(()=>expect(graph.data.some(t=>t.name==='published day-ahead price')).toBe(true));
   expect(screen.queryByRole('alert')).toBeNull();
 });
+
+test('day loading retains the slider geometry and selected time',async()=>{
+  await open();
+  const slider=screen.getByRole('slider',{name:'Market interval'});
+  const ticks=document.querySelectorAll('.cnec-tick').length;
+  vi.mocked(fetch).mockImplementationOnce(()=>new Promise(()=>{}));
+  fireEvent.change(screen.getByLabelText('Delivery day'),{target:{value:'2024-08-30'}});
+  await screen.findByRole('status',{name:'Map loading'});
+  expect(screen.getByRole('slider',{name:'Market interval'})).toBe(slider);
+  expect(slider.getAttribute('max')).toBe('1');
+  expect(slider.getAttribute('value')).toBe('0');
+  expect(document.querySelectorAll('.cnec-tick')).toHaveLength(ticks);
+  expect(document.querySelector('.cnec-control-row output')?.textContent).toBe('00:00 CEST');
+  expect(document.querySelector('.cnec-time-controls')?.getAttribute('aria-busy')).toBe('true');
+});

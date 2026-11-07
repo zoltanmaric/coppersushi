@@ -1,5 +1,5 @@
-.cnec-map-container {height:calc(100vh - 210px);min-height:400px;position:relative}
-.cnec-sources {position:absolute;bottom:8px;left:50%;transform:translateX(-50%);max-width:calc(100% - 80px);padding:2px 6px;border-radius:3px;background:rgba(20,20,20,.65);color:#aaa;font-size:11px;line-height:1.4;text-align:center;z-index:2;pointer-events:none}
+.cnec-map-container {height:100%;min-height:0;position:relative}
+.cnec-sources {width:max-content;max-width:calc(100% - 48px);color:#aaa;font-size:11px;line-height:1.2;text-align:center;pointer-events:none}
 .cnec-sources a {color:inherit;pointer-events:auto;text-decoration:none}
 .cnec-sources a:hover,.cnec-sources a:focus-visible {color:#eee;text-decoration:underline}
 .cnec-progress {position:absolute;right:12px;top:12px;max-width:min(30em,70%);font-size:.85rem;background:rgba(20,20,20,.88);border-radius:4px;z-index:5}
@@ -7,40 +7,41 @@
 .cnec-progress>div {padding:6px 10px}
 .cnec-progress [role=alert] {color:#ffc4bd}
 .cnec-panel {background:rgba(18,18,18,.85);border-radius:5px;color:#eee}
-.cnec-time-controls {position:absolute;bottom:36px;left:16px;right:16px;display:grid;grid-template-columns:290px minmax(0,1fr);gap:12px;align-items:stretch;z-index:3}
-.cnec-date-time {padding:6px 8px}
-.cnec-control-row {display:grid;grid-template-columns:40px minmax(0,1fr) 40px;align-items:center;text-align:center;min-height:38px}
+.cnec-bottom-controls {position:absolute;bottom:calc(4px + env(safe-area-inset-bottom,0px));left:16px;right:16px;display:grid;gap:4px;z-index:3}
+.cnec-footer {display:grid;place-items:center;min-height:24px}
+.cnec-time-controls {display:grid;grid-template-columns:max-content minmax(0,1fr);gap:12px;align-items:stretch;z-index:3}
+.cnec-date-time {padding:2px 6px;display:flex;justify-content:center;gap:4px;font-size:14px}
+.cnec-control-row {display:grid;grid-template-columns:28px max-content 28px;align-items:center;text-align:center;min-height:38px}
 .cnec-control-row button {border:0;background:transparent;color:inherit;font-size:28px;line-height:1;min-height:38px;cursor:pointer}
 .cnec-control-row button:disabled {opacity:.3;cursor:default}
-.cnec-control-row input {color-scheme:dark;min-width:0;width:100%;border:0;background:transparent;color:inherit;text-align:center;font:inherit;font-weight:600}
+.cnec-control-row input {color-scheme:dark;min-width:0;width:124px;border:0;background:transparent;color:inherit;text-align:center;font:inherit;font-weight:600}
 .cnec-control-row output {font-variant-numeric:tabular-nums;font-weight:600}
-.cnec-slider-panel {padding:10px 18px 0;display:flex;align-items:center;min-width:0}
+.cnec-slider-panel {padding:0 18px;display:flex;align-items:center;min-width:0}
 .cnec-slider-panel>div {width:100%}
-.cnec-react {position:relative}
-.cnec-map-container {height:calc(100dvh - 48px);min-height:480px}
+.cnec-react {position:relative;height:100%}
 .cnec-progress {top:120px}
-@media(max-width:650px){
-  .cnec-map-container {height:calc(100dvh - 76px)}
-  .cnec-tick-major:not([data-hour="00"]):not([data-hour="06"]):not([data-hour="12"]):not([data-hour="18"]) .cnec-tick-label {display:none}
-  .cnec-time-controls {grid-template-columns:1fr;gap:0;bottom:34px;left:12px;right:12px;background:rgba(18,18,18,.85);border-radius:5px}
+/* Three-hour labels need 281px for 28px text plus 8px gaps; other controls use 417px. */
+@media(max-width:700px){
+  .cnec-bottom-controls {left:12px;right:12px}
+  .cnec-time-controls {grid-template-columns:1fr;gap:0;background:rgba(18,18,18,.85);border-radius:5px}
   .cnec-time-controls .cnec-panel {background:transparent}
-  .cnec-date-time {max-width:320px;width:100%;justify-self:center;box-sizing:border-box}
+  .cnec-date-time {width:100%;box-sizing:border-box}
+
+
   .cnec-slider-panel {padding:0 16px}
 }
 
-.cnec-timeline-scroll {overflow-x:auto;padding-bottom:4px}
-.cnec-timeline {position:relative;min-width:0;padding-top:8px;height:65px}
+.cnec-timeline-scroll {overflow-x:auto}
+.cnec-timeline {position:relative;min-width:0;height:36px}
 .cnec-timeline input {appearance:none;position:relative;z-index:1;height:18px;background:transparent;margin:0;width:100%}
 .cnec-timeline input::-webkit-slider-runnable-track {height:2px;background:#707780}
 .cnec-timeline input::-moz-range-track {height:2px;background:#707780}
 .cnec-timeline input::-webkit-slider-thumb {appearance:none;width:16px;height:16px;border-radius:50%;background:#af77ed;border:1px solid white;margin-top:-7px}
 .cnec-timeline input::-moz-range-thumb {width:14px;height:14px;border-radius:50%;background:#af77ed;border:1px solid white}
-.cnec-timeline-marks {position:absolute;top:16px;left:8px;right:8px;pointer-events:none}
+.cnec-timeline-marks {position:absolute;top:8px;left:8px;right:8px;pointer-events:none}
 .cnec-tick {position:absolute;border-left:1px solid #9298a0;height:5px}
 .cnec-tick-major {height:9px}
 .cnec-tick-label {position:absolute;top:12px;transform:translateX(-50%);font-size:11px;line-height:1.3;white-space:nowrap;text-align:center}
-.cnec-tick-label small {display:block;font-size:9px}
-.cnec-tick-first .cnec-tick-label {transform:none}
 
 /* Plotly draws the compact attribution icon on the parent pseudo-element. */
 .cnec-map-container .mapboxgl-ctrl-attrib-button {position:absolute;inset:0;width:20px;height:20px;padding:0;border:0;background:transparent;cursor:pointer}
@@ -88,3 +89,12 @@
 .cnec-country-labels button {position:absolute;left:0;top:0;padding:0;border:0;background:none;color:white;font:inherit;line-height:18px;text-align:center;white-space:nowrap;pointer-events:auto;cursor:pointer}
 .cnec-country-labels span {display:block}
 .cnec-country-labels button:focus-visible {outline:1px solid white;outline-offset:3px}
+
+.cnec-control-row input::-webkit-datetime-edit {padding:0}
+.cnec-control-row input::-webkit-calendar-picker-indicator {margin-left:4px;padding:0}
+@media(max-width:400px){
+  .cnec-date-time {font-size:12px;gap:2px}
+  .cnec-control-row {grid-template-columns:24px max-content 24px}
+  .cnec-control-row input {width:110px}
+  .cnec-control-row button {font-size:24px}
+}
