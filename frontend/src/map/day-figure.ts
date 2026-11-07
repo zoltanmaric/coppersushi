@@ -1,6 +1,6 @@
 import {contributions} from '../market/contributions';
 import type {DayBundle, BindingRow, MarketInterval, ElementGeometry} from '../data/contracts';
-import type {PlotlyFigure, ConstraintOption} from './figure';
+import type {PlotlyFigure} from './figure';
 import type { CoreZone } from "../market/reference";
 import {layerAnchor} from './map-layer-order';
 
@@ -75,9 +75,8 @@ const bearing = (g: ElementGeometry) => {
 const hover = (r: BindingRow) =>
   `<b>${r.name}</b><br>Binding under: ${r.contingency ?? "Base case (no contingency)"}<br>Direction: ${r.direction}<br>RAM: ${r.ram === null ? "n/a" : number(r.ram, 0) + " MW"}<br>Capacity: ${r.capacity === null ? "n/a" : number(r.capacity, 0) + " MW"}<br>Shadow price: ${number(r.shadow_price)} €/MWh`;
 
-export function optionsFor(interval: MarketInterval): ConstraintOption[] {
-  const physical = [...new Map(interval.constraints.map(r => [r.eic, {value:r.eic, label:r.name, source:'constraints' as const}])).values()];
-  return [...physical, ...interval.caps.map(r => ({value:'cap:PL',label:r.name,source:'attribution' as const}))];
+export function selectionIds(interval: MarketInterval): string[] {
+  return [...new Set([...interval.constraints.map(r=>r.eic), ...interval.caps.map(()=>'cap:PL')])];
 }
 
 /** Stable geographic data, constructed once per loaded day. */

@@ -18,8 +18,7 @@ export function viewFromUrl(day: string, search: string): Selection {
   const raw = params.get('constraint');
   const selected = raw && (/^[A-Z0-9-]{16}$/.test(raw) || raw === 'cap:PL') ? raw : null;
   return {day, interval: interval !== null && interval >= 0 ? interval : 0,
-    reference: coreZone(params.get('reference')) ?? 'DE', selected,
-    source: selected === 'cap:PL' ? 'attribution' : 'constraints'};
+    reference: coreZone(params.get('reference')) ?? 'DE', selected};
 }
 
 export function viewSearch(view: Selection, search: string): string {

@@ -8,7 +8,7 @@ import type {PlotlyFigure} from './map/figure';
 
 function CnecView(props: Omit<React.ComponentProps<typeof CnecPage>, 'selection' | 'onAction'> & {day: string; interval?: number}) {
   const [selection, onAction] = React.useReducer(reduceSelection, {
-    day: props.day, interval: props.interval ?? 0, reference: 'DE', selected: null, source: 'constraints',
+    day: props.day, interval: props.interval ?? 0, reference: 'DE', selected: null,
   });
   return <CnecPage {...props} selection={selection} onAction={onAction}/>;
 }
