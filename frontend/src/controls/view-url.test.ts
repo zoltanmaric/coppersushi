@@ -17,10 +17,10 @@ test('missing or malformed URL values use the initial view; cap identities retai
   expect(viewFromUrl('2026-10-25', '?interval=8').interval).not.toBe(viewFromUrl('2026-10-25', '?interval=12').interval);
 });
 
-test('day navigation preserves reference, clears stale selection and steps across DST and year boundaries', () => {
+test('day navigation preserves interval and reference, clears stale selection and steps across DST and year boundaries', () => {
   const view = viewFromUrl('2026-10-25', '?interval=12&reference=BE&constraint=-2');
   const next = reduceSelection(view, {type: 'day', day: stepDay(view.day, 1)});
-  expect(next).toEqual({...view, day: '2026-10-26', interval: 0, selected: null, source: 'constraints'});
+  expect(next).toEqual({...view, day: '2026-10-26', interval: 12, selected: null, source: 'constraints'});
   expect(viewSearch(next, '?constraint=-2')).not.toContain('constraint');
   expect(stepDay('2026-12-31', 1)).toBe('2027-01-01');
 });
