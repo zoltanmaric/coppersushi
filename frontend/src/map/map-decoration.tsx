@@ -28,6 +28,8 @@ export function MapDecoration({map, model, hidden, countries, onReference}: {
     const {x,y} = map.project(point);
     return [x,y];
   } : null;
-  return <><ConstraintOverlay model={model} project={visible ? project : null}/>
-    {map && createPortal(<CountryLabels labels={countries} map={map} onReference={onReference}/>,map.getCanvasContainer())}</>;
+  return map && createPortal(<>
+    <ConstraintOverlay model={model} project={visible ? project : null}/>
+    <CountryLabels labels={countries} map={map} onReference={onReference}/>
+  </>, map.getCanvasContainer());
 }

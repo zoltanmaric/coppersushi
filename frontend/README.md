@@ -23,7 +23,7 @@ flowchart LR
 
 Components: [data](src/data/README.md), [market](src/market/README.md),
 [map](src/map/README.md), [controls](src/controls/README.md).
-`index.tsx` composes them; the [map component](src/map/README.md) owns render completion; `bootstrap.tsx` validates configuration and loads the
+`index.tsx` composes them; the [map component](src/map/README.md) owns render completion and input gestures; `bootstrap.tsx` validates configuration and loads the
 basemap. Build with `npm ci && npm run build` in this directory.
 
 ## Static site

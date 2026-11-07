@@ -98,3 +98,8 @@
   .cnec-control-row button {font-size:24px}
 }
 
+/* Touch tooltips can be dismissed without passing the tap through to the map. */
+@media (pointer:coarse) {.cnec-map-container .hoverlayer .hovertext {pointer-events:all}}
+
+/* A tooltip revealed by a map tap must not steal that gesture's final click. */
+.cnec-map-gesture .hoverlayer .hovertext {pointer-events:none}

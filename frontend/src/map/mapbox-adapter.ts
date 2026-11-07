@@ -7,6 +7,7 @@ export interface MapboxMap {
   keyboard: {disableRotation(): void};
   getCanvasContainer(): HTMLElement;
   project(point: LngLat): {x: number; y: number};
+  unproject(point: [number, number]): {lng: number; lat: number};
   isMoving(): boolean;
   getPitch(): number;
   getBearing(): number;
