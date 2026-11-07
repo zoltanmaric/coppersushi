@@ -91,6 +91,12 @@ flowchart LR
     cnec_geometry -->|constraint layer| cnec_http
     cnec_price_figure -->|enriched view| cnec_http
     cnec_http --> react_cnec
+    prepared_day["Prepared market day<br/>validated prices, PTDFs, alpha, cap terms and shared geometry"]
+    cnec_geometry --> prepared_day
+    day_ahead_prices --> prepared_day
+    cnec_attribution_context --> prepared_day
+    prepared_files["Static publication files<br/>shared metadata, uniform intervals, atomic manifest"]
+    prepared_day --> prepared_files
     native_glyphs["Map-owned CNEC glyphs<br/>owned transformer/triangle sprite; hover and selection"]
     selection_effects["Decorative SVG energy<br/>typed figure metadata; native Mapbox projection and lifecycle; north-up 2D adapter"]
     react_cnec --> native_glyphs
