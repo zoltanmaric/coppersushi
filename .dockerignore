@@ -7,6 +7,7 @@ data/*
 !data/jao
 data/jao/*
 !data/jao/element-ends.csv
+!data/core-zone-shapes.geojson
 !data/element-catalog
 !data/osm-locator
 data/osm-locator/*
@@ -31,6 +32,7 @@ infra/lambda/*.tfplan
 **/dist
 
 121gigawatts
+
 
 assets/cnec-app.js
 assets/cnec-app.css

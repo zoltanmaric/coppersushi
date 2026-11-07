@@ -64,7 +64,4 @@ without the bundle retain on-demand figure construction.
 An optional CloudFront hostname fronts the Lambda deployment, with an ACM certificate
 and externally managed DNS; see [hosting](../infra/lambda/README.md#delivery).
 
-CloudFront caches only static asset routes. OPF retains Dash callbacks; the CNEC React view requests independent layers from
-the same Python server, retaining the last settled figure while the next loads; see [hosting](../infra/lambda/README.md#delivery).
-
 For external-input resilience, see [JAO availability and response retention](jao-availability.md).

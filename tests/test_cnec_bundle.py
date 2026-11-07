@@ -68,3 +68,30 @@ def test_publication_shares_metadata_and_uses_one_shape_per_interval():
     assert 'intervals' not in metadata
     assert [json.loads(content)['index'] for _,content in files[1:-1]] == [0,1]
     assert all('zones' not in json.loads(content) for _,content in files[1:-1])
+
+
+def test_geometry_budget_retains_locations_and_every_interval():
+    from coppersushi.publication.data_sources.bundles import resolve_day_geometry
+    from coppersushi.grid_catalog.data_sources.element_catalog import mapped_elements
+    from coppersushi import REPO
+
+    day = MarketDay.on('2026-11-07')
+    times = day.market_time_units()
+    row = table('physical', ActiveConstraints).iloc[[0]]
+    constraints = pd.concat([row.assign(interval=t, source_id=i) for i, t in enumerate(times)], ignore_index=True).pipe(ActiveConstraints.validate)
+    empty = MappedCnecElements.validate(pd.DataFrame(columns=list(MappedCnecElements.to_schema().columns)))
+    located = mapped_elements(REPO / 'tests/fixtures/element-catalog')
+    ticks = iter([0., 0., 30., 61.])
+    calls = []
+
+    def resolve(hour, required, previous, pending):
+        calls.append(hour)
+        assert list(required.interval) == list(pd.date_range(hour, periods=4, freq='15min'))
+        if len(calls) == 2:
+            assert previous.equals(located)
+        return located
+
+    geometry = resolve_day_geometry(day, constraints, empty, set(), resolve=resolve, clock=lambda: next(ticks))
+    assert calls == list(day.hours()[:2])
+    assert list(geometry) == list(range(96))
+    assert all(frame.equals(located) for frame in geometry.values())

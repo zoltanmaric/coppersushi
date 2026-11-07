@@ -21,7 +21,7 @@ Check jobs use native Ubuntu runners and locked Pixi environments. Only the Pyth
 job writes the shared Pixi cache; all groups can restore it without competing to save it.
 Short checks share a job because another environment download can cost more than the check.
 
-The container smoke stage inherits the production environment and mounts fixtures
+The OPF and native publisher smoke stages inherit their production environments and mount fixtures
 read-only. Running the check inside the build avoids exporting and loading an image
 just to test it. It has no remote layer cache: downloading, extracting and publishing
 those layers can cost more than rebuilding. Dependency and source layers remain
@@ -31,6 +31,7 @@ To run the container check locally:
 
 ```sh
 docker buildx build --target runtime-check --build-context fixtures=tests/fixtures .
+docker buildx build --target publisher-check .
 ```
 
 The performance target is elapsed workflow time, including runner setup and cache

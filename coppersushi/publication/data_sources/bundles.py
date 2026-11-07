@@ -1,6 +1,13 @@
 """Prepare and atomically publish versioned browser data; raw caches remain private."""
 import argparse
+from collections.abc import Callable
+import pandas as pd
+from pandera.typing import DataFrame
+from coppersushi.data_model.jao import ActiveConstraints
+from coppersushi.data_model.cnec_price_map import MappedCnecElements
 import gzip
+import logging
+from time import monotonic
 import os
 from pathlib import Path
 
@@ -34,10 +41,30 @@ def prepare(day: MarketDay, refresh: bool = False) -> DayBundle:
                  ZonalPrices.validate(prices), context)
     directory = Path(os.environ.get('COPPERSUSHI_ELEMENT_CATALOG', str(REPO / 'data/element-catalog')))
     mapped, pending = element_catalog.resolution_inputs(directory)
+    return cnec_bundle.build(inputs, resolve_day_geometry(day, active.constraints, mapped, pending))
+
+
+def resolve_day_geometry(
+    day: MarketDay, constraints: DataFrame[ActiveConstraints],
+    mapped: DataFrame[MappedCnecElements], pending: set[tuple], *,
+    resolve: Callable[[pd.Timestamp, DataFrame[ActiveConstraints], DataFrame[MappedCnecElements], set[tuple]], DataFrame[MappedCnecElements]] = element_catalog.resolve_loaded,
+    clock: Callable[[], float] = monotonic,
+) -> dict[int, DataFrame[MappedCnecElements]]:
+    """Resolve each UTC hour once; retain available locations when discovery runs late."""
     times = day.market_time_units()
-    geometry = {i: element_catalog.resolve_loaded(times[i], active.constraints[active.constraints.interval.eq(times[i])], mapped, pending)
-                for i in range(len(times))}
-    return cnec_bundle.build(inputs, geometry)
+    geometry: dict[int, DataFrame[MappedCnecElements]] = {}
+    # This limits starts, not in-flight I/O, parsing or cache operations.
+    deadline = clock() + 60
+    for hour in times.floor('h').unique():
+        if clock() >= deadline:
+            logging.getLogger(__name__).warning('Geometry discovery budget exhausted for %s; using available locations', day.date)
+            break
+        indices = [i for i, timestamp in enumerate(times) if timestamp.floor('h') == hour]
+        required = constraints[constraints.interval.isin(times[indices])]
+        mapped = resolve(hour, required, mapped, pending)
+        for i in indices:
+            geometry[i] = mapped
+    return {i: geometry.get(i, mapped) for i in range(len(times))}
 
 
 def is_published(day: MarketDay, bucket: str) -> bool:

@@ -62,8 +62,12 @@ make = "4.4.1.*"
 [tool.pixi.pypi-dependencies]
 coppersushi = { path = ".", editable = true }
 
+[tool.pixi.feature.publisher.target.linux-64.pypi-dependencies]
+awslambdaric = "==3.1.1"
+
 [tool.pixi.environments]
 default = { features = ["build", "dev"], solve-group = "default" }
+publisher = { features = ["publisher"], platforms = ["linux-64"], solve-group = "default" }
 runtime = { features = [], solve-group = "default" }
 build = { features = ["build"], solve-group = "default" }
 
