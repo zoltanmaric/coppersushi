@@ -32,7 +32,18 @@ const Graph = (props: GraphProps) => {
   useEffect(()=>{dispatch({type:'request',value:props});},[props]);
   const {overlay, hidden, figure, id, config, style, setProps, countries, onReference} = render.active;
   const interactive = !render.busy && props.figure === figure;
-  const complete = () => dispatch({type:'complete',figure});
+  const completionFrame = useRef<number | null>(null);
+  useEffect(()=>()=>{if (completionFrame.current !== null) cancelAnimationFrame(completionFrame.current);},[]);
+  const complete = () => {
+    if (completionFrame.current !== null) return;
+    // Give input and a paint a turn before starting another expensive map update.
+    completionFrame.current = requestAnimationFrame(()=>{
+      completionFrame.current = requestAnimationFrame(()=>{
+        completionFrame.current = null;
+        dispatch({type:'complete',figure});
+      });
+    });
+  };
   const host = useRef<HTMLDivElement>(null);
   const data = useMemo(() => structuredClone(figure.data), [figure.data]);
   // Mapbox mutates its style (including removing empty layer layouts). Keep this

@@ -124,8 +124,10 @@ test('the mounted graph selects constraints using current interval options', asy
   await reply('/1.json', {...full.intervals[1],constraints:[row]});
   await waitFor(()=>expect(pending).toHaveLength(0));
   fireEvent.click(screen.getByRole('button',{name:'Next interval'}));
-  await act(async()=>clickGraph({clickData:{points:[{customdata:['11T0-0000-0984-D']}]}}));
-  expect(graph.data.some(t=>t.name==='ray contributions')).toBe(true);
+  await waitFor(async()=>{
+    await act(async()=>clickGraph({clickData:{points:[{customdata:['11T0-0000-0984-D']}]}}));
+    expect(graph.data.some(t=>t.name==='ray contributions')).toBe(true);
+  });
   expect(fetch).toHaveBeenCalledTimes(4);
 });
 
