@@ -48,6 +48,7 @@ async function open() {
   const {intervals,...metadata}=first;
   await reply('/metadata.json',metadata);
   await reply('/0.json',interval);
+  await waitFor(()=>expect(graph.data.some(t=>t.name==='published day-ahead price')).toBe(true));
   return basemap;
 }
 
@@ -103,8 +104,7 @@ test('pending interval identifies the data still on screen', async () => {
 });
 
 test('invalid initial interval can recover without a page reload', async () => {
-  render(<CnecPage id="cnec" min_day="2024-01-01" token="token" basemap="dark"
-    selection={{day:'2024-08-29',interval:999,reference:'DE',selected:null,source:'constraints'}} onAction={() => {}}/>);
+  render(<CnecView id="cnec" day="2024-08-29" interval={999} min_day="2024-01-01" token="token" basemap="dark"/>);
   const {intervals,...metadata}=first;
   await reply('/metadata.json',metadata);
   fireEvent.click(await screen.findByRole('button', {name:'Go to first interval'}));
@@ -178,4 +178,16 @@ test('an unavailable day is rechecked automatically, then polling stops after pu
     await act(async () => {await vi.advanceTimersByTimeAsync(120_000);});
     expect(vi.mocked(fetch).mock.calls.filter(([url])=>String(url).endsWith('/manifest.json'))).toHaveLength(before+1);
   } finally {cleanup(); vi.useRealTimers();}
+});
+
+test.each(['pending','failed'])('selection can leave a %s initial interval', async state => {
+  render(<CnecView id="cnec" day="2024-08-29" min_day="2024-01-01" token="token" basemap="dark"/>);
+  const {intervals,...metadata}=first;
+  await reply('/metadata.json',metadata);
+  await waitFor(()=>expect((screen.getByRole('button',{name:'Next interval'}) as HTMLButtonElement).disabled).toBe(false));
+  if (state === 'failed') await reply('/0.json',{},503);
+  fireEvent.click(screen.getByRole('button',{name:'Next interval'}));
+  await reply('/1.json',full.intervals[1]);
+  await waitFor(()=>expect(graph.data.some(t=>t.name==='published day-ahead price')).toBe(true));
+  expect(screen.queryByRole('alert')).toBeNull();
 });

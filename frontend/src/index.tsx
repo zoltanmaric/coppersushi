@@ -97,16 +97,8 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
 
 
   const [initialCamera] = useState(() => initialCoreCamera(window.innerWidth, window.innerHeight));
-  const [initial, setInitial] = useState({day, interval});
-  const initialInterval = initial.day === day ? initial.interval : interval;
-  useEffect(() => {if (initial.day !== day) setInitial({day, interval});}, [day, interval, initial.day]);
-  const {publication,metadata,first,current: intervalQuery,labels,generation} = useDayData(day,interval,initialInterval);
-  const data = intervalQuery.data ?? first.data;
+  const {publication,metadata,current: intervalQuery,data,labels,generation} = useDayData(day,interval);
   const validInterval = !!metadata.data && interval >= 0 && interval < labels.length;
-  useEffect(()=>{
-    if(metadata.data && initialInterval >= labels.length && validInterval)
-      setInitial({day,interval});
-  },[metadata.data,initialInterval,labels.length,validInterval,day,interval]);
   const mapCurrent = validInterval && data?.index === interval && !intervalQuery.isPlaceholderData;
   const geography = useMemo(() => metadata.data ? zoneFeatures(metadata.data) : null,[metadata.data]);
   const countries = useMemo(() => (metadata.data?.zones ?? []).flatMap(zone => {
@@ -133,7 +125,7 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
   }
 
   return <section id={id} className="cnec-react">
-    <IntervalPrefetch day={day} generation={generation} count={labels.length} enabled={first.isSuccess}/>
+    <IntervalPrefetch day={day} generation={generation} count={labels.length} enabled={!!data && !!metadata.data}/>
     <div className="cnec-map-container">
       <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
         countries={countries} onReference={reference=>dispatch({type:'reference',reference})}
@@ -155,12 +147,12 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
 
       <aside className="cnec-progress" aria-live="polite">
         {metadata.data && !validInterval && <div role="alert">This interval is outside the selected day.{' '}
-          <button onClick={() => {setInitial({day,interval:0});dispatch({type:'interval',interval:0});}}>Go to first interval</button>
+          <button onClick={() => {dispatch({type:'interval',interval:0});}}>Go to first interval</button>
         </div>}
-        {(publication.isFetching || metadata.isFetching || (!mapCurrent && (first.isFetching || intervalQuery.isFetching))) && <div role="status" aria-label="Map loading">Loading interval…{data && !mapCurrent && <div>Showing {data.label.split(' · ')[1]}.</div>}</div>}
+        {(publication.isFetching || metadata.isFetching || (!mapCurrent && intervalQuery.isFetching)) && <div role="status" aria-label="Map loading">Loading interval…{data && !mapCurrent && <div>Showing {data.label.split(' · ')[1]}.</div>}</div>}
         {publication.isSuccess && !publication.data && <div role="status">This day has not been prepared yet. Checking automatically every minute. <button onClick={() => void publication.refetch()}>Check again</button></div>}
         {notes.map(note => <div role="status" key={note}>{note}</div>)}
-        {([['Publication',publication],['Metadata',metadata],['First interval',first],...(interval === initialInterval ? [] : [['Interval',intervalQuery] as const])] as const).map(([name,query])=>query.error && <div role="alert" key={name}>{name}: {query.error.message}{data && !mapCurrent && ` Showing ${data.label.split(' · ')[1]}.`} <button onClick={()=>void query.refetch()}>Retry</button></div>)}
+        {([['Publication',publication],['Metadata',metadata],['Interval',intervalQuery]] as const).map(([name,query])=>query.error && <div role="alert" key={name}>{name}: {query.error.message}{data && !mapCurrent && ` Showing ${data.label.split(' · ')[1]}.`} <button onClick={()=>void query.refetch()}>Retry</button></div>)}
       </aside>
     <div className="cnec-time-controls">
       <DateTimeControls day={day} minDay={min_day} time={labels[interval]?.split(' · ')[1] ?? ''}
