@@ -17,7 +17,8 @@ interface Pending {path: string; body?: {day: string; interval: number; selected
 let pending: Pending[];
 let graph: PlotlyFigure;
 let clickGraph: (change: {clickData: {points: {customdata: string[]}[]}}) => void;
-vi.mock('./map/plot', () => ({Plot: (props: {data: PlotlyFigure['data']; layout: PlotlyFigure['layout']; onClick: (click: unknown) => void}) => {
+vi.mock('./map/plot', () => ({Plot: (props: {data: PlotlyFigure['data']; layout: PlotlyFigure['layout']; onClick: (click: unknown) => void; onInitialized:()=>void; onUpdate:(figure:PlotlyFigure)=>void}) => {
+  React.useEffect(()=>{props.onUpdate({data:props.data,layout:props.layout});},[props.data,props.layout]);
   graph = {data: props.data, layout: props.layout};
   clickGraph = change => props.onClick(change.clickData);
   return <div aria-label="Map">{props.data.map(t=>t.name).join(',')}</div>;
