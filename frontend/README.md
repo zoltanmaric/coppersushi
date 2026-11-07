@@ -25,3 +25,11 @@ Components: [data](src/data/README.md), [market](src/market/README.md),
 [map](src/map/README.md), [controls](src/controls/README.md).
 `index.tsx` composes them; `bootstrap.tsx` validates configuration and loads the
 basemap. Build with `npm ci && npm run build` in this directory.
+
+## Static site
+
+`index.html` owns the shell. `python -m frontend.publish --bucket <bucket>` embeds
+the public Mapbox token and publishes built assets before the shell. It does not
+import a web framework. The browser determines the current market date itself.
+For local preview, `cnec_server.py` serves the same shell and `data/browser` files.
+Production routing and rollback are in the [hosting runbook](../infra/lambda/README.md).

@@ -64,6 +64,36 @@ resource "aws_cloudfront_distribution" "app" {
     }
   }
 
+  origin {
+    domain_name              = aws_s3_bucket.cache.bucket_regional_domain_name
+    origin_id                = "prepared-data"
+    origin_access_control_id = aws_cloudfront_origin_access_control.prepared[0].id
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "/data/cnec/*"
+    target_origin_id       = "prepared-data"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    cache_policy_id        = aws_cloudfront_cache_policy.prepared[0].id
+    compress               = true
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "/cnec*"
+    target_origin_id       = "prepared-data"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    cache_policy_id        = aws_cloudfront_cache_policy.prepared[0].id
+    compress               = true
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.cnec_static[0].arn
+    }
+  }
+
   default_cache_behavior {
     target_origin_id         = "lambda"
     viewer_protocol_policy   = "redirect-to-https"
@@ -78,12 +108,19 @@ resource "aws_cloudfront_distribution" "app" {
     for_each = ["/assets/*", "/_dash-component-suites/*"]
     content {
       path_pattern           = ordered_cache_behavior.value
-      target_origin_id       = "lambda"
+      target_origin_id       = ordered_cache_behavior.value == "/assets/*" ? "prepared-data" : "lambda"
       viewer_protocol_policy = "redirect-to-https"
       allowed_methods        = ["GET", "HEAD", "OPTIONS"]
       cached_methods         = ["GET", "HEAD"]
       cache_policy_id        = aws_cloudfront_cache_policy.static[0].id
-      compress               = true
+      dynamic "function_association" {
+        for_each = ordered_cache_behavior.value == "/assets/*" ? [1] : []
+        content {
+          event_type   = "viewer-request"
+          function_arn = aws_cloudfront_function.cnec_static[0].arn
+        }
+      }
+      compress = true
     }
   }
 
@@ -104,3 +141,41 @@ output "certificate_dns" {
 }
 output "hostname_target" { value = try(aws_cloudfront_distribution.app[0].domain_name, null) }
 output "custom_url" { value = var.custom_domain == null ? null : "https://${var.custom_domain}" }
+
+resource "aws_cloudfront_origin_access_control" "prepared" {
+  count                             = var.custom_domain == null ? 0 : 1
+  name                              = "coppersushi-prepared-data"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+resource "aws_cloudfront_cache_policy" "prepared" {
+  count       = var.custom_domain == null ? 0 : 1
+  name        = "coppersushi-prepared-data"
+  min_ttl     = 0
+  default_ttl = 60
+  max_ttl     = 31536000
+  parameters_in_cache_key_and_forwarded_to_origin {
+    enable_accept_encoding_gzip   = true
+    enable_accept_encoding_brotli = true
+    cookies_config { cookie_behavior = "none" }
+    headers_config { header_behavior = "none" }
+    query_strings_config { query_string_behavior = "none" }
+  }
+}
+
+resource "aws_cloudfront_function" "cnec_static" {
+  count   = var.custom_domain == null ? 0 : 1
+  name    = "coppersushi-cnec-static"
+  runtime = "cloudfront-js-2.0"
+  publish = true
+  code    = <<-JS
+    function handler(event) {
+      var request = event.request;
+      request.uri = request.uri.indexOf('/assets/') === 0
+        ? '/data/cnec/v1/ui' + request.uri
+        : '/data/cnec/v1/ui/index.html';
+      return request;
+    }
+  JS
+}
