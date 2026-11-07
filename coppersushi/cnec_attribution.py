@@ -1,11 +1,9 @@
 """Validated normalized-FB attribution inputs."""
 
-from typing import NamedTuple
 from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
-from shapely.geometry import Point
 from pandera.typing import DataFrame
 
 from coppersushi.data_model.cnec_attribution import (
@@ -13,9 +11,6 @@ from coppersushi.data_model.cnec_attribution import (
 )
 
 from coppersushi.data_model.market import ZonalPrices
-from coppersushi.data_model.cnec_price_map import MappedCnecElements
-from coppersushi.data_model.network_views import BiddingZoneShapes
-from coppersushi.market import CORE_ZONES
 from coppersushi.market_day import MarketDay
 
 def context(day: MarketDay, alpha_rows: list[AlphaFactor], cap_rows: list[AllocationConstraint],
@@ -62,27 +57,9 @@ def context(day: MarketDay, alpha_rows: list[AlphaFactor], cap_rows: list[Alloca
     return AttributionContext.validate(result)
 
 
-class PriceSpread(NamedTuple):
-    """Signed €/MWh terms for other-zone price minus reference-zone price."""
-
-    observed: float
-    selected: float
-    remainder: float
-
-
 def country_cap_effect(country_price: float, adjusted_price: float) -> float:
     """The cap's signed effect on its country's price; retain source precision."""
     return country_price - adjusted_price
-
-
-def price_spread(reference_price: float, other_price: float, contribution: float) -> PriceSpread:
-    """Separate the observed spread from one selected term, without rounding either.
-
-    The remainder includes other constraints and discrepancies between price publications.
-    A selected term need not equal, or be smaller than, the observed spread.
-    """
-    observed = other_price - reference_price
-    return PriceSpread(observed, contribution, observed - contribution)
 
 
 # Published positions can differ from a binding limit by 0.1 MW.
@@ -126,29 +103,3 @@ def country_caps[Prices: ZonalPrices](inputs: DataFrame[AttributionContext] | No
             interval=pd.Series([], dtype="datetime64[ns, UTC]")))
     return pd.DataFrame([[identity, interval, f"Poland aggregate {sense} cap", abs(delta), sense,
                           capacity, delta]], columns=columns).pipe(CountryCaps.validate)
-
-
-def physical_reference[Prices: ZonalPrices](row: pd.Series, geometries: DataFrame[MappedCnecElements],
-                       zones: DataFrame[BiddingZoneShapes], prices: DataFrame[Prices]) -> str | None:
-    """Choose a Core reference from the line's endpoints or Swiss neighbours."""
-    matched = geometries[geometries.eic.eq(row.eic) & geometries.tso.eq(row.tso)
-                         & geometries.name.eq(row['name'])]
-    if len(matched) != 1 or matched.iloc[0].match_status != "matched":
-        return None
-    if row.direction not in {"DIRECT", "OPPOSITE"}:
-        return None
-    mapped = matched.iloc[0]
-    sending = 0 if row.direction == "DIRECT" else 1
-    for end in (sending, 1 - sending):
-        point = Point(mapped[f"x{end}"], mapped[f"y{end}"])
-        candidates = [zone for zone, geometry in zip(zones.zone, zones.geometry) if geometry.covers(point)]
-        if len(candidates) > 1:
-            return None
-        if candidates and candidates[0] in CORE_ZONES:
-            return candidates[0]
-    if row.tso != "SWISSGRID":
-        return None
-    neighbours = prices[prices.interval.eq(row.interval) & prices.zone.isin(("AT", "DE", "FR"))]
-    if len(neighbours) != 3 or set(neighbours.zone) != {"AT", "DE", "FR"} or not np.isfinite(neighbours.price).all():
-        return None
-    return str(neighbours.sort_values(["price", "zone"]).zone.iloc[0])

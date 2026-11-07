@@ -1,11 +1,15 @@
 """Day-scoped domain data consumed by the browser renderer."""
 from datetime import date
 from typing import Literal, Annotated
-from pydantic import Field, JsonValue
-from coppersushi.data_model.cnec_api import Contract
+from pydantic import BaseModel, ConfigDict, Field
 from coppersushi.data_model.market import CoreZone
 
 Coordinates = Annotated[list[float], Field(min_length=2, max_length=2)]
+
+
+class Contract(BaseModel):
+    """Prepared-publication models reject fields outside the shared contract."""
+    model_config = ConfigDict(extra='forbid')
 
 class ZoneGeometry(Contract):
     """Display boundary and interior label anchor shared by every interval."""

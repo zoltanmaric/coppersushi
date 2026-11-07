@@ -13,7 +13,7 @@ along with an explanation of the main features.
 
 The app has two views: `/opf-2024` (29 August 2024, hourly, on the 2025 grid)
 and `/cnec` (prices and binding constraints). The CNEC view officially supports
-delivery dates from **5 November 2025** onward; earlier dates are outside supported
+delivery dates from **1 November 2026** onward; earlier dates are outside supported
 coverage. The supported-history sweep is pending; not every supported date has been verified. This cutoff does not apply to the separate OPF demonstration. `/embed/opf-2024` shows the OPF map
 and time controls without navigation. Both OPF layouts use the same solved network.
 
@@ -30,25 +30,24 @@ Clone with `GIT_LFS_SKIP_SMUDGE=1` to skip the files, e.g. to run only the tests
 
 ```mermaid
 flowchart TB
-    market["JAO and Electricity Maps"] -->|Market inputs| server["Dash application on Lambda"]
-    catalog["Grid catalog"] -->|Located elements and zone outlines| server
-    opf["OPF preparation"] -->|Hourly figures| server
-    edge["CloudFront"] <-->|Pages and callbacks| server
-    browser["Browser: Dash, React and Plotly"] <-->|HTTPS| edge
-    maps["Mapbox"] -->|Styles and tiles| browser
-    market -->|Prepare complete day| publication["Market-day publication"]
-    catalog -->|Located elements| publication
+    market["JAO and Electricity Maps"] -->|Market inputs| publication["Market-day publication"]
+    catalog["Grid catalog"] -->|Located elements and outlines| publication
     publication -->|Immutable generation and manifest| prepared[("Prepared market files")]
-    click publication "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/publication/README.md" "Publication architecture"
-    click catalog "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/grid_catalog/README.md" "Grid catalog architecture"
-    click opf "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/opf/README.md" "OPF architecture"
+    prepared -->|Validated data| browser["CNEC browser: React and Plotly"]
+    opf["OPF preparation"] -->|Hourly figures| server["OPF Dash application"]
+    server <-->|Pages and callbacks| opfbrowser["OPF browser"]
+    maps["Mapbox"] -->|Styles and tiles| browser
+    maps -->|Styles and tiles| opfbrowser
+    click catalog "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/grid_catalog/README.md" "Grid catalog"
+    click opf "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/opf/README.md" "OPF"
+    click publication "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/publication/README.md" "Publication"
+    click browser "https://github.com/zoltanmaric/coppersushi/blob/main/frontend/README.md" "CNEC browser"
 ```
 
-Component details: [OPF](coppersushi/opf/README.md),
-[grid catalog](coppersushi/grid_catalog/README.md),
-[market-day publication](coppersushi/publication/README.md),
-[hosting](infra/lambda/README.md). The server owns the existing market-data and
-figure request path; the browser renders the resulting map.
+Components: [CNEC browser](frontend/README.md), [publication](coppersushi/publication/README.md),
+[grid catalog](coppersushi/grid_catalog/README.md), [OPF](coppersushi/opf/README.md).
+Prepared CNEC data is independent of request-time Python calculations. The local
+Flask shell serves the browser and its prepared files; OPF retains Dash.
 
 ## Working with Agents
 The repository is developed with coding agents (Claude Code and Codex), and the tooling for that is

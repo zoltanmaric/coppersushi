@@ -21,7 +21,7 @@ COPY . .
 RUN pixi install --locked -e runtime && \
     pixi shell-hook --locked -e runtime -s bash > /opt/entrypoint.sh && \
     printf '\nexec "$@"\n' >> /opt/entrypoint.sh
-RUN /bin/bash /opt/entrypoint.sh python -m compileall -q app.py cnec_http.py coppersushi
+RUN /bin/bash /opt/entrypoint.sh python -m compileall -q app.py cnec_server.py coppersushi
 COPY --from=frontend-builder /opt/webapp/assets/ /opt/webapp/assets/
 
 # CI supplies fixtures separately so they never enter the serving image.

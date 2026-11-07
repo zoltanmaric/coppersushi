@@ -1,7 +1,6 @@
 import json
 
 import pandas as pd
-import pytest
 
 from coppersushi import REPO, cnec_market, cnecs, market
 from coppersushi.data_model.market import ElectricityMapsPriceResponse
@@ -24,7 +23,6 @@ def inputs():
     rows = active_rows()
     return (
         cnecs.active_constraints(rows),
-        cnecs.constraint_ptdfs(rows),
         market.day_ahead_prices(price_payloads()),
     )
 
@@ -33,32 +31,3 @@ def test_an_interval_with_no_binding_row_still_has_its_published_prices():
     view = cnec_market.snapshot(*inputs(), pd.Timestamp("2024-08-28T23:00:00Z"))
     assert view.constraints.empty
     assert view.prices.set_index("zone").price.to_dict() == {"AT": 41.0}
-    assert view.contribution is None
-
-
-@pytest.mark.parametrize('reference', market.CORE_ZONES)
-def test_selecting_a_row_adds_its_relative_contribution(reference):
-    interval = pd.Timestamp("2024-08-28T22:00:00Z")
-    base = cnec_market.snapshot(*inputs(), interval)
-    selected = cnec_market.key_of(base.constraints.iloc[0])
-    view = cnec_market.snapshot(*inputs(), interval, selected, reference, alpha=1.0)
-    contribution = view.contribution.set_index("zone").contribution
-    assert view.reference == reference
-    assert view.contribution.reference_zone.eq(reference).all()
-    assert contribution[reference] == pytest.approx(0.0)
-    assert contribution["BE"] - contribution["AT"] == pytest.approx(2.87)
-
-
-def test_a_selection_requires_an_explicit_reference():
-    interval = pd.Timestamp("2024-08-28T22:00:00Z")
-    base = cnec_market.snapshot(*inputs(), interval)
-    with pytest.raises(ValueError, match="explicit reference"):
-        cnec_market.snapshot(*inputs(), interval, cnec_market.key_of(base.constraints.iloc[0]))
-
-
-def test_a_selection_from_another_interval_is_refused():
-    interval = pd.Timestamp("2024-08-28T22:00:00Z")
-    base = cnec_market.snapshot(*inputs(), interval)
-    selected = cnec_market.key_of(base.constraints.iloc[0])
-    with pytest.raises(ValueError, match="matched 0"):
-        cnec_market.snapshot(*inputs(), pd.Timestamp("2024-08-28T22:15:00Z"), selected, "AT")

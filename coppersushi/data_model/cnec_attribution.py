@@ -8,15 +8,12 @@ See wiki/flow-based-market-coupling.md#attribution for an example and interpreta
 
 
 import datetime
-from datetime import date
 
-import pandas as pd
 import pandera.pandas as pa
-from pandera.typing import DataFrame, Series
-from pydantic import AwareDatetime, BaseModel, ConfigDict, StrictFloat, StrictInt, field_validator
+from pandera.typing import Series
+from pydantic import AwareDatetime, BaseModel, ConfigDict, StrictFloat, StrictInt
 
 from coppersushi.data_model.jao import ZonedTimestamp
-from coppersushi.market_day import MarketDay
 
 
 class JaoRecord(BaseModel):
@@ -53,46 +50,6 @@ class PolishAlternative(JaoRecord):
     border_PL_SDAC_NP: StrictFloat
 
 
-class AttributionRow(BaseModel):
-    """Inputs for explaining why electricity prices differ between bidding zones.
-
-    Attribution calculates how much each binding grid or import/export limit
-    contributes to that price difference, in EUR/MWh. This row holds the scaling
-    factor and Polish cap inputs for one market interval, encoded as browser JSON.
-    Null means an input is unavailable.
-
-    See wiki/flow-based-market-coupling.md#attribution for an example and limits.
-    """
-
-    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
-    interval: AwareDatetime
-    alpha: StrictFloat | None
-    import_limit: StrictFloat | None
-    export_limit: StrictFloat | None
-    polish_position: StrictFloat | None
-    polish_alt: StrictFloat | None
-
-
-class AttributionRequest(BaseModel):
-    """Delivery date shared by attribution browser responses."""
-
-    model_config = ConfigDict(extra="forbid", strict=True)
-    day: date
-
-    @field_validator('day', mode='before')
-    @classmethod
-    def parse_delivery_date(cls, value: object) -> object:
-        """Parse the browser's ISO date; strict validation rejects other representations."""
-        return date.fromisoformat(value) if isinstance(value, str) else value
-
-
-class AttributionPayload(AttributionRequest):
-    """Successfully loaded price-attribution inputs for one browser request."""
-
-    complete: bool
-    rows: list[AttributionRow]
-
-
 class AttributionContext(pa.DataFrameModel):
     """Table of scaling and Polish cap inputs, one UTC market interval per row."""
 
@@ -123,19 +80,3 @@ class CountryCaps(pa.DataFrameModel):
         strict = True
         coerce = True
         unique = ["interval", "source_id"]
-
-
-def attribution_to_browser(frame: DataFrame[AttributionContext], day: MarketDay) -> AttributionPayload:
-    """Build a typed browser payload from a day's table, preserving missing inputs as None."""
-    return AttributionPayload.model_validate({
-        'day': day.date,
-        'rows': frame.astype(object).where(frame.notna(), None).to_dict(orient='records'),
-        'complete': bool(frame.notna().all().all()),
-    })
-
-
-def attribution_from_browser(payload: AttributionPayload) -> DataFrame[AttributionContext]:
-    """Restore UTC timestamps and numeric missing values from a validated browser payload."""
-    frame = pd.DataFrame([row.model_dump() for row in payload.rows])
-    frame['interval'] = pd.to_datetime(frame.interval, utc=True)
-    return AttributionContext.validate(frame)

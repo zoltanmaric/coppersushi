@@ -3,13 +3,12 @@ import React from 'react';
 import {act, cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 import {CnecPage} from './index';
-import {reduceSelection} from './state';
-import responses from './fixtures/responses.json';
-import type {PlotlyFigure} from './contracts';
+import {reduceSelection} from './controls/state';
+import type {PlotlyFigure} from './map/figure';
 
-function CnecView(props: Omit<React.ComponentProps<typeof CnecPage>, 'selection' | 'onAction'> & {day: string}) {
+function CnecView(props: Omit<React.ComponentProps<typeof CnecPage>, 'selection' | 'onAction'> & {day: string; interval?: number}) {
   const [selection, onAction] = React.useReducer(reduceSelection, {
-    day: props.day, interval: 0, reference: 'DE', selected: null, source: 'constraints',
+    day: props.day, interval: props.interval ?? 0, reference: 'DE', selected: null, source: 'constraints',
   });
   return <CnecPage {...props} selection={selection} onAction={onAction}/>;
 }
@@ -18,166 +17,151 @@ interface Pending {path: string; body?: {day: string; interval: number; selected
 let pending: Pending[];
 let graph: PlotlyFigure;
 let clickGraph: (change: {clickData: {points: {customdata: string[]}[]}}) => void;
+vi.mock('./map/plot', () => ({Plot: (props: {data: PlotlyFigure['data']; layout: PlotlyFigure['layout']; onClick: (click: unknown) => void}) => {
+  graph = {data: props.data, layout: props.layout};
+  clickGraph = change => props.onClick(change.clickData);
+  return <div aria-label="Map">{props.data.map(t=>t.name).join(',')}</div>;
+}}));
 beforeEach(() => {
   window.history.replaceState(null, "", "/cnec/2024-08-29");
 
   pending = [];
   vi.stubGlobal('fetch', vi.fn((url: string, options: RequestInit) => new Promise<Response>(resolve => {
+    if (url.endsWith('/manifest.json')) {resolve(new Response(JSON.stringify({version:2,day:'2024-08-29',generation:'a'.repeat(24)}))); return;}
     pending.push({path: url, body: options.body ? JSON.parse(String(options.body)) : undefined, resolve});
   })));
-  Object.assign(window, {dash_core_components: {Graph: (props: {figure: PlotlyFigure; setProps: typeof clickGraph}) => {
-    clickGraph = props.setProps;
-    graph = props.figure;
-    return <div aria-label="Map">{props.figure.data.map(t => t.name).join(',')}</div>;
-  }}});
+
 });
 afterEach(() => {cleanup(); vi.unstubAllGlobals();});
 
-async function reply(path: string, data: object, selected?: number | null, status = 200) {
-  await waitFor(() => expect(pending.some(p => p.path.endsWith(path) && (selected === undefined || p.body?.selected === selected))).toBe(true));
-  const index = pending.findIndex(p => p.path.endsWith(path) && (selected === undefined || p.body?.selected === selected));
+const interval = {index: 0, label: 'Thu 29 Aug 2024 · 00:00 CEST', prices: {DE: 100, FR: 90}, constraints: [], alpha: 1, caps: [], notes: []};
+const first = {version: 2, day: '2024-08-29', labels: [interval.label, 'Thu 29 Aug 2024 · 00:15 CEST'], zones: [{zone:'DE',name:'Germany',centre:[10,50],rings:[[[9,49],[11,49],[11,51],[9,49]]]},{zone:'FR',name:'France',centre:[2,47],rings:[[[1,46],[3,46],[3,48],[1,46]]]}], elements: {}, intervals: [interval], price_range: [90, 100]};
+const full = {...first, intervals: [interval, {...interval, index: 1, label: first.labels[1]}]};
+async function reply(path: string, data: object, status = 200) {
+  await waitFor(() => expect(pending.some(p => p.path.endsWith(path))).toBe(true));
+  const index = pending.findIndex(p => p.path.endsWith(path));
   await act(async () => {pending.splice(index, 1)[0].resolve(new Response(JSON.stringify(data), {status}));});
 }
 async function open() {
-  render(<CnecView id="cnec" day="2024-08-29" min_day="2024-01-01" token="token" basemap={{version: 8, sources: {}, layers: []}}/>);
-  await reply('day/2024-08-29', responses.day);
+  const basemap={version:8,sources:{},layers:[]};
+  render(<CnecView id="cnec" day="2024-08-29" min_day="2024-01-01" token="token" basemap={basemap}/>);
+  const {intervals,...metadata}=first;
+  await reply('/metadata.json',metadata);
+  await reply('/0.json',interval);
+  return basemap;
 }
 
-test('first map appears after its layers settle', async () => {
+test('show first interval, share background request, then navigate locally', async () => {
   await open();
-  await reply('prices', responses.prices);
-  expect(screen.getByLabelText('Map').textContent).not.toContain('prices');
-  await waitFor(() => expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toBe('Loading constraints…'));
-  await reply('constraints', responses.constraints);
-  expect(screen.getByLabelText('Map').textContent).not.toContain('binding lines');
-  await waitFor(() => expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toBe('Loading price contributions…'));
-  expect(pending.some(p => p.path.endsWith('attribution/2024-08-29'))).toBe(true);
-  await waitFor(() => expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toBe('Loading price contributions…'));
-  expect(screen.getByLabelText('Map').textContent).not.toContain('prices');
-  await reply('attribution/2024-08-29', responses.attribution);
-  await reply('enriched', responses.caps, null);
-  await waitFor(() => expect(screen.getByLabelText('Map').textContent).toContain('country cap'));
-  expect(graph.layout.uirevision).toBe('cnec-camera');
-});
-
-test('late results from the previous day never appear on the new day', async () => {
-  await open();
-  await waitFor(() => expect(pending.some(p => p.path.endsWith('prices'))).toBe(true));
-  fireEvent.change(screen.getByLabelText('Delivery day'), {target: {value: '2024-08-30'}});
-  await reply('prices', responses.prices);
-  await reply('constraints', responses.constraints);
-  expect(screen.getByLabelText('Map').textContent).not.toContain('prices');
-  expect(screen.getByLabelText('Map').textContent).not.toContain('binding lines');
-  expect((screen.getByLabelText('Delivery day') as HTMLInputElement).value).toBe('2024-08-30');
-});
-
-test('attribution failure stays visible without removing prices or constraints; retry is targeted', async () => {
-  await open();
-  await reply('prices', responses.prices);
-  await reply('constraints', responses.constraints);
-  await reply('attribution/2024-08-29', {error: 'JAO unavailable'}, undefined, 500);
-  await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('JAO unavailable'));
-  expect(screen.getByLabelText('Map').textContent).toContain('binding lines');
-  expect(screen.getByLabelText('Map').textContent).toContain('prices');
-  fireEvent.click(screen.getByText('Retry'));
-  await waitFor(() => expect(pending.filter(p => p.path.includes('attribution'))).toHaveLength(1));
-  expect(pending.some(p => p.path.endsWith('prices') || p.path.endsWith('constraints'))).toBe(false);
-});
-
-test('an interval change clears old layers and late contributions cannot restore them', async () => {
-  await open();
-  await reply('prices', responses.prices);
-  await reply('constraints', responses.constraints);
-  await reply('attribution/2024-08-29', responses.attribution);
-  await waitFor(() => expect(pending.some(p => p.path.endsWith('enriched'))).toBe(true));
+  await waitFor(() => expect(graph.data.some(t => t.name === 'published day-ahead price')).toBe(true));
+  await waitFor(() => expect(pending).toHaveLength(1));
   fireEvent.click(screen.getByRole('button', {name: 'Next interval'}));
-  await reply('enriched', responses.enriched, null);
-  expect(screen.getByLabelText('Map').textContent).not.toContain('contributions');
-  expect((screen.getByLabelText('Market interval') as HTMLInputElement).value).toBe('1');
-});
-
-test('a single enrichment error produces one alert, and a failed calendar stops loading', async () => {
-  await open();
-  await reply('prices', responses.prices);
-  await reply('constraints', responses.constraints);
-  await reply('attribution/2024-08-29', responses.attribution);
-  await reply('enriched', {error: 'render failed'}, null, 500);
-  await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(1));
-  fireEvent.change(screen.getByLabelText('Delivery day'), {target: {value: '2024-08-30'}});
-  await reply('day/2024-08-30', {error: 'calendar failed'}, undefined, 500);
-  await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('calendar failed'));
-  expect(screen.queryByRole('status', {name: 'Map loading'})).toBeNull();
-});
-
-test('invalid API payloads are visible errors, never successful empty layers', async () => {
-  await open();
-  await reply('prices', {unexpected: true});
-  await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Invalid layer response'));
-  expect(screen.getByLabelText('Map').textContent).not.toContain('prices');
-});
-
-
-test('a loaded interval remains unchanged until the next interval layers settle', async () => {
-  await open();
-  await reply('prices', responses.prices);
-  await reply('constraints', responses.constraints);
-  await reply('attribution/2024-08-29', responses.attribution);
-  await reply('enriched', responses.caps, null);
-  await waitFor(() => expect(graph.data.some(t => t.name === 'country cap')).toBe(true));
-  const displayed = graph;
+  expect(screen.getByRole('status', {name: 'Map loading'})).toBeTruthy();
+  expect(pending).toHaveLength(1);
+  await reply('/1.json', full.intervals[1]);
+  await waitFor(() => expect(screen.queryByRole('status', {name: 'Map loading'})).toBeNull());
+  fireEvent.change(screen.getByLabelText('Reference country'), {target: {value: 'FR'}});
+  fireEvent.click(screen.getByRole('button', {name: 'Previous interval'}));
   fireEvent.click(screen.getByRole('button', {name: 'Next interval'}));
-  expect(graph).toBe(displayed);
-  await reply('prices', {...responses.prices, request: {...responses.prices.request, interval: 1}});
-  expect(graph).toBe(displayed);
-  await reply('constraints', {...responses.constraints, request: {...responses.constraints.request, interval: 1}}, null);
-  expect(graph).toBe(displayed);
-  act(() => clickGraph({clickData: {points: [{customdata: ['1']}]}}));
-  expect(pending.some(p => p.body?.selected !== null && p.body?.selected !== undefined)).toBe(false);
-  await reply('enriched', {...responses.caps, request: {...responses.caps.request, interval: 1}}, null);
-  await waitFor(() => expect(graph).not.toBe(displayed));
-  expect(graph.data.map(t => t.uid)).toEqual(displayed.data.map(t => t.uid));
+  expect(fetch).toHaveBeenCalledTimes(4);
 });
 
+test('Mapbox style mutations survive data updates without mutating the input layout', async () => {
+  const input=await open();
+  const layout=graph.layout;
+  const style=layout.mapbox.style as {layers: {id:string;type:string;layout?:object}[]};
+  // Mapbox removes empty layer layouts while loading a style. Reintroducing them
+  // on the next interval makes Plotly call setStyle and clear all data layers.
+  style.layers.push({id:'retained-base-layer',type:'background',layout:{}});
+  delete style.layers[0].layout;
+  await reply('/1.json',full.intervals[1]);
+  fireEvent.click(screen.getByRole('button',{name:'Next interval'}));
+  await waitFor(()=>expect(screen.getByRole('slider').getAttribute('aria-valuetext')).toContain('00:15'));
+  expect(graph.layout).toBe(layout);
+  expect((graph.layout.mapbox.style as typeof style).layers[0].layout).toBeUndefined();
+  expect(input.layers).toEqual([]);
+});
 
-test('the initially bound graph callback selects constraints loaded later', async () => {
+test('background failure retains first interval and offers retry', async () => {
   await open();
-  const initialClick = clickGraph;
-  await reply('constraints', responses.constraints);
-  await reply('prices', responses.prices);
-  await reply('attribution/2024-08-29', responses.attribution);
-  await reply('enriched', responses.caps, null);
-  await waitFor(() => expect(graph.data.some(t => t.name === 'country cap')).toBe(true));
-  act(() => initialClick({clickData: {points: [{customdata: ['-1']}]}}));
-  await waitFor(() => expect(pending.some(p => p.body?.selected === -1)).toBe(true));
+  fireEvent.click(screen.getByRole('button',{name:'Next interval'}));
+  await reply('/1.json', {error: 'Not published yet'}, 503);
+  await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Prepared data request failed (503)'));
+  await waitFor(() => expect(graph.data.some(t => t.name === 'published day-ahead price')).toBe(true));
+  fireEvent.click(screen.getByRole('button', {name: 'Retry'}));
+  await reply('/1.json', full.intervals[1]);
+  await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
 });
 
-
-test('shows a specific unavailable attribution reason', async () => {
+test('pending interval identifies the data still on screen', async () => {
   await open();
-  await reply('prices', responses.prices);
-  await reply('constraints', responses.constraints);
-  await reply('attribution/2024-08-29', {...responses.attribution, complete: false});
-  await waitFor(() => expect(pending.some(p => p.path.endsWith('enriched'))).toBe(true));
-  expect(screen.queryByText('Some attribution inputs are unavailable.')).toBeNull();
-  expect(screen.queryByText('Poland cap attribution unavailable for this interval.')).toBeNull();
-  await reply('enriched', {...responses.caps, notes: ['Poland cap attribution unavailable for this interval.']}, null);
-  await waitFor(() => expect(screen.getByText('Poland cap attribution unavailable for this interval.')).toBeTruthy());
+  await waitFor(() => expect(pending).toHaveLength(1));
+  fireEvent.click(screen.getByRole('button', {name: 'Next interval'}));
+  expect(screen.getByRole('status', {name: 'Map loading'}).textContent).toContain('Showing 00:00 CEST');
+  await reply('/1.json', {error: 'Unavailable'}, 503);
+  await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Showing 00:00 CEST'));
 });
 
-test('delivery picker rejects dates before the supported window', async () => {
-  render(<CnecView id="cnec" day="2025-11-05" min_day="2025-11-05" token="token" basemap={{version: 8, sources: {}, layers: []}}/>);
-  const picker = screen.getByLabelText('Delivery day') as HTMLInputElement;
-  expect(picker.min).toBe('2025-11-05');
-  fireEvent.change(picker, {target: {value: '2025-11-04'}});
-  expect(picker.value).toBe('2025-11-05');
+test('invalid initial interval can recover without a page reload', async () => {
+  render(<CnecPage id="cnec" min_day="2024-01-01" token="token" basemap="dark"
+    selection={{day:'2024-08-29',interval:999,reference:'DE',selected:null,source:'constraints'}} onAction={() => {}}/>);
+  const {intervals,...metadata}=first;
+  await reply('/metadata.json',metadata);
+  fireEvent.click(await screen.findByRole('button', {name:'Go to first interval'}));
+  await waitFor(() => expect(pending.some(p=>p.path.endsWith('/0.json'))).toBe(true));
 });
 
-test('date selection delegates to the host without touching browser history', async () => {
+test('invalid bundle is rejected at the browser boundary', async () => {
+  render(<CnecView id="cnec" day="2024-08-29" min_day="2024-01-01" token="token" basemap="dark"/>);
+  await reply('/metadata.json', {version:2});
+  await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Invalid metadata response'));
+});
+
+test('the mounted graph selects constraints using current interval options', async () => {
   await open();
-  window.history.replaceState(null, '', '/cnec/2024-08-29?view=map#detail');
-  fireEvent.change(screen.getByLabelText('Delivery day'), {target: {value: '2024-08-30'}});
-  expect((screen.getByLabelText('Delivery day') as HTMLInputElement).value).toBe('2024-08-30');
-  expect(window.location.pathname).toBe('/cnec/2024-08-29');
-  expect(window.location.search).toBe('?view=map');
-  expect(window.location.hash).toBe('#detail');
+  const row={source_id:42,name:'Published line',direction:'DIRECT',contingency:null,shadow_price:10,ram:100,capacity:200,geometry:null,ptdfs:{DE:0,FR:0.1}};
+  await reply('/1.json', {...full.intervals[1],constraints:[row]});
+  await waitFor(()=>expect(pending).toHaveLength(0));
+  fireEvent.click(screen.getByRole('button',{name:'Next interval'}));
+  await act(async()=>clickGraph({clickData:{points:[{customdata:['42']}]}}));
+  expect(graph.data.some(t=>t.name==='ray contributions')).toBe(true);
+  expect(fetch).toHaveBeenCalledTimes(4);
+});
+
+test('an unprepared day shows availability and never starts upstream work', async()=>{
+  vi.mocked(fetch).mockResolvedValueOnce(new Response(null,{status:404}));
+  render(<CnecView id="cnec" day="2024-08-29" min_day="2024-01-01" token="token" basemap="dark"/>);
+  await screen.findByText(/This day has not been prepared yet/);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(pending).toHaveLength(0);
+});
+
+test('all remaining intervals start together and selection shares their in-flight requests',async()=>{
+  const labels=Array.from({length:8},(_,i)=>`Thu 29 Aug 2024 · ${String(Math.floor(i/4)).padStart(2,'0')}:${String(i%4*15).padStart(2,'0')} CEST`);
+  render(<CnecView id="cnec" day="2024-08-29" min_day="2024-01-01" token="token" basemap="dark"/>);
+  const {intervals,...metadata}=first;
+  await reply('/metadata.json',{...metadata,labels});
+  await reply('/0.json',interval);
+  await waitFor(()=>expect(pending).toHaveLength(7));
+  const started=vi.mocked(fetch).mock.calls.filter(([url])=>String(url).endsWith('/1.json')).length;
+  fireEvent.change(screen.getByRole('slider',{name:'Market interval'}),{target:{value:'1'}});
+  expect(vi.mocked(fetch).mock.calls.filter(([url])=>String(url).endsWith('/1.json'))).toHaveLength(started);
+  fireEvent.change(screen.getByRole('slider',{name:'Market interval'}),{target:{value:'7'}});
+  await waitFor(()=>expect(pending.some(p=>p.path.endsWith('/7.json'))).toBe(true));
+  const call = vi.mocked(fetch).mock.calls.find(([url])=>String(url).endsWith('/1.json'))!;
+  expect((call[1]?.signal as AbortSignal).aborted).toBe(false);
+  await reply('/7.json',{...interval,index:7,label:labels[7]});
+  await waitFor(()=>expect(screen.queryByRole('status',{name:'Map loading'})).toBeNull());
+  expect(vi.mocked(fetch).mock.calls.filter(([url])=>String(url).endsWith('/7.json'))).toHaveLength(1);
+});
+
+test('an invalid deep link recovers when the slider chooses a valid interval',async()=>{
+  render(<CnecView id="cnec" day="2024-08-29" interval={999} min_day="2024-01-01" token="token" basemap="dark"/>);
+  const {intervals,...metadata}=first;
+  await reply('/metadata.json',metadata);
+  await screen.findByText(/This interval is outside/);
+  fireEvent.change(screen.getByRole('slider',{name:'Market interval'}),{target:{value:'1'}});
+  await reply('/1.json',full.intervals[1]);
+  await waitFor(()=>expect(graph.data.some(t=>t.name==='published day-ahead price')).toBe(true));
+  expect(screen.queryByRole('alert')).toBeNull();
 });
