@@ -15,28 +15,29 @@ test.each([
   expect(ticks).toHaveLength(count);
   expect(ticks[0].position).toBe(0);
   expect(ticks.at(-1)?.position).toBe(100);
-  const labels = ticks.filter(t => t.time).map(t => `${t.time} ${t.zone}`);
+  const labels = ticks.flatMap(t => t.time ? [t.time] : []);
   expect(new Set(labels).size).toBe(labels.length);
-  expect(labels).toContain('00:00 ' + (day === '2026-03-29' ? 'CET' : 'CEST'));
-  expect(labels.some(label => label.startsWith('22:00'))).toBe(true);
+  expect(labels).toContain('00:00');
+  expect(labels.some(label => label.startsWith('21:00'))).toBe(true);
 });
 
-test('both repeated two-o’clock labels remain distinguishable', () => {
-  for (const day of ['2024-10-27', '2026-10-25'] as const) {
-    const repeated = timelineTicks(calendars[day].labels).filter(t => t.time === '02:00');
-    expect(repeated.map(t => t.zone)).toEqual(['CEST', 'CET']);
-    expect(repeated[1].position).toBeGreaterThan(repeated[0].position);
-  }
-  expect(timelineTicks(calendars['2026-03-29'].labels).some(t => t.time === '02:00')).toBe(false);
+test.each(['2024-10-27', '2026-10-25'] as const)('repeated DST intervals expose distinct accessible times on %s', day => {
+  const labels=calendars[day].labels;
+  const repeated=labels.flatMap((label,index)=>label.includes('· 02:00 ') ? [index] : []);
+  const props={labels,disabled:false,onChange:()=>{}};
+  const {rerender}=render(<Timeline {...props} interval={repeated[0]}/>);
+  expect(screen.getByRole('slider').getAttribute('aria-valuetext')).toContain('02:00 CEST');
+  rerender(<Timeline {...props} interval={repeated[1]}/>);
+  expect(screen.getByRole('slider').getAttribute('aria-valuetext')).toContain('02:00 CET');
 });
 
-test('the rendered timeline exposes ticks, timezone labels and keyboard-sized interval steps', () => {
+test('the rendered timeline exposes ticks without timezone labels and keyboard-sized interval steps', () => {
   const labels = calendars['2026-10-25'].labels;
   let selected = 0;
   const {container} = render(<Timeline labels={labels} interval={0} disabled={false} onChange={index => {selected = index;}}/>);
   expect(container.querySelectorAll('.cnec-tick')).toHaveLength(100);
-  expect(container.querySelectorAll('.cnec-tick-major')).toHaveLength(13);
-  expect(screen.getAllByText('02:00').map(el => el.textContent)).toEqual(['02:00CEST', '02:00CET']);
+  expect(container.querySelectorAll('.cnec-tick-major')).toHaveLength(8);
+  expect(screen.getByText('03:00').textContent).toBe('03:00');
   const slider = screen.getByLabelText('Market interval');
   expect(slider.getAttribute('aria-valuetext')).toBe(labels[0]);
   expect(slider.getAttribute('max')).toBe('99');
