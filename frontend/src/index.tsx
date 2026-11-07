@@ -5,43 +5,21 @@ import {BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate, 
 import {useDayData, IntervalPrefetch} from './data/day-data';
 import {dayFigure, zoneFeatures, selectionIds} from './map/day-figure';
 import {Timeline} from './controls/timeline';
-import {Plot} from './map/plot';
+import {MapGraph} from './map/map-graph';
 import {CORE_ZONES} from './market/reference';
 import {DateTimeControls} from './controls/date-time-controls';
 import {reduceSelection} from './controls/state';
 import type {Selection, Action} from './controls/state';
 import {viewFromUrl, viewSearch} from './controls/view-url';
 import {mapSelection} from './map/map-selection';
-import {MapDecoration} from './map/map-decoration';
 import {initialCoreCamera} from './map/initial-camera';
 import type {PlotlyFigure} from './map/figure';
 import {PriceLegend} from './controls/price-legend';
 
 import {overlayModel} from './map/overlay-model';
-import type {OverlayModel} from './map/overlay-model';
-import type {CountryLabel} from './map/country-labels';
-import type {CoreZone} from './market/reference';
 import './style.css';
 
 interface Props {id: string; day: string; min_day: string; token: string; basemap: PlotlyFigure['layout']['mapbox']['style']}
-interface GraphChange {clickData?: unknown}
-interface GraphProps {id: string; figure: PlotlyFigure; config: object; style: object; setProps: (change: GraphChange) => void; overlay: OverlayModel; hidden: boolean; countries: CountryLabel[]; onReference: (zone: CoreZone) => void}
-const Graph = ({overlay, hidden, figure, id, config, style, setProps, countries, onReference}: GraphProps) => {
-  const host = useRef<HTMLDivElement>(null);
-  const data = useMemo(() => structuredClone(figure.data), [figure.data]);
-  // Mapbox mutates its style (including removing empty layer layouts). Keep this
-  // owned layout until the actual layout input changes, or Plotly reloads the style.
-  const layout = useMemo(() => structuredClone(figure.layout), [figure.layout]);
-  const [error, setError] = useState<string | null>(null);
-  return <div ref={host} style={style}>
-    <Plot divId={id} data={data} layout={layout} config={config}
-      style={{height:'100%',width:'100%'}} useResizeHandler
-      onAfterPlot={() => setError(null)} onClick={(clickData: unknown) => setProps({clickData})} onError={error=>setError(error.message)}/>
-    <MapDecoration host={host} model={overlay} hidden={hidden} countries={countries} onReference={onReference}/>
-    {error && <div role="alert">Map: {error}</div>}
-  </div>;
-};
-
 const plotConfig = {responsive: true, displayModeBar: false, scrollZoom: true};
 
 type HostProps = Omit<Props, 'day'> & {default_day: string};
@@ -117,17 +95,17 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
     notes.push('Contribution unavailable: missing FB scaling factor or country sensitivities.');
   if (current && selected !== null && !options.includes(selected))
     notes.push(`Selected element ${selected} is not binding in this interval.`);
-  function mapClick(change: GraphChange) {
-    const action = mapSelection(change.clickData, options, selected, mapCurrent);
+  function mapClick(event: unknown) {
+    const action = mapSelection(event, options, selected, mapCurrent);
     if (action) dispatch(action);
   }
 
   return <section id={id} className="cnec-react">
     <IntervalPrefetch day={day} generation={generation} count={labels.length} enabled={!!data && !!metadata.data}/>
     <div className="cnec-map-container">
-      <Graph id={`${id}-map`} figure={graphFigure} setProps={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
+      <MapGraph id={`${id}-map`} figure={graphFigure} onClick={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
         countries={countries} onReference={reference=>dispatch({type:'reference',reference})}
-        config={plotConfig} style={{height: '100%'}}/>
+        config={plotConfig}/>
       <small className="cnec-sources">
         Data: <a href="https://publicationtool.jao.eu/core/" target="_blank" rel="noopener noreferrer">JAO</a> · {' '}
         <a href="https://www.electricitymaps.com/" target="_blank" rel="noopener noreferrer">Electricity Maps</a> · {' '}
