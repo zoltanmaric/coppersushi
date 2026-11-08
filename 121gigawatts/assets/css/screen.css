@@ -2087,13 +2087,13 @@ Usage (In Ghost editor):
     align-items: center;
 }
 
-/* Figure cards already have their own bottom margin. */
-.post-content > .kg-card:not(figure) + :not(.kg-card) {
+/* Preserve figure spacing and the leading margins on headings, rules, and code. */
+.post-content > .kg-card:not(figure) + :is(p, ul, ol, dl, blockquote) {
     margin-top: 1.5em;
 }
 
 @media (max-width: 500px) {
-    .post-content > .kg-card:not(figure) + :not(.kg-card) {
+    .post-content > .kg-card:not(figure) + :is(p, ul, ol, dl, blockquote) {
         margin-top: 1.28em;
     }
 }
