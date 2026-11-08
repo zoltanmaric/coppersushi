@@ -9,7 +9,7 @@ import pandas as pd
 from pandera.typing import DataFrame
 
 from coppersushi.data_model.cnec_attribution import (
-    JaoRecord, AlphaFactor, AllocationConstraint, NetPosition, PolishAlternative, AttributionContext,
+    JaoRecord, AlphaFactor, AllocationConstraint, NetPosition, PolishAlternative, AttributionContext, normalize_alpha,
 )
 
 from coppersushi import cnec_attribution
@@ -27,7 +27,8 @@ def load_day(day: MarketDay, refresh: bool = False) -> DataFrame[AttributionCont
         cache.restore(key, path.parent, (path.name,))
     if path.is_file() and not refresh:
         frame = pd.read_csv(path)
-        frame = frame.assign(interval=pd.to_datetime(frame.interval, utc=True))
+        frame = frame.assign(interval=pd.to_datetime(frame.interval, utc=True),
+                             alpha=frame.alpha.map(normalize_alpha))
         frame = AttributionContext.validate(frame)
         if not frame.notna().all().all() or frame.interval.tolist() != list(day.market_time_units()):
             raise ValueError(f"Incomplete attribution cache for {day_key}")

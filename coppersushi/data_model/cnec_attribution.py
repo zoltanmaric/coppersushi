@@ -11,7 +11,7 @@ import datetime
 
 import pandera.pandas as pa
 from pandera.typing import Series
-from pydantic import AwareDatetime, BaseModel, ConfigDict, StrictFloat, StrictInt
+from pydantic import AwareDatetime, BaseModel, ConfigDict, StrictFloat, StrictInt, field_validator
 
 from coppersushi.data_model.jao import ZonedTimestamp
 
@@ -23,10 +23,22 @@ class JaoRecord(BaseModel):
     dateTimeUtc: AwareDatetime
 
 
+def normalize_alpha(value: float) -> float:
+    """Snap source rounding within one part per million to the mathematical bounds."""
+    if value < -1e-6 or value > 1 + 1e-6:
+        raise ValueError('Alpha must be within [0, 1], allowing 1e-6 source rounding')
+    return min(1.0, max(0.0, value)) if value == value else value
+
+
 class AlphaFactor(JaoRecord):
     """Published flow-based scaling factor for one market interval."""
 
     alphaFactor: StrictFloat
+
+    @field_validator('alphaFactor')
+    @classmethod
+    def normalize(cls, value: float) -> float:
+        return normalize_alpha(value)
 
 
 class AllocationConstraint(JaoRecord):

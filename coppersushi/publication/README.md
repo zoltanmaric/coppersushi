@@ -63,5 +63,7 @@ not prove that caps were absent: safely interior positions establish nonbinding
 caps; near a bound, interval notes expose unavailable Polish attribution in the
 browser. See [publication coverage](../../wiki/country-import-export-caps.md#publication-coverage).
 The one-day CLI provides the same policy through `--allow-partial-attribution`.
-Scheduled publication stays strict. Neither path changes the browser's supported
+Alpha values up to `1e-6` outside `[0, 1]` are snapped to the nearest bound
+at input loading, including cached inputs. Larger violations are rejected;
+in-range values are preserved. Scheduled publication stays strict. Neither path changes the browser's supported
 date boundary; move it only after the required generations have been verified.

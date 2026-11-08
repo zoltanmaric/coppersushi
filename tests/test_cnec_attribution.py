@@ -125,3 +125,23 @@ def test_missing_polish_price_is_reported_for_saturated_cap():
     no_poland = prices[prices.zone.ne('PL')]
     view = cnec_market.snapshot(phys, no_poland, prices.interval.iloc[0], context=context())
     assert 'Poland cap attribution unavailable for this interval.' in view.notes
+
+
+@pytest.mark.parametrize('value,expected', [
+    (-1e-6, 0), (-0.0000000001, 0), (0, 0),
+    (0.0000001, 0.0000001), (0.9999999, 0.9999999),
+    (1, 1), (1.0000000002, 1), (1.000001, 1),
+])
+def test_source_alpha_rounding_only_snaps_outside_the_bounds(value, expected):
+    row = inputs()['feeds']['alpha'][0].copy()
+    row['alphaFactor'] = value
+    assert AlphaFactor.model_validate(row).alphaFactor == expected
+
+
+@pytest.mark.parametrize('value', [-0.0000011, 1.0000011, float('inf'), float('nan')])
+def test_source_alpha_rejects_values_beyond_rounding_tolerance(value):
+    from pydantic import ValidationError
+    row = inputs()['feeds']['alpha'][0].copy()
+    row['alphaFactor'] = value
+    with pytest.raises(ValidationError):
+        AlphaFactor.model_validate(row)
