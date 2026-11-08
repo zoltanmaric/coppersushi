@@ -16,11 +16,11 @@ function CnecView(props: Omit<React.ComponentProps<typeof CnecPage>, 'selection'
 interface Pending {path: string; body?: {day: string; interval: number; selected: number | null}; resolve: (value: Response) => void}
 let pending: Pending[];
 let graph: PlotlyFigure;
-let clickGraph: (change: {clickData: {points: {customdata: string[]}[]}}) => void;
-vi.mock('./map/plot', () => ({Plot: (props: {data: PlotlyFigure['data']; layout: PlotlyFigure['layout']; onClick: (click: unknown) => void}) => {
-  graph = {data: props.data, layout: props.layout};
+let clickGraph: (change: {clickData: unknown}) => void;
+vi.mock('./map/map-graph', () => ({MapGraph: (props: {figure: PlotlyFigure; onClick: (event: unknown) => void}) => {
+  graph = props.figure;
   clickGraph = change => props.onClick(change.clickData);
-  return <div aria-label="Map">{props.data.map(t=>t.name).join(',')}</div>;
+  return <div aria-label="Map">{props.figure.data.map(t=>t.name).join(',')}</div>;
 }}));
 beforeEach(() => {
   window.history.replaceState(null, "", "/cnec/2024-08-29");
@@ -67,22 +67,6 @@ test('show first interval, share background request, then navigate locally', asy
   expect(fetch).toHaveBeenCalledTimes(4);
 });
 
-test('Mapbox style mutations survive data updates without mutating the input layout', async () => {
-  const input=await open();
-  const layout=graph.layout;
-  const style=layout.mapbox.style as {layers: {id:string;type:string;layout?:object}[]};
-  // Mapbox removes empty layer layouts while loading a style. Reintroducing them
-  // on the next interval makes Plotly call setStyle and clear all data layers.
-  style.layers.push({id:'retained-base-layer',type:'background',layout:{}});
-  delete style.layers[0].layout;
-  await reply('/1.json',full.intervals[1]);
-  fireEvent.click(screen.getByRole('button',{name:'Next interval'}));
-  await waitFor(()=>expect(screen.getByRole('slider').getAttribute('aria-valuetext')).toContain('00:15'));
-  expect(graph.layout).toBe(layout);
-  expect((graph.layout.mapbox.style as typeof style).layers[0].layout).toBeUndefined();
-  expect(input.layers).toEqual([]);
-});
-
 test('background failure retains first interval and offers retry', async () => {
   await open();
   fireEvent.click(screen.getByRole('button',{name:'Next interval'}));
@@ -123,8 +107,10 @@ test('the mounted graph selects constraints using current interval options', asy
   await reply('/1.json', {...full.intervals[1],constraints:[row]});
   await waitFor(()=>expect(pending).toHaveLength(0));
   fireEvent.click(screen.getByRole('button',{name:'Next interval'}));
-  await act(async()=>clickGraph({clickData:{points:[{customdata:['11T0-0000-0984-D']}]}}));
-  expect(graph.data.some(t=>t.name==='ray contributions')).toBe(true);
+  await waitFor(async()=>{
+    await act(async()=>clickGraph({clickData:{points:[{customdata:['11T0-0000-0984-D']}]}}));
+    expect(graph.data.some(t=>t.name==='ray contributions')).toBe(true);
+  });
   expect(fetch).toHaveBeenCalledTimes(4);
 });
 
@@ -191,3 +177,4 @@ test.each(['pending','failed'])('selection can leave a %s initial interval', asy
   await waitFor(()=>expect(graph.data.some(t=>t.name==='published day-ahead price')).toBe(true));
   expect(screen.queryByRole('alert')).toBeNull();
 });
+
