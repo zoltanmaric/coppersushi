@@ -20,6 +20,8 @@
 .cnec-date-picker svg {color:#b6b6bd;flex-shrink:0}
 /* The native picker owns the entire visible date, including its calendar icon. */
 .cnec-date-picker input {position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;color-scheme:dark;cursor:pointer}
+/* Native picker activation also works inside cross-origin blog embeds. */
+.cnec-date-picker input::-webkit-calendar-picker-indicator {position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0}
 .cnec-control-row output {min-width:80px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .cnec-slider-panel {flex:1 1 320px;box-sizing:border-box;padding:0 12px;min-width:0}
 .cnec-react {position:relative;height:100%}

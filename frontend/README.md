@@ -28,8 +28,10 @@ basemap. Build with `npm ci && npm run build` in this directory.
 
 ## Static site
 
-`index.html` owns the shell. `python -m frontend.publish --bucket <bucket>` embeds
-the public Mapbox token and publishes built assets before the shell. It does not
+`index.html` owns the shell. `/` and `/cnec/:day?` show navigation;
+`/embed/cnec/:day?` uses the same shell without it. Embed interactions retain
+the embed route. `python -m frontend.publish --bucket <bucket>` embeds
+the public Mapbox token and publishes built assets before the normal and embedded shells. It does not
 import a web framework. The browser determines the current market date itself.
 For local preview, `cnec_server.py` serves the same shell and `data/browser` files.
 Production routing and rollback are in the [hosting runbook](../infra/lambda/README.md).

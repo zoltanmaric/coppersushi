@@ -56,14 +56,14 @@ no longer tracked; preserve the authoritative state and inputs.
    terraform -chdir=.secrets/aws-production apply deploy.tfplan
    ```
 
-7. Invalidate `/cnec*`, `/assets/*`, `/data/cnec/v1/ui/*` and
+7. Invalidate `/`, `/cnec*`, `/embed/cnec*`, `/assets/*`, `/data/cnec/v1/ui/*` and
    `/_dash-component-suites/*` on CloudFront. Quote paths passed to the AWS CLI.
    Wait for invalidation to finish before verifying; both original request paths
    and rewritten S3 paths can have cached content.
 8. Confirm the app and publisher Lambdas report successful updates with the expected
    image digest. Check that the daily schedule is enabled and the workflow points
-   at the publisher. Verify `/opf-2024`, `/embed/opf-2024` and a prepared dated
-   `/cnec/<day>` through the public hostname. Exercise time controls, reference and
+   at the publisher. Verify `/`, `/opf-2024`, `/embed/opf-2024`, and prepared dated
+   `/cnec/<day>` and `/embed/cnec/<day>` views through the public hostname. Exercise time controls, reference and
    constraint selection, and inspect browser errors after loading completes.
 
 Frontend-only changes can reuse the deployed Lambda image: build and test the
@@ -221,10 +221,10 @@ the restored manifest must point to the generation matching that reader's contra
 
 ## Handler separation
 
-CloudFront serves `/cnec*` and `/assets/*` from the published private S3 UI
-prefix. There is no production CNEC serving Lambda or interval API. OPF and Dash component routes stay on `app:server`.
-The CNEC shell imports neither Dash nor pandas. Data preparation runs only in the background producer. The frontend uses the official React Plotly
-component and a pinned Mapbox-only Plotly bundle.
+CloudFront serves `/`, `/cnec*`, `/embed/cnec*` and `/assets/*` from the published
+private S3 UI prefix. Embedded CNEC paths resolve to `embed.html`; normal map paths
+resolve to `index.html`. Both shells share the same application assets. There is no production CNEC serving Lambda or interval API. OPF and Dash component routes stay on `app:server`.
+The CNEC shell imports neither Dash nor pandas. Data preparation runs only in the background producer. The frontend uses React and a pinned Mapbox-only Plotly bundle.
 
 The browser computes the default market date locally; a cached shell cannot freeze it on its publication date.
 

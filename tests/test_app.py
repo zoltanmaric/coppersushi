@@ -43,17 +43,14 @@ def _ids(component):
     return (c for c in _components(component) if getattr(c, "id", None))
 
 
-@pytest.mark.parametrize("mode", ['embed', 'full'])
-def test_root_rollout_keeps_permanent_urls_stable(mode, monkeypatch):
+def test_permanent_opf_urls_keep_normal_and_embed_layouts(monkeypatch):
     monkeypatch.setattr(app, "mapbox_token", lambda: "token")
-    assert app.is_embed_path('/', mode) is (mode == 'embed')
-    assert app.is_embed_path('/embed/opf-2024', mode)
-    assert not app.is_embed_path('/opf-2024', mode)
-    assert app.network_key_from_path('/') == app.network_key_from_path('/embed/opf-2024') == 'opf-2024'
-    for path in ['/', '/embed/opf-2024', '/opf-2024']:
-        page = app.show_page(path, root_view=mode)
+    assert app.network_key_from_path('/') is None
+    assert app.network_key_from_path('/embed/opf-2024') == 'opf-2024'
+    for path in ['/embed/opf-2024', '/opf-2024']:
+        page = app.show_page(path)
         links = [c.href for c in _components(page) if isinstance(c, html.A)]
-        assert links == ([] if app.is_embed_path(path, mode) else ['/opf-2024', '/cnec'])
+        assert links == ([] if app.is_embed_path(path) else ['/cnec', '/opf-2024'])
         assert {'map', 'snapshot-slider', 'opf-time'} <= {c.id for c in _ids(page)}
 
 
@@ -79,7 +76,8 @@ def test_opf_clock_and_slider_share_the_local_day_and_noon_default():
     assert app.opf_snapshot_state(snapshots.tz_localize(None), 1, True) == app.opf_snapshot_state(snapshots, 1, True)
 
 
-def test_page_shell_does_not_load_the_opf_runtime():
+def test_page_shell_does_not_load_the_opf_runtime(monkeypatch):
+    monkeypatch.setenv("MAPBOX_TOKEN", "test-public-token")
     import subprocess
     import sys
     result = subprocess.run(

@@ -1,6 +1,7 @@
 """The standalone shell preserves routing without initializing the analysis stack."""
 import subprocess
 import sys
+import pytest
 from cnec_server import server
 
 def test_shell_import_does_not_initialize_dash_or_pandas():
@@ -33,3 +34,25 @@ def test_static_shell_needs_no_server_and_safely_embeds_configuration():
     subprocess.run([sys.executable, '-c',
         "import sys; from frontend.publish import render_shell; render_shell('test'); "
         "assert not {'flask','dash','pandas','plotly'} & sys.modules.keys()"], check=True)
+
+
+@pytest.mark.parametrize('path,embed', [
+    ('/', False), ('/cnec', False), ('/cnec/2026-11-05', False),
+    ('/embed/cnec', True), ('/embed/cnec/2026-11-05', True),
+])
+def test_home_and_embed_share_the_shell_with_explicit_header_mode(path, embed, monkeypatch):
+    monkeypatch.setenv('MAPBOX_TOKEN', 'test-public-token')
+    import app
+    for app_server in (server, app.server):
+        response = app_server.test_client().get(path)
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+        assert f'data-embed="{str(embed).lower()}"' in html
+        assert '/assets/cnec-app.js' in html
+        assert html.index('Critical Elements') < html.index('Power Flow')
+
+
+def test_unsupported_embed_date_stays_in_the_embed():
+    response = server.test_client().get('/embed/cnec/2025-11-04')
+    assert response.status_code == 302
+    assert response.headers['Location'] == '/embed/cnec'

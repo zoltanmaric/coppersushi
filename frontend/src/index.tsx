@@ -26,7 +26,8 @@ type HostProps = Omit<Props, 'day'> & {default_day: string};
 
 export function CnecView(props: HostProps) {
   return <BrowserRouter><Routes>
-    <Route path="/cnec/:day?" element={<RoutedCnecPage {...props}/>}/>
+    {['/', '/cnec/:day?', '/embed/cnec/:day?'].map(path =>
+      <Route key={path} path={path} element={<RoutedCnecPage {...props}/>}/>)}
   </Routes></BrowserRouter>;
 }
 
@@ -34,17 +35,18 @@ function RoutedCnecPage({default_day, ...props}: HostProps) {
   const {day} = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const base = location.pathname.startsWith('/embed/') ? '/embed/cnec' : '/cnec';
   let selection: Selection;
   try {
     selection = viewFromUrl(day ?? default_day, location.search);
   } catch {
-    return <section role="alert">Invalid delivery day. <Link to="/cnec" replace>Open the current day</Link>.</section>;
+    return <section role="alert">Invalid delivery day. <Link to={base} replace>Open the current day</Link>.</section>;
   }
-  if (selection.day < props.min_day) return <Navigate to="/cnec" replace/>;
+  if (selection.day < props.min_day) return <Navigate to={base} replace/>;
   const onAction = (action: Action) => {
     const next = reduceSelection(selection, action);
     if (next === selection) return;
-    navigate({pathname: `/cnec/${next.day}`, search: viewSearch(next, location.search), hash: location.hash},
+    navigate({pathname: `${base}/${next.day}`, search: viewSearch(next, location.search), hash: location.hash},
       {replace: true});
   };
   return <CnecPage {...props} selection={selection} onAction={onAction}/>;
