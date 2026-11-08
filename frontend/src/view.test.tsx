@@ -193,3 +193,17 @@ test('day loading retains the slider geometry and selected time',async()=>{
   expect(document.querySelector('.cnec-time-controls')?.getAttribute('aria-busy')).toBe('true');
 });
 
+
+test('legend bounds appear from metadata before an interval or market figure is ready',async()=>{
+  render(<CnecView id="cnec" day="2024-08-29" min_day="2024-01-01" token="token" basemap="dark"/>);
+  const legend=screen.getByLabelText('Daily day-ahead price scale');
+  const slots=legend.querySelector('.cnec-price-range')!;
+  expect(screen.getByText('Day-ahead · €/MWh')).toBeTruthy();
+  expect(slots.textContent).toBe('\u00a0\u00a0');
+  const {intervals,...metadata}=first;
+  await reply('/metadata.json',metadata);
+  await waitFor(()=>expect(slots.textContent).toBe('90100'));
+  expect(screen.getByLabelText('Daily day-ahead price scale')).toBe(legend);
+  expect(graph.data.some(trace=>trace.type==='choroplethmapbox')).toBe(false);
+  expect(screen.getByRole('status',{name:'Map loading'})).toBeTruthy();
+});

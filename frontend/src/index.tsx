@@ -117,7 +117,7 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
         config={plotConfig}/>
 
       <div className="cnec-map-tools">
-        <PriceLegend figure={graphFigure}/>
+        <PriceLegend range={metadata.data?.price_range ?? null}/>
         <label className="cnec-reference cnec-panel">Reference
           <select aria-label="Reference country" value={reference}
             onChange={e => dispatch({type: 'reference', reference: CORE_ZONES.find(zone => zone === e.target.value)!})}>

@@ -3,6 +3,7 @@ import type {DayBundle, BindingRow, MarketInterval, ElementGeometry} from '../da
 import type {PlotlyFigure} from './figure';
 import type { CoreZone } from "../market/reference";
 import {layerAnchor} from './map-layer-order';
+import {PRICE_COLORSCALE} from './price-scale';
 
 type Trace = PlotlyFigure["data"][number];
 const purple = "#a72af5",
@@ -13,7 +14,6 @@ const hoverlabel = {
   bordercolor: lavender,
   font: { color: "#21152d" },
 };
-const scale = [[0.0, "rgb(0, 155, 158)"], [0.16666666666666666, "rgb(66, 183, 185)"], [0.3333333333333333, "rgb(167, 211, 212)"], [0.5, "rgb(241, 241, 241)"], [0.6666666666666666, "rgb(228, 193, 217)"], [0.8333333333333334, "rgb(214, 145, 193)"], [1.0, "rgb(199, 93, 171)"]];
 const number = (n: number, digits = 2) =>
   n.toLocaleString("en-US", {
     minimumFractionDigits: digits,
@@ -125,7 +125,7 @@ export function dayFigure(
       zmin: bundle.price_range[0],
       zmax: bundle.price_range[1],
       zauto: false,
-      colorscale: scale,
+      colorscale: PRICE_COLORSCALE,
       marker: {
         opacity: 0.6,
         line: { color: "rgba(255,255,255,0.55)", width: 1.2 },
