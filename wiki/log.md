@@ -383,3 +383,7 @@ The camera review reproduced electricity hidden after an initial programmatic fi
 ## [2026-11-08] query | Historical JAO monitoring names
 
 [Monitoring probes](literature/jao-core-publication-handbook.md#monitoring-labels) and JAO's rename notice establish that historical `Shadow Prices` receipts identify the Active FB publication. The missing new label on 2025-11-05 was a compatibility problem in the publisher's readiness check, not evidence that JAO failed to publish the constraints.
+
+## [2026-11-09] query | June alpha and monitoring gaps
+
+[Controlled source probes](jao-availability.md#historical-gaps) confirm missing alpha on June 2–9 despite Received monitoring statuses, and complete June 11 net-position data without its monitoring receipt. Alternate time windows and neighboring-day controls rule out the tested date-filter explanations. No safe substitute source was found; both gaps remain publication blockers.

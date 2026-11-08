@@ -73,3 +73,34 @@ Extend the existing cache rather than introduce a second storage system without 
 
 See [the app architecture](sushi-2.md) and the
 [external-service outage procedure](../.agents/skills/service-outage/SKILL.md).
+
+## Historical-gaps
+
+Probes on **2026-11-09** distinguish two source inconsistencies:
+
+- **2026-06-02–09:** Core `alphaFactor` returns HTTP 200 with empty `data`,
+  `rejected=false` and no messages for every delivery day. Monitoring on June 2
+  and June 9 nevertheless marks `Alpha factor from MCP` Received. Two-day windows
+  June 1–3 and June 9–11 return 96 rows belonging only to the neighboring complete
+  June 1 and June 10 delivery days. A UTC-calendar-day query and a quarter-hour
+  query on June 2 are also empty. June 2 active constraints contain no alpha field.
+  No attribution bundles for June were present under the private derived-cache
+  prefix when checked; local June 2–9 attribution caches were absent. These days
+  remain blocked; missing alpha must not become 1 or an interpolated value.
+- **2026-06-11:** Core `netPos` returns 96 records that validate and exactly cover
+  the delivery-day quarter-hours, but the `Net Position` monitoring entry is absent.
+  A two-day monitoring query confirms the same missing entry. This is a receipt
+  gap, separate from the alpha gap; the publisher retains its receipt requirement.
+
+Queries use market-midnight UTC bounds at `/core/api/data/{endpoint}` and
+`/core/api/system/monitoring`. A ten-day alpha query returns HTTP 400 explicitly
+limiting the requested range to two days; the controls above respect that limit.
+Successful empty responses are source observations, not failed HTTP requests or
+proof of zero-valued alpha. Raw probe bodies and headers remain in ignored local
+research artifacts.
+
+JAO's [AHC go-live notice](https://www.jao.eu/news/successful-go-live-core-advanced-hybrid-coupling)
+dates Advanced Hybrid Coupling to delivery June 11 and lists RAM-at-clearing and
+exchange-publication issues. It does not establish the cause of either observed
+gap. Recovery from another authoritative publication or an explicit incomplete-data
+product contract remains necessary before publishing these dates.
