@@ -109,11 +109,7 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
       <MapGraph id={`${id}-map`} figure={graphFigure} onClick={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
         countries={countries} onReference={reference=>dispatch({type:'reference',reference})}
         config={plotConfig}/>
-      <small className="cnec-sources">
-        Data: <a href="https://publicationtool.jao.eu/core/" target="_blank" rel="noopener noreferrer">JAO</a> · {' '}
-        <a href="https://www.electricitymaps.com/" target="_blank" rel="noopener noreferrer">Electricity Maps</a> · {' '}
-        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>
-      </small>
+
       <div className="cnec-map-tools">
         <PriceLegend figure={graphFigure}/>
         <label className="cnec-reference cnec-panel">Reference
@@ -133,7 +129,9 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
         {notes.map(note => <div role="status" key={note}>{note}</div>)}
         {([['Publication',publication],['Metadata',metadata],['Interval',intervalQuery]] as const).map(([name,query])=>query.error && <div role="alert" key={name}>{name}: {query.error.message}{data && !mapCurrent && ` Showing ${data.label.split(' · ')[1]}.`} <button onClick={()=>void query.refetch()}>Retry</button></div>)}
       </aside>
+    <div className="cnec-bottom-controls">
     <div className="cnec-time-controls" aria-busy={!labels.length}>
+
       <DateTimeControls day={day} minDay={min_day} time={controlLabels[interval]?.split(' · ')[1] ?? ''}
         previousDisabled={!labels.length || interval === 0}
         nextDisabled={!labels.length || interval === labels.length - 1}
@@ -143,6 +141,14 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
       <Timeline labels={controlLabels} interval={interval} disabled={!labels.length}
         onChange={interval => dispatch({type: 'interval', interval})}/>
       </div>
+    </div>
+    <footer className="cnec-footer">
+      <small className="cnec-sources">
+        Data: <a href="https://publicationtool.jao.eu/core/" target="_blank" rel="noopener noreferrer">JAO</a> · {' '}
+        <a href="https://www.electricitymaps.com/" target="_blank" rel="noopener noreferrer">Electricity Maps</a> · {' '}
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>
+      </small>
+    </footer>
     </div>
     </div>
   </section>;
