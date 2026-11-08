@@ -9,38 +9,35 @@
 .cnec-panel {background:rgba(18,18,18,.85);border-radius:5px;color:#eee}
 .cnec-bottom-controls {position:absolute;bottom:calc(4px + env(safe-area-inset-bottom,0px));left:16px;right:16px;display:grid;gap:4px;z-index:3}
 .cnec-footer {display:grid;place-items:center;min-height:24px}
-.cnec-time-controls {display:grid;grid-template-columns:max-content minmax(0,1fr);gap:12px;align-items:stretch;z-index:3}
-.cnec-date-time {padding:2px 6px;display:flex;justify-content:center;gap:4px;font-size:14px}
-.cnec-control-row {display:grid;grid-template-columns:28px max-content 28px;align-items:center;text-align:center;min-height:38px}
-.cnec-control-row button {border:0;background:transparent;color:inherit;font-size:28px;line-height:1;min-height:38px;cursor:pointer}
+.cnec-time-controls {padding:16px 6px;display:flex;flex-wrap:wrap;align-items:center;column-gap:12px;z-index:3;border-radius:10px}
+.cnec-date-time {flex:0 1 auto;margin-inline:auto;display:flex;flex-wrap:wrap;justify-content:center;column-gap:4px;font-size:14px}
+.cnec-control-row {display:flex;align-items:center;justify-content:center;text-align:center;min-height:44px}
+.cnec-control-row button {display:flex;align-items:center;justify-content:center;flex:0 0 40px;height:44px;padding:0;border:0;border-radius:6px;background:transparent;color:inherit;cursor:pointer}
+.cnec-control-row button:hover:not(:disabled) {background:rgba(255,255,255,.06)}
 .cnec-control-row button:disabled {opacity:.3;cursor:default}
-.cnec-control-row input {color-scheme:dark;min-width:0;width:124px;border:0;background:transparent;color:inherit;text-align:center;font:inherit;font-weight:600}
-.cnec-control-row output {font-variant-numeric:tabular-nums;font-weight:600}
-.cnec-slider-panel {padding:0 18px;display:flex;align-items:center;min-width:0}
-.cnec-slider-panel>div {width:100%}
+.cnec-control-row button:focus-visible,.cnec-date-picker:focus-within {outline:2px solid #af77ed;outline-offset:1px}
+.cnec-date-picker {position:relative;display:flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer}
+.cnec-date-picker svg {color:#b6b6bd;flex-shrink:0}
+/* The native picker owns the entire visible date, including its calendar icon. */
+.cnec-date-picker input {position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;color-scheme:dark;cursor:pointer}
+.cnec-control-row output {min-width:80px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cnec-slider-panel {flex:1 1 320px;box-sizing:border-box;padding:0 12px;min-width:0}
 .cnec-react {position:relative;height:100%}
 .cnec-progress {top:120px}
-/* Three-hour labels need 281px for 28px text plus 8px gaps; other controls use 417px. */
-@media(max-width:700px){
-  .cnec-bottom-controls {left:12px;right:12px}
-  .cnec-time-controls {grid-template-columns:1fr;gap:0;background:rgba(18,18,18,.85);border-radius:5px}
-  .cnec-time-controls .cnec-panel {background:transparent}
-  .cnec-date-time {width:100%;box-sizing:border-box}
+@media(max-width:700px){.cnec-bottom-controls {left:12px;right:12px}}
 
-
-  .cnec-slider-panel {padding:0 16px}
-}
-
-.cnec-timeline {position:relative;min-width:0;height:36px}
-.cnec-timeline input {appearance:none;position:relative;z-index:1;height:18px;background:transparent;margin:0;padding:0;border:0;box-sizing:border-box;display:block;width:100%}
-.cnec-timeline input::-webkit-slider-runnable-track {height:2px;background:#707780}
-.cnec-timeline input::-moz-range-track {height:2px;background:#707780}
-.cnec-timeline input::-webkit-slider-thumb {appearance:none;box-sizing:border-box;width:16px;height:16px;border-radius:50%;background:#af77ed;border:1px solid white;margin-top:-7px}
-.cnec-timeline input::-moz-range-thumb {box-sizing:border-box;width:16px;height:16px;border-radius:50%;background:#af77ed;border:1px solid white}
-.cnec-timeline-marks {position:absolute;top:8px;left:8px;right:8px;pointer-events:none}
-.cnec-tick {position:absolute;border-left:1px solid #9298a0;height:5px}
-.cnec-tick-major {height:9px}
-.cnec-tick-label {position:absolute;top:12px;transform:translateX(-50%);font-size:11px;line-height:1.3;white-space:nowrap;text-align:center}
+.cnec-timeline {position:relative;min-width:0;height:36px;--cnec-time-progress:0%}
+.cnec-timeline input {appearance:none;height:36px;background:transparent;margin:0;padding:0;border:0;box-sizing:border-box;display:block;width:100%;cursor:ew-resize}
+.cnec-timeline input:focus-visible {outline:2px solid #af77ed;outline-offset:2px;border-radius:4px}
+.cnec-timeline input:disabled {opacity:.4;cursor:default}
+.cnec-timeline input::-webkit-slider-runnable-track {height:4px;border-radius:4px;background:linear-gradient(to right,#af77ed var(--cnec-time-progress),#55585f var(--cnec-time-progress))}
+.cnec-timeline input::-moz-range-track {height:4px;border-radius:4px;background:linear-gradient(to right,#af77ed var(--cnec-time-progress),#55585f var(--cnec-time-progress))}
+.cnec-timeline input::-webkit-slider-thumb {appearance:none;width:16px;height:16px;border-radius:50%;background:#d4b6f1;border:0;margin-top:-6px}
+.cnec-timeline input::-moz-range-thumb {width:16px;height:16px;border-radius:50%;background:#d4b6f1;border:0}
+.cnec-timeline-labels {position:absolute;top:32px;left:8px;right:8px;pointer-events:none;color:#b4b6bd;font-size:11px;line-height:16px;font-variant-numeric:tabular-nums}
+.cnec-timeline-labels span {position:absolute;transform:translateX(-50%);white-space:nowrap}
+.cnec-timeline-labels span:first-child {transform:none}
+.cnec-timeline-labels span:last-child {transform:translateX(-100%)}
 
 /* Plotly draws the compact attribution icon on the parent pseudo-element. */
 .cnec-map-container .mapboxgl-ctrl-attrib-button {position:absolute;inset:0;width:20px;height:20px;padding:0;border:0;background:transparent;cursor:pointer}
@@ -88,15 +85,6 @@
 .cnec-country-labels button {position:absolute;left:0;top:0;padding:0;border:0;background:none;color:white;font:inherit;line-height:18px;text-align:center;white-space:nowrap;pointer-events:auto;cursor:pointer}
 .cnec-country-labels span {display:block}
 .cnec-country-labels button:focus-visible {outline:1px solid white;outline-offset:3px}
-
-.cnec-control-row input::-webkit-datetime-edit {padding:0}
-.cnec-control-row input::-webkit-calendar-picker-indicator {margin-left:4px;padding:0}
-@media(max-width:400px){
-  .cnec-date-time {font-size:12px;gap:2px}
-  .cnec-control-row {grid-template-columns:24px max-content 24px}
-  .cnec-control-row input {width:110px}
-  .cnec-control-row button {font-size:24px}
-}
 
 /* Touch tooltips can be dismissed without passing the tap through to the map. */
 @media (pointer:coarse) {.cnec-map-container .hoverlayer .hovertext {pointer-events:all}}

@@ -137,14 +137,14 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
       </aside>
 
     <div className="cnec-bottom-controls">
-    <div className="cnec-time-controls" aria-busy={!labels.length}>
+    <div className="cnec-time-controls cnec-panel" aria-busy={!labels.length}>
 
       <DateTimeControls day={day} minDay={min_day} time={controlLabels[interval]?.split(' · ')[1] ?? ''}
         previousDisabled={!labels.length || interval === 0}
         nextDisabled={!labels.length || interval === labels.length - 1}
         onDay={day => dispatch({type: 'day', day})} onPrevious={() => dispatch({type: 'interval', interval: interval - 1})}
         onNext={() => dispatch({type: 'interval', interval: interval + 1})}/>
-      <div className="cnec-slider-panel cnec-panel">
+      <div className="cnec-slider-panel">
       <Timeline labels={controlLabels} interval={interval} disabled={!labels.length}
         onChange={interval => dispatch({type: 'interval', interval})}/>
       </div>
