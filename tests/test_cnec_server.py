@@ -49,7 +49,8 @@ def test_home_and_embed_share_the_shell_with_explicit_header_mode(path, embed, m
         html = response.get_data(as_text=True)
         assert f'data-embed="{str(embed).lower()}"' in html
         assert '/assets/cnec-app.js' in html
-        assert html.index('Critical Elements') < html.index('Power Flow')
+        navigation = html.split('<nav>', 1)[1].split('</nav>', 1)[0]
+        assert navigation.index('Critical Elements') < navigation.index('Power Flow')
 
 
 def test_unsupported_embed_date_stays_in_the_embed():
