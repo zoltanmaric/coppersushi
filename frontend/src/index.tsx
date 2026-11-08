@@ -74,6 +74,14 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
   const {day, interval, selected, reference} = selection;
 
 
+  const [compactTooltips, setCompactTooltips] = useState(() => window.matchMedia?.('(pointer: coarse)').matches ?? false);
+  useEffect(() => {
+    const media = window.matchMedia?.('(pointer: coarse)');
+    if (!media) return;
+    const update = () => setCompactTooltips(media.matches);
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
   const [initialCamera] = useState(() => initialCoreCamera(window.innerWidth, window.innerHeight));
   const {publication,metadata,current: intervalQuery,data,labels,generation} = useDayData(day,interval);
   const previousControlLabels = useRef(labels);
@@ -88,8 +96,8 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
   }),[metadata.data,data]);
   const emptyFigure = useMemo(() => shell(token,basemap,initialCamera),[token,basemap,initialCamera]);
   const graphFigure = useMemo(() => metadata.data && data && geography
-    ? dayFigure({...metadata.data,intervals:[data]},data.index,mapCurrent ? selected : null,reference,emptyFigure.layout,geography)
-    : emptyFigure,[metadata.data,data,geography,mapCurrent,selected,reference,emptyFigure]);
+    ? dayFigure({...metadata.data,intervals:[data]},data.index,mapCurrent ? selected : null,reference,emptyFigure.layout,geography,compactTooltips)
+    : emptyFigure,[metadata.data,data,geography,mapCurrent,selected,reference,emptyFigure,compactTooltips]);
   const current = mapCurrent ? data : null;
   const options = current ? selectionIds(current) : [];
   const notes = [...(current?.notes ?? [])];

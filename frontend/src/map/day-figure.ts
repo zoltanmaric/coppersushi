@@ -72,8 +72,8 @@ const bearing = (g: ElementGeometry) => {
     360
   );
 };
-const hover = (r: BindingRow) =>
-  `<b>${r.name}</b><br>Binding under: ${r.contingency ?? "Base case (no contingency)"}<br>Direction: ${r.direction}<br>RAM: ${r.ram === null ? "n/a" : number(r.ram, 0) + " MW"}<br>Capacity: ${r.capacity === null ? "n/a" : number(r.capacity, 0) + " MW"}<br>Shadow price: ${number(r.shadow_price)} €/MWh`;
+const constraintTooltip = (r: BindingRow, compact: boolean) =>
+  `<b>${r.name}</b>${compact ? "" : `<br>Binding under: ${r.contingency ?? "Base case (no contingency)"}`}<br>RAM: ${r.ram === null ? "n/a" : number(r.ram, 0) + " MW"} · Capacity: ${r.capacity === null ? "n/a" : number(r.capacity, 0) + " MW"}<br>Shadow price: ${number(r.shadow_price)} €/MWh`;
 
 export function selectionIds(interval: MarketInterval): string[] {
   return [...new Set([...interval.constraints.map(r=>r.eic), ...interval.caps.map(()=>'cap:PL')])];
@@ -99,6 +99,7 @@ export function dayFigure(
   reference: CoreZone,
   layout: PlotlyFigure["layout"],
   geojson: ReturnType<typeof zoneFeatures>,
+  compactTooltips = false,
 ): PlotlyFigure {
   const interval = bundle.intervals.find((i) => i.index === index);
   if (!interval) throw new Error("Interval is outside the selected day");
@@ -136,7 +137,7 @@ export function dayFigure(
   ];
   const assetHover = (rows: BindingRow[]) => {
     const ids = new Set(rows.map(r=>r.eic));
-    return interval.constraints.filter(r=>ids.has(r.eic)).map(hover).join('<br><br>');
+    return interval.constraints.filter(r=>ids.has(r.eic)).map(r=>constraintTooltip(r, compactTooltips)).join('<br><br>');
   };
   const rows = interval.constraints.filter((r) => r.geometry !== null);
   const lines = rows.filter(
@@ -307,9 +308,7 @@ export function dayFigure(
       origin = zones.find((z) => z.zone === reference);
     const labelX: number[] = [],
       labelY: number[] = [],
-      labels: string[] = [],
-      hovers: string[] = [],
-      backgrounds: string[] = [];
+      labels: string[] = [];
     if (values && origin)
       for (const z of zones) {
         const value = values[z.zone];
@@ -330,10 +329,7 @@ export function dayFigure(
           xs.push(x0 * (1 - t) + x1 * t);
           ys.push((1 - t) ** 2 * y0 + 2 * (1 - t) * t * cy + t * t * y1);
         }
-        const observed = interval.prices[z.zone]! - interval.prices[reference]!;
-        const text = `<b>Spread: ${z.zone} − ${reference}</b><br>Selected element’s combined contribution: ${signed(value)} /MWh<br>Total observed spread: ${signed(observed)} /MWh<br>Remainder (other constraints / source precision): ${signed(observed - value)} /MWh`;
-        const color = value < 0 ? teal : purple,
-          bg = value < 0 ? String(scale[0][1]) : lavender;
+        const color = value < 0 ? teal : purple;
         traces.push(
           scatter(`${z.zone} ray`, xs, ys, {
             mode: "lines+markers",
@@ -343,16 +339,12 @@ export function dayFigure(
               color,
             },
             opacity: 0.48,
-            hoverinfo: "text",
-            hovertext: text,
-            hoverlabel: { ...hoverlabel, bgcolor: bg, bordercolor: bg },
+            hoverinfo: "skip",
           }),
         );
         labelX.push(xs[12]);
         labelY.push(ys[12]);
         labels.push(signed(value));
-        hovers.push(text);
-        backgrounds.push(bg);
       }
     // Plotly cannot dispose an unrendered symbol layer when selection expires.
     // Do not introduce a temporary empty label trace between those two states.
@@ -363,13 +355,7 @@ export function dayFigure(
         textposition: "middle center",
         marker: { symbol: "circle" },
         textfont: { color: "white", size: 12 },
-        hoverinfo: "text",
-        hovertext: hovers,
-        hoverlabel: {
-          ...hoverlabel,
-          bgcolor: backgrounds,
-          bordercolor: backgrounds,
-        },
+        hoverinfo: "skip",
       }),
     );
   }

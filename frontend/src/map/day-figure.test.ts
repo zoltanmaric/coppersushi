@@ -12,7 +12,7 @@ function drawingFixture(): DayBundle {
       {source_id:2,eic:'11T0-0000-0984-D',name:'Line',direction:'OPPOSITE',contingency:'Other outage',shadow_price:2,capacity:200,ram:100,geometry:'line',ptdfs:{DE:0,PL:-0.2}},
       {source_id:3,eic:'11T0-0000-0986-7',name:'PST',direction:'DIRECT',contingency:null,shadow_price:1,capacity:200,ram:100,geometry:'pst',ptdfs:{DE:0,PL:0.1}}]}]};
 }
-function draw(selected:string|null) {const data=drawingFixture();return dayFigure(data,0,selected,'DE',{mapbox:{style:'dark'},uirevision:'camera'},zoneFeatures(data));}
+function draw(selected:string|null, compactTooltips=false) {const data=drawingFixture();return dayFigure(data,0,selected,'DE',{mapbox:{style:'dark'},uirevision:'camera'},zoneFeatures(data),compactTooltips);}
 
 test('opposite directions have opposite triangles and share line hit identities',()=>{
   const figure=draw(null);
@@ -73,6 +73,10 @@ test('asset rays sum opposite directions while tooltip keeps each contingency',(
   const text=(figure.data.find(t=>t.name==='select line')!.text as string[])[0];
   expect(text).toContain('Base case');
   expect(text).toContain('Other outage');
+  expect(text).not.toContain('Direction:');
+  for (const trace of figure.data.filter(t=>String(t.name).endsWith(' ray') || t.name==='ray contributions')) {
+    expect(trace.hoverinfo).toBe('skip');
+  }
 });
 
 test('one EIC highlights all of its distinct branches',()=>{
@@ -87,4 +91,13 @@ test('a selected asset with no binding rows has no rays or selection effect',()=
   const data=drawingFixture();data.intervals[0].constraints=[];
   const figure=dayFigure(data,0,'11T0-0000-0984-D','DE',{mapbox:{},uirevision:'camera'},zoneFeatures(data));
   expect(figure.data.some(t=>t.name==='selected CNEC' || t.name==='ray contributions')).toBe(false);
+});
+
+test('touch tooltips omit contingencies and keep both limits on one row',()=>{
+  const figure=draw('11T0-0000-0984-D',true);
+  const text=(figure.data.find(t=>t.name==='select line')!.text as string[])[0];
+  expect(text).not.toContain('Binding under:');
+  expect(text).not.toContain('Other outage');
+  expect(text).toContain('RAM: 100 MW · Capacity: 200 MW');
+  expect(text).toContain('Shadow price: 10.00 €/MWh');
 });
