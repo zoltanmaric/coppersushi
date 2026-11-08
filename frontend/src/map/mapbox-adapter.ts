@@ -6,6 +6,13 @@ export interface MapboxMap {
   touchPitch: {disable(): void};
   keyboard: {disableRotation(): void};
   getCanvasContainer(): HTMLElement;
+  addSource(id: string, source: object): void;
+  getSource(id: string): {setData(data: object): void} | undefined;
+  removeSource(id: string): void;
+  addLayer(layer: object): void;
+  getLayer(id: string): object | undefined;
+  removeLayer(id: string): void;
+  queryRenderedFeatures(point: [number, number], options: {layers: string[]}): {properties?: Record<string, unknown>}[];
   project(point: LngLat): {x: number; y: number};
   unproject(point: [number, number]): {lng: number; lat: number};
   isMoving(): boolean;
@@ -28,4 +35,9 @@ export function lockMapOrientation(map: MapboxMap) {
   map.touchZoomRotate.disableRotation();
   map.touchPitch.disable();
   map.keyboard.disableRotation();
+}
+
+/** Plotly's pinned Mapbox 1.13.4 fork has a constructor fadeDuration option but no public setter. */
+export function disableLabelFade(map: MapboxMap) {
+  (map as MapboxMap & {_fadeDuration: number})._fadeDuration = 0;
 }
