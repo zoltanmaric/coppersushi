@@ -11,13 +11,14 @@ const figure=(index:number):PlotlyFigure=>({data:[{name:String(index)}],layout:{
 let draws:{plot:PlotElement;figure:PlotlyFigure;resolve:()=>void;reject:(error:Error)=>void}[];
 let events:Map<string,(event:unknown)=>unknown>;
 let movement:Map<string,()=>void>;
+let hit:string;
 const selections:string[]=[];
 const props=(value:PlotlyFigure)=>({id:'map',figure:value,config,overlay:{ambient:[],selections:[]},hidden:false,
-  countries:[],onReference:()=>{},
+  countries:[],onReference:()=>{},compactTooltips:true,
   onClick:(event:unknown)=>selections.push((event as {points:{customdata:string[]}[]}).points[0].customdata[0])});
 
 beforeEach(()=>{
-  draws=[]; events=new Map(); movement=new Map(); selections.length=0;
+  draws=[]; events=new Map(); movement=new Map(); selections.length=0; hit='';
   vi.stubGlobal('PointerEvent',MouseEvent);
   // Only the GPU renderer is substituted: real React effects, event routing and promises run.
   window.Plotly={
@@ -28,6 +29,7 @@ beforeEach(()=>{
         plot.innerHTML='<div class="mapboxgl-canvas-container"><canvas class="mapboxgl-canvas" aria-label="Map canvas"></canvas></div><svg class="hoverlayer"></svg>';
         plot.on=(name,handler)=>{events.set(name,handler);};
         plot.removeListener=(name)=>{events.delete(name);};
+        plot.querySelector('canvas')!.addEventListener('click',()=>events.get('plotly_click')?.({points:[{customdata:[hit]}]}));
         Object.assign(plot,{_fullLayout:{mapbox:{_subplot:{map:{
           dragRotate:{disable:()=>{}},touchZoomRotate:{disableRotation:()=>{}},touchPitch:{disable:()=>{}},keyboard:{disableRotation:()=>{}},
           getCanvasContainer:()=>plot.querySelector('.mapboxgl-canvas-container')!,
@@ -40,6 +42,13 @@ beforeEach(()=>{
       return new Promise((resolve,reject)=>draws.push({plot,figure:view,resolve:()=>resolve(undefined),reject}));
     },
     purge:()=>{},
+    Fx:{
+      unhover:element=>{element.querySelector('.hovertext')?.remove();},
+      hover:(element,point)=>{
+        hit=point.xval<100 ? 'altheim' : 'cap:PL';
+        element.querySelector('.hoverlayer')!.innerHTML='<g class="hovertext"><text>Element details</text></g>';
+      },
+    },
   };
 });
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
@@ -83,6 +92,35 @@ test('native style mutations survive subsequent data updates without mutating th
   expect(draws[1].figure.layout).toBe(layout);
   expect((first.layout.mapbox.style as typeof style).layers).toEqual([]);
   await settle(1);
+});
+
+test('a complete touch gesture selects fresh hits, retains its click, and dismisses only on a separate tooltip tap',async()=>{
+  render(<MapGraph {...props(figure(0))}/>);
+  await waitFor(()=>expect(draws).toHaveLength(1));
+  await settle(0);
+  const canvas=screen.getByLabelText('Map canvas');
+  const tap=(x:number)=>{
+    fireEvent.pointerDown(canvas,{clientX:x,clientY:20});
+    fireEvent.pointerUp(canvas);
+    fireEvent.click(canvas);
+  };
+  tap(20); tap(120); tap(20);
+  expect(selections).toEqual(['altheim','cap:PL','altheim']);
+  const tooltip=screen.getByText('Element details');
+  fireEvent.pointerDown(tooltip);
+  fireEvent.pointerUp(tooltip);
+  fireEvent.click(tooltip);
+  expect(screen.queryByText('Element details')).toBeNull();
+  expect(selections).toHaveLength(3);
+  expect(events.get('plotly_beforehover')?.({})).toBe(false);
+  tap(120);
+  expect(selections.at(-1)).toBe('cap:PL');
+  await act(async()=>{movement.get('dragstart')?.();});
+  expect(screen.queryByText('Element details')).toBeNull();
+  expect(events.get('plotly_beforehover')?.({})).toBe(false);
+  tap(20);
+  expect(events.get('plotly_beforehover')?.({})).toBe(true);
+  expect(selections.at(-1)).toBe('altheim');
 });
 
 test('a failed replacement reports its error without enabling clicks on unconfirmed pixels',async()=>{

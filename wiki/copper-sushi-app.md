@@ -66,7 +66,7 @@ Physical rows show the [normalized flow-based contribution](flow-based-market-co
 
 A decorative electric effect marks the selected physical element; map-owned glyphs stay visible during movement and loading. Native Mapbox movement events control decoration visibility; gestures on non-map overlays do not change motion state. See the map-rendering limits above.
 
-Rays start at the reference country and carry signed euro labels for the selected constraint's contribution in €/MWh. Rays have no hover tooltip. Element tooltips combine RAM and capacity on one row; touch tooltips omit contingency details. Poland's aggregate-cap contribution is identical across its rays; physical-row contributions depend on the zonal PTDF difference. Rays never represent a physical power-flow path. The published dual and MW capacity are separate from that contribution. Normalized FB terms are not an exhaustive decomposition of FB plus long-term allocation welfare.
+Rays start at the reference country and carry signed euro labels for the selected constraint's contribution in €/MWh. Rays have no hover tooltip. Element tooltips combine RAM and capacity on one row; touch tooltips omit contingency details. Panning dismisses a tooltip without changing selection, and a separate touch on the tooltip dismisses it. Poland's aggregate-cap contribution is identical across its rays; physical-row contributions depend on the zonal PTDF difference. Rays never represent a physical power-flow path. The published dual and MW capacity are separate from that contribution. Normalized FB terms are not an exhaustive decomposition of FB plus long-term allocation welfare.
 
 
 ![Illustrative CNEC price-influence map](assets/cnec-price-influence-map-preview.png)

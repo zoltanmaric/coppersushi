@@ -114,7 +114,7 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
   return <section id={id} className="cnec-react">
     <IntervalPrefetch day={day} generation={generation} count={labels.length} enabled={!!data && !!metadata.data}/>
     <div className="cnec-map-container">
-      <MapGraph id={`${id}-map`} figure={graphFigure} onClick={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
+      <MapGraph compactTooltips={compactTooltips} id={`${id}-map`} figure={graphFigure} onClick={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
         countries={countries} onReference={reference=>dispatch({type:'reference',reference})}
         config={plotConfig}/>
 
@@ -137,6 +137,7 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
         {notes.map(note => <div role="status" key={note}>{note}</div>)}
         {([['Publication',publication],['Metadata',metadata],['Interval',intervalQuery]] as const).map(([name,query])=>query.error && <div role="alert" key={name}>{name}: {query.error.message}{data && !mapCurrent && ` Showing ${data.label.split(' · ')[1]}.`} <button onClick={()=>void query.refetch()}>Retry</button></div>)}
       </aside>
+
     <div className="cnec-bottom-controls">
     <div className="cnec-time-controls" aria-busy={!labels.length}>
 
