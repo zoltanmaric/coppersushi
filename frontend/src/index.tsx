@@ -104,8 +104,6 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
   if (current && selected !== null && current.constraints.some(r => r.eic === selected) &&
       contributions(current, selected, reference) === null)
     notes.push('Contribution unavailable: missing FB scaling factor or country sensitivities.');
-  if (current && selected !== null && !options.includes(selected))
-    notes.push(`Selected element ${selected} is not binding in this interval.`);
   function mapClick(event: unknown) {
     const action = mapSelection(event, options, selected, mapCurrent);
     if (action) dispatch(action);

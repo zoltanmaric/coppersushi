@@ -84,8 +84,8 @@ def is_embed_path(pathname: str, root_view: str = ROOT_VIEW) -> bool:
 
 def navigation() -> html.Nav:
     return html.Nav([
-        html.A('2024 OPF on the 2025 grid', href='/opf-2024'),
-        html.A('Prices and binding CNECs', href=f'/{CNEC_ROUTE}'),
+        html.A('Power Flow', href='/opf-2024'),
+        html.A('Critical Elements', href=f'/{CNEC_ROUTE}'),
     ], className='app-navigation')
 
 

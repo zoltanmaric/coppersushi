@@ -25,7 +25,7 @@ def test_failed_load_becomes_banner(monkeypatch):
 def test_the_cnec_link_names_no_day_so_the_page_opens_on_today(monkeypatch):
     monkeypatch.setattr(app, "mapbox_token", lambda: "token")
     links = (c for c in _components(app.show_page("/opf-2024")) if isinstance(c, html.A))
-    assert next(link for link in links if link.children == "Prices and binding CNECs").href == "/cnec"
+    assert next(link for link in links if link.children == "Critical Elements").href == "/cnec"
 
 
 def _components(component):
