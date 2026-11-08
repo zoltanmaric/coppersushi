@@ -75,10 +75,12 @@ def main() -> None:
     parser.add_argument('end', type=date.fromisoformat)
     parser.add_argument('--report', type=Path, required=True)
     parser.add_argument('--bucket', help='Publish eligible days; omitted means audit only')
+    parser.add_argument('--jao-requests-per-minute', type=int, choices=(90, 180), default=90,
+                        help='Shared request budget; 180 is an explicit throttle/backoff trial')
     args = parser.parse_args()
     if args.start > args.end or args.end >= datetime.now(tz=MARKET_TZ).date():
         parser.error('Require an ordered range ending before today')
-    jao._pacer = jao.RequestPacer(requests_per_minute=90, retry_attempts=3)
+    jao._pacer = jao.RequestPacer(requests_per_minute=args.jao_requests_per_minute, retry_attempts=3)
     done: set[date] = set()
     if args.report.exists():
         for line in args.report.read_text().splitlines():

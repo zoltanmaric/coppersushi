@@ -41,7 +41,10 @@ shared process limiter controls the aggregate request pace. The range CLI starts
 at 90 requests/minute with up to four independent attribution feeds in flight.
 HTTP 429 pauses all queued JAO calls using `Retry-After` (60 seconds if missing
 or invalid), reduces the shared rate by 20% (down to 40/minute), and retries a request up to three
-times. Other consumers retain the conservative 40/minute, fail-fast policy. Use job supervision
+times. Other consumers retain the conservative 40/minute, fail-fast policy.
+`--jao-requests-per-minute 180` enables an explicit measured trial above JAO’s
+published 100/minute quota; shared cooldowns and retries still apply. The default
+remains 90/minute. Use job supervision
 for long ranges. Reports contain source evidence and errors, and belong in ignored
 `data/`, not Git:
 

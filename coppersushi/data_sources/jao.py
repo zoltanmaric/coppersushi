@@ -103,8 +103,8 @@ class RequestPacer:
     """One process's shared JAO request-start budget and server-directed cooldown."""
 
     def __init__(self, requests_per_minute: int = 40, retry_attempts: int = 0) -> None:
-        if not 1 <= requests_per_minute <= 100 or retry_attempts < 0:
-            raise ValueError('Require 1..100 requests/minute and nonnegative retry attempts')
+        if requests_per_minute < 1 or retry_attempts < 0:
+            raise ValueError('Require positive requests/minute and nonnegative retry attempts')
         self._spacing = 60 / requests_per_minute
         self._max_spacing = max(self._spacing, 60 / 40)
         self.retry_attempts = retry_attempts

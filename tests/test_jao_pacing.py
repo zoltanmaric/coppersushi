@@ -16,7 +16,7 @@ END = pd.Timestamp('2026-01-02', tz='UTC')
 PAYLOAD = REPO / 'tests/fixtures/synthetic-jao/active-fb-day.json'
 
 
-@pytest.mark.parametrize('rate', [40, 90])
+@pytest.mark.parametrize('rate', [40, 90, 180])
 def test_parallel_endpoints_share_request_start_pacing(monkeypatch, rate):
     monkeypatch.setattr(jao, '_pacer', jao.RequestPacer(requests_per_minute=rate))
     starts = []
@@ -65,11 +65,12 @@ def test_http_date_cooldown_and_overlapping_429_do_not_shorten_wait(monkeypatch)
         pacer.wait()
 
 
-def test_backfill_retries_429_after_shared_cooldown(monkeypatch):
+@pytest.mark.parametrize('rate', [90, 180])
+def test_backfill_retries_429_after_shared_cooldown(monkeypatch, rate):
     now = [0.]
     monkeypatch.setattr(jao.time, 'monotonic', lambda: now[0])
     monkeypatch.setattr(jao.time, 'sleep', lambda delay: now.__setitem__(0, now[0] + delay))
-    pacer = jao.RequestPacer(requests_per_minute=90, retry_attempts=3)
+    pacer = jao.RequestPacer(requests_per_minute=rate, retry_attempts=3)
     monkeypatch.setattr(jao, '_pacer', pacer)
     starts = []
     headers = Message()
@@ -83,7 +84,7 @@ def test_backfill_retries_429_after_shared_cooldown(monkeypatch):
     assert jao._get('alphaFactor', START, END)
     assert starts == [0., 12.]
     assert jao._get('netPos', START, END)
-    assert starts[2] - starts[1] == pytest.approx((60 / 90) * 1.25)
+    assert starts[2] - starts[1] == pytest.approx((60 / rate) * 1.25)
 
 
 def test_backfill_retry_budget_is_finite(monkeypatch):
