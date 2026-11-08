@@ -9,10 +9,11 @@ from coppersushi.cnec_support import FIRST_DAY
 from coppersushi.data_sources import cache, credentials
 
 
-def render_shell(token: str) -> str:
+def render_shell(token: str, *, embed: bool = False) -> str:
     """Build a date-independent shell with safely embedded browser configuration."""
     config = json.dumps({'min_day': FIRST_DAY.isoformat(), 'token': token}).replace('<', r'\u003c')
-    return (REPO / 'frontend/index.html').read_text().replace('__CNEC_CONFIG__', config)
+    template = (REPO / 'frontend/index.html').read_text()
+    return template.replace('__CNEC_EMBED__', str(embed).lower()).replace('__CNEC_CONFIG__', config)
 
 
 def publish(bucket: str) -> None:
@@ -22,7 +23,7 @@ def publish(bucket: str) -> None:
     missing = [name for name in required if not (REPO / 'assets' / name).is_file()]
     if missing:
         raise ValueError(f'Build frontend assets before publication: {missing}')
-    html = render_shell(credentials.token('MAPBOX_TOKEN', REPO / '.secrets/.mapbox_token'))
+    token = credentials.token('MAPBOX_TOKEN', REPO / '.secrets/.mapbox_token')
     client = cache._client()
     prefix = 'data/cnec/v1/ui'
     for path in sorted((REPO / 'assets').iterdir()):
@@ -32,8 +33,10 @@ def publish(bucket: str) -> None:
         kind = mimetypes.guess_type(path.name)[0] or 'application/octet-stream'
         client.put_object(Bucket=bucket, Key=f'{prefix}/assets/{path.name}', Body=gzip.compress(content, mtime=0),
                           ContentType=kind, ContentEncoding='gzip', CacheControl='public,max-age=0,must-revalidate')
-    client.put_object(Bucket=bucket, Key=f'{prefix}/index.html', Body=gzip.compress(html.encode(), mtime=0),
-                      ContentType='text/html;charset=utf-8', ContentEncoding='gzip', CacheControl='public,max-age=60')
+    for filename, embed in [('index.html', False), ('embed.html', True)]:
+        html = render_shell(token, embed=embed)
+        client.put_object(Bucket=bucket, Key=f'{prefix}/{filename}', Body=gzip.compress(html.encode(), mtime=0),
+                          ContentType='text/html;charset=utf-8', ContentEncoding='gzip', CacheControl='public,max-age=60')
 
 
 def main() -> None:

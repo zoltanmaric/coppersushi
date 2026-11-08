@@ -80,17 +80,20 @@ resource "aws_cloudfront_distribution" "app" {
     compress               = true
   }
 
-  ordered_cache_behavior {
-    path_pattern           = "/cnec*"
-    target_origin_id       = "prepared-data"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
-    cached_methods         = ["GET", "HEAD"]
-    cache_policy_id        = aws_cloudfront_cache_policy.prepared[0].id
-    compress               = true
-    function_association {
-      event_type   = "viewer-request"
-      function_arn = aws_cloudfront_function.cnec_static[0].arn
+  dynamic "ordered_cache_behavior" {
+    for_each = ["/", "/cnec*", "/embed/cnec*"]
+    content {
+      path_pattern           = ordered_cache_behavior.value
+      target_origin_id       = "prepared-data"
+      viewer_protocol_policy = "redirect-to-https"
+      allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+      cached_methods         = ["GET", "HEAD"]
+      cache_policy_id        = aws_cloudfront_cache_policy.prepared[0].id
+      compress               = true
+      function_association {
+        event_type   = "viewer-request"
+        function_arn = aws_cloudfront_function.cnec_static[0].arn
+      }
     }
   }
 
@@ -174,7 +177,7 @@ resource "aws_cloudfront_function" "cnec_static" {
       var request = event.request;
       request.uri = request.uri.indexOf('/assets/') === 0
         ? '/data/cnec/v1/ui' + request.uri
-        : '/data/cnec/v1/ui/index.html';
+        : '/data/cnec/v1/ui/' + (request.uri.indexOf('/embed/cnec') === 0 ? 'embed.html' : 'index.html');
       return request;
     }
   JS

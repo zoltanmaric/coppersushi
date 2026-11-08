@@ -11,15 +11,23 @@ The web app is deployed
 [**here**](https://121gigawatts.org/copper-sushi-power-flow-european-grid/),
 along with an explanation of the main features.
 
-The app has two views: `/opf-2024` (29 August 2024, hourly, on the 2025 grid)
-and `/cnec` (prices and binding constraints). The CNEC view officially supports
+The homepage `/` shows Critical Elements: prices and binding constraints.
+`/cnec` opens the same map, and `/cnec/YYYY-MM-DD` selects a delivery day.
+Power Flow is at `/opf-2024` (29 August 2024, hourly, on the 2025 grid). The CNEC view officially supports
 delivery dates from **1 November 2026** onward; earlier dates are outside supported
-coverage. The supported-history sweep is pending; not every supported date has been verified. This cutoff does not apply to the separate OPF demonstration. `/embed/opf-2024` shows the OPF map
-and time controls without navigation. Both OPF layouts use the same solved network.
+coverage. The supported-history sweep is pending; not every supported date has been verified. This cutoff does not apply to the separate OPF demonstration.
 
-For the first rollout, `/` also shows the embed, preserving the article's existing
-iframe. `ROOT_VIEW=embed` is the default; set `ROOT_VIEW=full` only after the article
-uses `/embed/opf-2024`. Model details: [power-flow architecture](wiki/sushi-2.md).
+Both maps have header-free embeds: `/embed/cnec` (or `/embed/cnec/YYYY-MM-DD`)
+and `/embed/opf-2024`. Critical Elements embeds retain their date, interval,
+reference and element controls; URL query parameters work as on the full map.
+
+```html
+<iframe src="https://coppersushi.121gigawatts.org/embed/cnec"
+        title="Critical Elements map" width="100%" height="650"
+        style="border:0" loading="lazy"></iframe>
+```
+
+Model details: [power-flow architecture](wiki/sushi-2.md).
 
 Networks are versioned with [Git LFS](https://git-lfs.com). Install `git-lfs` system-wide (`brew install git-lfs`)
 so git works from any shell or IDE, run `git lfs install` once to register the filters that turn pointers into
@@ -37,7 +45,7 @@ flowchart TB
     publication -->|Immutable generation and manifest| prepared[("Prepared market files")]
     prepared -->|Private S3 objects| edge["CloudFront"]
     build["Static site build"] -->|Shell and assets in S3| edge
-    edge -->|Shell, assets and market data| browser["CNEC browser: React and Plotly"]
+    edge -->|Homepage, map embeds and market data| browser["CNEC browser: React and Plotly"]
     opf["OPF preparation"] -->|Hourly figures| server["OPF Dash application"]
     server <-->|Pages and callbacks| opfbrowser["OPF browser"]
     maps["Mapbox"] -->|Styles and tiles| browser
