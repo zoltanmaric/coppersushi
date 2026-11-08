@@ -33,3 +33,32 @@ The `publisher` image includes catalog inputs and outlines, without solved netwo
 OPF figures or a web server. It uses AWS's official Runtime Interface Client.
 
 Every physical binding row carries its required published EIC. Asset selection and aggregation use EIC; publication row IDs identify individual constraints and their PTDFs. Regenerate prepared days when this contract changes.
+
+## Historical backfill
+
+Audit a historical range before publishing. Run one process at a time so JAO's
+shared process limiter controls the aggregate request pace. Use job supervision
+for long ranges. Reports contain source evidence and errors, and belong in ignored
+`data/`, not Git:
+
+```sh
+python -m coppersushi.publication.data_sources.backfill 2025-11-05 2026-10-31 --report data/backfill/coverage.jsonl
+```
+
+Add `--bucket <cache_bucket>` to publish eligible days. Repeating a command skips
+successful report entries and retries blocked days. Existing S3 manifests are
+preserved. The command exits with status 1 if any attempted day is blocked.
+Each report line records monitoring receipts, physical active/PTDF row counts,
+expected market intervals, missing Polish alternatives and unavailable intervals.
+A nonempty constraints response never substitutes for a missing receipt; inspect
+adjacent monitoring dates, page names and statuses before choosing independent
+historical evidence. Such days remain blocked by this workflow.
+
+The backfill permits missing Polish alternative prices while retaining complete
+alpha, allocation limits, net positions and Core prices. Missing alternatives do
+not prove that caps were absent: safely interior positions establish nonbinding
+caps; near a bound, interval notes expose unavailable Polish attribution in the
+browser. See [publication coverage](../../wiki/country-import-export-caps.md#publication-coverage).
+The one-day CLI provides the same policy through `--allow-partial-attribution`.
+Scheduled publication stays strict. Neither path changes the browser's supported
+date boundary; move it only after the required generations have been verified.

@@ -39,3 +39,12 @@ def test_duplicate_receipt_is_invalid_not_pending() -> None:
     rows = receipts(day)
     with pytest.raises(ValueError, match='Duplicate'):
         require_received(day, rows + rows[:1])
+
+
+def test_historical_policy_does_not_bypass_missing_receipts(monkeypatch):
+    from coppersushi.publication.data_sources import bundles
+    day = MarketDay.on('2025-11-05')
+    monkeypatch.setattr(bundles.jao, '_get',
+                        lambda *args, **kwargs: [r.model_dump() for r in receipts(day)[1:]])
+    with pytest.raises(PublicationNotReady, match='Active FB Constraints'):
+        bundles.prepare(day, allow_partial_attribution=True)

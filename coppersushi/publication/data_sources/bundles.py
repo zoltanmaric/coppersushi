@@ -26,14 +26,14 @@ from coppersushi.market_day import MarketDay
 from coppersushi.publication.readiness import PublicationNotReady, PublicationReceipt, require_received
 
 
-def prepare(day: MarketDay, refresh: bool = False) -> DayBundle:
+def prepare(day: MarketDay, refresh: bool = False, *, allow_partial_attribution: bool = False) -> DayBundle:
     """Construct domain data without importing or invoking the web application's renderer."""
     key = day.date.isoformat()
     receipts = jao._get('monitoring', day.start_time_utc, day.end_time_utc,
                         base_url='https://publicationtool.jao.eu/core/api/system')
     require_received(day, [PublicationReceipt.model_validate(row) for row in receipts])
     context = cnec_attribution.load_day(day, refresh=refresh)
-    if not context.notna().all().all():
+    if not context.drop(columns=["polish_alt"] if allow_partial_attribution else []).notna().all().all():
         raise PublicationNotReady(f'Attribution feeds are incomplete for {day.date}')
     active = jao.load_active_day(key, refresh=refresh)
     prices = electricity_maps.load_day(key, refresh=refresh)
@@ -79,9 +79,9 @@ def is_published(day: MarketDay, bucket: str) -> bool:
     return True
 
 
-def publish(bundle: DayBundle, bucket: str) -> str:
+def publish(bundle: DayBundle, bucket: str, *, allow_partial_attribution: bool = False) -> str:
     """Write every immutable object before replacing the small day manifest."""
-    generation, files = cnec_bundle.publication_files(bundle)
+    generation, files = cnec_bundle.publication_files(bundle, allow_partial_attribution=allow_partial_attribution)
     client = cache._client()
     for key, content in files:
         lifetime = 'public,max-age=60' if key.endswith('/manifest.json') else 'public,max-age=31536000,immutable'
@@ -90,9 +90,9 @@ def publish(bundle: DayBundle, bucket: str) -> str:
     return generation
 
 
-def write_local(bundle: DayBundle, directory: Path) -> str:
+def write_local(bundle: DayBundle, directory: Path, *, allow_partial_attribution: bool = False) -> str:
     """Serve the exact same publication format from a local development server."""
-    generation, files = cnec_bundle.publication_files(bundle)
+    generation, files = cnec_bundle.publication_files(bundle, allow_partial_attribution=allow_partial_attribution)
     for key, content in files:
         cache.atomic_text(directory / key,content)
     return generation
@@ -105,10 +105,12 @@ def main() -> None:
     target.add_argument('--bucket')
     target.add_argument('--directory',type=Path)
     parser.add_argument('--refresh', action='store_true')
+    parser.add_argument('--allow-partial-attribution', action='store_true',
+                        help='Permit unavailable Polish cap attribution; all receipt checks still apply')
     args = parser.parse_args()
     day = MarketDay.on(args.day)
-    bundle = prepare(day,refresh=args.refresh)
-    print(publish(bundle,args.bucket) if args.bucket else write_local(bundle,args.directory))
+    bundle = prepare(day,refresh=args.refresh, allow_partial_attribution=args.allow_partial_attribution)
+    print(publish(bundle,args.bucket, allow_partial_attribution=args.allow_partial_attribution) if args.bucket else write_local(bundle,args.directory, allow_partial_attribution=args.allow_partial_attribution))
 
 if __name__ == '__main__':
     main()
