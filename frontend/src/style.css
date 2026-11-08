@@ -40,7 +40,7 @@
 .cnec-timeline-labels span {position:absolute;transform:translateX(-50%);white-space:nowrap}
 .cnec-timeline-labels span:first-child {transform:none}
 .cnec-timeline-labels span:last-child {transform:translateX(-100%)}
-@media(max-width:600px){
+@media(max-width:740px){
   .cnec-time-controls {padding-block:4px}
   .cnec-control-row {min-height:36px}
   .cnec-control-row button {height:36px}
