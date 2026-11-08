@@ -2087,6 +2087,17 @@ Usage (In Ghost editor):
     align-items: center;
 }
 
+/* Preserve figure spacing and the leading margins on headings, rules, and code. */
+.post-content > .kg-card:not(figure) + :is(p, ul, ol, dl, blockquote) {
+    margin-top: 1.5em;
+}
+
+@media (max-width: 500px) {
+    .post-content > .kg-card:not(figure) + :is(p, ul, ol, dl, blockquote) {
+        margin-top: 1.28em;
+    }
+}
+
 .post-full-content .kg-image {
     margin: 0 auto;
     max-width: 100%;
