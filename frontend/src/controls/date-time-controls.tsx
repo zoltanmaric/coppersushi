@@ -37,6 +37,14 @@ export function DateTimeControls({day, minDay, time, previousDisabled, nextDisab
         </svg>
         <span aria-hidden="true">{formatDay(day)}</span>
         <input aria-label="Delivery day" type="date" min={minDay} value={day}
+          onClick={e => {
+            try {
+              e.currentTarget.showPicker();
+              e.preventDefault();
+            } catch {
+              // Let the browser handle the native control if opening is unavailable.
+            }
+          }}
           onChange={e => {if (e.target.value >= minDay && e.target.value !== day) onDay(e.target.value);}}/>
       </label>
       <StepButton direction="next" aria-label="Next day" onClick={() => onDay(stepDay(day, 1))}/>
