@@ -29,6 +29,10 @@ def require_received(day: MarketDay, receipts: list[PublicationReceipt]) -> None
     if len(pages) != len(set(pages)):
         raise ValueError('Duplicate JAO monitoring publications for the delivery day')
     received = {r.page for r in current if r.status == 'Received'}
+    # JAO renamed Shadow Prices to Active FB constraints; historical monitoring
+    # retains the old label. An explicit new-label status always takes precedence.
+    if 'Active FB Constraints' not in pages and 'Shadow Prices' in received:
+        received.add('Active FB Constraints')
     missing = [page for page in REQUIRED_PUBLICATIONS if page not in received]
     if missing:
         raise PublicationNotReady(f'{day.date}: waiting for {", ".join(missing)}')

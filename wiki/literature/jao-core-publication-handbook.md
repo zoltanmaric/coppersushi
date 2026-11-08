@@ -43,3 +43,18 @@ Nothing in it ties an element to coordinates; substations are names only.
 ## Version-2.2
 
 The [July 2024 v2.2 handbook](https://publicationtool.jao.eu/PublicationHandbook/Core_PublicationTool_Handbook_v2.2.pdf) adds relevant detail: §5.30 documents the FB/LTA alpha factor; §5.15 distinguishes Core and whole-SDAC caps. `hubFrom`/`hubTo` identify the maximum zone-to-zone PTDF exchange, not physical element endpoints. The [country-cap API audit](../country-import-export-caps.md#public-data) and [spread-scaling audit](../flow-based-market-coupling.md#price-contribution) cover checks made on 2026-10-09; the hourly API observations above describe the 2024 sample, not a guarantee for quarter-hour feeds.
+
+## Monitoring-labels
+
+JAO's [2 August 2024 change notice](https://www.jao.eu/news/core-da-publication-tool-update-planned)
+renames Shadow Prices to Active FB constraints while retaining the `/shadowPrices`
+API endpoint. Historical monitoring retains the old name: probes on 2026-11-08
+found `Shadow Prices: Received` for delivery 2025-11-04–06, whereas 2026-05-06
+and 2026-11-05 used `Active FB Constraints: Received`. For 2025-11-05,
+`shadowPrices` and `activeFbConstraints` returned identical lists of 385 raw rows
+(316 physical constraint rows after classification).
+
+The publisher accepts `Shadow Prices: Received` when the new label is absent.
+An explicit new-label status takes precedence; the old label cannot override
+`Expected` or `Pending`. This is receipt-name compatibility, not inference of
+completeness from a nonempty response.

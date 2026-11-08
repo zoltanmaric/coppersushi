@@ -50,6 +50,9 @@ successful report entries and retries blocked days. Existing S3 manifests are
 preserved. The command exits with status 1 if any attempted day is blocked.
 Each report line records monitoring receipts, physical active/PTDF row counts,
 expected market intervals, missing Polish alternatives and unavailable intervals.
+Historical `Shadow Prices: Received` is accepted when the renamed `Active FB
+Constraints` receipt is absent; an explicit new-label status takes precedence.
+See [monitoring labels](../../wiki/literature/jao-core-publication-handbook.md#monitoring-labels).
 A nonempty constraints response never substitutes for a missing receipt; inspect
 adjacent monitoring dates, page names and statuses before choosing independent
 historical evidence. Such days remain blocked by this workflow.

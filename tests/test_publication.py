@@ -48,3 +48,22 @@ def test_historical_policy_does_not_bypass_missing_receipts(monkeypatch):
                         lambda *args, **kwargs: [r.model_dump() for r in receipts(day)[1:]])
     with pytest.raises(PublicationNotReady, match='Active FB Constraints'):
         bundles.prepare(day, allow_partial_attribution=True)
+
+
+def test_legacy_shadow_prices_receipt_identifies_active_fb_publication():
+    day = MarketDay.on('2025-11-05')
+    rows = receipts(day)
+    rows[0] = rows[0].model_copy(update={'page':'Shadow Prices'})
+    require_received(day, rows)
+    with pytest.raises(PublicationNotReady, match='Active FB Constraints'):
+        require_received(day, [rows[0].model_copy(update={'status':'Pending'}), *rows[1:]])
+
+
+@pytest.mark.parametrize('status', ['Expected', 'Pending'])
+def test_legacy_receipt_does_not_override_explicit_current_status(status):
+    day = MarketDay.on('2025-11-05')
+    rows = receipts(day)
+    legacy = rows[0].model_copy(update={'page':'Shadow Prices'})
+    rows[0] = rows[0].model_copy(update={'status':status})
+    with pytest.raises(PublicationNotReady, match='Active FB Constraints'):
+        require_received(day, [*rows, legacy])

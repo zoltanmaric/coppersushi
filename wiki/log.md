@@ -379,3 +379,7 @@ Recorded [the shared camera/layer ownership limitation](copper-sushi-app.md) beh
 ## [2026-11-06] query | Native camera ownership for electric decoration
 
 The camera review reproduced electricity hidden after an initial programmatic fit and identified drift under rotation/inertial movement. Plotly's progress and completion forwarding does not cover the full native camera lifecycle. [Map rendering direction](copper-sushi-app.md#map-rendering-direction) records why native projection/event observation removes the copied camera, and why the remaining private acquisition is evidence for direct map ownership rather than a need to change UI frameworks.
+
+## [2026-11-08] query | Historical JAO monitoring names
+
+[Monitoring probes](literature/jao-core-publication-handbook.md#monitoring-labels) and JAO's rename notice establish that historical `Shadow Prices` receipts identify the Active FB publication. The missing new label on 2025-11-05 was a compatibility problem in the publisher's readiness check, not evidence that JAO failed to publish the constraints.
