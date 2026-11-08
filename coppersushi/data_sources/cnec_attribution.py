@@ -1,7 +1,7 @@
 """Small public JAO feeds required for normalized FB and Polish cap attribution."""
 
 import tempfile
-import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from pathlib import Path
 
@@ -34,25 +34,23 @@ def load_day(day: MarketDay, refresh: bool = False) -> DataFrame[AttributionCont
             raise ValueError(f"Incomplete attribution cache for {day_key}")
         return frame
 
-    def fetch[T: JaoRecord](endpoint: str, model: type[T], pause: bool = True) -> list[T]:
-        if pause:
-            # Conservative local pacing; concurrent callers still share the IP's quota.
-            # Official limit and bulk-query guidance: wiki/jao-availability.md#rate-limits.
-            time.sleep(1.5)
+    def fetch[T: JaoRecord](endpoint: str, model: type[T]) -> list[T]:
         kwargs = {"base_url": "https://publicationtool.jao.eu/crossCCR/api/data"} if endpoint == "DA_PL_AC" else {}
         rows = jao._get(endpoint, day.start_time_utc, day.end_time_utc,
                         timeout=10, **kwargs)
         return [model.model_validate(row) for row in rows]
 
-    frame = cnec_attribution.context(
-        day,
-        fetch("alphaFactor", AlphaFactor, pause=False),
-        fetch("allocationConstraint", AllocationConstraint),
-        fetch("netPos", NetPosition),
-        # JAO omitted 00:00–01:00 UTC on 2026-10-25 even for the full 25-hour query.
-        # See wiki/country-import-export-caps.md#publication-coverage for evidence and gaps.
-        fetch("DA_PL_AC", PolishAlternative) if day.date >= POLISH_ALTERNATIVE_PUBLICATION_START else [],
-    )
+    # Independent feeds share JAO's process-wide request budget and cooldown.
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        alpha = pool.submit(fetch, 'alphaFactor', AlphaFactor)
+        allocation = pool.submit(fetch, 'allocationConstraint', AllocationConstraint)
+        positions = pool.submit(fetch, 'netPos', NetPosition)
+        polish = (pool.submit(fetch, 'DA_PL_AC', PolishAlternative)
+                  if day.date >= POLISH_ALTERNATIVE_PUBLICATION_START else None)
+        frame = cnec_attribution.context(
+            day, alpha.result(), allocation.result(), positions.result(),
+            polish.result() if polish is not None else [],
+        )
     if frame.notna().all().all():
         path.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(dir=path.parent, suffix=".csv", delete=False) as file:

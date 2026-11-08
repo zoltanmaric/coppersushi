@@ -78,6 +78,7 @@ def main() -> None:
     args = parser.parse_args()
     if args.start > args.end or args.end >= datetime.now(tz=MARKET_TZ).date():
         parser.error('Require an ordered range ending before today')
+    jao._pacer = jao.RequestPacer(requests_per_minute=90, retry_attempts=3)
     done: set[date] = set()
     if args.report.exists():
         for line in args.report.read_text().splitlines():

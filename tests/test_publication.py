@@ -86,6 +86,7 @@ def test_interrupted_checkpoint_preserves_report_and_resume_skips_existing_manif
     import sys
     from pathlib import Path
     from coppersushi.publication.data_sources import backfill
+    monkeypatch.setattr(backfill.jao, '_pacer', backfill.jao.RequestPacer())
     report = tmp_path / 'report.jsonl'
     original = (Path(__file__).parent / 'fixtures/backfill/blocked.json').read_text()
     report.write_text(original)

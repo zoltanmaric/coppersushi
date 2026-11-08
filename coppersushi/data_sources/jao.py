@@ -102,7 +102,12 @@ class RateLimited(RuntimeError):
 class RequestPacer:
     """One process's shared JAO request-start budget and server-directed cooldown."""
 
-    def __init__(self) -> None:
+    def __init__(self, requests_per_minute: int = 40, retry_attempts: int = 0) -> None:
+        if not 1 <= requests_per_minute <= 100 or retry_attempts < 0:
+            raise ValueError('Require 1..100 requests/minute and nonnegative retry attempts')
+        self._spacing = 60 / requests_per_minute
+        self._max_spacing = max(self._spacing, 60 / 40)
+        self.retry_attempts = retry_attempts
         self._lock = threading.Lock()
         self._next_start = 0.0
         self._blocked_until = 0.0
@@ -113,10 +118,11 @@ class RequestPacer:
                 now = time.monotonic()
                 if now < self._blocked_until:
                     seconds = math.ceil(self._blocked_until - now)
-                    raise RateLimited(f"JAO rate limit: retry in {seconds} seconds.")
-                delay = self._next_start - now
+                    if not self.retry_attempts:
+                        raise RateLimited(f"JAO rate limit: retry in {seconds} seconds.")
+                delay = max(self._next_start, self._blocked_until) - now
                 if delay <= 0:
-                    self._next_start = now + 1.5
+                    self._next_start = now + self._spacing
                     return
             # Keep the lock available so a concurrent 429 can stop queued callers.
             time.sleep(delay)
@@ -137,6 +143,8 @@ class RequestPacer:
             seconds = 60.0
         with self._lock:
             self._blocked_until = max(self._blocked_until, time.monotonic() + seconds)
+            if self.retry_attempts:
+                self._spacing = min(self._max_spacing, self._spacing * 1.25)
 
 
 _pacer = RequestPacer()
@@ -151,14 +159,20 @@ def _get(
     window = {"FromUtc": _stamp(start), "ToUtc": _stamp(end), "Take": 100_000_000}
     url = f"{base_url}/{endpoint}?{urllib.parse.urlencode(window)}"
     logger.info("jao: GET %s %s..%s", endpoint, window["FromUtc"], window["ToUtc"])
-    _pacer.wait()
-    try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:
-            payload = json.load(response)
-    except urllib.error.HTTPError as error:
-        if error.code == 429:
+    for attempt in range(_pacer.retry_attempts + 1):
+        _pacer.wait()
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as response:
+                payload = json.load(response)
+            break
+        except urllib.error.HTTPError as error:
+            if error.code != 429:
+                raise
             _pacer.throttle(error.headers.get("Retry-After"))
-        raise
+            logger.warning('JAO throttled %s; shared cooldown applied (attempt %d, rate %.1f/min)',
+                           endpoint, attempt + 1, 60 / _pacer._spacing)
+            if attempt == _pacer.retry_attempts:
+                raise
     rows = payload["data"]
     if "totalRows" in payload:
         check_complete(endpoint, rows, payload["totalRows"])
