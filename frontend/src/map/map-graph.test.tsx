@@ -12,13 +12,14 @@ let draws:{plot:PlotElement;figure:PlotlyFigure;resolve:()=>void;reject:(error:E
 let events:Map<string,(event:unknown)=>unknown>;
 let movement:Map<string,()=>void>;
 let hit:string;
+let countryHit:string | null;
 const selections:string[]=[];
 const props=(value:PlotlyFigure)=>({id:'map',figure:value,config,overlay:{ambient:[],selections:[]},hidden:false,
   countries:[],onReference:()=>{},compactTooltips:true,
   onClick:(event:unknown)=>selections.push((event as {points:{customdata:string[]}[]}).points[0].customdata[0])});
 
 beforeEach(()=>{
-  draws=[]; events=new Map(); movement=new Map(); selections.length=0; hit='';
+  draws=[]; events=new Map(); movement=new Map(); selections.length=0; hit=''; countryHit=null;
   vi.stubGlobal('PointerEvent',MouseEvent);
   // Only the GPU renderer is substituted: real React effects, event routing and promises run.
   window.Plotly={
@@ -33,6 +34,9 @@ beforeEach(()=>{
         Object.assign(plot,{_fullLayout:{mapbox:{_subplot:{map:{
           dragRotate:{disable:()=>{}},touchZoomRotate:{disableRotation:()=>{}},touchPitch:{disable:()=>{}},keyboard:{disableRotation:()=>{}},
           getCanvasContainer:()=>plot.querySelector('.mapboxgl-canvas-container')!,
+          addSource:()=>{},getSource:()=>({setData:()=>{}}),removeSource:()=>{},
+          addLayer:()=>{},getLayer:()=>({}),removeLayer:()=>{},
+          queryRenderedFeatures:()=>countryHit ? [{properties:{zone:countryHit}}] : [],
           project:()=>({x:0,y:0}),unproject:([x,y]:number[])=>({lng:x,lat:y}),
           isMoving:()=>false,getPitch:()=>0,getBearing:()=>0,getBounds:()=>({getWest:()=>-180,getEast:()=>180}),
           on:(name:string,handler:()=>void)=>movement.set(name,handler),off:(name:string)=>movement.delete(name),
@@ -146,7 +150,10 @@ test('same-figure navigation keeps the newest intent callbacks outside the rende
   await settle(0);
   // Two pending interval requests can share the same visible placeholder figure.
   rerender(<MapGraph {...request(2)}/>);
-  fireEvent.click(screen.getByRole('button',{name:'Use Germany as reference'}));
+  countryHit='DE';
+  const canvas=screen.getByLabelText('Map canvas');
+  fireEvent.pointerDown(canvas,{clientX:20,clientY:20});
+  fireEvent.click(canvas,{clientX:20,clientY:20});
   await act(async()=>{events.get('plotly_click')?.({points:[]});});
   expect(destinations).toEqual([2,2]);
   expect(draws).toHaveLength(1);

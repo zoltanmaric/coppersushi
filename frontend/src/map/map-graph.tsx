@@ -32,7 +32,7 @@ export function MapGraph(props: Props) {
   useLayoutEffect(() => {interaction.current = {interactive, onClick:props.onClick};});
   const host = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<MapboxMap | null>(null);
-  const gestures = useMapGestures(host, map, props.compactTooltips);
+  const gestures = useMapGestures(host, map, props.compactTooltips, zone => {if (interactive) props.onReference(zone);});
   const completionFrame = useRef<number | null>(null);
   useEffect(() => () => {if (completionFrame.current !== null) cancelAnimationFrame(completionFrame.current);}, []);
   const complete = () => {
@@ -53,8 +53,7 @@ export function MapGraph(props: Props) {
       onError={error => {setError(error.message);complete();}}
       onClick={event => {if (interaction.current.interactive) interaction.current.onClick(event);}}
       onBeforeHover={gestures.beforeHover}/>
-    <MapDecoration map={map} model={overlay} hidden={hidden} countries={countries}
-      onReference={zone => {if (interactive) props.onReference(zone);}}/>
+    <MapDecoration map={map} model={overlay} hidden={hidden} countries={countries}/>
     {error && <div role="alert">Map: {error}</div>}
   </div>;
 }

@@ -81,13 +81,8 @@
 .cnec-reference select {font:inherit;font-size:18px;font-weight:600;border:0;background:#202020;color:#fff;color-scheme:dark;min-height:28px;cursor:pointer}
 @media(max-width:450px){.cnec-map-tools {left:12px;right:12px;max-width:none;gap:8px}.cnec-price-legend {flex:1;min-width:0}.cnec-reference {min-width:95px}}
 
-/* Keep country text above the canvas but below Plotly’s sibling tooltip SVG. */
+/* Keep electric decoration below Plotly’s sibling tooltip SVG. */
 .cnec-map-container .mapboxgl-canvas-container {isolation:isolate}
-.cnec-country-labels {position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden;font:14px Arial,sans-serif}
-.cnec-country-labels button {position:absolute;left:0;top:0;padding:0;border:0;background:none;color:white;font:inherit;line-height:18px;text-align:center;white-space:nowrap;pointer-events:auto;cursor:pointer}
-.cnec-country-labels span {display:block}
-.cnec-country-labels button:focus-visible {outline:1px solid white;outline-offset:3px}
-
 /* Touch tooltips can be dismissed without passing the tap through to the map. */
 @media (pointer:coarse) {.cnec-map-container .hoverlayer .hovertext {pointer-events:all}}
 

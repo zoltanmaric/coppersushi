@@ -6,12 +6,11 @@ import type {MapboxMap} from './mapbox-adapter';
 import type {OverlayModel} from './overlay-model';
 import {CountryLabels} from './country-labels';
 import type {CountryLabel} from './country-labels';
-import type {CoreZone} from '../market/reference';
 
 /** Native movement updates decoration without requesting or redrawing a market figure. */
-export function MapDecoration({map, model, hidden, countries, onReference}: {
+export function MapDecoration({map, model, hidden, countries}: {
   map: MapboxMap | null; model: OverlayModel; hidden: boolean;
-  countries: CountryLabel[]; onReference: (zone: CoreZone) => void;
+  countries: CountryLabel[];
 }) {
   const [, redraw] = useReducer(n => n + 1, 0);
   useEffect(() => {
@@ -30,6 +29,6 @@ export function MapDecoration({map, model, hidden, countries, onReference}: {
   } : null;
   return map && createPortal(<>
     <ConstraintOverlay model={model} project={visible ? project : null}/>
-    <CountryLabels labels={countries} map={map} onReference={onReference}/>
+    <CountryLabels labels={countries} map={map}/>
   </>, map.getCanvasContainer());
 }
