@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from coppersushi.data_sources import cnec_attribution, electricity_maps, jao
+from coppersushi.data_sources import cache, cnec_attribution, electricity_maps, jao
 from coppersushi.market_day import MARKET_TZ, MarketDay
 from coppersushi.publication import bundle
 from coppersushi.publication.data_sources import bundles
@@ -105,8 +105,8 @@ def main() -> None:
                 except Exception as error:
                     result.status = 'blocked'
                     result.errors.append(f'publication: {type(error).__name__}: {error}')
-            with args.report.open('a') as report:
-                report.write(result.model_dump_json() + '\n')
+            previous = args.report.read_text() if args.report.exists() else ''
+            cache.atomic_text(args.report, previous + result.model_dump_json() + '\n')
             print(f'{current}: {result.status}; {"; ".join(result.errors)}', flush=True)
             blocked |= result.status == 'blocked'
         current += timedelta(days=1)

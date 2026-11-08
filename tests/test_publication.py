@@ -67,3 +67,51 @@ def test_legacy_receipt_does_not_override_explicit_current_status(status):
     rows[0] = rows[0].model_copy(update={'status':status})
     with pytest.raises(PublicationNotReady, match='Active FB Constraints'):
         require_received(day, [*rows, legacy])
+
+
+@pytest.mark.parametrize('alpha', [-0.01, 1.01, float('inf')])
+def test_attribution_boundary_rejects_out_of_range_alpha(alpha):
+    from pathlib import Path
+    import pandas as pd
+    from pandera.errors import SchemaError
+    from coppersushi.data_model.cnec_attribution import AttributionContext
+    path = Path(__file__).parent / 'fixtures/cnec-attribution/observed/context.csv'
+    frame = pd.read_csv(path)
+    frame.interval = pd.to_datetime(frame.interval, utc=True)
+    with pytest.raises(SchemaError):
+        AttributionContext.validate(frame.assign(alpha=alpha))
+
+
+def test_interrupted_checkpoint_preserves_report_and_resume_skips_existing_manifest(tmp_path, monkeypatch):
+    import sys
+    from pathlib import Path
+    from coppersushi.publication.data_sources import backfill
+    report = tmp_path / 'report.jsonl'
+    original = (Path(__file__).parent / 'fixtures/backfill/blocked.json').read_text()
+    report.write_text(original)
+    result = backfill.Coverage.model_validate_json(original).model_copy(
+        update={'status':'eligible', 'errors':[]})
+    monkeypatch.setattr(backfill, 'audit', lambda day: result.model_copy())
+    monkeypatch.setattr(sys, 'argv', ['backfill', '2025-11-05', '2025-11-05',
+                                    '--report', str(report), '--bucket', 'test'])
+    published = []
+    monkeypatch.setattr(backfill.bundles, 'is_published', lambda *args: bool(published))
+    monkeypatch.setattr(backfill.bundles, 'prepare', lambda *args, **kwargs: object())
+    monkeypatch.setattr(backfill.bundle, 'validate_publication', lambda *args, **kwargs: None)
+    monkeypatch.setattr(backfill.bundles, 'publish', lambda *args, **kwargs: published.append(True))
+    replace = Path.replace
+    def interrupted_replace(source, target):
+        if target == report:
+            raise OSError('interrupted before checkpoint replacement')
+        return replace(source, target)
+    monkeypatch.setattr(Path, 'replace', interrupted_replace)
+    with pytest.raises(OSError, match='interrupted'):
+        backfill.main()
+    assert report.read_text() == original
+    assert len(published) == 1
+    monkeypatch.setattr(Path, 'replace', replace)
+    with pytest.raises(SystemExit) as exit:
+        backfill.main()
+    assert exit.value.code == 0
+    assert len(published) == 1
+    assert backfill.Coverage.model_validate_json(report.read_text().splitlines()[-1]).status == 'published'

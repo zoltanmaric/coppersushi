@@ -54,7 +54,7 @@ class AttributionContext(pa.DataFrameModel):
     """Table of scaling and Polish cap inputs, one UTC market interval per row."""
 
     interval: Series[ZonedTimestamp] = pa.Field(dtype_kwargs={"tz": datetime.UTC}, unique=True)
-    alpha: Series[float] = pa.Field(nullable=True)
+    alpha: Series[float] = pa.Field(nullable=True, ge=0, le=1)
     import_limit: Series[float] = pa.Field(nullable=True)
     export_limit: Series[float] = pa.Field(nullable=True)
     polish_position: Series[float] = pa.Field(nullable=True)
