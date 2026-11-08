@@ -117,7 +117,7 @@ test('the mounted graph selects constraints using current interval options', asy
 test('an unprepared day shows availability and never starts upstream work', async()=>{
   vi.mocked(fetch).mockResolvedValueOnce(new Response(null,{status:404}));
   render(<CnecView id="cnec" day="2024-08-29" min_day="2024-01-01" token="token" basemap="dark"/>);
-  await screen.findByText(/This day has not been prepared yet/);
+  await screen.findByText(/Data is unavailable for this day/);
   expect(fetch).toHaveBeenCalledTimes(1);
   expect(pending).toHaveLength(0);
 });

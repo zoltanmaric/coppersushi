@@ -104,3 +104,10 @@ dates Advanced Hybrid Coupling to delivery June 11 and lists RAM-at-clearing and
 exchange-publication issues. It does not establish the cause of either observed
 gap. Recovery from another authoritative publication or an explicit incomplete-data
 product contract remains necessary before publishing these dates.
+
+**Disposition, 2026-11-09:** accept June 2–9 and June 11 as nine unavailable days
+in the historical product. Do not synthesize alpha, waive receipt evidence or keep
+investigating/retrying these known gaps. Preserve the observations above; missing
+manifests keep these days unavailable. Completion means publishing and verifying
+the other 352 days in the 361-day range; these nine gaps do not block extending
+the supported history. Unexpected failures remain retryable work.

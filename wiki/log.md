@@ -387,3 +387,11 @@ The camera review reproduced electricity hidden after an initial programmatic fi
 ## [2026-11-09] query | June alpha and monitoring gaps
 
 [Controlled source probes](jao-availability.md#historical-gaps) confirm missing alpha on June 2–9 despite Received monitoring statuses, and complete June 11 net-position data without its monitoring receipt. Alternate time windows and neighboring-day controls rule out the tested date-filter explanations. No safe substitute source was found; both gaps remain publication blockers.
+
+## [2026-11-09] query | Polish cap comparison during the June gap
+
+[The June consistency check](country-import-export-caps.md#poland-validation) found 81 of 768 Core positions outside published Polish allocation bounds, with fresh limits matching retained evidence. Cap binding cannot be established from this comparison. Alpha is separately required by normalized physical-constraint attribution across Core.
+
+## [2026-11-09] decision | Accept nine unavailable June days
+
+[Historical coverage](jao-availability.md#historical-gaps) accepts June 2–9 and June 11 as unavailable. End recovery investigation; finish and verify the other 352 requested days. Missing inputs remain missing, and these accepted gaps do not block extending the supported historical window.
