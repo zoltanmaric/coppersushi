@@ -9,7 +9,7 @@
 .cnec-panel {background:rgba(18,18,18,.85);border-radius:5px;color:#eee}
 .cnec-bottom-controls {position:absolute;bottom:calc(4px + env(safe-area-inset-bottom,0px));left:16px;right:16px;display:grid;gap:4px;z-index:3}
 .cnec-footer {display:grid;place-items:center;min-height:24px}
-.cnec-time-controls {padding:8px 6px;display:flex;flex-wrap:wrap;align-items:center;column-gap:12px;z-index:3;border-radius:10px}
+.cnec-time-controls {padding:8px 6px;display:flex;flex-wrap:wrap;align-items:flex-start;column-gap:12px;z-index:3;border-radius:10px}
 .cnec-date-time {flex:0 1 auto;margin-inline:auto;display:flex;flex-wrap:wrap;justify-content:center;column-gap:4px;font-size:14px}
 .cnec-control-row {display:grid;grid-template-columns:40px max-content 40px;flex:none;align-items:center;justify-content:center;text-align:center;min-height:44px}
 .cnec-control-row button {display:flex;align-items:center;justify-content:center;height:44px;padding:0;border:0;border-radius:6px;background:transparent;color:inherit;cursor:pointer}
@@ -27,20 +27,26 @@
 .cnec-react {position:relative;height:100%}
 .cnec-progress {top:120px}
 @media(max-width:700px){.cnec-bottom-controls {left:12px;right:12px}}
-@media(max-width:600px){.cnec-time-controls {padding-block:4px}.cnec-timeline-labels {display:none}}
 
-.cnec-timeline {position:relative;min-width:0;height:36px;--cnec-time-progress:0%}
-.cnec-timeline input {appearance:none;height:36px;background:transparent;margin:0;padding:0;border:0;box-sizing:border-box;display:block;width:100%;cursor:ew-resize}
+.cnec-timeline {position:relative;min-width:0;height:52px;--cnec-time-progress:0%}
+.cnec-timeline input {appearance:none;height:44px;background:transparent;margin:0;padding:0;border:0;box-sizing:border-box;display:block;width:100%;cursor:ew-resize}
 .cnec-timeline input:focus-visible {outline:2px solid #af77ed;outline-offset:2px;border-radius:4px}
 .cnec-timeline input:disabled {opacity:.4;cursor:default}
 .cnec-timeline input::-webkit-slider-runnable-track {height:4px;border-radius:4px;background:linear-gradient(to right,#af77ed var(--cnec-time-progress),#55585f var(--cnec-time-progress))}
 .cnec-timeline input::-moz-range-track {height:4px;border-radius:4px;background:linear-gradient(to right,#af77ed var(--cnec-time-progress),#55585f var(--cnec-time-progress))}
 .cnec-timeline input::-webkit-slider-thumb {appearance:none;width:16px;height:16px;border-radius:50%;background:#d4b6f1;border:0;margin-top:-6px}
 .cnec-timeline input::-moz-range-thumb {width:16px;height:16px;border-radius:50%;background:#d4b6f1;border:0}
-.cnec-timeline-labels {position:absolute;top:32px;left:8px;right:8px;pointer-events:none;color:#b4b6bd;font-size:11px;line-height:16px;font-variant-numeric:tabular-nums}
+.cnec-timeline-labels {position:absolute;top:36px;left:8px;right:8px;pointer-events:none;color:#b4b6bd;font-size:11px;line-height:16px;font-variant-numeric:tabular-nums}
 .cnec-timeline-labels span {position:absolute;transform:translateX(-50%);white-space:nowrap}
 .cnec-timeline-labels span:first-child {transform:none}
 .cnec-timeline-labels span:last-child {transform:translateX(-100%)}
+@media(max-width:600px){
+  .cnec-time-controls {padding-block:4px}
+  .cnec-control-row {min-height:36px}
+  .cnec-control-row button {height:36px}
+  .cnec-timeline,.cnec-timeline input {height:28px}
+  .cnec-timeline-labels {display:none}
+}
 
 /* Plotly draws the compact attribution icon on the parent pseudo-element. */
 .cnec-map-container .mapboxgl-ctrl-attrib-button {position:absolute;inset:0;width:20px;height:20px;padding:0;border:0;background:transparent;cursor:pointer}
