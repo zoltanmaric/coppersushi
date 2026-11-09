@@ -18,9 +18,10 @@
 .cnec-control-row>button:focus-visible {outline:2px solid #af77ed;outline-offset:1px}
 .cnec-control-row .cnec-date-picker {display:flex;align-items:center;gap:6px;white-space:nowrap;font:inherit;padding-inline:4px}
 .cnec-date-picker svg {color:#b6b6bd;flex-shrink:0}
-.cnec-calendar {background:#1c1c23;color:#eee;border:1px solid #555;border-radius:12px;padding:16px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);box-sizing:border-box;box-shadow:0 12px 48px #0008}
-.cnec-calendar::backdrop {background:#0006}
+.cnec-calendar {margin:0;width:max-content;overflow:auto;background:#1c1c23;color:#eee;border:1px solid #555;border-radius:12px;padding:16px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);box-sizing:border-box;box-shadow:0 12px 48px #0008}
+.cnec-calendar::backdrop {background:transparent}
 .cnec-calendar .rdp-root {--rdp-accent-color:#c69af5;--rdp-accent-background-color:#39294d;--rdp-day-width:40px;--rdp-day-height:40px;--rdp-day_button-width:38px;--rdp-day_button-height:38px;font-size:14px}
+@media(max-width:360px){.cnec-calendar .rdp-root {--rdp-day-width:36px;--rdp-day_button-width:34px}}
 .cnec-calendar button {cursor:pointer;color:inherit}
 .cnec-calendar button:focus-visible {outline:2px solid #c69af5;outline-offset:2px}
 .cnec-calendar-close {display:block;margin:12px 0 0 auto;padding:6px 12px;background:transparent;border:1px solid #666;border-radius:6px;font:inherit}
