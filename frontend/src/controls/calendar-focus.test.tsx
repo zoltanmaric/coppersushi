@@ -1,20 +1,18 @@
 // @vitest-environment jsdom
 import React from 'react';
-import {cleanup, fireEvent, render} from '@testing-library/react';
+import {cleanup, render, screen} from '@testing-library/react';
 import {afterEach, expect, test, vi} from 'vitest';
-import {DayPicker} from '@daypicker/react';
-import {CalendarDayButton} from './date-time-controls';
+import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
+import {DateTimeControls} from './date-time-controls';
 
-afterEach(() => {cleanup(); vi.restoreAllMocks();});
+afterEach(() => {cleanup(); vi.unstubAllGlobals();});
 
-test('calendar opening and arrow navigation focus days without scrolling the containing article', () => {
-  const focus = vi.spyOn(HTMLButtonElement.prototype, 'focus');
-  const selected = new Date('2026-11-03T00:00:00Z');
-  render(<DayPicker mode="single" selected={selected} defaultMonth={selected} autoFocus timeZone="UTC"
-    components={{DayButton: CalendarDayButton}}/>);
-  expect(document.activeElement?.getAttribute('aria-label')).toContain('Tuesday, November 3rd, 2026');
-  expect(focus).toHaveBeenLastCalledWith({preventScroll:true});
-  fireEvent.keyDown(document.activeElement!, {key:'ArrowRight'});
-  expect(document.activeElement?.getAttribute('aria-label')).toContain('Wednesday, November 4th, 2026');
-  expect(focus.mock.calls.every(([options]) => options?.preventScroll === true)).toBe(true);
+test('the mounted calendar does not take focus from the page', () => {
+  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response('',{status:404})));
+  const client = new QueryClient({defaultOptions:{queries:{retry:false}}});
+  render(<QueryClientProvider client={client}><button autoFocus>Outside calendar</button><DateTimeControls day="2026-11-03" minDay="2026-11-01"
+    time="14:45 CET" previousDisabled={false} nextDisabled={false} onDay={vi.fn()}
+    onPrevious={vi.fn()} onNext={vi.fn()}/></QueryClientProvider>);
+  expect(document.activeElement).toBe(screen.getByRole('button',{name:'Outside calendar'}));
+  client.clear();
 });
