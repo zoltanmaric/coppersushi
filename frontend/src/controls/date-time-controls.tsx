@@ -1,5 +1,8 @@
 import React, {useId, useRef, useState} from 'react';
 import {autoUpdate, offset, shift, size, useFloating} from '@floating-ui/react-dom';
+import {useQuery} from '@tanstack/react-query';
+import {publicationOptions} from '../data/day-data';
+import {useMarketToday} from './market-day';
 import {DayPicker} from '@daypicker/react';
 import '@daypicker/react/style.css';
 
@@ -33,6 +36,11 @@ export function DateTimeControls({day, minDay, time, previousDisabled, nextDisab
   const dialog = useRef<HTMLDialogElement | null>(null);
   const dialogId = useId();
   const [open, setOpen] = useState(false);
+  const today = useMarketToday();
+  const tomorrow = stepDay(today, 1);
+  const publication = useQuery({...publicationOptions(tomorrow), enabled: open || day >= today});
+  const maxDay = publication.data ? tomorrow : today;
+  const latest = new Date(`${maxDay}T00:00:00Z`);
   const {refs, floatingStyles} = useFloating({
     open, placement: 'top-start', strategy: 'fixed', whileElementsMounted: autoUpdate,
     middleware: [offset(8), shift({padding: 12}), size({padding: 12,
@@ -58,8 +66,8 @@ export function DateTimeControls({day, minDay, time, previousDisabled, nextDisab
       <dialog ref={node => {dialog.current = node; refs.setFloating(node);}} style={floatingStyles} id={dialogId} className="cnec-calendar" aria-label="Choose delivery day"
         onClose={() => setOpen(false)}
         onClick={e => {if (e.target === e.currentTarget) dialog.current?.close();}}>
-        {open && <DayPicker mode="single" required autoFocus timeZone="UTC" weekStartsOn={1}
-          selected={selected} defaultMonth={selected} startMonth={earliest} disabled={{before: earliest}}
+        {open && <DayPicker mode="single" required autoFocus timeZone="UTC" today={new Date(`${today}T00:00:00Z`)} weekStartsOn={1}
+          selected={selected} defaultMonth={selected} startMonth={earliest} endMonth={latest} disabled={[{before: earliest}, {after: latest}]}
           onSelect={date => {
             const next = date.toISOString().slice(0, 10);
             dialog.current?.close();
@@ -67,7 +75,7 @@ export function DateTimeControls({day, minDay, time, previousDisabled, nextDisab
           }}/>}
         <button type="button" className="cnec-calendar-close" onClick={() => dialog.current?.close()}>Close</button>
       </dialog>
-      <StepButton direction="next" aria-label="Next day" onClick={() => onDay(stepDay(day, 1))}/>
+      <StepButton direction="next" aria-label="Next day" disabled={day >= maxDay} onClick={() => onDay(stepDay(day, 1))}/>
     </div>
     <div className="cnec-control-row">
       <StepButton direction="previous" aria-label="Previous interval" disabled={previousDisabled} onClick={onPrevious}/>
