@@ -2,6 +2,7 @@ import React from 'react';
 import {createRoot} from 'react-dom/client';
 import Ajv from 'ajv';
 import {CnecView} from './index';
+import {marketDay} from './controls/market-day';
 import {orderedMapLayers} from './map/map-layer-order';
 
 interface Config {min_day: string; token: string}
@@ -17,8 +18,7 @@ root.render(<div role="status">Loading map…</div>);
 async function start() {
   const config: unknown = JSON.parse(document.getElementById('cnec-config')!.textContent!);
   if (!validConfig(config)) throw new Error('Invalid map configuration');
-  const parts = new Intl.DateTimeFormat('en-CA', {timeZone:'Europe/Brussels',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
-  const default_day = ['year','month','day'].map(type => parts.find(part => part.type === type)!.value).join('-');
+  const default_day = marketDay(new Date());
   const query = new URLSearchParams({access_token: config.token});
   const response = await fetch(`https://api.mapbox.com/styles/v1/mapbox/dark-v11?${query}`);
   if (!response.ok) throw new Error(`Basemap failed (${response.status})`);
