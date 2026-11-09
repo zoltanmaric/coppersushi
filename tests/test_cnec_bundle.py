@@ -96,3 +96,22 @@ def test_geometry_budget_retains_locations_and_every_interval():
     assert calls == list(day.hours()[:2])
     assert list(geometry) == list(range(96))
     assert all(frame.equals(located) for frame in geometry.values())
+
+
+def test_partial_attribution_requires_explicit_policy_and_preserves_note():
+    import pytest
+    from coppersushi.publication.models import MarketInterval
+    note = 'Poland cap attribution unavailable for this interval.'
+    interval = MarketInterval(index=0, label='00:00', prices={'DE':100},
+                              constraints=[], alpha=1, caps=[], notes=[note])
+    day = DayBundle(day='2025-11-05', labels=['00:00'], zones=[], elements={},
+                    intervals=[interval], price_range=[100,100])
+    with pytest.raises(ValueError, match='Attribution publication is incomplete'):
+        cnec_bundle.publication_files(day)
+    _, files = cnec_bundle.publication_files(day, allow_partial_attribution=True)
+    assert json.loads(files[1][1])['notes'] == [note]
+    for broken in (interval.model_copy(update={'alpha':None}),
+                   interval.model_copy(update={'notes':['Unknown missing source']})):
+        with pytest.raises(ValueError, match='Attribution publication is incomplete'):
+            cnec_bundle.publication_files(day.model_copy(update={'intervals':[broken]}),
+                                          allow_partial_attribution=True)

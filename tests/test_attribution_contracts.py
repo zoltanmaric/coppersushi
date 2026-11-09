@@ -32,7 +32,6 @@ def test_invalid_feed_raises(monkeypatch, tmp_path, case):
     responses["alphaFactor"] = [case["record"]]
     monkeypatch.setattr(source.jao, "day_dir", lambda _: tmp_path)
     monkeypatch.setattr(source.jao, "_get", lambda endpoint, *args, **kwargs: responses[endpoint])
-    monkeypatch.setattr(source.time, "sleep", lambda _: None)
     monkeypatch.setattr(source.cache, "publish", lambda *args: pytest.fail("incomplete cache published"))
     with pytest.raises(ValidationError):
         source.load_day(MarketDay.on("2026-09-12"), refresh=True)
@@ -41,7 +40,6 @@ def test_invalid_feed_raises(monkeypatch, tmp_path, case):
 def test_empty_feeds_are_supported_missing_data(monkeypatch, tmp_path):
     monkeypatch.setattr(source.jao, "day_dir", lambda _: tmp_path)
     monkeypatch.setattr(source.jao, "_get", lambda *args, **kwargs: [])
-    monkeypatch.setattr(source.time, "sleep", lambda _: None)
     frame = source.load_day(MarketDay.on("2026-09-12"), refresh=True)
     assert len(frame) == 96
     assert frame.drop(columns="interval").isna().all().all()
@@ -55,7 +53,6 @@ def test_invalid_cached_table_raises(monkeypatch, tmp_path):
     calls = []
     monkeypatch.setattr(source.jao, "day_dir", lambda _: tmp_path)
     monkeypatch.setattr(source.jao, "_get", lambda endpoint, *args, **kwargs: calls.append(endpoint) or [])
-    monkeypatch.setattr(source.time, "sleep", lambda _: None)
     with pytest.raises(SchemaError):
         source.load_day(MarketDay.on("2026-09-12"))
     assert not calls
@@ -67,7 +64,6 @@ def test_loader_does_not_hide_failures(monkeypatch, tmp_path, stage):
         raise RuntimeError("unexpected failure")
     monkeypatch.setattr(source.jao, "day_dir", lambda _: tmp_path)
     monkeypatch.setattr(source.jao, "_get", broken if stage == "request" else lambda *args, **kwargs: [])
-    monkeypatch.setattr(source.time, "sleep", lambda _: None)
     if stage == "transformation":
         monkeypatch.setattr(source.cnec_attribution, "context", broken)
     with pytest.raises(RuntimeError, match="unexpected failure"):
@@ -84,7 +80,6 @@ def test_loader_uses_market_day_boundaries_on_clock_change(monkeypatch, tmp_path
         return []
     monkeypatch.setattr(source.jao, "day_dir", lambda _: tmp_path)
     monkeypatch.setattr(source.jao, "_get", fetch)
-    monkeypatch.setattr(source.time, "sleep", lambda _: None)
     frame = source.load_day(day, refresh=True)
     assert len(frame) == 100
     assert windows == [(day.start_time_utc, day.end_time_utc)] * 4

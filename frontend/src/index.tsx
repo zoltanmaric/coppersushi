@@ -133,7 +133,7 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
           <button onClick={() => {dispatch({type:'interval',interval:0});}}>Go to first interval</button>
         </div>}
         {(publication.isFetching || metadata.isFetching || (!mapCurrent && intervalQuery.isFetching)) && <div role="status" aria-label="Map loading">Loading interval…{data && !mapCurrent && <div>Showing {data.label.split(' · ')[1]}.</div>}</div>}
-        {publication.isSuccess && !publication.data && <div role="status">This day has not been prepared yet. Checking automatically every minute. <button onClick={() => void publication.refetch()}>Check again</button></div>}
+        {publication.isSuccess && !publication.data && <div role="status">Data is unavailable for this day. <button onClick={() => void publication.refetch()}>Check again</button></div>}
         {notes.map(note => <div role="status" key={note}>{note}</div>)}
         {([['Publication',publication],['Metadata',metadata],['Interval',intervalQuery]] as const).map(([name,query])=>query.error && <div role="alert" key={name}>{name}: {query.error.message}{data && !mapCurrent && ` Showing ${data.label.split(' · ')[1]}.`} <button onClick={()=>void query.refetch()}>Retry</button></div>)}
       </aside>

@@ -32,7 +32,9 @@ ago” result missed this observed incident. No usable crowdsourced start time w
 
 [JAO's October 1, 2025 access notice](https://www.jao.eu/sites/default/files/news_media/PuTo%20Communication.pdf) specifies **100 requests per minute per user or IP address**. It also recommends checking monitoring/metadata endpoints for freshness before large data requests. The quota must be budgeted across concurrent callers, not separately for each worker.
 
-For bulk queries, use the project's empirically successful conservative pace: **at most 40 request starts/minute, spaced 1.5 seconds apart in aggregate**. The [annual audit](jao-constraint-types.md#active-audit) completed 549 requests at that pace without rate limiting. This is operational guidance, not a separate JAO limit or a guarantee when other clients share the IP. The shared `_get` helper enforces this pace across threads within each process. HTTP 429 establishes a shared cooldown from `Retry-After` (seconds or HTTP date), or 60 seconds when absent or invalid; queued requests fail promptly during cooldown. The failing response still propagates as an error. Separate processes and other clients sharing the IP need coordination outside this limiter.
+The historical backfill CLI uses **90 request starts/minute**, up to four concurrent attribution feeds and shared HTTP 429 backoff/retries (decision 2026-11-08). It lowers its shared rate by 20% after each 429, down to 40/minute; workers wait for the common cooldown. Other consumers keep the following conservative policy.
+
+For other bulk queries, use the project's empirically successful conservative pace: **at most 40 request starts/minute, spaced 1.5 seconds apart in aggregate**. The [annual audit](jao-constraint-types.md#active-audit) completed 549 requests at that pace without rate limiting. This is operational guidance, not a separate JAO limit or a guarantee when other clients share the IP. The shared `_get` helper enforces this pace across threads within each process. HTTP 429 establishes a shared cooldown from `Retry-After` (seconds or HTTP date), or 60 seconds when absent or invalid; queued requests fail promptly during cooldown. The failing response still propagates as an error. Separate processes and other clients sharing the IP need coordination outside this limiter.
 
 On 2026-11-03, an unpaced four-worker Polish-feed sweep received 100 successful responses followed by HTTP 429 responses. The probe saved status/errors but not the 429 headers or bodies, so whether JAO supplied `Retry-After` is unknown. After a 65-second cooldown, 12 retries succeeded before the sweep was stopped. For future 429s, retain and honor `Retry-After` when present; otherwise back off at least a minute before resuming conservatively. Do not count a 429 as an empty dataset. The notice does not specify the rate-window algorithm or reset headers.
 
@@ -71,3 +73,41 @@ Extend the existing cache rather than introduce a second storage system without 
 
 See [the app architecture](sushi-2.md) and the
 [external-service outage procedure](../.agents/skills/service-outage/SKILL.md).
+
+## Historical-gaps
+
+Probes on **2026-11-09** distinguish two source inconsistencies:
+
+- **2026-06-02–09:** Core `alphaFactor` returns HTTP 200 with empty `data`,
+  `rejected=false` and no messages for every delivery day. Monitoring on June 2
+  and June 9 nevertheless marks `Alpha factor from MCP` Received. Two-day windows
+  June 1–3 and June 9–11 return 96 rows belonging only to the neighboring complete
+  June 1 and June 10 delivery days. A UTC-calendar-day query and a quarter-hour
+  query on June 2 are also empty. June 2 active constraints contain no alpha field.
+  No attribution bundles for June were present under the private derived-cache
+  prefix when checked; local June 2–9 attribution caches were absent. These days
+  remain blocked; missing alpha must not become 1 or an interpolated value.
+- **2026-06-11:** Core `netPos` returns 96 records that validate and exactly cover
+  the delivery-day quarter-hours, but the `Net Position` monitoring entry is absent.
+  A two-day monitoring query confirms the same missing entry. This is a receipt
+  gap, separate from the alpha gap; the publisher retains its receipt requirement.
+
+Queries use market-midnight UTC bounds at `/core/api/data/{endpoint}` and
+`/core/api/system/monitoring`. A ten-day alpha query returns HTTP 400 explicitly
+limiting the requested range to two days; the controls above respect that limit.
+Successful empty responses are source observations, not failed HTTP requests or
+proof of zero-valued alpha. Raw probe bodies and headers remain in ignored local
+research artifacts.
+
+JAO's [AHC go-live notice](https://www.jao.eu/news/successful-go-live-core-advanced-hybrid-coupling)
+dates Advanced Hybrid Coupling to delivery June 11 and lists RAM-at-clearing and
+exchange-publication issues. It does not establish the cause of either observed
+gap. Recovery from another authoritative publication or an explicit incomplete-data
+product contract remains necessary before publishing these dates.
+
+**Disposition, 2026-11-09:** accept June 2–9 and June 11 as nine unavailable days
+in the historical product. Do not synthesize alpha, waive receipt evidence or keep
+investigating/retrying these known gaps. Preserve the observations above; missing
+manifests keep these days unavailable. Completion means publishing and verifying
+the other 352 days in the 361-day range; these nine gaps do not block extending
+the supported history. Unexpected failures remain retryable work.

@@ -70,19 +70,20 @@ def build(day: Day, geometries: dict[int, DataFrame[MappedCnecElements]]) -> Day
                      price_range=list(cnec_market.daily_price_range(day.prices)))
 
 
-def validate_publication(bundle: DayBundle) -> None:
-    """A missing feed must never become a completed, immutable market day."""
+def validate_publication(bundle: DayBundle, *, allow_partial_attribution: bool = False) -> None:
+    """Require complete intervals; historical policy permits explicit Polish attribution gaps."""
     if [i.index for i in bundle.intervals] != list(range(len(bundle.labels))):
         raise ValueError('Only complete days may be published')
-    if any(i.alpha is None or not 0 <= i.alpha <= 1 or i.notes for i in bundle.intervals):
+    allowed_notes = {"Poland cap attribution unavailable for this interval."} if allow_partial_attribution else set()
+    if any(i.alpha is None or not 0 <= i.alpha <= 1 or set(i.notes) - allowed_notes for i in bundle.intervals):
         raise ValueError('Attribution publication is incomplete; retain the previous generation')
 
 
-def publication_files(bundle: DayBundle) -> tuple[str, list[tuple[str, str]]]:
+def publication_files(bundle: DayBundle, *, allow_partial_attribution: bool = False) -> tuple[str, list[tuple[str, str]]]:
     """Immutable objects first, atomic manifest last; shared by S3 and local previews."""
     import hashlib
     from coppersushi.publication.models import DayMetadata, DayManifest
-    validate_publication(bundle)
+    validate_publication(bundle, allow_partial_attribution=allow_partial_attribution)
     generation = hashlib.sha256(bundle.model_dump_json().encode()).hexdigest()[:24]
     prefix = f'data/cnec/v2/{bundle.day}'
     metadata = DayMetadata.model_validate(bundle.model_dump(exclude={'intervals'}))
