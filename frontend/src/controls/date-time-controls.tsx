@@ -1,9 +1,9 @@
-import React, {useId, useRef, useState} from 'react';
+import React, {useEffect, useId, useRef, useState} from 'react';
 import {autoUpdate, offset, shift, size, useFloating} from '@floating-ui/react-dom';
 import {useQuery} from '@tanstack/react-query';
 import {publicationOptions} from '../data/day-data';
 import {useMarketToday} from './market-day';
-import {DayPicker} from '@daypicker/react';
+import {DayPicker, type DayButtonProps} from '@daypicker/react';
 import '@daypicker/react/style.css';
 
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
@@ -12,6 +12,15 @@ const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 
 export function formatDay(day: string): string {
   const [year, month, date] = day.split('-');
   return `${Number(date)} ${months[Number(month) - 1]} ${year}`;
+}
+
+/** Keep calendar focus changes from scrolling the article around an embedded map. */
+export function CalendarDayButton({day: _day, modifiers, ...props}: DayButtonProps) {
+  const ref = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (modifiers.focused) ref.current?.focus({preventScroll: true});
+  }, [modifiers.focused]);
+  return <button ref={ref} {...props}/>;
 }
 
 function StepButton({direction, ...props}: React.ComponentProps<'button'> & {direction: 'previous' | 'next'}) {
@@ -66,7 +75,7 @@ export function DateTimeControls({day, minDay, time, previousDisabled, nextDisab
       <dialog ref={node => {dialog.current = node; refs.setFloating(node);}} style={floatingStyles} id={dialogId} className="cnec-calendar" aria-label="Choose delivery day"
         onClose={() => setOpen(false)}
         onClick={e => {if (e.target === e.currentTarget) dialog.current?.close();}}>
-        {open && <DayPicker mode="single" required autoFocus timeZone="UTC" today={new Date(`${today}T00:00:00Z`)} weekStartsOn={1}
+        {open && <DayPicker components={{DayButton: CalendarDayButton}} mode="single" required autoFocus timeZone="UTC" today={new Date(`${today}T00:00:00Z`)} weekStartsOn={1}
           selected={selected} defaultMonth={selected} startMonth={earliest} endMonth={latest} disabled={[{before: earliest}, {after: latest}]}
           onSelect={date => {
             const next = date.toISOString().slice(0, 10);
