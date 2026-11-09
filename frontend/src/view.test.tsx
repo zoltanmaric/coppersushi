@@ -15,6 +15,7 @@ function CnecView(props: Omit<React.ComponentProps<typeof CnecPage>, 'selection'
 
 interface Pending {path: string; body?: {day: string; interval: number; selected: number | null}; resolve: (value: Response) => void}
 let pending: Pending[];
+let missNextPublication: boolean;
 let graph: PlotlyFigure;
 let clickGraph: (change: {clickData: unknown}) => void;
 vi.mock('./map/map-graph', () => ({MapGraph: (props: {figure: PlotlyFigure; onClick: (event: unknown) => void}) => {
@@ -26,8 +27,16 @@ beforeEach(() => {
   window.history.replaceState(null, "", "/cnec/2024-08-29");
 
   pending = [];
+  missNextPublication = false;
   vi.stubGlobal('fetch', vi.fn((url: string, options: RequestInit) => new Promise<Response>(resolve => {
-    if (url.endsWith('/manifest.json')) {resolve(new Response(JSON.stringify({version:2,day:'2024-08-29',generation:'a'.repeat(24)}))); return;}
+    if (url.endsWith('/manifest.json')) {
+      const selected = url.endsWith('/2024-08-29/manifest.json');
+      const missing = !selected || missNextPublication;
+      if (selected) missNextPublication = false;
+      resolve(missing ? new Response(null,{status:404})
+        : new Response(JSON.stringify({version:2,day:'2024-08-29',generation:'a'.repeat(24)})));
+      return;
+    }
     pending.push({path: url, body: options.body ? JSON.parse(String(options.body)) : undefined, resolve});
   })));
 
@@ -64,7 +73,7 @@ test('show first interval, share background request, then navigate locally', asy
   fireEvent.change(screen.getByLabelText('Reference country'), {target: {value: 'FR'}});
   fireEvent.click(screen.getByRole('button', {name: 'Previous interval'}));
   fireEvent.click(screen.getByRole('button', {name: 'Next interval'}));
-  expect(fetch).toHaveBeenCalledTimes(4);
+  expect(fetch).toHaveBeenCalledTimes(5);
 });
 
 test('background failure retains first interval and offers retry', async () => {
@@ -111,14 +120,14 @@ test('the mounted graph selects constraints using current interval options', asy
     await act(async()=>clickGraph({clickData:{points:[{customdata:['11T0-0000-0984-D']}]}}));
     expect(graph.data.some(t=>t.name==='ray contributions')).toBe(true);
   });
-  expect(fetch).toHaveBeenCalledTimes(4);
+  expect(fetch).toHaveBeenCalledTimes(5);
 });
 
 test('an unprepared day shows availability and never starts upstream work', async()=>{
-  vi.mocked(fetch).mockResolvedValueOnce(new Response(null,{status:404}));
+  missNextPublication = true;
   render(<CnecView id="cnec" day="2024-08-29" min_day="2024-01-01" token="token" basemap="dark"/>);
   await screen.findByText(/Data is unavailable for this day/);
-  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(fetch).toHaveBeenCalledTimes(2);
   expect(pending).toHaveLength(0);
 });
 
@@ -155,14 +164,14 @@ test('an invalid deep link recovers when the slider chooses a valid interval',as
 test('an unavailable day is rechecked automatically, then polling stops after publication', async () => {
   vi.useFakeTimers();
   try {
-    vi.mocked(fetch).mockResolvedValueOnce(new Response(null,{status:404}));
+    missNextPublication = true;
     render(<CnecView id="cnec" day="2024-08-29" min_day="2024-01-01" token="token" basemap="dark"/>);
     await act(async () => {await vi.advanceTimersByTimeAsync(1);});
-    const before = vi.mocked(fetch).mock.calls.filter(([url])=>String(url).endsWith('/manifest.json')).length;
+    const before = vi.mocked(fetch).mock.calls.filter(([url])=>String(url).endsWith('/2024-08-29/manifest.json')).length;
     await act(async () => {await vi.advanceTimersByTimeAsync(60_000);});
-    expect(vi.mocked(fetch).mock.calls.filter(([url])=>String(url).endsWith('/manifest.json'))).toHaveLength(before+1);
+    expect(vi.mocked(fetch).mock.calls.filter(([url])=>String(url).endsWith('/2024-08-29/manifest.json'))).toHaveLength(before+1);
     await act(async () => {await vi.advanceTimersByTimeAsync(120_000);});
-    expect(vi.mocked(fetch).mock.calls.filter(([url])=>String(url).endsWith('/manifest.json'))).toHaveLength(before+1);
+    expect(vi.mocked(fetch).mock.calls.filter(([url])=>String(url).endsWith('/2024-08-29/manifest.json'))).toHaveLength(before+1);
   } finally {cleanup(); vi.useRealTimers();}
 });
 

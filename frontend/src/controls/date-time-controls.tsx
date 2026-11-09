@@ -1,4 +1,4 @@
-import React, {useEffect, useId, useRef, useState} from 'react';
+import React, {useId, useRef} from 'react';
 import {autoUpdate, offset, shift, size, useFloating} from '@floating-ui/react-dom';
 import {useQuery} from '@tanstack/react-query';
 import {publicationOptions} from '../data/day-data';
@@ -35,20 +35,13 @@ interface Props {
 export function DateTimeControls({day, minDay, time, previousDisabled, nextDisabled, onDay, onPrevious, onNext}: Props) {
   const calendar = useRef<HTMLDivElement | null>(null);
   const calendarId = useId();
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const node = calendar.current!;
-    const sync = (event: ToggleEvent) => setOpen(event.newState === 'open');
-    node.addEventListener('toggle', sync);
-    return () => node.removeEventListener('toggle', sync);
-  }, []);
   const today = useMarketToday();
   const tomorrow = stepDay(today, 1);
-  const publication = useQuery({...publicationOptions(tomorrow), enabled: open || day >= today});
+  const publication = useQuery(publicationOptions(tomorrow));
   const maxDay = publication.data ? tomorrow : today;
   const latest = new Date(`${maxDay}T00:00:00Z`);
   const {refs, floatingStyles} = useFloating({
-    open, placement: 'top-start', strategy: 'fixed', whileElementsMounted: autoUpdate,
+    placement: 'top-start', strategy: 'fixed', whileElementsMounted: autoUpdate,
     middleware: [offset(8), shift({padding: 12}), size({padding: 12,
       apply: ({availableHeight, elements}) => {
         elements.floating.style.maxHeight = `${Math.max(0, availableHeight)}px`;
@@ -61,7 +54,7 @@ export function DateTimeControls({day, minDay, time, previousDisabled, nextDisab
     <div className="cnec-control-row">
       <StepButton direction="previous" aria-label="Previous day" disabled={day <= minDay} onClick={() => onDay(stepDay(day, -1))}/>
       <button {...{popovertarget: calendarId}} ref={refs.setReference} type="button" className="cnec-date-picker" aria-label={`Delivery day: ${formatDay(day)}`}
-        aria-haspopup="dialog" aria-expanded={open} aria-controls={calendarId}>
+        aria-haspopup="dialog" aria-controls={calendarId}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.6"/>
           <path d="M7 3v4m10-4v4M3 11h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
@@ -70,13 +63,13 @@ export function DateTimeControls({day, minDay, time, previousDisabled, nextDisab
       </button>
       <div {...{popover: 'auto'}} ref={node => {calendar.current = node; refs.setFloating(node);}}
         style={floatingStyles} id={calendarId} className="cnec-calendar" role="dialog" aria-label="Choose delivery day">
-        {open && <DayPicker mode="single" required timeZone="UTC" today={new Date(`${today}T00:00:00Z`)} weekStartsOn={1}
+        <DayPicker key={day} mode="single" required timeZone="UTC" today={new Date(`${today}T00:00:00Z`)} weekStartsOn={1}
           selected={selected} defaultMonth={selected} startMonth={earliest} endMonth={latest} disabled={[{before: earliest}, {after: latest}]}
           onSelect={date => {
             const next = date.toISOString().slice(0, 10);
             calendar.current?.hidePopover();
             if (next !== day) onDay(next);
-          }}/>}
+          }}/>
         <button type="button" className="cnec-calendar-close" onClick={() => calendar.current?.hidePopover()}>Close</button>
       </div>
       <StepButton direction="next" aria-label="Next day" disabled={day >= maxDay} onClick={() => onDay(stepDay(day, 1))}/>
