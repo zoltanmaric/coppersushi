@@ -66,7 +66,7 @@ export function DateTimeControls({day, minDay, time, previousDisabled, nextDisab
       <dialog ref={node => {dialog.current = node; refs.setFloating(node);}} style={floatingStyles} id={dialogId} className="cnec-calendar" aria-label="Choose delivery day"
         onClose={() => setOpen(false)}
         onClick={e => {if (e.target === e.currentTarget) dialog.current?.close();}}>
-        {open && <DayPicker mode="single" required autoFocus timeZone="UTC" weekStartsOn={1}
+        {open && <DayPicker mode="single" required autoFocus timeZone="UTC" today={new Date(`${today}T00:00:00Z`)} weekStartsOn={1}
           selected={selected} defaultMonth={selected} startMonth={earliest} endMonth={latest} disabled={[{before: earliest}, {after: latest}]}
           onSelect={date => {
             const next = date.toISOString().slice(0, 10);
