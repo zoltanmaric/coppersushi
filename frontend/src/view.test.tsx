@@ -183,7 +183,7 @@ test('day loading retains the slider geometry and selected time',async()=>{
   const slider=screen.getByRole('slider',{name:'Market interval'});
   const ticks=document.querySelectorAll('.cnec-tick').length;
   vi.mocked(fetch).mockImplementationOnce(()=>new Promise(()=>{}));
-  fireEvent.change(screen.getByLabelText('Delivery day'),{target:{value:'2024-08-30'}});
+  fireEvent.click(screen.getByRole('button',{name:'Next day'}));
   await screen.findByRole('status',{name:'Map loading'});
   expect(screen.getByRole('slider',{name:'Market interval'})).toBe(slider);
   expect(slider.getAttribute('max')).toBe('1');
