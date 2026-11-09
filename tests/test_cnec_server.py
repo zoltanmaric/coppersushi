@@ -30,15 +30,15 @@ def test_static_shell_needs_no_server_and_safely_embeds_configuration():
     html = render_shell(token)
     assert token not in html
     config = html.split('type="application/json">', 1)[1].split('</script>', 1)[0]
-    assert json.loads(config) == {'min_day': '2026-11-01', 'token': token}
+    assert json.loads(config) == {'min_day': '2025-11-05', 'token': token}
     subprocess.run([sys.executable, '-c',
         "import sys; from frontend.publish import render_shell; render_shell('test'); "
         "assert not {'flask','dash','pandas','plotly'} & sys.modules.keys()"], check=True)
 
 
 @pytest.mark.parametrize('path,embed', [
-    ('/', False), ('/cnec', False), ('/cnec/2026-11-05', False),
-    ('/embed/cnec', True), ('/embed/cnec/2026-11-05', True),
+    ('/', False), ('/cnec', False), ('/cnec/2025-11-05', False),
+    ('/embed/cnec', True), ('/embed/cnec/2025-11-05', True),
 ])
 def test_home_and_embed_share_the_shell_with_explicit_header_mode(path, embed, monkeypatch):
     monkeypatch.setenv('MAPBOX_TOKEN', 'test-public-token')

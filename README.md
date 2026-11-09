@@ -14,8 +14,9 @@ along with an explanation of the main features.
 The homepage `/` shows Critical Elements: prices and binding constraints.
 `/cnec` opens the same map, and `/cnec/YYYY-MM-DD` selects a delivery day.
 Power Flow is at `/opf-2024` (29 August 2024, hourly, on the 2025 grid). The CNEC view officially supports
-delivery dates from **1 November 2026** onward; earlier dates are outside supported
-coverage. The supported-history sweep is pending; not every supported date has been verified. This cutoff does not apply to the separate OPF demonstration.
+delivery dates from **5 November 2025** onward. Historical publications through
+31 October 2026 are verified; **2–9 June and 11 June 2026** are unavailable due to
+[source gaps](wiki/jao-availability.md#historical-gaps). This cutoff does not apply to the separate OPF demonstration.
 
 Both maps have header-free embeds: `/embed/cnec` (or `/embed/cnec/YYYY-MM-DD`)
 and `/embed/opf-2024`. Critical Elements embeds retain their date, interval,

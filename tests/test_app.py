@@ -93,4 +93,4 @@ def test_unsupported_cnec_dates_redirect_to_undated_view(monkeypatch):
     response = client.get('/cnec/2025-11-04')
     assert response.status_code == 302
     assert response.headers['Location'] == '/cnec'
-    assert client.get('/cnec/2026-11-01').status_code == 200
+    assert client.get('/cnec/2025-11-05').status_code == 200

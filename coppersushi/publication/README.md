@@ -72,5 +72,6 @@ browser. See [publication coverage](../../wiki/country-import-export-caps.md#pub
 The one-day CLI provides the same policy through `--allow-partial-attribution`.
 Alpha values up to `1e-6` outside `[0, 1]` are snapped to the nearest bound
 at input loading, including cached inputs. Larger violations are rejected;
-in-range values are preserved. Scheduled publication stays strict. Neither path changes the browser's supported
-date boundary; move it only after the required generations have been verified.
+in-range values are preserved. Scheduled publication stays strict. The browser's
+supported history starts on 5 November 2025, with 352 verified historical days
+through 31 October 2026 and nine accepted [unavailable dates](../../wiki/jao-availability.md#historical-gaps).

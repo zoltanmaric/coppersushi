@@ -203,7 +203,7 @@ image does not rebuild those days. For this silent-release EIC contract change:
 
 1. Save each existing supported day's manifest with the image/UI rollback notes.
    List `data/cnec/v2/` in the private bucket and select the dated manifests in the
-   supported window (starting 1 November 2026).
+   supported window (starting 5 November 2025).
 2. From the new checkout, run the publication CLI above for **every listed day**.
    Do not use the scheduled handler: its manifest-existence check skips the work.
    The CLI prepares and publishes unconditionally; `--refresh` is only needed to
@@ -228,9 +228,9 @@ The CNEC shell imports neither Dash nor pandas. Data preparation runs only in th
 
 The browser computes the default market date locally; a cached shell cannot freeze it on its publication date.
 
-The supported delivery window starts on 1 November 2026. Backfill prepared day
-generations before moving that boundary earlier; the planned historical boundary
-is 5 November 2025. The frontend never starts an upstream fetch for a visitor.
+The supported delivery window starts on 5 November 2025. The 352 available days
+through 31 October 2026 are published and independently verified. June 2–9 and
+June 11, 2026 remain unavailable due to [source gaps](../../wiki/jao-availability.md#historical-gaps). The frontend never starts an upstream fetch for a visitor.
 
 For local development, prepare a day with
 `python -m coppersushi.publication.data_sources.bundles YYYY-MM-DD --directory data/browser`.
