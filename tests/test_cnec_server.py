@@ -57,3 +57,57 @@ def test_unsupported_embed_date_stays_in_the_embed():
     response = server.test_client().get('/embed/cnec/2025-11-04')
     assert response.status_code == 302
     assert response.headers['Location'] == '/embed/cnec'
+
+
+def test_production_preview_proxies_data_but_keeps_local_assets(monkeypatch):
+    from io import BytesIO
+    import cnec_server
+    calls = []
+
+    def public_file(url, *, timeout):
+        calls.append((url, timeout))
+        from gzip import compress
+        response = BytesIO(compress(b'{"day":"2026-11-09"}'))
+        response.headers = {'Content-Encoding': 'gzip'}
+        return response
+
+    monkeypatch.setattr(cnec_server, 'urlopen', public_file)
+    client = cnec_server.create_app(production_data=True).test_client()
+    response = client.get('/data/cnec/v2/2026-11-09/manifest.json')
+    assert response.json == {'day': '2026-11-09'}
+    assert calls == [('https://coppersushi.121gigawatts.org/data/cnec/v2/2026-11-09/manifest.json', 20)]
+    assert client.get('/assets/cnec-app.css').status_code == 200
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize('status', [403, 404, 503])
+def test_production_preview_preserves_missing_and_failed_publications(monkeypatch, status):
+    from urllib.error import HTTPError
+    import cnec_server
+
+    def missing(url, *, timeout):
+        raise HTTPError(url, status, 'Unavailable', {}, None)
+
+    monkeypatch.setattr(cnec_server, 'urlopen', missing)
+    client = cnec_server.create_app(production_data=True).test_client()
+    assert client.get('/data/cnec/v2/2026-11-10/manifest.json').status_code == status
+
+
+def test_production_preview_recovers_from_connection_reset(monkeypatch):
+    from io import BytesIO
+    import cnec_server
+    attempts = 0
+
+    def flaky(url, *, timeout):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise ConnectionResetError('edge reset')
+        response = BytesIO(b'{}')
+        response.headers = {}
+        return response
+
+    monkeypatch.setattr(cnec_server, 'urlopen', flaky)
+    client = cnec_server.create_app(production_data=True).test_client()
+    assert client.get('/data/cnec/v2/2026-11-09/manifest.json').json == {}
+    assert attempts == 2
