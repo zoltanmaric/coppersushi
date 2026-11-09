@@ -27,8 +27,9 @@ def load_day(day: MarketDay, refresh: bool = False) -> DataFrame[AttributionCont
         cache.restore(key, path.parent, (path.name,))
     if path.is_file() and not refresh:
         frame = pd.read_csv(path)
-        frame = frame.assign(interval=pd.to_datetime(frame.interval, utc=True),
-                             alpha=frame.alpha.map(normalize_alpha))
+        if 'alpha' in frame:
+            frame['alpha'] = frame.alpha.map(normalize_alpha)
+        frame = frame.assign(interval=pd.to_datetime(frame.interval, utc=True))
         frame = AttributionContext.validate(frame)
         if not frame.notna().all().all() or frame.interval.tolist() != list(day.market_time_units()):
             raise ValueError(f"Incomplete attribution cache for {day_key}")

@@ -199,7 +199,7 @@ Publish a day with `python -m coppersushi.publication.data_sources.bundles YYYY-
 ### Rebuilding prepared data after a contract change
 
 The scheduler skips any day whose manifest already exists. Deploying a publisher
-image does not rebuild those days. For this silent-release EIC contract change:
+image does not rebuild those days. For a data-contract change:
 
 1. Save each existing supported day's manifest with the image/UI rollback notes.
    List `data/cnec/v2/` in the private bucket and select the dated manifests in the
@@ -207,7 +207,9 @@ image does not rebuild those days. For this silent-release EIC contract change:
 2. From the new checkout, run the publication CLI above for **every listed day**.
    Do not use the scheduled handler: its manifest-existence check skips the work.
    The CLI prepares and publishes unconditionally; `--refresh` is only needed to
-   refresh upstream observations. Confirm every physical row has its required EIC.
+   refresh upstream observations. For historical days with accepted Polish
+   attribution gaps, add `--allow-partial-attribution`; alpha and receipt checks
+   still apply. Confirm every physical row has its required EIC.
 3. Each rebuild writes a new immutable content-hash generation, then replaces the
    day manifest. Invalidate `/data/cnec/v2/*/manifest.json` on CloudFront and wait
    for completion before publishing the new frontend. Keep the previous generations.

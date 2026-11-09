@@ -108,8 +108,8 @@ def main() -> None:
                 except Exception as error:
                     result.status = 'blocked'
                     result.errors.append(f'publication: {type(error).__name__}: {error}')
-            previous = args.report.read_text() if args.report.exists() else ''
-            cache.atomic_text(args.report, previous + result.model_dump_json() + '\n')
+            previous_text = args.report.read_text() if args.report.exists() else ''
+            cache.atomic_text(args.report, previous_text + result.model_dump_json() + '\n')
             print(f'{current}: {result.status}; {"; ".join(result.errors)}', flush=True)
             blocked |= result.status == 'blocked'
         current += timedelta(days=1)
