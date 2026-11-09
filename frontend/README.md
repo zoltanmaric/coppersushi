@@ -34,4 +34,11 @@ the embed route. `python -m frontend.publish --bucket <bucket>` embeds
 the public Mapbox token and publishes built assets before the normal and embedded shells. It does not
 import a web framework. The browser determines the current market date itself.
 For local preview, `cnec_server.py` serves the same shell and `data/browser` files.
+To use current production data with local frontend assets instead:
+
+```sh
+python -m flask --app 'cnec_server:create_app(production_data=True)' run --port 8765
+```
+
+Only prepared-data requests are proxied to the public production site.
 Production routing and rollback are in the [hosting runbook](../infra/lambda/README.md).

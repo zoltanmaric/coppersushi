@@ -1,7 +1,12 @@
 """Local CNEC preview server; production serves the same shell and files from S3."""
 from datetime import date
+from gzip import decompress
+from http.client import HTTPException
 from pathlib import Path
-from flask import Blueprint, Flask, Response, request, send_from_directory
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote
+from urllib.request import urlopen
+from flask import Blueprint, Flask, Response, current_app, request, send_from_directory
 from coppersushi.data_sources import credentials
 
 from coppersushi.cnec_support import FIRST_DAY
@@ -27,8 +32,31 @@ def index(day: str | None = None) -> str | Response:
 
 @routes.get('/data/cnec/v2/<path:filename>')
 def local_data(filename: str) -> Response:
+    if current_app.config.get('PRODUCTION_DATA', False):
+        url = 'https://coppersushi.121gigawatts.org/data/cnec/v2/' + quote(filename, safe='/')
+        # Full-day prefetch can encounter transient connection resets at the edge.
+        for attempt in range(3):
+            try:
+                with urlopen(url, timeout=20) as response:
+                    body = response.read()
+                    if response.headers.get('Content-Encoding') == 'gzip':
+                        body = decompress(body)
+                    return Response(body, content_type='application/json')
+            except HTTPError as error:
+                if error.code not in (502, 503, 504) or attempt == 2:
+                    return Response(status=error.code)
+            except (URLError, OSError, HTTPException):
+                if attempt == 2:
+                    return Response('Production data is unavailable', status=502)
     return send_from_directory(Path(__file__).parent / 'data/browser/data/cnec/v2',filename)
 
 
-server = Flask(__name__, static_folder='assets', static_url_path='/assets')
-server.register_blueprint(routes)
+def create_app(*, production_data: bool) -> Flask:
+    """Preview local frontend assets against disk files or public production data."""
+    app = Flask(__name__, static_folder='assets', static_url_path='/assets')
+    app.config['PRODUCTION_DATA'] = production_data
+    app.register_blueprint(routes)
+    return app
+
+
+server = create_app(production_data=False)
