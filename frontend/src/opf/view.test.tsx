@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 import React from 'react';
 import {afterEach,expect,test,vi} from 'vitest';
-import {cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react';
+import {act,cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react';
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {OpfView} from './view';
+const plot = vi.hoisted(()=>({auto:true,complete:()=>{}}));
 vi.mock('../map/plot',()=>({Plot:({data,onRendered}:{data:{name:string}[];onRendered:()=>void})=>{
-  React.useEffect(()=>{onRendered();},[data]);return <div data-testid="hour">{data[0].name}</div>;
+  React.useEffect(()=>{plot.complete=onRendered;if(plot.auto) onRendered();},[data]);return <div data-testid="hour">{data[0].name}</div>;
 }}));
-afterEach(()=>{cleanup();vi.unstubAllGlobals();});
+afterEach(()=>{cleanup();vi.unstubAllGlobals();plot.auto=true;});
 test('late response from an old selection cannot replace the selected hour',async()=>{
   const pending = new Map<string,(value:unknown)=>void>();
   vi.stubGlobal('fetch',vi.fn((url:string)=>url.endsWith('manifest.json') ? Promise.resolve({ok:true,json:async()=>({generation:'a'.repeat(24),snapshots:['2024-08-29T10:00:00Z','2024-08-29T11:00:00Z','2024-08-29T12:00:00Z']})}) : new Promise(resolve=>pending.set(url.split('/').at(-1)!,resolve))));
@@ -24,4 +25,20 @@ test('late response from an old selection cannot replace the selected hour',asyn
   await screen.findByText('hour 2');
   reply(1);reply(0);
   await waitFor(()=>expect(screen.getByTestId('hour').textContent).toBe('hour 2'));
+});
+
+
+test('loading stays visible until Plotly finishes the selected hour',async()=>{
+  plot.auto=false;
+  vi.stubGlobal('fetch',vi.fn((url:string)=>Promise.resolve({ok:true,json:async()=>url.endsWith('manifest.json')
+    ? {generation:'a'.repeat(24),snapshots:['2024-08-29T10:00:00Z']}
+    : {data:[{name:'hour 0'}],layout:{mapbox:{}}}})));
+  const client = new QueryClient({defaultOptions:{queries:{retry:false}}});
+  render(<QueryClientProvider client={client}><OpfView token="test"/></QueryClientProvider>);
+  await screen.findByText('hour 0');
+  expect(screen.getByText('Loading Power Flow…').getAttribute('role')).toBe('status');
+  expect(screen.getByText(/loading selected hour/)).toBeTruthy();
+  act(()=>plot.complete());
+  await waitFor(()=>expect(screen.queryByText('Loading Power Flow…')).toBeNull());
+  expect(screen.queryByText(/loading selected hour/)).toBeNull();
 });

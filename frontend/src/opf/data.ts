@@ -2,13 +2,14 @@ import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import type {PlotlyFigure} from '../map/figure';
 
+export interface OpfHour {data:PlotlyFigure['data']; layout:{mapbox:Record<string,unknown>;[key:string]:unknown}}
 export interface OpfManifest {generation:string; snapshots:string[]}
 const ajv = new Ajv();
 addFormats(ajv);
 const manifest = ajv.compile<OpfManifest>({type:'object',required:['generation','snapshots'],additionalProperties:false,
   properties:{generation:{type:'string',pattern:'^[a-f0-9]{24}$'},
     snapshots:{type:'array',minItems:1,uniqueItems:true,items:{type:'string',format:'date-time'}}}});
-const figure = ajv.compile<PlotlyFigure>({type:'object',required:['data','layout'],
+const figure = ajv.compile<OpfHour>({type:'object',required:['data','layout'],
   properties:{data:{type:'array',items:{type:'object'}},layout:{type:'object',required:['mapbox'],properties:{mapbox:{type:'object'}}}}});
 const base = '/data/opf/v1/opf-2024';
 async function read(path:string,signal:AbortSignal):Promise<unknown> {
@@ -21,7 +22,7 @@ export async function fetchManifest(signal:AbortSignal):Promise<OpfManifest> {
   if (!manifest(value) || value.snapshots.some((t,i,a)=>i>0 && Date.parse(t)<=Date.parse(a[i-1]))) throw new Error('Invalid Power Flow manifest');
   return value;
 }
-export async function fetchHour(generation:string,index:number,signal:AbortSignal):Promise<PlotlyFigure> {
+export async function fetchHour(generation:string,index:number,signal:AbortSignal):Promise<OpfHour> {
   const value = await read(`${generation}/${index}.json`,signal);
   if (!figure(value)) throw new Error('Invalid Power Flow figure');
   return value;
