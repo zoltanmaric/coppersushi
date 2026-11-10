@@ -1,4 +1,4 @@
-"""Local CNEC preview server; production serves the same shell and files from S3."""
+"""Local static-view preview; production serves the same shells and files from S3."""
 from datetime import date
 from gzip import decompress
 from http.client import HTTPException
