@@ -1,0 +1,11 @@
+.app-navigation {
+    position:relative;
+    display:flex;
+    align-items:center;
+    flex:none;
+    gap:24px;
+    padding:var(--navigation-padding, 10px) 16px;
+}
+.app-navigation .app-logo {width:calc(1lh + 2 * var(--navigation-padding, 10px)); flex:none; align-self:stretch;}
+.app-navigation .app-logo img {position:absolute; top:0; height:100%; width:auto;}
+body[data-embed="true"]>.app-navigation {display:none;}

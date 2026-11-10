@@ -1,7 +1,7 @@
-.app-navigation { position:relative; display:flex; align-items:center; flex-wrap:wrap; gap:0.4rem 1.2rem; padding:0.4rem 1rem; flex:none; }
-.app-logo { width:2.3rem; align-self:stretch; }
-.app-logo img { position:absolute; top:0; height:100%; width:2.3rem; object-fit:contain; }
-.app-page { display:flex; flex-direction:column; height:100vh; height:100dvh; }
+.app-navigation {--navigation-padding:0.4rem;}
+body {display:flex; flex-direction:column; height:100dvh;}
+#react-entry-point, #_dash-app-content, .app-root, #page {display:flex; flex-direction:column; flex:1; min-height:0;}
+.app-page { display:flex; flex-direction:column; height:100%; }
 .opf-view { display:flex; flex:1; flex-direction:column; min-height:0; }
 .opf-time { padding:0.35rem 1rem; font-weight:600; flex:none; }
 .opf-slider { padding:0.75rem 1.75rem 1.25rem; flex:none; min-height:76px; }

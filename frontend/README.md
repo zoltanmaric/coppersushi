@@ -28,7 +28,9 @@ basemap. Build with `npm ci && npm run build` in this directory.
 
 ## Static site
 
-`index.html` owns the shell. `/` and `/cnec/:day?` show navigation;
+`index.html` owns the CNEC shell. `navigation.html` supplies static navigation to
+both that shell and Dash’s HTML template, outside its component tree;
+`assets/navigation.css` owns the shared styling. `/` and `/cnec/:day?` show navigation;
 `/embed/cnec/:day?` uses the same shell without it. Embed interactions retain
 the embed route. `python -m frontend.publish --bucket <bucket>` embeds
 the public Mapbox token and publishes built assets before the normal and embedded shells. It does not

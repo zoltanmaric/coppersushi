@@ -22,12 +22,6 @@ def test_failed_load_becomes_banner(monkeypatch):
     assert is_open and "git lfs pull" in message
 
 
-def test_the_cnec_link_names_no_day_so_the_page_opens_on_today(monkeypatch):
-    monkeypatch.setattr(app, "mapbox_token", lambda: "token")
-    links = (c for c in _components(app.show_page("/opf-2024")) if isinstance(c, html.A))
-    assert next(link for link in links if link.children == "Critical Elements").href == "/cnec"
-
-
 def _components(component):
     """Every component in a layout tree, depth first."""
     yield component
@@ -50,7 +44,7 @@ def test_permanent_opf_urls_keep_normal_and_embed_layouts(monkeypatch):
     for path in ['/embed/opf-2024', '/opf-2024']:
         page = app.show_page(path)
         links = [c.href for c in _components(page) if isinstance(c, html.A)]
-        assert links == ([] if app.is_embed_path(path) else ['https://121gigawatts.org/', '/cnec', '/opf-2024'])
+        assert links == []
         assert {'map', 'snapshot-slider', 'opf-time'} <= {c.id for c in _ids(page)}
 
 

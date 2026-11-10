@@ -3,6 +3,7 @@ import argparse
 import gzip
 import mimetypes
 from pathlib import Path
+from frontend.shell import navigation_html
 from coppersushi import REPO
 import json
 from coppersushi.cnec_support import FIRST_DAY
@@ -13,7 +14,7 @@ def render_shell(token: str, *, embed: bool = False) -> str:
     """Build a date-independent shell with safely embedded browser configuration."""
     config = json.dumps({'min_day': FIRST_DAY.isoformat(), 'token': token}).replace('<', r'\u003c')
     template = (REPO / 'frontend/index.html').read_text()
-    return template.replace('__CNEC_EMBED__', str(embed).lower()).replace('__CNEC_CONFIG__', config)
+    return template.replace('__APP_NAVIGATION__', navigation_html()).replace('__CNEC_EMBED__', str(embed).lower()).replace('__CNEC_CONFIG__', config)
 
 
 def publish(bucket: str) -> None:
