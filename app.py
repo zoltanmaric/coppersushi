@@ -77,6 +77,7 @@ def is_embed_path(pathname: str) -> bool:
 
 def navigation() -> html.Nav:
     return html.Nav([
+        html.A(html.Img(src='https://121gigawatts.org/content/images/2022/03/Gigawatts-Square-800.jpg', alt='1.21 Gigawatts'), href='https://121gigawatts.org/', className='app-logo'),
         html.A('Critical Elements', href='/cnec'),
         html.A('Power Flow', href='/opf-2024'),
     ], className='app-navigation')
