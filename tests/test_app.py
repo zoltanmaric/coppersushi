@@ -50,7 +50,7 @@ def test_permanent_opf_urls_keep_normal_and_embed_layouts(monkeypatch):
     for path in ['/embed/opf-2024', '/opf-2024']:
         page = app.show_page(path)
         links = [c.href for c in _components(page) if isinstance(c, html.A)]
-        assert links == ([] if app.is_embed_path(path) else ['/cnec', '/opf-2024'])
+        assert links == ([] if app.is_embed_path(path) else ['https://121gigawatts.org/', '/cnec', '/opf-2024'])
         assert {'map', 'snapshot-slider', 'opf-time'} <= {c.id for c in _ids(page)}
 
 
