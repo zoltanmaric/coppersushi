@@ -38,8 +38,11 @@ def publish(bucket: str) -> None:
         kind = mimetypes.guess_type(path.name)[0] or 'application/octet-stream'
         client.put_object(Bucket=bucket, Key=f'{prefix}/assets/{path.name}', Body=gzip.compress(content, mtime=0),
                           ContentType=kind, ContentEncoding='gzip', CacheControl='public,max-age=0,must-revalidate')
-    for filename, embed, view in [('index.html', False, 'cnec'), ('embed.html', True, 'cnec'),
-                                  ('opf.html', False, 'opf'), ('opf-embed.html', True, 'opf')]:
+    shells: list[tuple[str, bool, Literal['cnec', 'opf']]] = [
+        ('index.html', False, 'cnec'), ('embed.html', True, 'cnec'),
+        ('opf.html', False, 'opf'), ('opf-embed.html', True, 'opf'),
+    ]
+    for filename, embed, view in shells:
         html = render_shell(token, embed=embed, view=view)
         client.put_object(Bucket=bucket, Key=f'{prefix}/{filename}', Body=gzip.compress(html.encode(), mtime=0),
                           ContentType='text/html;charset=utf-8', ContentEncoding='gzip', CacheControl='public,max-age=60')

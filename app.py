@@ -1,6 +1,7 @@
 import logging
 from functools import partial
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -26,8 +27,8 @@ server.register_blueprint(cnec_routes)
 class PageShellDash(Dash):
     """Put static navigation outside the Dash component tree."""
 
-    def interpolate_index(self, **kwargs):
-        page = super().interpolate_index(**kwargs)
+    def interpolate_index(self, *args: Any, **kwargs: Any) -> str:
+        page: str = super().interpolate_index(*args, **kwargs)
         embed = str(is_embed_path(request.path)).lower()
         return page.replace('<body>', f'<body data-embed="{embed}">{navigation_html()}')
 

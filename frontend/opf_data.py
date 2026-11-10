@@ -41,7 +41,7 @@ def publish(directory: Path, *, bucket: str | None, output: Path | None) -> None
             path = output / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(content)
-        if client:
+        if client and bucket is not None:
             client.put_object(Bucket=bucket, Key=f'data/opf/v1/opf-2024/{name}',
                               Body=gzip.compress(content, mtime=0), ContentType='application/json',
                               ContentEncoding='gzip', CacheControl='public,max-age=60' if name == 'manifest.json'
