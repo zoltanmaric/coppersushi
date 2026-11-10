@@ -36,7 +36,7 @@ app = PageShellDash(
     __name__,
     server=False,
     title='Copper Sushi 🍣',
-    assets_ignore=r'(cnec-(app|view)\.(js|css)|plotly-mapbox-.*\.js)',
+    assets_ignore=r'((cnec|opf)-(app|view)\.(js|css)|plotly-mapbox-.*\.js)',
     external_stylesheets=[dbc.themes.DARKLY],
     suppress_callback_exceptions=True,
 )

@@ -13,10 +13,10 @@ const validConfig = ajv.compile<Config>({type:'object',required:['min_day','toke
 const validBasemap = ajv.compile<Basemap>({type:'object',required:['layers','sources','glyphs'],additionalProperties:true,
   properties:{layers:{type:'array',items:{type:'object',required:['id','type'],properties:{id:{type:'string'},type:{type:'string'}}}},
     sources:{type:'object',additionalProperties:{type:'object',properties:{url:{type:'string'}}}},glyphs:{type:'string'}}});
-const root = createRoot(document.getElementById('cnec-root')!);
+const root = createRoot(document.getElementById('app-root')!);
 root.render(<div role="status">Loading map…</div>);
 async function start() {
-  const config: unknown = JSON.parse(document.getElementById('cnec-config')!.textContent!);
+  const config: unknown = JSON.parse(document.getElementById('app-config')!.textContent!);
   if (!validConfig(config)) throw new Error('Invalid map configuration');
   const default_day = marketDay(new Date());
   const query = new URLSearchParams({access_token: config.token});

@@ -1,6 +1,7 @@
+.plot-host {height:100%;width:100%;}
 body {margin:0;background:#222;color:#eee;font-family:Arial,sans-serif;display:flex;flex-direction:column;height:100dvh}
 a {color:#00bc8c}
-#cnec-root {flex:1;min-height:0}
+#app-root {flex:1;min-height:0}
 .cnec-map-container {height:100%;min-height:0;position:relative}
 .cnec-sources {width:max-content;max-width:calc(100% - 48px);color:#aaa;font-size:11px;line-height:1.2;text-align:center;pointer-events:none}
 .cnec-sources a {color:inherit;pointer-events:auto;text-decoration:none}

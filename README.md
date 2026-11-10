@@ -49,6 +49,8 @@ flowchart TB
     edge -->|Homepage, map embeds and market data| browser["CNEC browser: React and Plotly"]
     opf["OPF preparation"] -->|Hourly figures| server["OPF Dash application"]
     server <-->|Pages and callbacks| opfbrowser["OPF browser"]
+    opf -->|Versioned hours and timestamps| opffiles[("Static OPF files")]
+    opffiles --> staticopf["Static OPF browser preview"]
     maps["Mapbox"] -->|Styles and tiles| browser
     maps -->|Styles and tiles| opfbrowser
     click catalog "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/grid_catalog/README.md" "Grid catalog"
