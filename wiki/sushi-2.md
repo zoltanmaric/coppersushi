@@ -18,7 +18,6 @@ serving boundaries. Component details live with [OPF](../coppersushi/opf/README.
 [grid catalog](../coppersushi/grid_catalog/README.md),
 [publication](../coppersushi/publication/README.md) and the [browser](../frontend/README.md).
 
-
 The catalog keeps source evidence, endpoint identity and orientation assessments
 separate from price attribution. Unknown locations remain explicit. Publication
 resolves missing endpoints before writing the day; browser navigation does not
@@ -34,20 +33,11 @@ in Europe/Brussels time. `/opf-2024` shows both product links;
 `/embed/opf-2024` shows the map without navigation. The homepage and Critical
 Elements embed routes are documented in the [README](../README.md). Both 2013 app models are removed.
 
-The [production Lambda deployment](../infra/lambda/README.md) runs the OPF Dash server behind AWS Web Adapter. OPF responses carry only the
-selected hour’s four traces; API keys come from a dedicated secret. Rendering, S3 reuse and cross-origin framing are verified; measured startup
-limits are recorded in the deployment README.
-
-The OPF page first displays its basemap and camera, then adds the network when the
-figure is ready. A small loading label leaves the map visible during that request.
-The page owns the map layout. Every hour load, including the first, replaces only
-the network traces, preserving the user's zoom and camera.
-
-Image preparation precomputes each OPF hour into a token-free compressed figure.
-Runtime reads the selected hour and supplies the Mapbox token; local checkouts
-without the bundle retain on-demand figure construction.
-
-An optional CloudFront hostname fronts the Lambda deployment, with an ACM certificate
-and externally managed DNS; see [hosting](../infra/lambda/README.md#delivery).
+The [static production hosting](../infra/lambda/README.md) serves both browser views
+and published data through CloudFront and private S3. OPF preparation writes token-free
+compressed figures and UTC timestamps; the browser validates the manifest and selected
+hour, supplies the public Mapbox token and keeps camera state across hour changes.
+Python and Dash remain local tools for candidate solves. The market-data publisher
+Lambda and its workflow are independent of public page delivery.
 
 For external-input resilience, see [JAO availability and response retention](jao-availability.md).

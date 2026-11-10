@@ -1,7 +1,6 @@
 import logging
 from functools import partial
 from pathlib import Path
-from typing import Any
 
 import pandas as pd
 
@@ -9,13 +8,11 @@ import plotly.graph_objects as go
 from dash import Dash, dcc, html, Input, Output, Patch, ctx, no_update
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
-from flask import Flask, request
-from frontend.shell import navigation_html
-from cnec_server import routes as cnec_routes
+from flask import Flask
+from cnec_server import routes as cnec_routes, opf_routes
 
 from coppersushi import map_style
 from coppersushi.opf import power_flow
-from coppersushi.opf.data_sources import opf_bundle
 from coppersushi.data_sources import credentials
 from coppersushi.opf.data_sources import networks
 from coppersushi.market_day import MARKET_TZ
@@ -23,17 +20,9 @@ from coppersushi.market_day import MARKET_TZ
 # Register static map routes before Dash’s fallback routes.
 server = Flask(__name__)
 server.register_blueprint(cnec_routes)
+server.register_blueprint(opf_routes)
 
-class PageShellDash(Dash):
-    """Put static navigation outside the Dash component tree."""
-
-    def interpolate_index(self, *args: Any, **kwargs: Any) -> str:
-        page: str = super().interpolate_index(*args, **kwargs)
-        embed = str(is_embed_path(request.path)).lower()
-        return page.replace('<body>', f'<body data-embed="{embed}">{navigation_html()}')
-
-
-app = PageShellDash(
+app = Dash(
     __name__,
     server=False,
     title='Copper Sushi 🍣',
@@ -47,9 +36,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-NETWORK_LOADERS = {
-    'opf-2024': lambda: networks.load(networks.solved('2024-08-29')),
-}
+NETWORK_LOADERS = {}
 # Unsanctioned solves are viewable at /candidates/<file stem>
 NETWORK_LOADERS.update({
     f'candidates/{path.stem}': partial(networks.load, path)
@@ -76,14 +63,7 @@ def figure_for(network_key: str) -> tuple[go.Figure, pd.Index]:
 
 def network_key_from_path(pathname: str) -> str | None:
     key = (pathname or '').strip('/')
-    if key == 'embed/opf-2024':
-        return 'opf-2024'
     return key if key in NETWORK_LOADERS else None
-
-
-def is_embed_path(pathname: str) -> bool:
-    key = (pathname or '').strip('/')
-    return key == 'embed/opf-2024'
 
 
 def network_layout(token: str | None = None) -> html.Div:
@@ -145,14 +125,9 @@ def render(pathname: str, snapshot_index: int, slider_moved: bool) -> tuple:
     if network_key is None:
         raise PreventUpdate
     try:
-        snapshots: pd.Index | None = opf_bundle.snapshots() if network_key == 'opf-2024' else None
-        if snapshots is None:
-            fig, snapshots = figure_for(network_key)
-            state = opf_snapshot_state(snapshots, snapshot_index, slider_moved)
-            selected = power_flow.show_snapshot(fig, state[2])
-        else:
-            state = opf_snapshot_state(snapshots, snapshot_index, slider_moved)
-            selected = opf_bundle.load(state[2], mapbox_token())
+        fig, snapshots = figure_for(network_key)
+        state = opf_snapshot_state(snapshots, snapshot_index, slider_moved)
+        selected = power_flow.show_snapshot(fig, state[2])
     except Exception as e:  # noqa: BLE001 — every loader failure must reach the page
         logging.exception('Loading %s failed', network_key)
         return no_update, no_update, no_update, no_update, no_update, f'Could not load {network_key}: {e}', True

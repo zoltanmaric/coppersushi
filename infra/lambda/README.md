@@ -1,90 +1,101 @@
-# Deploy Copper Sushi to AWS
+# Static application hosting and publication
 
-This directory manages the Lambda deployment and CloudFront hostname at
-[coppersushi.121gigawatts.org](https://coppersushi.121gigawatts.org).
+CloudFront serves both app shells, shared assets and prepared CNEC/OPF files from
+the private S3 bucket at [coppersushi.121gigawatts.org](https://coppersushi.121gigawatts.org).
+The native CNEC publisher Lambda and its Step Functions schedule prepare market data.
+Python prepares sanctioned OPF hours offline; no public app server is required.
 
-## Deploy an update
+## Deployment state
 
-Run commands from the repository root. Tracked `infra/lambda/` holds the Terraform
-source; the existing production working directory is ignored
-`.secrets/aws-production/`. Its `terraform.tfstate` is authoritative and
-`terraform.tfvars.json` holds the deployment inputs. Read its `README.local.txt`
-before use. Keep the previous `image_uri` and `producer_image_uri` digests for rollback.
+Tracked `infra/lambda/` owns Terraform source. Ignored `.secrets/aws-production/`
+holds the authoritative `terraform.tfstate` and `terraform.tfvars.json`; read its
+`README.local.txt` first. If missing, locate the primary checkout with
+`git worktree list`. Never initialize replacement state. Refresh all tracked `*.tf`
+and `.terraform.lock.hcl` in that directory; delete obsolete mirrored Terraform source
+files while preserving state, inputs and rollback notes.
 
-Ignored deployment files do not follow Git worktrees. If this directory is absent,
-locate the primary checkout with `git worktree list` and check there before asking
-for configuration. Do not initialize replacement state for an existing deployment.
-Refresh **all tracked `*.tf` files**, including `producer.tf`, and `.terraform.lock.hcl`
-from `infra/lambda/` before planning. Remove mirrored Terraform source files that are
-no longer tracked; preserve the authoritative state and inputs.
+## Frontend and OPF publication
 
-1. Run `pixi run --locked setup-app` in this checkout to prepare the validated
-   endpoint seed, locator, element catalog and country outlines. This is the same
-   setup used for local development and needs no data from another worktree.
-   Downloads remain outside Docker; the image build validates its bundled inputs
-   and precomputes hourly OPF maps. See the [catalog workflow](../../config/element-catalog/README.md).
-2. Build the OPF `lambda` target and native `publisher` target with separate tags:
-   `docker build --platform linux/amd64 --provenance=false --target lambda -t <image> .`
-   `docker build --platform linux/amd64 --provenance=false --target publisher -t <publisher-image> .`
-   For a GHCR token error, see [GHCR authentication](#ghcr-authentication).
-3. Authenticate Docker to ECR using the configured AWS profile. Tag and push the
-   image to the `repository_url` Terraform output. ECR tags are immutable: use a
-   fresh tag for each build.
-4. Preserve the previous image digest, Terraform source revision and S3 UI together.
-   Before overwriting public assets, copy the existing UI to a unique rollback
-   prefix outside the public CloudFront origin. S3-to-S3 copy preserves content
-   encoding and cache metadata:
+Use one merged checkout for preparation, publication and rollback notes:
+
+1. Run `pixi run --locked setup-app`, `pixi run --locked frontend-test` and routing tests.
+2. Generate token-free OPF files with
+   `pixi run --locked -e build python -m coppersushi.opf.data_sources.opf_bundle`.
+3. Before overwriting UI or the OPF manifest, archive `data/cnec/v1/ui/` and
+   `data/opf/v1/opf-2024/manifest.json` under a unique `ui-rollback/<release>/`
+   prefix. Use `aws s3 cp --copy-props default` to preserve encoding, MIME types
+   and cache headers. Record the release revision and previous publisher digest
+   in ignored deployment notes. Keep private rollback prefixes out of origin policy.
+4. Publish immutable hours first:
+   `pixi run --locked python -m frontend.opf_data --directory data/opf-2024 --bucket <bucket>`.
+   This uploads all content-versioned hours before the timestamp manifest.
+5. Publish both view shells and shared assets:
+   `pixi run --locked python -m frontend.publish --bucket <bucket>`.
+6. Invalidate `/`, `/cnec*`, `/embed/cnec*`, `/opf-2024*`, `/embed/opf-2024*`,
+   `/assets/*`, `/data/cnec/v1/ui/*` and `/data/opf/v1/opf-2024/manifest.json`.
+   Quote paths. Wait for invalidation completion before verifying.
+7. Through the public hostname, verify CNEC day/interval/reference/selection and
+   Power Flow hours, hover content, direction markers, camera persistence, rapid
+   scrubbing, embed sizing and loading/errors. Inspect console and failed requests.
+
+Ordinary frontend updates require no image build or Terraform apply. Preserve immutable
+OPF generations so cached manifests and rollback shells continue to resolve.
+
+## Cut over from the serving Lambda
+
+Do not retire the server before static data and shells are published.
+
+1. Back up state, variables and old Terraform source revision. Record the serving
+   image digest and Function URL for rollback. Remove `image_uri` from the new
+   inputs; preserve `producer_image_uri`, bucket, repository and secret resources.
+2. Publish and verify the frontend and OPF data as above in local standalone preview.
+3. Refresh tracked Terraform source and initialize the existing working directory.
+   Save a **routing-only** plan:
 
    ```sh
-   aws s3 cp s3://<cache_bucket>/data/cnec/v1/ui/ \
-     s3://<cache_bucket>/ui-rollback/<previous-release>/ --recursive --copy-props default
+   terraform -chdir=.secrets/aws-production plan -target=aws_cloudfront_distribution.app -target=aws_s3_bucket_policy.cache -out=static-routing.tfplan
+   terraform -chdir=.secrets/aws-production show static-routing.tfplan
+   terraform -chdir=.secrets/aws-production apply static-routing.tfplan
    ```
 
-   Record that prefix alongside the previous image digest in ignored deployment
-   notes. On a first deployment there is no previous UI to archive.
-5. Publish the built shell and **all shared assets, including OPF assets**, from the
-   same checkout as the image:
-   `pixi run --locked python -m frontend.publish --bucket <cache_bucket>`.
-   This step is required on every frontend/shared-asset update, not just the first
-   routing cutover. CI builds and checks assets; it does not publish them.
-6. Set `image_uri` and `producer_image_uri` in the ignored variables file to the
-   corresponding image **digest URIs**, then review and apply a saved plan:
+   Review the plan: it changes CloudFront routing and origin permissions, with the
+   serving Lambda still present in state. The default origin is S3; unrecognized
+   app paths return 404 at the edge. Direct data behaviors expose only intended
+   `data/cnec/*` and `data/opf/*` prefixes.
+4. Wait for CloudFront deployment, invalidate the paths above, and complete public
+   browser verification. Confirm there are no Dash callback/component requests.
+   Confirm the publisher Lambda, workflow and daily schedule remain unchanged.
+5. Only after that verification, review a full saved plan and apply it to remove
+   the retired serving Lambda, public Function URL, permissions, role and log group.
+   No publisher, storage, secret, repository or schedule resources should be destroyed.
 
-   ```sh
-   terraform -chdir=.secrets/aws-production init
-   terraform -chdir=.secrets/aws-production plan -out=deploy.tfplan
-   terraform -chdir=.secrets/aws-production apply deploy.tfplan
-   ```
+Targeted apply is a one-time migration step. All subsequent infrastructure updates
+use full saved plans.
 
-7. Invalidate `/`, `/cnec*`, `/embed/cnec*`, `/assets/*`, `/data/cnec/v1/ui/*` and
-   `/_dash-component-suites/*` on CloudFront. Quote paths passed to the AWS CLI.
-   Wait for invalidation to finish before verifying; both original request paths
-   and rewritten S3 paths can have cached content.
-8. Confirm the app and publisher Lambdas report successful updates with the expected
-   image digest. Check that the daily schedule is enabled and the workflow points
-   at the publisher. Verify `/`, `/opf-2024`, `/embed/opf-2024`, and prepared dated
-   `/cnec/<day>` and `/embed/cnec/<day>` views through the public hostname. Exercise time controls, reference and
-   constraint selection, and inspect browser errors after loading completes.
+## Rollback
 
-Frontend-only changes can reuse the deployed Lambda image: build and test the
-frontend, then follow steps 4–5 and 7–8. Record the frontend Git revision with the
-unchanged image digest. Prepared data and frontend assets are served independently
-of the Python image; no Terraform apply is needed when its inputs are unchanged.
+Before retirement, restore the previous Terraform source and variables and review
+and apply a full plan to return CloudFront to the existing Lambda. After retirement,
+the same rollback recreates the server from its preserved image digest. Preserve
+that digest in ECR until the release is accepted.
 
-### Rollback
+Restore archived UI and OPF manifest with S3-to-S3 `cp --copy-props default`, then
+invalidate and verify again. Do not use timestamp-based `sync`: same-size older
+assets must also be restored. Immutable hours do not need overwriting.
 
-Restore the previous Terraform source revision and image digest, then review and
-apply a saved plan against the same authoritative state. Restore the archived UI
-with S3-to-S3 copy so compression, MIME types and cache headers survive:
+## Publisher deployment
 
-```sh
-aws s3 cp s3://<cache_bucket>/ui-rollback/<previous-release>/ \
-  s3://<cache_bucket>/data/cnec/v1/ui/ --recursive --copy-props default
-```
+For changes to market preparation, run `pixi run --locked setup-app`, build
+`docker build --platform linux/amd64 --provenance=false --target publisher -t <image> .`,
+authenticate Docker to ECR with the configured AWS profile, and push a fresh immutable
+tag to the `repository_url` output. Set `producer_image_uri` to its digest URI,
+review a full saved Terraform plan, and apply it. Verify the publisher update,
+workflow target and enabled daily schedule. Preserve its previous digest for rollback.
 
-Use `cp`, rather than timestamp-based `sync`, so same-size older assets are also
-restored. Repeat step 7 and the browser checks from step 8. Restoring only the Lambda
-image does not roll back the S3-owned CNEC or OPF assets.
+Set API key values separately with `python infra/lambda/configure-keys.py --profile <profile>`.
+Keys come from the environment or ignored files; never put values in Terraform inputs,
+command arguments or Git. The native publisher runs on `awslambdaric` and needs no Flask,
+Dash or Web Adapter. Candidate solves remain local tooling through `app.py`.
 
 ## GHCR authentication
 
@@ -114,133 +125,3 @@ if authenticated GHCR access is no longer needed. A successful anonymous build
 identifies the saved-credential problem; it does not establish why that credential
 was rejected.
 
-## Initial setup
-
-Configure `profile` and `region` in the ignored variables file. Leave `image_uri`
-and `custom_domain` unset for the first apply; this creates the repository, private
-cache bucket, secret metadata, IAM role and logs. Set the API keys below, then
-deploy an image using the steps above before adding the hostname.
-
-Set API keys separately:
-
-```sh
-python infra/lambda/configure-keys.py --profile <profile>
-```
-
-This needs Python with `boto3` and the Terraform CLI. Values come from
-`MAPBOX_TOKEN` and `ELECTRICITY_MAPS_API_KEY`, or their files in `.secrets/`.
-They do not enter command arguments, the image or Terraform state. Pass `--region`
-if using a region other than eu-west-1.
-
-For the hostname, set `custom_domain`, plan/apply only `aws_acm_certificate.app`,
-and publish the `certificate_dns` CNAME at the DNS provider. Then review and apply
-an untargeted plan. Point the hostname's DNS-only CNAME at `hostname_target`.
-The certificate is created in us-east-1 for CloudFront.
-
-## State
-
-Keep state, plans, variables and credentials out of Git. Preserve the existing
-resource names and cache bucket; changing an identifier can replace a resource.
-The Terraform output `trial_url` names the direct Function URL; use `custom_url`
-for the public site.
-
-## Runtime
-
-Lambda runs in eu-west-1 with 2 GB memory, 1 GB of disposable `/tmp` space, a
-120-second timeout, concurrency capped at 10, and seven-day logs. The image is
-read-only. Complete validated cache bundles persist in private S3; related
-tables publish together and endpoint discoveries merge without lost concurrent
-writes. Failed fetches remain retryable.
-
-The OPF `bundle-builder` uses `build` to precompute 24 hourly figures. Its runtime
-contains those figures, with no catalog inputs or solved networks. The separate
-`publisher` target validates and bundles prepared catalog inputs and outlines; it
-uses the official AWS Runtime Interface Client, not Flask, Gunicorn or Web Adapter.
-Both environments omit PyPSA and its solver dependencies. Python package dependencies
-are shared for now, but the entry points, bundled data and image digests are independent.
-Runtime reads the selected hour and adds the Mapbox token. Local OPF views without
-bundles render on demand; country outlines require `pixi run --locked build-zone-shapes`.
-Lambda initialization and first-use data loading are separate costs. Buffered synchronous responses must fit Lambda's 6 MB limit.
-Scale-to-zero avoids idle compute charges; storage, logs and requests still cost.
-
-## Tracing
-
-Active X-Ray service tracing samples Lambda requests and separates AWS environment
-preparation from function execution. The execution role permits trace ingestion;
-no application SDK is installed. Inspect traces in eu-west-1 alongside the matching
-CloudWatch request IDs. See [AWS's trace structure](https://docs.aws.amazon.com/lambda/latest/dg/services-xray.html).
-
-`AWS_LWA_ASYNC_INIT=true` lets application startup continue into the first invocation
-after the adapter's roughly 9.8-second initialization limit. Lambda's `Init Duration`
-therefore need not cover all application startup. Service traces do not profile
-individual Python imports.
-
-Lambda Insights is not installed: its agent officially supports Amazon Linux 2/2023,
-whereas this image uses Ubuntu. See [container support](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Lambda-Insights-Getting-Started-docker.html).
-
-## Delivery
-
-CloudFront serves CNEC pages, shared `/assets/*` and prepared interval files from
-private S3. The page resolver rewrites CNEC URLs to the shell; raw source caches
-and UI rollback archives are not public. Manifests and the shell have short cache
-lifetimes; generation data is immutable. Dash component assets are cached at the
-Lambda origin, while OPF page layouts and callback POSTs remain uncached.
-
-HTTPS is enforced for viewers and origins. CloudFront's 60-second origin read
-timeout can end a slow OPF callback before Lambda's 120-second timeout. The direct
-Function URL remains accessible.
-
-## Prepared CNEC data
-
-Shared metadata and uniform interval objects live under `data/cnec/v2/` in the private cache bucket. The publisher writes immutable objects before replacing a manifest cached for 60 seconds. The browser loads the selected interval first and prefetches the rest in parallel through shared query keys. Dates without a prepared publication show an availability message.
-
-Publish a day with `python -m coppersushi.publication.data_sources.bundles YYYY-MM-DD --bucket <cache_bucket>`. Use `--refresh` for a correction, or `--directory data/browser` for local static files. Frontend publication and rollback follow [Deploy an update](#deploy-an-update).
-
-### Rebuilding prepared data after a contract change
-
-The scheduler skips any day whose manifest already exists. Deploying a publisher
-image does not rebuild those days. For a data-contract change:
-
-1. Save each existing supported day's manifest with the image/UI rollback notes.
-   List `data/cnec/v2/` in the private bucket and select the dated manifests in the
-   supported window (starting 5 November 2025).
-2. From the new checkout, run the publication CLI above for **every listed day**.
-   Do not use the scheduled handler: its manifest-existence check skips the work.
-   The CLI prepares and publishes unconditionally; `--refresh` is only needed to
-   refresh upstream observations. For historical days with accepted Polish
-   attribution gaps, add `--allow-partial-attribution`; alpha and receipt checks
-   still apply. Confirm every physical row has its required EIC.
-3. Each rebuild writes a new immutable content-hash generation, then replaces the
-   day manifest. Invalidate `/data/cnec/v2/*/manifest.json` on CloudFront and wait
-   for completion before publishing the new frontend. Keep the previous generations.
-4. Deploy the matching publisher and frontend following the deployment steps above.
-   Existing open tabs may fail validation during this silent-release cutover; reload
-   them after the new frontend is published. No cross-version compatibility is promised.
-
-Rollback restores the saved manifests **as well as** the previous image and UI,
-then invalidates manifests and frontend assets. Old generations alone are insufficient:
-the restored manifest must point to the generation matching that reader's contract.
-
-## Handler separation
-
-CloudFront serves `/`, `/cnec*`, `/embed/cnec*` and `/assets/*` from the published
-private S3 UI prefix. Embedded CNEC paths resolve to `embed.html`; normal map paths
-resolve to `index.html`. Both shells share the same application assets. There is no production CNEC serving Lambda or interval API. OPF and Dash component routes stay on `app:server`.
-The CNEC shell imports neither Dash nor pandas. Data preparation runs only in the background producer. The frontend uses React and a pinned Mapbox-only Plotly bundle.
-
-The browser computes the default market date locally; a cached shell cannot freeze it on its publication date.
-
-The supported delivery window starts on 5 November 2025. The 352 available days
-through 31 October 2026 are published and independently verified. June 2–9 and
-June 11, 2026 remain unavailable due to [source gaps](../../wiki/jao-availability.md#historical-gaps). The frontend never starts an upstream fetch for a visitor.
-
-For local development, prepare a day with
-`python -m coppersushi.publication.data_sources.bundles YYYY-MM-DD --directory data/browser`.
-The local shell serves the same static file format as CloudFront. No upstream fetch
-is initiated by browser navigation.
-
-### Daily publication
-
-EventBridge Scheduler starts a Step Functions Standard execution at 15:50 Europe/Brussels. The scheduled instant pins tomorrow’s delivery date, including across DST. A dedicated publisher first requires JAO monitoring to mark Active FB Constraints, Allocation Constraints, Alpha factor from MCP and Net Position as Received for that delivery day. Only then are sparse active rows meaningful: a received empty set is valid; an absent or pending publication is retried. Interval attribution and prices must also be complete before fetching geometry. Complete days are skipped. Missing publications and transient upstream failures wait two minutes before another attempt; the execution stops after five hours. Unexpected failures get three short retries, then fail visibly in the execution history. Lambda only runs during an attempt. Every deferred attempt logs its delivery date, exception type and reason to the publisher’s CloudWatch log. Unpublished days in the browser recheck the manifest every minute while visible and on return to the page; polling stops after publication.
-
-JAO’s [Core handbook](https://publicationtool.jao.eu/PublicationHandbook/Core_PublicationTool_Handbook_v2.2.pdf) lists active constraints at 13:30 D−1 and alpha/net positions at 15:50 D−1. All required feeds must be complete before the manifest is exposed.

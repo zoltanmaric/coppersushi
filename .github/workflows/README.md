@@ -9,7 +9,7 @@ A small selection job chooses the check groups; the container check starts indep
 | Quality | Type checking and frontend contracts, types and tests | These checks share setup without occupying the app's test workers. |
 | Ghost theme | Theme installation and validation | Independent of app checks; selected only for relevant changes. |
 | Ghost hosting | Ansible setup and Terraform/Ansible checks | Network-dependent setup can overlap the other groups. |
-| Container | Runtime activation and native-library smoke test | Checks the serving environment separately from development dependencies. |
+| Container | Native publisher dependency and import check | Checks the publisher environment separately from development dependencies. |
 
 Ghost groups are selected when `121gigawatts/`, `pyproject.toml`, `pixi.lock` or
 workflow files change. Manual runs select every group. Selection compares the PR
@@ -21,18 +21,9 @@ Check jobs use native Ubuntu runners and locked Pixi environments. Only the Pyth
 job writes the shared Pixi cache; all groups can restore it without competing to save it.
 Short checks share a job because another environment download can cost more than the check.
 
-The OPF and native publisher smoke stages inherit their production environments and mount fixtures
-read-only. Running the check inside the build avoids exporting and loading an image
-just to test it. It has no remote layer cache: downloading, extracting and publishing
-those layers can cost more than rebuilding. Dependency and source layers remain
-separate for local build reuse; production bytecode compilation serves Lambda startup.
-
-To run the container check locally:
-
-```sh
-docker buildx build --target runtime-check --build-context fixtures=tests/fixtures .
-docker buildx build --target publisher-check .
-```
+The native publisher smoke stage verifies the deployed handler imports without web frameworks.
+It has no remote layer cache: downloading and publishing layers can cost more than rebuilding.
+Run it locally with `docker buildx build --target publisher-check .`.
 
 The performance target is elapsed workflow time, including runner setup and cache
 transfers. More jobs, cache hits or faster individual steps do not necessarily shorten

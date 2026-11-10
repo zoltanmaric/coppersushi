@@ -47,10 +47,9 @@ flowchart TB
     prepared -->|Private S3 objects| edge["CloudFront"]
     build["Static site build"] -->|Shell and assets in S3| edge
     edge -->|Homepage, map embeds and market data| browser["CNEC browser: React and Plotly"]
-    opf["OPF preparation"] -->|Hourly figures| server["OPF Dash application"]
-    server <-->|Pages and callbacks| opfbrowser["OPF browser"]
-    opf -->|Versioned hours and timestamps| opffiles[("Static OPF files")]
-    opffiles --> staticopf["Static OPF browser preview"]
+    opf["OPF preparation"] -->|Versioned hours and timestamps| opffiles[("Static OPF files")]
+    opffiles --> edge
+    edge -->|Shell and selected hour| opfbrowser["OPF browser: React and Plotly"]
     maps["Mapbox"] -->|Styles and tiles| browser
     maps -->|Styles and tiles| opfbrowser
     click catalog "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/grid_catalog/README.md" "Grid catalog"
@@ -61,7 +60,7 @@ flowchart TB
 
 Components: [CNEC browser](frontend/README.md), [publication](coppersushi/publication/README.md),
 [grid catalog](coppersushi/grid_catalog/README.md), [OPF](coppersushi/opf/README.md).
-Prepared CNEC data is independent of request-time Python calculations. CloudFront serves the static CNEC shell and prepared files from private S3; OPF retains Dash.
+Prepared CNEC data is independent of request-time Python calculations. CloudFront serves the static CNEC shell and prepared files from private S3; OPF uses the same static hosting boundary.
 The local Flask server previews those same files.
 
 ## Working with Agents
@@ -200,14 +199,11 @@ committed version is a Git LFS object kept forever. Set `PYPSA_EUR_DIR` to use a
 
 ## Production deployment
 
-The app runs on AWS Lambda behind CloudFront. Follow the [deployment runbook](infra/lambda/README.md)
-to prepare bundled data, build the image and deploy an update.
+CloudFront serves the static app and prepared files from private S3. Follow the
+[deployment runbook](infra/lambda/README.md) to publish frontend or hourly OPF updates.
+Only market-data preparation uses a Lambda image; public page requests do not.
 
-Dependencies compose in `pyproject.toml`: the shared base serves the app, the `build`
-extra adds PyPSA for bundle generation, and `dev` adds development tools. Pixi's
-`default` environment combines all three; `build` combines base + build; `runtime`
-uses only the base. All environments share version resolution in `pixi.lock`.
-
-Docker prepares data in the `bundle-builder` stage and installs the serving
-packages and precompiles Python bytecode in `environment`. The final Lambda image receives the runtime environment
-and generated data, without the build environment or its solver dependencies.
+Dependencies compose in `pyproject.toml`: `build` adds PyPSA for offline figures and
+`dev` adds local analysis and development tools. The native publisher image has its
+own handler and omits the frontend and solved networks. Candidate solves remain
+viewable locally through Dash.

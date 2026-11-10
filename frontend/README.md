@@ -29,7 +29,7 @@ basemap. Build with `npm ci && npm run build` in this directory.
 ## Static site
 
 `index.html` owns the CNEC shell. `navigation.html` supplies static navigation to
-the CNEC and OPF shells (and the legacy Dash template);
+the CNEC and OPF shells;
 `assets/navigation.css` owns the shared styling. `/` and `/cnec/:day?` show navigation;
 `/embed/cnec/:day?` uses the same shell without it. Embed interactions retain
 the embed route. `python -m frontend.publish --bucket <bucket>` embeds
