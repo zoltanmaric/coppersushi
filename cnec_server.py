@@ -10,7 +10,7 @@ from flask import Blueprint, Flask, Response, current_app, request, send_from_di
 from coppersushi.data_sources import credentials
 
 from coppersushi.cnec_support import FIRST_DAY
-from frontend.publish import render_shell
+from frontend.packaging.shell import render_shell
 routes = Blueprint('cnec', __name__)
 
 @routes.get('/')

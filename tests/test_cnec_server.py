@@ -26,14 +26,14 @@ def test_opf_does_not_auto_execute_the_standalone_frontend(monkeypatch):
 
 def test_static_shell_needs_no_server_and_safely_embeds_configuration():
     import json
-    from frontend.publish import render_shell
+    from frontend.packaging.shell import render_shell
     token = '</script><script>unsafe</script>'
     html = render_shell(token)
     assert token not in html
     config = html.split('type="application/json">', 1)[1].split('</script>', 1)[0]
     assert json.loads(config) == {'min_day': '2025-11-05', 'token': token}
     subprocess.run([sys.executable, '-c',
-        "import sys; from frontend.publish import render_shell; render_shell('test'); "
+        "import sys; from frontend.packaging.shell import render_shell; render_shell('test'); "
         "assert not {'flask','dash','pandas','plotly'} & sys.modules.keys()"], check=True)
 
 
@@ -117,7 +117,7 @@ def test_production_preview_recovers_from_connection_reset(monkeypatch):
 @pytest.mark.parametrize('path,embed', [('/opf-2024', False), ('/embed/opf-2024', True)])
 def test_opf_shell_uses_shared_static_navigation(path, embed, monkeypatch):
     import app
-    from frontend.shell import navigation_html
+    from frontend.packaging.shell import navigation_html
     monkeypatch.setenv('MAPBOX_TOKEN', 'test-public-token')
     page = app.server.test_client().get(path).get_data(as_text=True)
     assert navigation_html() in page

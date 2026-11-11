@@ -28,11 +28,14 @@ basemap. Build with `npm ci && npm run build` in this directory.
 
 ## Static site
 
+`packaging/` owns Python shell assembly and deployment tools; browser code lives in
+`src/`. Domain data preparation and publication belong to the owning Python package.
+
 `index.html` owns the CNEC shell. `navigation.html` supplies static navigation to
 the CNEC and OPF shells;
 `assets/navigation.css` owns the shared styling. `/` and `/cnec/:day?` show navigation;
 `/embed/cnec/:day?` uses the same shell without it. Embed interactions retain
-the embed route. `python -m frontend.publish --bucket <bucket>` embeds
+the embed route. `python -m frontend.packaging.publish --bucket <bucket>` embeds
 the public Mapbox token and publishes built assets before the normal and embedded shells. It does not
 import a web framework. The browser determines the current market date itself.
 For local preview, `cnec_server.py` serves the same shell and `data/browser` files.

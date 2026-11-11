@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import pytest
 
 from coppersushi.opf.data_sources.publication import publish
-from frontend.publish import render_shell
+from frontend.packaging.shell import render_shell
 
 
 def bundle(directory):
