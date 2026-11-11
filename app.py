@@ -18,7 +18,7 @@ from coppersushi.opf.data_sources import networks
 from coppersushi.market_day import MARKET_TZ
 
 # Register static map routes before Dash’s fallback routes.
-server = Flask(__name__)
+server = Flask(__name__, static_folder='frontend/dist/assets', static_url_path='/assets')
 server.register_blueprint(cnec_routes)
 server.register_blueprint(opf_routes)
 
@@ -26,7 +26,8 @@ app = Dash(
     __name__,
     server=False,
     title='Copper Sushi 🍣',
-    assets_ignore=r'((cnec|opf)-(app|view)\.(js|css)|plotly-mapbox-.*\.js)',
+    assets_folder='frontend/assets',
+    assets_url_path='candidate-assets',
     external_stylesheets=[dbc.themes.DARKLY],
     suppress_callback_exceptions=True,
 )

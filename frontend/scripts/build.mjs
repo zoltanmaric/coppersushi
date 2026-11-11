@@ -1,8 +1,18 @@
-import './sprites.mjs';
+import {cp,copyFile,mkdir,rm} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
-// Each static view owns its React entry and CSS bundle.
-await build({entryPoints: { 'cnec-app':'src/bootstrap.tsx', 'opf-app':'src/opf/bootstrap.tsx' }, bundle: true, minify: true,
-  format: 'iife', outdir: '../assets',
-  define: {'process.env.NODE_ENV': '"production"'}});
-const {copyFile} = await import('node:fs/promises');
-await copyFile('node_modules/plotly.js/plotly-mapbox.min.js', '../assets/plotly-mapbox-3.7.0.min.js');
+import {buildSprites} from './sprites.mjs';
+
+const root = new URL('../',import.meta.url);
+const dist = new URL('dist/',root);
+const assets = new URL('assets/',dist);
+await rm(dist,{recursive:true,force:true});
+await mkdir(assets,{recursive:true});
+await cp(new URL('assets/',root),assets,{recursive:true});
+await buildSprites(assets);
+await build({absWorkingDir:fileURLToPath(root),
+  entryPoints:{'cnec-app':'src/bootstrap.tsx','opf-app':'src/opf/bootstrap.tsx'},
+  bundle:true,minify:true,format:'iife',outdir:fileURLToPath(assets),
+  define:{'process.env.NODE_ENV':'"production"'}});
+await copyFile(new URL('node_modules/plotly.js/plotly-mapbox.min.js',root),
+  new URL('plotly-mapbox-3.7.0.min.js',assets));
