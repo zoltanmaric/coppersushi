@@ -27,7 +27,7 @@ Use one merged checkout for preparation, publication and rollback notes:
    and cache headers. Record the release revision and previous publisher digest
    in ignored deployment notes. Keep private rollback prefixes out of origin policy.
 4. Publish immutable hours first:
-   `pixi run --locked python -m frontend.opf_data --directory data/opf-2024 --bucket <bucket>`.
+   `pixi run --locked python -m coppersushi.opf.data_sources.publication --directory data/opf-2024 --bucket <bucket>`.
    This uploads all content-versioned hours before the timestamp manifest.
 5. Publish both view shells and shared assets:
    `pixi run --locked python -m frontend.publish --bucket <bucket>`.
