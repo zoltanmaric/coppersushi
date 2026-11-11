@@ -9,10 +9,6 @@ variable "region" {
   type    = string
   default = "eu-west-1"
 }
-variable "image_uri" {
-  type    = string
-  default = null
-}
 provider "aws" {
   profile = var.profile
   region  = var.region
@@ -55,76 +51,12 @@ resource "aws_s3_bucket_policy" "cache" {
     Condition = { Bool = { "aws:SecureTransport" = "false" } }
     }], var.custom_domain == null ? [] : [{
     Effect    = "Allow", Principal = { Service = "cloudfront.amazonaws.com" }, Action = "s3:GetObject",
-    Resource  = "${aws_s3_bucket.cache.arn}/data/cnec/*",
+    Resource  = ["${aws_s3_bucket.cache.arn}/data/cnec/*", "${aws_s3_bucket.cache.arn}/data/opf/*"],
     Condition = { StringEquals = { "AWS:SourceArn" = aws_cloudfront_distribution.app[0].arn } }
   }]) })
 }
 # Only metadata is managed here. Secret values are set separately, never in state.
 resource "aws_secretsmanager_secret" "api" { name_prefix = "coppersushi-lambda-trial-" }
-resource "aws_cloudwatch_log_group" "app" {
-  name              = "/aws/lambda/coppersushi-trial"
-  retention_in_days = 7
-}
-resource "aws_iam_role" "app" {
-  name_prefix = "coppersushi-lambda-"
-  assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
-    Effect = "Allow", Principal = { Service = "lambda.amazonaws.com" }, Action = "sts:AssumeRole"
-  }] })
-}
-resource "aws_iam_role_policy" "app" {
-  role = aws_iam_role.app.id
-  policy = jsonencode({ Version = "2012-10-17", Statement = [
-    { Effect = "Allow", Action = ["s3:ListBucket"], Resource = aws_s3_bucket.cache.arn },
-    { Effect = "Allow", Action = ["s3:GetObject", "s3:PutObject"], Resource = "${aws_s3_bucket.cache.arn}/cache/v1/*" },
-    { Effect = "Allow", Action = ["secretsmanager:GetSecretValue"], Resource = aws_secretsmanager_secret.api.arn },
-    { Effect = "Allow", Action = ["logs:CreateLogStream", "logs:PutLogEvents"], Resource = "${aws_cloudwatch_log_group.app.arn}:*" },
-    # X-Ray ingestion actions do not support resource-level permissions.
-    { Effect = "Allow", Action = ["xray:PutTraceSegments", "xray:PutTelemetryRecords"], Resource = "*" }
-  ] })
-}
-resource "aws_lambda_function" "app" {
-  count         = var.image_uri == null ? 0 : 1
-  function_name = "coppersushi-trial"
-  role          = aws_iam_role.app.arn
-  package_type  = "Image"
-  image_uri     = var.image_uri
-  architectures = ["x86_64"]
-  memory_size   = 2048
-  timeout       = 120
-  ephemeral_storage { size = 1024 }
-  tracing_config { mode = "Active" }
-  environment {
-    variables = {
-      XDG_CACHE_HOME           = "/tmp/cache"
-      HOME                     = "/tmp"
-      COPPERSUSHI_CACHE_BUCKET = aws_s3_bucket.cache.id
-      COPPERSUSHI_SECRET_ID    = aws_secretsmanager_secret.api.arn
-    }
-  }
-  depends_on = [aws_iam_role_policy.app]
-}
-resource "aws_lambda_function_url" "app" {
-  count              = var.image_uri == null ? 0 : 1
-  function_name      = aws_lambda_function.app[0].function_name
-  authorization_type = "NONE"
-}
-resource "aws_lambda_permission" "url" {
-  count                  = var.image_uri == null ? 0 : 1
-  function_name          = aws_lambda_function.app[0].function_name
-  statement_id           = "PublicFunctionUrl"
-  action                 = "lambda:InvokeFunctionUrl"
-  principal              = "*"
-  function_url_auth_type = "NONE"
-}
-resource "aws_lambda_permission" "invoke" {
-  count                    = var.image_uri == null ? 0 : 1
-  function_name            = aws_lambda_function.app[0].function_name
-  statement_id             = "OnlyThroughFunctionUrl"
-  action                   = "lambda:InvokeFunction"
-  principal                = "*"
-  invoked_via_function_url = true
-}
 output "repository_url" { value = aws_ecr_repository.app.repository_url }
 output "cache_bucket" { value = aws_s3_bucket.cache.id }
 output "secret_arn" { value = aws_secretsmanager_secret.api.arn }
-output "trial_url" { value = try(aws_lambda_function_url.app[0].function_url, null) }

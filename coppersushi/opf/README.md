@@ -3,7 +3,7 @@
 [System overview](../../README.md) · [Domain model](../../wiki/sushi-2.md)
 
 Owns solved-network loading, snapshot extraction, hourly figure preparation and
-power-flow rendering. The root Dash application serves these figures. External
+power-flow rendering. The static browser loads published hourly figures; local candidates render through Dash. External
 I/O lives in `data_sources/`; the remaining modules transform in-memory values.
 
 ```mermaid
@@ -12,15 +12,14 @@ flowchart LR
     networks --> snapshot["Typed snapshot"]
     snapshot --> figures["Plotly figure construction"]
     figures --> bundle["Hourly OPF bundle"]
-    bundle --> server["Dash application"]
     bundle --> publish["Versioned static publication"]
-    publish --> browser["Static OPF browser preview"]
+    publish --> browser["React and Plotly browser"]
 ```
 
 `data_sources/pypsa_eur.py` runs and promotes solves; `networks.py` loads them.
 `snapshot.py`, `shedding.py` and `power_flow.py` derive the view.
-`data_sources/opf_bundle.py` prepares the serving bundle. Its image contains only this precomputed data; OPF startup does not load or validate
-the [grid catalog](../grid_catalog/README.md).
-
-`data_sources/publication.py` publishes the same token-free hours and a timestamp manifest.
-The standalone [browser](../../frontend/README.md) consumes these files without Dash.
+`data_sources/opf_bundle.py` prepares token-free hours and UTC timestamps.
+`data_sources/publication.py` publishes immutable generations and their manifest to S3.
+The [browser](../../frontend/README.md) loads selected hours through CloudFront.
+Candidate solves remain local analysis through `app.py`; public page requests
+neither load solved networks nor construct figures in Python.

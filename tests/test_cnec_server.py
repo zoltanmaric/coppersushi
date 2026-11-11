@@ -17,11 +17,12 @@ def test_unprepared_local_manifest_is_an_explicit_miss():
     response = server.test_client().get('/data/cnec/v2/2099-01-01/manifest.json')
     assert response.status_code == 404
 
-def test_opf_does_not_auto_execute_the_standalone_frontend():
+def test_opf_does_not_auto_execute_the_standalone_frontend(monkeypatch):
+    monkeypatch.setenv("MAPBOX_TOKEN", "test-public-token")
     import app
     page = app.server.test_client().get('/opf-2024').get_data(as_text=True)
     assert 'cnec-app.js' not in page
-    assert 'plotly-mapbox-3.7.0.min.js' not in page
+    assert 'plotly-mapbox-3.7.0.min.js' in page
 
 def test_static_shell_needs_no_server_and_safely_embeds_configuration():
     import json
@@ -114,10 +115,12 @@ def test_production_preview_recovers_from_connection_reset(monkeypatch):
 
 
 @pytest.mark.parametrize('path,embed', [('/opf-2024', False), ('/embed/opf-2024', True)])
-def test_opf_shell_uses_shared_static_navigation(path, embed):
+def test_opf_shell_uses_shared_static_navigation(path, embed, monkeypatch):
     import app
     from frontend.shell import navigation_html
+    monkeypatch.setenv('MAPBOX_TOKEN', 'test-public-token')
     page = app.server.test_client().get(path).get_data(as_text=True)
     assert navigation_html() in page
     assert f'data-embed="{str(embed).lower()}"' in page
     assert '/assets/navigation.css' in page
+    assert '/assets/opf-app.js' in page

@@ -37,17 +37,6 @@ def _ids(component):
     return (c for c in _components(component) if getattr(c, "id", None))
 
 
-def test_permanent_opf_urls_keep_normal_and_embed_layouts(monkeypatch):
-    monkeypatch.setattr(app, "mapbox_token", lambda: "token")
-    assert app.network_key_from_path('/') is None
-    assert app.network_key_from_path('/embed/opf-2024') == 'opf-2024'
-    for path in ['/embed/opf-2024', '/opf-2024']:
-        page = app.show_page(path)
-        links = [c.href for c in _components(page) if isinstance(c, html.A)]
-        assert links == []
-        assert {'map', 'snapshot-slider', 'opf-time'} <= {c.id for c in _ids(page)}
-
-
 @pytest.mark.parametrize('path', ['/v1', '/opf-2013', '/missing'])
 def test_retired_or_unknown_views_do_not_fall_back_to_any_model(path):
     assert app.network_key_from_path(path) is None

@@ -1,6 +1,7 @@
 import re
 import json
 
+import pandas as pd
 import pypsa
 import plotly.graph_objects as go
 import pytest
@@ -102,41 +103,35 @@ class TestPlotPowerFlow:
         from coppersushi.opf.data_sources import opf_bundle
         fig = ppf.colored_network_figure(n, 'net_power', mapbox_token='build-token')
         opf_bundle.write(fig, n.snapshots, tmp_path)
-        assert opf_bundle.snapshots(tmp_path).equals(n.snapshots.tz_localize('UTC'))
+        import gzip
+        times = pd.DatetimeIndex(pd.to_datetime(json.loads((tmp_path / 'snapshots.json').read_text()), utc=True))
+        assert times.equals(n.snapshots.tz_localize('UTC'))
         for index in [0, 6, len(n.snapshots) - 1]:
-            loaded = opf_bundle.load(index, 'runtime-token', tmp_path)
+            loaded = go.Figure(json.loads(gzip.decompress((tmp_path / f'{index}.json.gz').read_bytes())))
+            loaded.update_layout(mapbox_accesstoken='runtime-token')
             expected = ppf.show_snapshot(fig, index)
             expected.update_layout(mapbox_accesstoken='runtime-token')
             assert json.loads(loaded.to_json()) == json.loads(expected.to_json())
-        import gzip
         assert 'build-token' not in gzip.decompress((tmp_path / '0.json.gz').read_bytes()).decode()
         assert fig.layout.mapbox.accesstoken == 'build-token'
 
-    @pytest.mark.parametrize('bundled', [False, True])
-    def test_hour_changes_replace_traces_without_overwriting_the_camera(self, n, tmp_path, monkeypatch, bundled):
+    def test_candidate_hour_changes_preserve_the_camera(self, n, monkeypatch):
         import app
         from dash import Patch
         from coppersushi import map_style
-        from coppersushi.opf.data_sources import opf_bundle
 
         fig = ppf.colored_network_figure(n, 'net_power')
         fig.update_layout(mapbox=map_style.OPF_CAMERA)
         monkeypatch.setattr(app, 'mapbox_token', lambda: 'runtime-token')
-        if bundled:
-            opf_bundle.write(fig, n.snapshots, tmp_path)
-            load = opf_bundle.load
-            monkeypatch.setattr(opf_bundle, 'snapshots', lambda: n.snapshots)
-            monkeypatch.setattr(opf_bundle, 'load', lambda index, token: load(index, token, tmp_path))
-        else:
-            monkeypatch.setattr(opf_bundle, 'snapshots', lambda: None)
-            monkeypatch.setattr(app, 'figure_for', lambda key: (fig, n.snapshots))
+        monkeypatch.setitem(app.NETWORK_LOADERS, 'candidates/test', lambda: n)
+        monkeypatch.setattr(app, 'figure_for', lambda key: (fig, n.snapshots))
 
         from tests.test_app import _ids
         graph = next(c for c in _ids(app.network_layout()) if c.id == 'map')
         assert graph.figure['layout']['mapbox']['zoom'] == map_style.OPF_CAMERA['zoom']
         assert graph.figure['layout']['showlegend'] is False
         for index, moved in [(0, False), (0, True), (6, True), (1, True)]:
-            result = app.render('/opf-2024', index, slider_moved=moved)
+            result = app.render('/candidates/test', index, slider_moved=moved)
             update, _, _, selected, _, message, is_open = result
             assert isinstance(update, Patch)
             assert not is_open and message == ''

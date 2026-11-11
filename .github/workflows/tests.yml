@@ -75,10 +75,6 @@ jobs:
         run: pixi run --locked "$CHECK_TASK"
 
   container:
-    strategy:
-      fail-fast: false
-      matrix:
-        target: [runtime-check, publisher-check]
     if: ${{ github.event_name == 'workflow_dispatch' || !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -89,8 +85,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          target: ${{ matrix.target }}
-          build-contexts: fixtures=./tests/fixtures
+          target: publisher-check
           platforms: linux/amd64
           outputs: type=cacheonly
           provenance: false

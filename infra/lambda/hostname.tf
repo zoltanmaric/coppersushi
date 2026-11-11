@@ -26,8 +26,6 @@ resource "aws_acm_certificate_validation" "app" {
   validation_record_fqdns = [for option in aws_acm_certificate.app[0].domain_validation_options : option.resource_record_name]
 }
 
-data "aws_cloudfront_cache_policy" "disabled" { name = "Managed-CachingDisabled" }
-data "aws_cloudfront_origin_request_policy" "lambda" { name = "Managed-AllViewerExceptHostHeader" }
 
 resource "aws_cloudfront_cache_policy" "static" {
   count       = var.custom_domain == null ? 0 : 1
@@ -53,35 +51,13 @@ resource "aws_cloudfront_distribution" "app" {
   price_class     = "PriceClass_100"
 
   origin {
-    domain_name = trimsuffix(trimprefix(aws_lambda_function_url.app[0].function_url, "https://"), "/")
-    origin_id   = "lambda"
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "https-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
-      origin_read_timeout    = 60
-    }
-  }
-
-  origin {
     domain_name              = aws_s3_bucket.cache.bucket_regional_domain_name
     origin_id                = "prepared-data"
     origin_access_control_id = aws_cloudfront_origin_access_control.prepared[0].id
   }
 
-  ordered_cache_behavior {
-    path_pattern           = "/data/cnec/*"
-    target_origin_id       = "prepared-data"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
-    cached_methods         = ["GET", "HEAD"]
-    cache_policy_id        = aws_cloudfront_cache_policy.prepared[0].id
-    compress               = true
-  }
-
   dynamic "ordered_cache_behavior" {
-    for_each = ["/", "/cnec*", "/embed/cnec*"]
+    for_each = ["/data/cnec/*", "/data/opf/*"]
     content {
       path_pattern           = ordered_cache_behavior.value
       target_origin_id       = "prepared-data"
@@ -90,40 +66,33 @@ resource "aws_cloudfront_distribution" "app" {
       cached_methods         = ["GET", "HEAD"]
       cache_policy_id        = aws_cloudfront_cache_policy.prepared[0].id
       compress               = true
-      function_association {
-        event_type   = "viewer-request"
-        function_arn = aws_cloudfront_function.cnec_static[0].arn
-      }
+    }
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "/assets/*"
+    target_origin_id       = "prepared-data"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    cache_policy_id        = aws_cloudfront_cache_policy.static[0].id
+    compress               = true
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.cnec_static[0].arn
     }
   }
 
   default_cache_behavior {
-    target_origin_id         = "lambda"
-    viewer_protocol_policy   = "redirect-to-https"
-    allowed_methods          = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods           = ["GET", "HEAD"]
-    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
-    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.lambda.id
-    compress                 = true
-  }
-
-  dynamic "ordered_cache_behavior" {
-    for_each = ["/assets/*", "/_dash-component-suites/*"]
-    content {
-      path_pattern           = ordered_cache_behavior.value
-      target_origin_id       = ordered_cache_behavior.value == "/assets/*" ? "prepared-data" : "lambda"
-      viewer_protocol_policy = "redirect-to-https"
-      allowed_methods        = ["GET", "HEAD", "OPTIONS"]
-      cached_methods         = ["GET", "HEAD"]
-      cache_policy_id        = aws_cloudfront_cache_policy.static[0].id
-      dynamic "function_association" {
-        for_each = ordered_cache_behavior.value == "/assets/*" ? [1] : []
-        content {
-          event_type   = "viewer-request"
-          function_arn = aws_cloudfront_function.cnec_static[0].arn
-        }
-      }
-      compress = true
+    target_origin_id       = "prepared-data"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    cache_policy_id        = aws_cloudfront_cache_policy.prepared[0].id
+    compress               = true
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.cnec_static[0].arn
     }
   }
 
@@ -175,9 +144,18 @@ resource "aws_cloudfront_function" "cnec_static" {
   code    = <<-JS
     function handler(event) {
       var request = event.request;
-      request.uri = request.uri.indexOf('/assets/') === 0
-        ? '/data/cnec/v1/ui' + request.uri
-        : '/data/cnec/v1/ui/' + (request.uri.indexOf('/embed/cnec') === 0 ? 'embed.html' : 'index.html');
+      var path = request.uri;
+      var prefix = '/data/cnec/v1/ui/';
+      if (path.indexOf('/assets/') === 0) {
+        request.uri = prefix + path.slice(1);
+      } else if (/^\/(embed\/)?opf-2024\/?$/.test(path)) {
+        request.uri = prefix + (path.indexOf('/embed/') === 0 ? 'opf-embed.html' : 'opf.html');
+      } else if (path === '/' || /^\/(embed\/)?cnec(\/\d{4}-\d{2}-\d{2})?\/?$/.test(path)) {
+        request.uri = prefix + (path.indexOf('/embed/') === 0 ? 'embed.html' : 'index.html');
+      } else {
+        return {statusCode: 404, statusDescription: 'Not Found',
+          headers: {'content-type': {value: 'text/plain'}}, body: 'Not found'};
+      }
       return request;
     }
   JS

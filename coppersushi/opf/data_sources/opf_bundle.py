@@ -1,10 +1,9 @@
-"""Read one precomputed OPF hour; build the token-free shelf when packaging the image."""
+"""Prepare token-free hourly OPF figures for static publication."""
 import gzip
 import json
 from pathlib import Path
 
 import pandas as pd
-import plotly.io as pio
 import plotly.graph_objects as go
 
 from coppersushi import REPO
@@ -13,13 +12,6 @@ from coppersushi.opf import power_flow
 from coppersushi.opf.data_sources import networks
 
 DIRECTORY = REPO / 'data' / 'opf-2024'
-
-
-def snapshots(directory: Path = DIRECTORY) -> pd.DatetimeIndex | None:
-    path = directory / 'snapshots.json'
-    if not path.exists():
-        return None
-    return pd.DatetimeIndex(pd.to_datetime(json.loads(path.read_text()), utc=True), tz='UTC')
 
 
 def write(fig: go.Figure, times: pd.Index, directory: Path) -> None:
@@ -32,13 +24,6 @@ def write(fig: go.Figure, times: pd.Index, directory: Path) -> None:
         with gzip.open(directory / f'{index}.json.gz', 'wt') as output:
             output.write(hour.to_json())
     (directory / 'snapshots.json').write_text(json.dumps([t.isoformat() for t in times]))
-
-
-def load(index: int, token: str, directory: Path = DIRECTORY) -> go.Figure:
-    with gzip.open(directory / f'{index}.json.gz', 'rt') as source:
-        fig = pio.from_json(source.read())
-    fig.update_layout(mapbox_accesstoken=token)
-    return fig
 
 
 def build() -> None:
