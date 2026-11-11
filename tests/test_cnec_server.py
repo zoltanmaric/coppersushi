@@ -49,7 +49,7 @@ def test_home_and_embed_share_the_shell_with_explicit_header_mode(path, embed, m
         html = response.get_data(as_text=True)
         assert f'data-embed="{str(embed).lower()}"' in html
         assert '/assets/cnec-app.js' in html
-        navigation = html.split('<nav>', 1)[1].split('</nav>', 1)[0]
+        navigation = html.split('<nav class="app-navigation">', 1)[1].split('</nav>', 1)[0]
         assert navigation.index('Critical Elements') < navigation.index('Power Flow')
 
 
@@ -111,3 +111,13 @@ def test_production_preview_recovers_from_connection_reset(monkeypatch):
     client = cnec_server.create_app(production_data=True).test_client()
     assert client.get('/data/cnec/v2/2026-11-09/manifest.json').json == {}
     assert attempts == 2
+
+
+@pytest.mark.parametrize('path,embed', [('/opf-2024', False), ('/embed/opf-2024', True)])
+def test_opf_shell_uses_shared_static_navigation(path, embed):
+    import app
+    from frontend.shell import navigation_html
+    page = app.server.test_client().get(path).get_data(as_text=True)
+    assert navigation_html() in page
+    assert f'data-embed="{str(embed).lower()}"' in page
+    assert '/assets/navigation.css' in page

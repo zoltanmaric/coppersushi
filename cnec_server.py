@@ -51,11 +51,27 @@ def local_data(filename: str) -> Response:
     return send_from_directory(Path(__file__).parent / 'data/browser/data/cnec/v2',filename)
 
 
+opf_routes = Blueprint('opf_static', __name__)
+
+
+@opf_routes.get('/opf-2024')
+@opf_routes.get('/embed/opf-2024')
+def opf_index() -> str:
+    return render_shell(credentials.token('MAPBOX_TOKEN', Path('.secrets/.mapbox_token')),
+                        embed=request.path.startswith('/embed/'), view='opf')
+
+
+@opf_routes.get('/data/opf/v1/opf-2024/<path:filename>')
+def opf_data(filename: str) -> Response:
+    return send_from_directory(Path(__file__).parent / 'data/browser/data/opf/v1/opf-2024', filename)
+
+
 def create_app(*, production_data: bool) -> Flask:
     """Preview local frontend assets against disk files or public production data."""
     app = Flask(__name__, static_folder='assets', static_url_path='/assets')
     app.config['PRODUCTION_DATA'] = production_data
     app.register_blueprint(routes)
+    app.register_blueprint(opf_routes)
     return app
 
 

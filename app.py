@@ -1,6 +1,7 @@
 import logging
 from functools import partial
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -8,7 +9,8 @@ import plotly.graph_objects as go
 from dash import Dash, dcc, html, Input, Output, Patch, ctx, no_update
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
-from flask import Flask
+from flask import Flask, request
+from frontend.shell import navigation_html
 from cnec_server import routes as cnec_routes
 
 from coppersushi import map_style
@@ -22,11 +24,20 @@ from coppersushi.market_day import MARKET_TZ
 server = Flask(__name__)
 server.register_blueprint(cnec_routes)
 
-app = Dash(
+class PageShellDash(Dash):
+    """Put static navigation outside the Dash component tree."""
+
+    def interpolate_index(self, *args: Any, **kwargs: Any) -> str:
+        page: str = super().interpolate_index(*args, **kwargs)
+        embed = str(is_embed_path(request.path)).lower()
+        return page.replace('<body>', f'<body data-embed="{embed}">{navigation_html()}')
+
+
+app = PageShellDash(
     __name__,
     server=False,
     title='Copper Sushi 🍣',
-    assets_ignore=r'(cnec-(app|view)\.(js|css)|plotly-mapbox-.*\.js)',
+    assets_ignore=r'((cnec|opf)-(app|view)\.(js|css)|plotly-mapbox-.*\.js)',
     external_stylesheets=[dbc.themes.DARKLY],
     suppress_callback_exceptions=True,
 )
@@ -75,14 +86,6 @@ def is_embed_path(pathname: str) -> bool:
     return key == 'embed/opf-2024'
 
 
-def navigation() -> html.Nav:
-    return html.Nav([
-        html.A(html.Img(src='https://121gigawatts.org/content/images/2022/03/Gigawatts-Square-800.jpg', alt='1.21 Gigawatts'), href='https://121gigawatts.org/', className='app-logo'),
-        html.A('Critical Elements', href='/cnec'),
-        html.A('Power Flow', href='/opf-2024'),
-    ], className='app-navigation')
-
-
 def network_layout(token: str | None = None) -> html.Div:
     return html.Div([
         html.Div(id='opf-time', className='opf-time'),
@@ -120,14 +123,13 @@ def network_layout(token: str | None = None) -> html.Div:
 app.layout = html.Div([
     dcc.Location(id='url', refresh='callback-nav'),
     html.Div(id='page'),
-])
+], className='app-root')
 
 
 def show_page(pathname: str) -> html.Div:
     if network_key_from_path(pathname) is None:
         return html.Div([html.H1('Page not found'), html.A('2024 OPF', href='/opf-2024')])
     return html.Div([
-        *([] if is_embed_path(pathname) else [navigation()]),
         network_layout(mapbox_token()),
     ], className='app-page')
 

@@ -46,3 +46,5 @@ dist/
 /assets/cnec-app.js
 /assets/cnec-app.css
 /assets/plotly-mapbox-*.min.js
+/assets/opf-app.js
+/assets/opf-app.css

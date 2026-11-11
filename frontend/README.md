@@ -28,7 +28,9 @@ basemap. Build with `npm ci && npm run build` in this directory.
 
 ## Static site
 
-`index.html` owns the shell. `/` and `/cnec/:day?` show navigation;
+`index.html` owns the CNEC shell. `navigation.html` supplies static navigation to
+the CNEC and OPF shells (and the legacy Dash template);
+`assets/navigation.css` owns the shared styling. `/` and `/cnec/:day?` show navigation;
 `/embed/cnec/:day?` uses the same shell without it. Embed interactions retain
 the embed route. `python -m frontend.publish --bucket <bucket>` embeds
 the public Mapbox token and publishes built assets before the normal and embedded shells. It does not
@@ -42,3 +44,30 @@ python -m flask --app 'cnec_server:create_app(production_data=True)' run --port 
 
 Only prepared-data requests are proxied to the public production site.
 Production routing and rollback are in the [hosting runbook](../infra/lambda/README.md).
+
+## Static Power Flow
+
+`src/opf/` validates a versioned timestamp manifest and selected Plotly hour. It owns
+local-time labels, noon selection and controls; `map/plot.tsx` and `map/render-state.ts`
+provide rendering and latest-selection queuing without CNEC overlays.
+
+```mermaid
+flowchart LR
+    preparation["Python OPF preparation"] --> hours["Immutable hourly figures"]
+    hours --> manifest["Timestamp manifest"]
+    manifest --> view["React controls and data validation"]
+    hours --> view
+    view --> plot["Plotly map"]
+```
+
+Prepare a local preview:
+
+```sh
+pixi run --locked -e build python -m coppersushi.opf.data_sources.opf_bundle
+pixi run --locked python -m coppersushi.opf.data_sources.publication --directory data/opf-2024 --output data/browser/data/opf/v1/opf-2024
+```
+
+The standalone Flask preview serves `/opf-2024` and `/embed/opf-2024` with local OPF
+files even when CNEC uses production data. Publish OPF hours separately with
+`python -m coppersushi.opf.data_sources.publication --directory data/opf-2024 --bucket <bucket>`; hours are
+uploaded under a content-derived generation before the mutable manifest.

@@ -47,7 +47,7 @@ export function Plot({id, data, layout, config, ...callbacks}: Props) {
     const plot = element.current!;
     return () => {void pending.current.then(() => window.Plotly.purge(plot));};
   }, []);
-  return <div id={id} ref={element} style={{height:'100%',width:'100%'}}/>;
+  return <div id={id} ref={element} className="plot-host"/>;
 }
 
 export function clearTooltip(plot: HTMLElement) {window.Plotly.Fx.unhover(plot);}
