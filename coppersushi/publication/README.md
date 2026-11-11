@@ -4,6 +4,8 @@
 
 Prepares complete market days as immutable browser data. JAO receipt evidence and
 complete prices/context are required before the manifest exposes a generation.
+Inputs include day-ahead prices, binding constraints and PTDFs, alpha factors,
+Polish allocation limits, net positions and alternative prices.
 There is no serving process in this component. `bundle.py` and `models.py` define
 pure conversion and the wire contract; `data_sources/` owns fetching and writing.
 

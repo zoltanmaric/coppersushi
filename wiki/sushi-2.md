@@ -18,20 +18,6 @@ serving boundaries. Component details live with [OPF](../coppersushi/opf/README.
 [grid catalog](../coppersushi/grid_catalog/README.md),
 [publication](../coppersushi/publication/README.md) and the [browser](../frontend/README.md).
 
-```mermaid
-flowchart LR
-    solve["Pinned PyPSA-Eur solve"] --> network["Solved network"]
-    network --> opf["Hourly optimal-power-flow figures"]
-    network --> outlines["Core bidding-zone outlines"]
-    evidence["JAO names, OSM sites and reviewed orientation evidence"] --> catalog["Located physical elements"]
-    prices["Published day-ahead prices"] --> day["Validated complete market day"]
-    binding["Binding rows, shadow prices and zonal PTDFs"] --> day
-    context["Alpha, Polish allocation limits, net positions and alternative prices"] --> day
-    catalog --> day
-    outlines --> day
-    day --> files["Immutable metadata and interval files"]
-    files --> browser["Country prices and selected spread attribution"]
-```
 
 The catalog keeps source evidence, endpoint identity and orientation assessments
 separate from price attribution. Unknown locations remain explicit. Publication
