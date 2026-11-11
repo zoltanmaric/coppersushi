@@ -22,5 +22,5 @@ flowchart LR
 `data_sources/opf_bundle.py` prepares the serving bundle. Its image contains only this precomputed data; OPF startup does not load or validate
 the [grid catalog](../grid_catalog/README.md).
 
-`frontend/opf_data.py` publishes the same token-free hours and a timestamp manifest.
+`data_sources/publication.py` publishes the same token-free hours and a timestamp manifest.
 The standalone [browser](../../frontend/README.md) consumes these files without Dash.

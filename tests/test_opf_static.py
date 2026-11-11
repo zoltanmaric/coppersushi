@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from frontend.opf_data import publish
+from coppersushi.opf.data_sources.publication import publish
 from frontend.publish import render_shell
 
 
@@ -18,7 +18,7 @@ def test_hours_are_immutable_and_published_before_manifest(tmp_path, monkeypatch
     source = tmp_path / 'source'
     bundle(source)
     client = Mock()
-    monkeypatch.setattr('frontend.opf_data.cache._client', lambda: client)
+    monkeypatch.setattr('coppersushi.opf.data_sources.publication.cache._client', lambda: client)
     publish(source, bucket='test', output=None)
     calls = [c.kwargs for c in client.put_object.call_args_list]
     manifest = json.loads(gzip.decompress(calls[-1]['Body']))
@@ -33,7 +33,7 @@ def test_invalid_hour_cannot_publish_a_manifest(tmp_path, monkeypatch):
     bundle(source)
     (source / '0.json.gz').write_bytes(gzip.compress(b'{"data": []}'))
     client = Mock()
-    monkeypatch.setattr('frontend.opf_data.cache._client', lambda: client)
+    monkeypatch.setattr('coppersushi.opf.data_sources.publication.cache._client', lambda: client)
     with pytest.raises(ValueError, match='Invalid OPF figure'):
         publish(source, bucket='test', output=None)
     client.put_object.assert_not_called()

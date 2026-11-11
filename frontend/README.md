@@ -64,10 +64,10 @@ Prepare a local preview:
 
 ```sh
 pixi run --locked -e build python -m coppersushi.opf.data_sources.opf_bundle
-pixi run --locked python -m frontend.opf_data --directory data/opf-2024 --output data/browser/data/opf/v1/opf-2024
+pixi run --locked python -m coppersushi.opf.data_sources.publication --directory data/opf-2024 --output data/browser/data/opf/v1/opf-2024
 ```
 
 The standalone Flask preview serves `/opf-2024` and `/embed/opf-2024` with local OPF
 files even when CNEC uses production data. Publish OPF hours separately with
-`python -m frontend.opf_data --directory data/opf-2024 --bucket <bucket>`; hours are
+`python -m coppersushi.opf.data_sources.publication --directory data/opf-2024 --bucket <bucket>`; hours are
 uploaded under a content-derived generation before the mutable manifest.
