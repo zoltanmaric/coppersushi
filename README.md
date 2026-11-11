@@ -1,6 +1,6 @@
 # Copper Sushi 🍣
 ## Electricity tools and 1.21 Gigawatts
-[![](assets/coppersushi-gif.gif)](https://121gigawatts.org/copper-sushi-power-flow-european-grid/)
+[![](frontend/assets/coppersushi-gif.gif)](https://121gigawatts.org/copper-sushi-power-flow-european-grid/)
 
 This monorepo owns the power-flow and grid-constraint apps, price forecasting,
 and the [1.21 Gigawatts Ghost theme and hosting](121gigawatts/README.md).

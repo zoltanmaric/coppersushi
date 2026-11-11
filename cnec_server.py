@@ -68,7 +68,7 @@ def opf_data(filename: str) -> Response:
 
 def create_app(*, production_data: bool) -> Flask:
     """Preview local frontend assets against disk files or public production data."""
-    app = Flask(__name__, static_folder='assets', static_url_path='/assets')
+    app = Flask(__name__, static_folder='frontend/dist/assets', static_url_path='/assets')
     app.config['PRODUCTION_DATA'] = production_data
     app.register_blueprint(routes)
     app.register_blueprint(opf_routes)

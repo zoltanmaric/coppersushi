@@ -28,6 +28,11 @@ basemap. Build with `npm ci && npm run build` in this directory.
 
 ## Static site
 
+`assets/` contains tracked static source files. `npm run build` cleans `dist/`,
+copies those sources into `dist/assets/`, and adds generated bundles, sprites and
+Plotly. Preview serves `dist/assets/` at `/assets/`; publication uploads those built
+files and writes the configured HTML shells into `dist/`. Public URLs stay stable.
+
 `packaging/` owns Python shell assembly and deployment tools; browser code lives in
 `src/`. Domain data preparation and publication belong to the owning Python package.
 
