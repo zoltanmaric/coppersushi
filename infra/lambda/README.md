@@ -30,7 +30,7 @@ Use one merged checkout for preparation, publication and rollback notes:
    `pixi run --locked python -m coppersushi.opf.data_sources.publication --directory data/opf-2024 --bucket <bucket>`.
    This uploads all content-versioned hours before the timestamp manifest.
 5. Publish both view shells and shared assets:
-   `pixi run --locked python -m frontend.publish --bucket <bucket>`.
+   `pixi run --locked python -m frontend.packaging.publish --bucket <bucket>`.
 6. Invalidate `/`, `/cnec*`, `/embed/cnec*`, `/opf-2024*`, `/embed/opf-2024*`,
    `/assets/*`, `/data/cnec/v1/ui/*` and `/data/opf/v1/opf-2024/manifest.json`.
    Quote paths. Wait for invalidation completion before verifying.
