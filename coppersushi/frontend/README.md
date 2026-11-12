@@ -1,0 +1,34 @@
+# Map frontend
+
+[Product](../README.md) · [Pipelines](../pipelines/README.md)
+
+Owns the React map pages and their browser presentation. `pages/powerflow/` constructs
+network layers and tooltips from numeric snapshots; `pages/cnec/` owns market selection,
+contributions and reference-country behavior. Both use shared `controls/`, `map/` and
+`data/` code. There is no intermediate source directory.
+
+```mermaid
+flowchart LR
+  files["Published manifests and intervals"] --> loading["Validated browser loading"]
+  loading --> powerflow["Power Flow page"]
+  loading --> cnec["Critical Elements page"]
+  powerflow --> controls["Shared MapControls overlay"]
+  cnec --> controls
+  powerflow --> plot["Shared Plot lifecycle"]
+  cnec --> plot
+```
+
+`controls/map-controls.tsx` owns overlay composition and placement for both pages.
+Pages supply legend units and range, help content, optional reference controls and
+calendar capabilities. Power Flow uses a fixed day; Critical Elements supplies daily
+availability. Domain fetching stays out of shared presentation components.
+
+`map/` owns plotting primitives; feature-specific layers and calculations stay with
+the page. Python shell assembly and asset publication live in `packaging/`; they do
+not fetch upstream market data or publish domain datasets.
+
+From the repository root: `pixi run frontend-build`, `pixi run frontend-test` and
+`pixi run frontend-contracts`. The latter regenerates browser contracts from Python
+models. Tests are colocated. `scripts/build.mjs` builds into ignored `dist/`; source
+assets live in `assets/`. The [deployment runbook](../infra/lambda/README.md) owns
+production publication and rollback.

@@ -1,11 +1,16 @@
 # Copper Sushi 🍣
 ## Electricity tools and 1.21 Gigawatts
-[![](frontend/assets/coppersushi-gif.gif)](https://121gigawatts.org/copper-sushi-power-flow-european-grid/)
+[![](coppersushi/frontend/assets/coppersushi-gif.gif)](https://121gigawatts.org/copper-sushi-power-flow-european-grid/)
 
 This monorepo owns the power-flow and grid-constraint apps, price forecasting,
 and the [1.21 Gigawatts Ghost theme and hosting](121gigawatts/README.md).
 The power-flow app visualises optimisation solutions from
 [`pypsa-eur`](https://github.com/PyPSA/pypsa-eur).
+
+Product ownership: [Copper Sushi](coppersushi/README.md) contains the tools at
+coppersushi.121gigawatts.org, including their frontend, pipelines and infrastructure.
+[1.21 Gigawatts](121gigawatts/README.md) contains the blog at 121gigawatts.org.
+[Forecasting](forecasts/README.md) retains its existing independent layout.
 
 The web app is deployed
 [**here**](https://121gigawatts.org/copper-sushi-power-flow-european-grid/),
@@ -47,20 +52,19 @@ flowchart TB
     prepared -->|Private S3 objects| edge["CloudFront"]
     build["Static site build"] -->|Shell and assets in S3| edge
     edge -->|Homepage, map embeds and market data| browser["CNEC browser: React and Plotly"]
-    opf["OPF preparation"] -->|Versioned hours and timestamps| opffiles[("Static OPF files")]
-    opf -->|Validated numeric export| localopf[("Local Power Flow dataset")]
+    opf["OPF preparation"] -->|Numeric metadata, intervals and manifest| opffiles[("Static OPF files")]
     opffiles --> edge
     edge -->|Shell and selected hour| opfbrowser["OPF browser: React and Plotly"]
     maps["Mapbox"] -->|Styles and tiles| browser
     maps -->|Styles and tiles| opfbrowser
-    click catalog "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/grid_catalog/README.md" "Grid catalog"
-    click opf "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/opf/README.md" "OPF"
-    click publication "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/publication/README.md" "Publication"
+    click catalog "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/grid/README.md" "Grid catalog"
+    click opf "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/powerflow/README.md" "OPF"
+    click publication "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/cnec/README.md" "Publication"
     click browser "https://github.com/zoltanmaric/coppersushi/blob/main/frontend/README.md" "CNEC browser"
 ```
 
-Components: [CNEC browser](frontend/README.md), [publication](coppersushi/publication/README.md),
-[grid catalog](coppersushi/grid_catalog/README.md), [OPF](coppersushi/opf/README.md).
+Components: [CNEC browser](coppersushi/frontend/README.md), [publication](coppersushi/pipelines/cnec/README.md),
+[grid catalog](coppersushi/pipelines/grid/README.md), [OPF](coppersushi/pipelines/powerflow/README.md).
 Prepared CNEC data is independent of request-time Python calculations. CloudFront serves the static CNEC shell and prepared files from private S3; OPF uses the same static hosting boundary.
 The local Flask server previews those same files.
 
@@ -96,7 +100,7 @@ pixi run --locked setup
 
 Repeat the same command after pulling dependency changes. No credentials, solver runs,
 cloud resources or large datasets are needed for setup or tests.
-The standalone [CNEC browser](frontend/README.md) owns selection, market arithmetic
+The standalone [CNEC browser](coppersushi/frontend/README.md) owns selection, market arithmetic
 and map rendering. It loads prepared interval files; browsing never calls the
 upstream market APIs. `setup` and `dev` build its assets with locked npm dependencies.
 After changing frontend sources, run `pixi run frontend-build`; after changing wire
@@ -154,13 +158,13 @@ Electricity Maps key in `.secrets/.electricity_maps_api_key`, or export
 `ELECTRICITY_MAPS_API_KEY`. Prepare a complete day before browsing:
 
 ```sh
-pixi run --locked python -m coppersushi.publication.data_sources.bundles 2026-11-03 --directory data/browser
+pixi run --locked python -m coppersushi.pipelines.cnec.data_sources.bundles 2026-11-03 --directory coppersushi/data/browser
 ```
 
-Preparation resolves elements through the [grid catalog](coppersushi/grid_catalog/README.md).
+Preparation resolves elements through the [grid catalog](coppersushi/pipelines/grid/README.md).
 Incomplete upstream publications remain unpublished; missing element locations are
-explicit in the prepared data. See [publication](coppersushi/publication/README.md)
-for the file contract and [deployment](infra/lambda/README.md) for S3 delivery.
+explicit in the prepared data. See [publication](coppersushi/pipelines/cnec/README.md)
+for the file contract and [deployment](coppersushi/infra/lambda/README.md) for S3 delivery.
 
 ## Running the Tests
 ```bash
@@ -170,38 +174,38 @@ This runs app tests, forecast tests, forecast type checks, Ghost theme validatio
 and hosting configuration checks. Node 22, Yarn, Terraform, Make and Ansible are
 installed by the same setup command. Theme npm packages retain `121gigawatts/yarn.lock`;
 Terraform providers retain their `.terraform.lock.hcl` files.
-The tests run against small checked-in fixtures under `tests/fixtures/`, never against the
+The tests run against small checked-in fixtures under `coppersushi/testdata/`, never against the
 networks. Tests require no Mapbox token; they build figures without fetching map tiles.
 
 See the [CI design](.github/workflows/README.md) for GitHub Actions check groups,
 parallelism, cache choices and the local container check.
 
 ## Solving a day with PyPSA-Eur
-The networks in `networks/` are produced by [PyPSA-Eur](https://github.com/PyPSA/pypsa-eur),
+The networks in `coppersushi/networks/` are produced by [PyPSA-Eur](https://github.com/PyPSA/pypsa-eur),
 run from a **sibling checkout** at `../pypsa-eur` pinned by `pypsa-eur.pin` (repository URL and
-commit) with the configuration in `config/coppersushi.yaml`. Set it up once:
+commit) with the configuration in `coppersushi/config/coppersushi.yaml`. Set it up once:
 ```bash
 git clone https://github.com/PyPSA/pypsa-eur.git ../pypsa-eur  # the runner fetches the pinned commit from the URL in pypsa-eur.pin
 (cd ../pypsa-eur && pixi install)
 ```
 Then, from this repository:
 ```bash
-pixi run --locked python -m coppersushi.opf.data_sources.pypsa_eur solve
+pixi run --locked python -m coppersushi.pipelines.powerflow.data_sources.pypsa_eur solve
 ```
 checks the sibling out at the pinned commit, runs the workflow (a first run downloads about
 20 GB and takes an hour on a fast connection; later runs take minutes) and writes the solved
-network to the gitignored `networks/candidates/opf-<day>-<pin>.nc`, viewable in the app at
-`/candidates/<file stem>` (after an app restart). Iterate as often as you like; when a solve is the one to keep,
+network to the gitignored `coppersushi/networks/candidates/opf-<day>-<pin>.nc`, previewable by exporting it with
+`python -m coppersushi.pipelines.powerflow.data_sources.dataset <network-file> coppersushi/data/candidate-preview --serve`. Iterate as often as you like; when a solve is the one to keep,
 ```bash
-pixi run --locked python -m coppersushi.opf.data_sources.pypsa_eur promote networks/candidates/opf-<day>-<pin>.nc
+pixi run --locked python -m coppersushi.pipelines.powerflow.data_sources.pypsa_eur promote coppersushi/networks/candidates/opf-<day>-<pin>.nc
 ```
-copies it to `networks/opf-<day>.nc` and stages it — committing is the sanction, and each
+copies it to `coppersushi/networks/opf-<day>.nc` and stages it — committing is the sanction, and each
 committed version is a Git LFS object kept forever. Set `PYPSA_EUR_DIR` to use a checkout elsewhere. Design: [`wiki/pypsa-eur-sibling.md`](wiki/pypsa-eur-sibling.md).
 
 ## Production deployment
 
 CloudFront serves the static app and prepared files from private S3. Follow the
-[deployment runbook](infra/lambda/README.md) to publish frontend or hourly OPF updates.
+[deployment runbook](coppersushi/infra/lambda/README.md) to publish frontend or hourly OPF updates.
 Only market-data preparation uses a Lambda image; public page requests do not.
 
 Dependencies compose in `pyproject.toml`: `build` adds PyPSA for offline figures and

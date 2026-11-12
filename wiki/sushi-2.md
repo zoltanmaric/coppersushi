@@ -1,6 +1,6 @@
 # Copper Sushi 2 — optimal power flow on the 2025 grid
 
-[System overview](../README.md) · [OPF component](../coppersushi/opf/README.md) · [Grid catalog component](../coppersushi/grid_catalog/README.md)
+[System overview](../README.md) · [OPF component](../coppersushi/pipelines/powerflow/README.md) · [Grid catalog component](../coppersushi/pipelines/grid/README.md)
 The in-place successor of [v1](copper-sushi-app.md). v1 visualized a *model's* optimal power flow on the 2013 GridKit grid ("the math is real, the data is not"). Sushi 2 keeps the OPF and moves it to **PyPSA-Eur as of 2026, on the 2025 OSM-based grid, for a 2024 day** — a working OPF first; truing it up to measured data comes after.
 
 ## Architecture (settled 2026-09-02)
@@ -14,23 +14,15 @@ The in-place successor of [v1](copper-sushi-app.md). v1 visualized a *model's* o
 ## Dataflow
 
 The [root system diagram](../README.md#system-design) owns runtime components and
-serving boundaries. Component details live with [OPF](../coppersushi/opf/README.md),
-[grid catalog](../coppersushi/grid_catalog/README.md),
-[publication](../coppersushi/publication/README.md) and the [browser](../frontend/README.md).
+serving boundaries. Component details live with [OPF](../coppersushi/pipelines/powerflow/README.md),
+[grid catalog](../coppersushi/pipelines/grid/README.md),
+[publication](../coppersushi/pipelines/cnec/README.md) and the [browser](../coppersushi/frontend/README.md).
 
 The catalog keeps source evidence, endpoint identity and orientation assessments
 separate from price attribution. Unknown locations remain explicit. Publication
 resolves missing endpoints before writing the day; browser navigation does not
 fetch upstream data or ask Python to render figures. The browser applies the chosen
 reference country and constraint to the published coefficients.
-
-## Planned viewer refactor
-
-The [implementation spec](specs/coppersushi-reorganization/index.html) replaces
-prebuilt Power Flow figures with typed network data and shared React controls,
-then reorganizes product files. This is planned, not implemented. The separate
-[data catalog draft](specs/coppersushi-reorganization/data-catalog-draft.html)
-is deferred and is not a delivery dependency.
 
 ## Future chapters
 
@@ -41,11 +33,10 @@ in Europe/Brussels time. `/opf-2024` shows both product links;
 `/embed/opf-2024` shows the map without navigation. The homepage and Critical
 Elements embed routes are documented in the [README](../README.md). Both 2013 app models are removed.
 
-The [static production hosting](../infra/lambda/README.md) serves both browser views
-and published data through CloudFront and private S3. OPF preparation writes token-free
-compressed figures and UTC timestamps; the browser validates the manifest and selected
+The [static production hosting](../coppersushi/infra/lambda/README.md) serves both browser views
+and published data through CloudFront and private S3. OPF preparation writes typed network metadata, numeric interval values and UTC timestamps; the browser validates the manifest and selected
 hour, supplies the public Mapbox token and keeps camera state across hour changes.
-Python and Dash remain local tools for candidate solves. The market-data publisher
+Candidate networks use the same numeric export and browser preview. The market-data publisher
 Lambda and its workflow are independent of public page delivery.
 
 For external-input resilience, see [JAO availability and response retention](jao-availability.md).

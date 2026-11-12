@@ -15,12 +15,12 @@ __pycache__/
 # Bulk JAO observations and generated catalogs are rebuilt locally; reviewed mappings
 # are tracked in config/. See config/element-catalog/README.md for source terms.
 /data/jao/
-/tests/fixtures/jao/
+/coppersushi/testdata/jao/
 /wiki/.obsidian/
 *.code-workspace
 
-# Unsanctioned solves; `python -m coppersushi.opf.data_sources.pypsa_eur promote <file>` moves one into networks/ (LFS).
-networks/candidates/
+# Unsanctioned solves; `python -m coppersushi.pipelines.powerflow.data_sources.pypsa_eur promote <file>` moves one into networks/ (LFS).
+/coppersushi/networks/candidates/
 
 # Implementation plans are working documents, not deliverables: they are amended as the work
 # teaches us things, so a checked-in copy differs per branch and goes stale on the lower ones.
@@ -41,3 +41,6 @@ dist/
 
 # Generated React component assets.
 /frontend/dist/
+
+/coppersushi/data/*
+/coppersushi/frontend/dist/

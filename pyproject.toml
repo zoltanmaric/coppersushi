@@ -7,8 +7,7 @@ name = "coppersushi"
 version = "0.1.0"
 requires-python = ">=3.14,<3.15"
 dependencies = [
-    "dash==4.4.1",
-    "dash-bootstrap-components==2.0.4",
+    "flask==3.1.3",
     "pandas==3.0.5",
     "plotly==6.9.0",
     "numpy==2.5.2",
@@ -16,7 +15,6 @@ dependencies = [
     "pydantic==2.14.1",
     "polars==2.1.0",
     "openpyxl==3.1.5",
-    "gunicorn==26.0.0",
     "boto3==1.43.118",
     "pyyaml==6.0.3",
     "geopandas>=1,<2",
@@ -41,6 +39,7 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
+namespaces = false
 include = ["coppersushi*", "forecasts*"]
 exclude = ["forecasts.tests*", "forecasts.evidence*"]
 
@@ -74,10 +73,10 @@ build = { features = ["build"], solve-group = "default" }
 [tool.pixi.tasks]
 setup = { cmd = "python -c \"import sys; print('Python interpreter:', sys.executable)\"", depends-on = ["theme-install", "hosting-setup", "frontend-build"] }
 setup-app = { depends-on = ["setup", "setup-data"] }
-setup-data = "git lfs pull && python -m coppersushi.data_sources.runtime_data prepare"
-check-data = "python -m coppersushi.data_sources.runtime_data check"
-dev = { cmd = "python app.py", depends-on = ["check-data", "frontend-build"] }
-build-zone-shapes = "python -m coppersushi.grid_catalog.data_sources.zone_shapes"
+setup-data = "git lfs pull && python -m coppersushi.pipelines.data_sources.runtime_data prepare"
+check-data = "python -m coppersushi.pipelines.data_sources.runtime_data check"
+dev = { cmd = "python -m coppersushi.frontend.packaging.preview", depends-on = ["check-data", "frontend-build"] }
+build-zone-shapes = "python -m coppersushi.pipelines.grid.data_sources.zone_shapes"
 test-app = "python -m pytest -q -n 4 --dist loadfile --durations=20"
 test-forecast = "python -m unittest discover -s forecasts/tests -v"
 typecheck = "python -m mypy --config-file mypy.ini"
@@ -85,7 +84,7 @@ test-python = { depends-on = ["test-app", "test-forecast"] }
 test-quality = { depends-on = ["typecheck", "frontend-test"] }
 test-core = { depends-on = ["test-python", "test-quality"] }
 test = { depends-on = ["test-core", "theme-test", "hosting-test"] }
-solve = "python -m coppersushi.opf.data_sources.pypsa_eur solve"
+solve = "python -m coppersushi.pipelines.powerflow.data_sources.pypsa_eur solve"
 theme-install = { cmd = "yarn install --frozen-lockfile --ignore-optional", cwd = "121gigawatts" }
 theme-dev = { cmd = "yarn dev", cwd = "121gigawatts" }
 theme-test = { cmd = "yarn test:ci", cwd = "121gigawatts" }
@@ -96,7 +95,7 @@ hosting-check = "make -C 121gigawatts/hosting check"
 hosting-configure = "make -C 121gigawatts/hosting configure"
 hosting-restore = "make -C 121gigawatts/hosting restore"
 
-frontend-install = { cmd = "npm ci", cwd = "frontend" }
-frontend-build = { cmd = "npm run build", cwd = "frontend", depends-on = ["frontend-install"] }
-frontend-test = "python -m scripts.cnec_contracts --check && npm run --prefix frontend types -- --check && npm run --prefix frontend typecheck && npm test --prefix frontend"
-frontend-contracts = "python -m scripts.cnec_contracts && npm run --prefix frontend types"
+frontend-install = { cmd = "npm ci", cwd = "coppersushi/frontend" }
+frontend-build = { cmd = "npm run build", cwd = "coppersushi/frontend", depends-on = ["frontend-install"] }
+frontend-test = "python -m scripts.cnec_contracts --check && npm run --prefix coppersushi/frontend types -- --check && npm run --prefix coppersushi/frontend typecheck && npm test --prefix coppersushi/frontend"
+frontend-contracts = "python -m scripts.cnec_contracts && npm run --prefix coppersushi/frontend types"

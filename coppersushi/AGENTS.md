@@ -1,5 +1,8 @@
-# Package Guidelines
+# Copper Sushi guidance
 
-- **io-boundary** — Keep external I/O at the boundary. Only modules under a component’s `data_sources/` directory touch files, processes or the network; every other module accepts and returns in-memory values. `tests/test_architecture.py` enforces it for a finite set of I/O APIs.
+Read [README.md](README.md) for product ownership and follow the local README where you work.
 
-- **explicit-timezones** — No timestamp without a named zone. Every local time is local *to a timezone*: require an explicit zone in timestamp types and constructors (`tz=`/`tzinfo=`/`utc=`), and reject naive inputs inside the application. `tz=None` is permitted only where a third party forces naiveness (PyPSA snapshots — naive, meaning UTC), declared at the single conversion point. `tests/test_architecture.py` enforces a finite set of constructors. Rationale and evidence: `wiki/timezone-handling.md`.
+
+- **checked-in-fixtures** — Test fixtures are checked-in files, never constructed in test code: far more readable than string-building, and inspectable/diffable on their own. Keep them minimal — the fewest rows that exercise the format's quirks. Where a source's licence forbids redistribution the file is synthesised rather than captured, reproducing every quirk of the real format with invented names and values, and the real measurements it stands for are recorded in the PR body or the wiki.
+
+- **hermetic-tests** — Tests never touch the network, downloaded data, or any manual step. A clean checkout runs the whole suite fast and green. Validating real datasets is the job of the code that loads them — assert invariants where the data is actually loaded, so they fail loudly in real runs, not in a test nobody executes.

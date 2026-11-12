@@ -4,7 +4,7 @@ Interactive map of the European transmission grid showing an **optimal power flo
 
 ## Hosting
 
-The [Lambda deployment README](../infra/lambda/README.md) defines production hosting and cache behavior.
+The [Lambda deployment README](../coppersushi/infra/lambda/README.md) defines production hosting and cache behavior.
 
 AWS Lambda with a durable S3 cache is the approved production host.
 
@@ -36,7 +36,7 @@ Observed limitations to address in a future map renderer:
 
 - Plotly updates the whole figure when independently fetched layers arrive. Country fills and symbols can blink repeatedly. Waiting for the layers to settle reduces redraws but delays the first prices and leaves the preceding interval visible while loading.
 - Country names and constraint markers are Mapbox symbols. They fade and are placed again on data updates; Plotly does not expose the map's symbol fade duration. A label-free basemap prevents the basemap's own names from appearing between updates.
-- Native plot listeners forward events to the committed displayed snapshot. Camera updates are not render-completion signals: only settlement of the public `Plotly.react` promise releases the render gate. The [map component](../frontend/src/map/README.md) owns this boundary and its input gestures.
+- Native plot listeners forward events to the committed displayed snapshot. Camera updates are not render-completion signals: only settlement of the public `Plotly.react` promise releases the render gate. The [map component](../coppersushi/frontend/src/map/README.md) owns this boundary and its input gestures.
 - Electric selection effects must share the renderer's actual camera. A version-bound adapter acquires Plotly's private Mapbox instance, then uses public `project` and native movement/resize events. The renderer supplies the map after its render promise settles; native notifications redraw only decoration. Plotly's forwarded events are insufficient: in the pinned integration, programmatic zoom emits progress without the completion event used by the old camera mirror; a first-load fit left electricity hidden until a real pan. Rotation and inertial panning also exposed synchronization drift. This is evidence for direct map ownership: it would remove the private acquisition and separate lifecycle bridge, and let independently updated layers share native ordering. React alone does not change that ownership. The smaller native-projection adapter fixes the present problem without a renderer migration. See [Mapbox projection](https://github.com/plotly/mapbox-gl-js/blob/v1.13.4/src/ui/map.js#L851) and [Plotly's Mapbox integration](https://github.com/plotly/plotly.js/blob/v3.7.0/src/plots/mapbox/mapbox.js).
 - The CNEC map stays north-up and flat, with decoration restricted to one canonical world. The adapter disables native mouse, touch and keyboard rotation/tilt while preserving pan and zoom. Native Plotly strokes remain the simpler static alternative; the retained electric filaments draw through native projection.
 - Plotly emits a missing sprite warning for `-15`; the map also reported style rebuild warnings when switching basemap styles. Browser checks must distinguish such warnings from failed data requests and visible errors.

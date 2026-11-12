@@ -1,0 +1,6 @@
+.cnec-bottom-controls {position:absolute;bottom:calc(4px + env(safe-area-inset-bottom,0px));left:16px;right:16px;display:grid;gap:4px;z-index:3}
+@media(max-width:700px){.cnec-bottom-controls {left:12px;right:12px}}
+.cnec-map-tools {position:absolute;top:16px;left:16px;right:16px;z-index:4;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:stretch;pointer-events:none}
+.cnec-map-tools .cnec-price-legend {position:static;box-sizing:border-box;max-width:100%}
+.cnec-bottom-controls {pointer-events:none}
+.cnec-bottom-controls>* {pointer-events:auto}

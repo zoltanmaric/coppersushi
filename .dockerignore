@@ -3,26 +3,26 @@
 .idea
 .secrets
 __pycache__
-data/*
-!data/jao
-data/jao/*
-!data/jao/element-ends.csv
-!data/core-zone-shapes.geojson
-!data/element-catalog
-!data/osm-locator
-data/osm-locator/*
-!data/osm-locator/*.csv
+coppersushi/data/*
+!coppersushi/data/jao
+coppersushi/data/jao/*
+!coppersushi/data/jao/element-ends.csv
+!coppersushi/data/core-zone-shapes.geojson
+!coppersushi/data/element-catalog
+!coppersushi/data/osm-locator
+coppersushi/data/osm-locator/*
+!coppersushi/data/osm-locator/*.csv
 specs
 worktrees
 wiki
 tests
 networks/candidates
 
-infra/lambda/.terraform
-infra/lambda/*.tfstate*
-infra/lambda/*.tfvars
-infra/lambda/*.tfvars.json
-infra/lambda/*.tfplan
+coppersushi/infra/lambda/.terraform
+coppersushi/infra/lambda/*.tfstate*
+coppersushi/infra/lambda/*.tfvars
+coppersushi/infra/lambda/*.tfvars.json
+coppersushi/infra/lambda/*.tfplan
 
 .pixi
 *.egg-info
@@ -32,4 +32,8 @@ infra/lambda/*.tfplan
 **/dist
 
 121gigawatts
-frontend/dist
+coppersushi/frontend/dist
+data/
+coppersushi/testdata/
+**/test_*.py
+coppersushi/networks/candidates/
