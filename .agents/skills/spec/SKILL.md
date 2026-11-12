@@ -1,21 +1,24 @@
 ---
 name: spec
-description: Maintain a one-page burn-down spec as the working memory of a large or multi-session task. Use when work spans sessions, when the user asks for a spec or brief, or when a grill ends on a task too big to carry in a confirmed summary alone.
+description: Maintain a concise burn-down spec as the working memory of a large or multi-session task. Use when work spans sessions, when the user asks for a spec or brief, or when a grill ends on a task too big to carry in a confirmed summary alone.
 ---
 
 # spec — a task-scoped burn-down file
 
-Intent: one markdown file holding the task's *remaining* intent, so any fresh session
-re-bootstraps by reading it. It is working memory, not documentation.
+Keep one authoritative artifact for the task’s remaining intent. Use the requested
+format; an HTML explainer can be the spec without a parallel Markdown copy.
 
-Shape (suggested, not enforced), hard cap ~1 page:
+Lead with a short overview; put necessary implementation contracts in linked or
+expandable detail. Preserve enough context for a fresh agent to act with the repo.
+Suggested shape:
 
 - **Problem** — a few sentences.
 - **Approach** — including rejected alternatives, with reasons.
 - **Acceptance criteria** — as runnable checks where possible. This is the load-bearing
   section: how will both of us know it's done?
 
-No file-by-file implementation plan — that lives in the working session and dies with it.
+Distinguish the verified baseline, agreed changes and parked ideas. Deferred ideas
+do not enter implementation steps or completion criteria.
 
 Guardrails:
 
@@ -24,12 +27,11 @@ Guardrails:
   slivers have long-term value lives in `wiki/specs/` instead — committed, and listed
   in the wiki index under a separate "Specs (working memory)" section so queries never
   mistake burn-down state for settled knowledge.
-- Link to the wiki rather than restating it — divergent copies rot.
-- Burn it down: as pieces land and verify, delete them from the spec.
-- Detail only the next step or two; keep later items coarse and re-plan after each
-  landing — once step one lands, step five as currently imagined often no longer exists.
+- Link to owning READMEs and wiki pages rather than copying their facts.
+- Reconcile with current code before handoff; remove work already landed and verified.
+- Keep agreed boundaries and acceptance criteria explicit; detail near-term work and
+  re-plan later steps as implementation changes what remains.
 
-Exit: when the acceptance criteria verify, distill anything worth keeping into the
-wiki (the llm-wiki skill decides what and in what shape), then delete the spec file —
-git keeps the history; a wiki-resident sliver may survive as (or merge into) a durable
-page. A leftover spec is a visible signal of an unfinished task.
+When acceptance criteria pass, move lasting architecture and operating facts to
+their owning READMEs, domain knowledge and decisions to the wiki, then delete the
+completed spec. Git keeps its history.
