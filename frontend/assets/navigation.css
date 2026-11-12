@@ -9,3 +9,7 @@
 .app-navigation .app-logo {width:calc(1lh + 2 * var(--navigation-padding, 10px)); flex:none; align-self:stretch;}
 .app-navigation .app-logo img {position:absolute; top:0; height:100%; width:auto;}
 body[data-embed="true"]>.app-navigation {display:none;}
+@media (max-width:380px) {
+    .app-navigation {gap:12px;font-size:14px;}
+    .app-navigation>a {white-space:nowrap;}
+}
