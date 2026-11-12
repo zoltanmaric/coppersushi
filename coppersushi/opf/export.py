@@ -30,10 +30,10 @@ def extract(network: 'pypsa.Network') -> Dataset:
     for timestamp in network.snapshots:
         snapshot = NetworkSnapshot(network, timestamp)
         flows = power_flow.get_branch_info_for_snapshot(network, geometry, timestamp)
-        generation_by_bus = {bus: rows for bus, rows in snapshot.generators.groupby(level=0)}
+        generation_by_bus = {str(bus): rows for bus, rows in snapshot.generators.groupby(level=0)}
         values = []
         for name, row in snapshot.buses.iterrows():
-            generators = generation_by_bus.get(name, snapshot.generators.iloc[:0])
+            generators = generation_by_bus.get(str(name), snapshot.generators.iloc[:0])
             values.append(NodeValues(node=str(name), net_power_mw=row.p,
                 load_mw=optional_number(snapshot.loads.p_load.get(name)),
                 generators=[Generation(technology=str(generator.carrier), power_mw=generator.p,
@@ -44,4 +44,3 @@ def extract(network: 'pypsa.Network') -> Dataset:
                       for _, row in flows.reset_index().iterrows()]))
     return Dataset(version=2, nodes=nodes, branches=branches, intervals=intervals,
                    net_power_scale_mw=max(abs(low), abs(high)) or 1.0)
-
