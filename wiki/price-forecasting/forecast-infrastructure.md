@@ -1,6 +1,6 @@
 # Forecast storage and execution
 
-Agreed direction, 2026-10-09. Typed S3 snapshots, the shared input/feature reader and local calculation are implemented. Metaflow execution, tracking and environment restoration remain planned. This supports the [forecast design](germany-luxembourg.md); the [product overview](../price-forecasting.md) owns the architecture graph. Remaining work lives in the [implementation spec](../specs/day-ahead-price-forecast.md).
+Agreed direction, 2026-10-09. Typed S3 snapshots, local calculation, Metaflow execution and MLflow tracking are implemented; cloud execution remains planned. This supports the [forecast design](germany-luxembourg.md); the [product overview](../price-forecasting.md) owns the architecture graph. Remaining work lives in the [implementation spec](../specs/day-ahead-price-forecast.md).
 
 ## Promise
 
@@ -50,7 +50,7 @@ The three dataset names, checked schemas and snapshot manifests provide the init
 
 ## Iteration
 
-Keep source collection, input loading, feature construction and model evaluation as ordinary Python functions with thin Metaflow steps. Small fixtures permit local checks without provider access. Accepted reproducible runs use a committed code revision and a frozen dependency environment. Record that revision, environment, configuration, seed and snapshot identifier. Exploratory runs with uncommitted code are marked as such and do not satisfy the reproduction guarantee; patch capture and replay are outside the first iteration. MLflow links to the Metaflow run; Metaflow records the MLflow run identifier. Reuse the platform's artifact and retry mechanisms.
+Keep source collection, input loading, feature construction and model evaluation as ordinary Python functions with thin Metaflow steps. Small fixtures permit local checks without provider access. Accepted reproducible runs archive the committed repository and its Pixi definitions, then install the locked `runtime` environment from that archive. The launcher’s development environment does not supply the computation’s dependencies. Record that revision, environment, configuration, seed and snapshot identifier. Exploratory runs with uncommitted code are marked as such and do not satisfy the reproduction guarantee; patch capture and replay are outside the first iteration. MLflow links to the Metaflow run; Metaflow records the MLflow run identifier. Reuse the platform's artifact and retry mechanisms.
 
 ### Research-history
 
