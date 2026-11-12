@@ -89,11 +89,13 @@ a {color:#00bc8c}
 
 .cnec-map-tools {position:absolute;top:16px;left:16px;right:16px;z-index:4;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:stretch;pointer-events:none}
 .cnec-map-tools .cnec-price-legend {position:static;box-sizing:border-box;max-width:100%}
-/* Radix owns dynamic positioning; visual styles stay here. */
-.cnec-help-trigger {position:relative;z-index:8;grid-column:1 / -1;justify-self:end;pointer-events:auto;width:44px;height:44px;display:grid;place-items:center;padding:0;border:0;border-radius:5px;background:rgba(0,0,0,.82);color:#fff;cursor:pointer}
-.cnec-help-trigger:hover,.cnec-help-trigger[data-state=open] {background:rgba(35,28,44,.94)}
-.cnec-help-trigger:focus-visible,.cnec-help a:focus-visible {outline:2px solid #af77ed;outline-offset:2px}
-.cnec-help {display:flex;flex-direction:column;max-height:var(--radix-popover-content-available-height);pointer-events:auto;z-index:7;width:340px;max-width:calc(100vw - 24px);box-sizing:border-box;border-radius:6px;background:rgba(0,0,0,.88);color:#eee;box-shadow:0 6px 24px #0004}
+.cnec-help-trigger {grid-column:1 / -1;justify-self:end;}
+.cnec-help-trigger,.cnec-help-close {font:24px Arial,sans-serif;pointer-events:auto;width:44px;height:44px;display:grid;place-items:center;padding:0;border:0;border-radius:5px;background:rgba(0,0,0,.82);color:#fff;cursor:pointer}
+.cnec-help-trigger:hover,.cnec-help-close:hover {background:rgba(35,28,44,.94)}
+.cnec-help-trigger:focus-visible,.cnec-help-close:focus-visible,.cnec-help a:focus-visible {outline:2px solid #af77ed;outline-offset:2px}
+.cnec-help-close {position:absolute;top:0;right:0;}
+.cnec-help:popover-open {display:flex;flex-direction:column;}
+.cnec-help {margin:0;padding:0;border:0;overflow:hidden;pointer-events:auto;width:340px;max-width:calc(100vw - 24px);box-sizing:border-box;border-radius:6px;background:rgba(0,0,0,.88);color:#eee;box-shadow:0 6px 24px #0004}
 .cnec-help-copy {padding:0 18px 18px;box-sizing:border-box;min-height:0;overflow:auto;font-size:14px;line-height:1.5}
 .cnec-help h2 {flex:none;padding:12px 56px 14px 18px;margin:0;font-size:18px;line-height:1.3;color:#fff}
 .cnec-help p {margin:0 0 12px}

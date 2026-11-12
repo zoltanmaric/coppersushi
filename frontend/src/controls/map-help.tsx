@@ -1,15 +1,28 @@
 import React, {useId} from 'react';
-import * as Popover from '@radix-ui/react-popover';
-import {QuestionMarkIcon} from '@radix-ui/react-icons';
+import {autoUpdate, offset, size, useFloating} from '@floating-ui/react-dom';
 
 export function MapHelp() {
+  const popoverId = useId();
   const headingId = useId();
-  return <Popover.Root>
-    <Popover.Trigger className="cnec-help-trigger" aria-label="What am I looking at?">
-      <QuestionMarkIcon width={24} height={24} aria-hidden="true"/>
-    </Popover.Trigger>
-    <Popover.Content className="cnec-help" side="bottom" align="end" sideOffset={-44}
-      avoidCollisions={false} collisionPadding={12} aria-labelledby={headingId}>
+  const {refs, floatingStyles} = useFloating({
+    placement: 'bottom-end', strategy: 'fixed', whileElementsMounted: autoUpdate,
+    middleware: [offset(({rects}) => -rects.reference.height), size({padding: 12,
+      apply: ({availableHeight, elements}) => {
+        elements.floating.style.maxHeight = `${Math.max(0, availableHeight)}px`;
+      },
+    })],
+  });
+  return <>
+    <button ref={refs.setReference} type="button" {...{popovertarget: popoverId}}
+      className="cnec-help-trigger" aria-label="What am I looking at?" aria-haspopup="dialog" aria-controls={popoverId}>
+      <span aria-hidden="true">?</span>
+    </button>
+    {/* Floating UI supplies runtime coordinates; visual styling stays in CSS. */}
+    <div ref={refs.setFloating} {...{popover: 'auto'}} id={popoverId}
+      style={floatingStyles} className="cnec-help" role="dialog" aria-labelledby={headingId}>
+      <button type="button" {...{popovertarget: popoverId, popovertargetaction: 'hide'}}
+        className="cnec-help-close" aria-label="Close map help"
+        ref={node => {if (node) node.autofocus = true;}}><span aria-hidden="true">?</span></button>
       <h2 id={headingId}>What am I looking at?</h2>
       <div className="cnec-help-copy">
         <p>Country colours show day-ahead electricity prices for the selected time.</p>
@@ -17,6 +30,6 @@ export function MapHelp() {
         <p>Click a highlighted element to see how much it contributes to price differences between countries and your selected reference country.</p>
         <a href="https://121gigawatts.org/critical-elements/" target="_blank" rel="noopener noreferrer">Read the full post: Critical Elements ⚡️</a>
       </div>
-    </Popover.Content>
-  </Popover.Root>;
+    </div>
+  </>;
 }
