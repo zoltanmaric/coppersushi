@@ -136,7 +136,3 @@ def get_interquartile_range(df: pd.DataFrame) -> tuple[float, float]:
     max = q3 + 1.5 * iqr
 
     return min, max
-
-
-
-

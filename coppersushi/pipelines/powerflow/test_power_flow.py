@@ -46,9 +46,3 @@ class TestPlotPowerFlow:
         assert totals.columns.is_unique
         assert totals.loc[n.snapshots[6], "5624"] == approx(312.710707, abs=1e-6)
         assert wind.loc[n.snapshots[6], "5624"] == approx(99.046965, abs=1e-6)
-
-
-
-
-
-
