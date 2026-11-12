@@ -48,6 +48,7 @@ flowchart TB
     build["Static site build"] -->|Shell and assets in S3| edge
     edge -->|Homepage, map embeds and market data| browser["CNEC browser: React and Plotly"]
     opf["OPF preparation"] -->|Versioned hours and timestamps| opffiles[("Static OPF files")]
+    opf -->|Validated numeric export| localopf[("Local Power Flow dataset")]
     opffiles --> edge
     edge -->|Shell and selected hour| opfbrowser["OPF browser: React and Plotly"]
     maps["Mapbox"] -->|Styles and tiles| browser

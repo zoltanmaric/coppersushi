@@ -10,6 +10,8 @@ I/O lives in `data_sources/`; the remaining modules transform in-memory values.
 flowchart LR
     solver["PyPSA-Eur solve"] -->|Solved network| networks["Network loader"]
     networks --> snapshot["Typed snapshot"]
+    snapshot --> numeric["Validated numeric dataset"]
+    numeric --> local["Local JSON export"]
     snapshot --> figures["Plotly figure construction"]
     figures --> bundle["Hourly OPF bundle"]
     bundle --> publish["Versioned static publication"]
@@ -23,3 +25,21 @@ flowchart LR
 The [browser](../../frontend/README.md) loads selected hours through CloudFront.
 Candidate solves remain local analysis through `app.py`; public page requests
 neither load solved networks nor construct figures in Python.
+
+## Data-only export
+
+`dataset.py` defines the v2 numeric contract; `export.py` reuses the existing
+snapshot calculations without constructing figures or HTML tooltips. Nodes carry
+WGS84 coordinates and voltage; branches retain component/name identity and bus0
+orientation. Intervals contain MW values and generator availability. Optional
+missing values are null, not zero. Validation rejects incomplete snapshots,
+invalid coordinates, duplicate identities and non-finite numbers.
+
+Export a solved network locally:
+
+```sh
+python -m coppersushi.opf.data_sources.dataset networks/opf-2024-08-29.nc /tmp/opf-data.json
+```
+
+Run its colocated checks with `python -m pytest coppersushi/opf/test_dataset.py`.
+This local data export does not change the published v1 figures or browser contract.
