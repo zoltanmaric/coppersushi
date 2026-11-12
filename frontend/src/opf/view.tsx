@@ -3,7 +3,8 @@ import {useQuery} from '@tanstack/react-query';
 import {Plot} from '../map/plot';
 import {reduceRender} from '../map/render-state';
 import type {PlotlyFigure} from '../map/figure';
-import {fetchManifest,fetchHour,defaultHour,timeLabel,fullLabel} from './data';
+import {IntervalControls} from '../controls/interval-controls';
+import {fetchManifest,fetchHour,defaultHour,fullLabel} from './data';
 
 const config = {responsive:true,displayModeBar:false,scrollZoom:true};
 const ignoreClick = () => {};
@@ -39,13 +40,8 @@ export function OpfView({token}:{token:string}) {
       {mapError && <div className="opf-notice" role="alert">Map: {mapError}</div>}
     </div>
     {times.length>0 && <div className="opf-controls">
-      <output>{fullLabel.format(new Date(times[selected]))}{!current && !error && ' · loading selected hour'}</output>
-      <input aria-label="Power Flow hour" type="range" min={0} max={times.length-1} step={1} value={selected}
-        onChange={event=>{setMapError(null);setSelection(Number(event.target.value));}}/>
-      <div className="opf-marks">{times.map((time,index)=>{
-        const label = timeLabel.format(new Date(time));
-        return <div className="opf-mark-slot" key={time}><span>{Number(label.slice(0,2))%4===0 || index===times.length-1 ? label : ''}</span></div>;
-      })}</div>
+      <IntervalControls date={<span>29 Aug 2024</span>} labels={times.map(time=>fullLabel.format(new Date(time)))} interval={selected} onChange={value=>{setMapError(null);setSelection(value);}}/>
+      {!current && !error && <span role="status">loading selected hour</span>}
     </div>}
   </section>;
 }

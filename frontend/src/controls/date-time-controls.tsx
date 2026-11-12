@@ -1,3 +1,4 @@
+import {StepButton} from './step-button';
 import React, {useId, useRef} from 'react';
 import {autoUpdate, offset, shift, size, useFloating} from '@floating-ui/react-dom';
 import {useQuery} from '@tanstack/react-query';
@@ -14,13 +15,6 @@ export function formatDay(day: string): string {
   return `${Number(date)} ${months[Number(month) - 1]} ${year}`;
 }
 
-function StepButton({direction, ...props}: React.ComponentProps<'button'> & {direction: 'previous' | 'next'}) {
-  return <button {...props}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d={direction === 'previous' ? 'm14 6-6 6 6 6' : 'm10 6 6 6-6 6'}
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg></button>;
-}
-
 /** Step calendar dates in UTC, independent of the browser's timezone and DST. */
 export function stepDay(day: string, direction: number): string {
   const date = new Date(`${day}T00:00:00Z`);
@@ -32,13 +26,17 @@ interface Props {
   day: string; minDay: string; time: string; previousDisabled: boolean; nextDisabled: boolean;
   onDay: (day: string) => void; onPrevious: () => void; onNext: () => void;
 }
-export function DateTimeControls({day, minDay, time, previousDisabled, nextDisabled, onDay, onPrevious, onNext}: Props) {
-  const calendar = useRef<HTMLDivElement | null>(null);
-  const calendarId = useId();
+export function DateTimeControls(props:Props) {
   const today = useMarketToday();
   const tomorrow = stepDay(today, 1);
   const publication = useQuery(publicationOptions(tomorrow));
-  const maxDay = publication.data ? tomorrow : today;
+  return <CalendarTimeControls {...props} today={today} maxDay={publication.data ? tomorrow : today}/>;
+}
+
+/** Calendar presentation receives availability from its owning market page. */
+export function CalendarTimeControls({day, minDay, time, previousDisabled, nextDisabled, onDay, onPrevious, onNext,today,maxDay}: Props & {today:string;maxDay:string}) {
+  const calendar = useRef<HTMLDivElement | null>(null);
+  const calendarId = useId();
   const latest = new Date(`${maxDay}T00:00:00Z`);
   const {refs, floatingStyles} = useFloating({
     placement: 'top-start', strategy: 'fixed', whileElementsMounted: autoUpdate,

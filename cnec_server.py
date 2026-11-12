@@ -61,9 +61,9 @@ def opf_index() -> str:
                         embed=request.path.startswith('/embed/'), view='opf')
 
 
-@opf_routes.get('/data/opf/v1/opf-2024/<path:filename>')
+@opf_routes.get('/data/opf/v2/opf-2024/<path:filename>')
 def opf_data(filename: str) -> Response:
-    return send_from_directory(Path(__file__).parent / 'data/browser/data/opf/v1/opf-2024', filename)
+    return send_from_directory(Path(__file__).parent / 'data/browser/data/opf/v2/opf-2024', filename)
 
 
 def create_app(*, production_data: bool) -> Flask:

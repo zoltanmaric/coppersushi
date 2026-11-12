@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from pydantic import BaseModel
 
+from coppersushi.opf.dataset import Dataset
 from coppersushi.publication.models import DayBundle, DayManifest, DayMetadata, MarketInterval
 
 class CnecContracts(BaseModel):
@@ -19,3 +20,10 @@ if __name__ == '__main__':
         assert target.read_text() == content, 'Run pixi run frontend-contracts'
     else:
         target.write_text(content)
+
+    opf_target = target.parents[1] / 'opf/contracts.json'
+    opf_content = json.dumps(Dataset.model_json_schema(), indent=2) + '\n'
+    if '--check' in sys.argv:
+        assert opf_target.read_text() == opf_content, 'Run pixi run frontend-contracts'
+    else:
+        opf_target.write_text(opf_content)
