@@ -1,0 +1,172 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Copper Sushi · Reorganization proposal</title>
+<link rel="stylesheet" href="style.css"><main>
+<p class="eyebrow">COPPER SUSHI / REVIEW DRAFT</p>
+<h1>One frontend.<br>Two data lifecycles.</h1>
+<p class="lead">Finish sharing Power Flow and Critical Elements data rendering and controls, then reorganize the code. Forecasting stays untouched.</p>
+<section>
+<h2>1. Migration order</h2>
+<p><b>Baseline, 12 November 2026:</b> main already serves Power Flow through React, private S3 and CloudFront; the serving Lambda is retired. Its hourly payloads still contain prebuilt Plotly figures, and its controls are separate. This spec starts from that implementation. Local candidate previews still use Dash.</p>
+<p><b>First:</b> replace Power Flow’s exported figures with typed network data and shared React controls; verify parity. <b>Then:</b> reorganize the surviving code. The data catalog is a separate draft idea, not a deliverable or completion requirement for this PR stack.</p>
+</section>
+<section>
+<h2>2. Shared interface</h2>
+<p>One configurable React control panel: legend title, units and scale; optional reference country; date and time controls. Power Flow has a fixed date, no reference selector, and the existing hourly CEST intervals. Critical Elements keeps its date selection and interval behavior.</p>
+<div class="row"><button id="ops" aria-pressed="true">Power Flow</button><button id="cnec" aria-pressed="false">Critical Elements</button></div>
+<div class="mock"><header><div class="legend"><strong id="legend">Net power feed-in · MW</strong><div class="gradient"></div><div class="ticks"><span id="low">−5,000</span><span id="high">5,000</span></div></div><label id="reference" hidden>Reference <select aria-label="Reference country"><option>DE</option><option>AT</option><option>FR</option></select></label></header>
+<div class="map-note">Shared map host · page-specific data and layers</div><div class="bottom"><div class="row"><button id="prevDay" aria-label="Previous day" hidden>‹</button><span id="day">29 Aug 2024</span><button id="nextDay" aria-label="Next day" hidden>›</button><button id="prevTime" aria-label="Previous interval">‹</button><output id="time">12:00 CEST</output><button id="nextTime" aria-label="Next interval">›</button></div><input id="timeline" aria-label="Time interval" type="range" min="0" max="23" value="12"></div></div>
+<p class="note">Control sketch only; scale values are illustrative. Share presentation components while keeping each page’s data and calculations separate.</p>
+</section>
+<section>
+<h2>3. Data and hosting</h2>
+<p><b>Static preparation:</b> Power Flow network geometry and hourly values; Critical Elements’ catalog, locator and outlines. Rebuild these deliberately.</p>
+<p><b>Daily publication:</b> fetch and validate Critical Elements and prices, then publish a complete day. Its background producer Lambda remains.</p><div class="flow">Prepared data → S3 → CloudFront → React renders the map</div>
+<p>No backend figure rendering, Dash, or Power Flow serving Lambda. Both pages share hosting and keep their existing normal and embedded URLs.</p>
+<p><b>Parked idea:</b> the <a href="data-catalog-draft.html">Data catalog draft</a> explores how to make stored data easier to understand. Keep that idea board with this PR stack, but do not implement it as part of this work. Typed data contracts and complete manifests needed by the map pages remain in scope.</p>
+</section>
+<section>
+<h2>4. Product ownership and names</h2>
+<p><b>Copper Sushi</b> owns the power, energy and market tools at coppersushi.121gigawatts.org. <b>1.21 Gigawatts</b> owns the blog at 121gigawatts.org. Frontend, infrastructure, tests and configuration belong with their product.</p>
+<p>Name folders for what they contain. Prefer one familiar word; use two or three when needed for clarity. Use <code>powerflow</code> for the Power Flow feature, <code>cnec</code> for the existing Critical Elements concept, and <code>grid</code> for reusable network geography and catalog data. Keep those names consistent across Python, frontend and diagrams. Spell them out in page titles.</p>
+<pre>coppersushi/                   # energy / power / market product
+  frontend/
+    pages/
+      powerflow/              # Power Flow page and renderer
+      cnec/                   # Critical Elements page and calculations
+    controls/                 # shared legend, date/time and timeline
+    map/                      # shared plotting lifecycle and basemap
+    data/                     # shared validated loading
+  pipelines/                  # Python jobs that build and publish data
+    powerflow/                # solved-network calculations and data export
+    cnec/                     # market-day calculations and publication jobs
+    grid/                     # catalog, locator and country outlines
+    data_sources/             # genuinely shared storage/configuration I/O
+  infra/                      # product hosting and job infrastructure
+  config/                     # tracked product preparation inputs
+  networks/                   # solved network inputs; preserve LFS
+  data/                       # ignored generated inputs and browser files
+
+121gigawatts/                 # blog, including its theme and hosting
+forecasts/                    # deferred; unchanged in this refactor
+pyproject.toml, pixi.lock      # shared workspace tooling stays at root
+.github/workflows/            # CI stays where GitHub expects it</pre>
+<p><b>Boundaries:</b> pipelines produce the data, frontend presents it, and infra runs and hosts it. <code>pages/</code> groups the two map pages within Copper Sushi; they are not separate products. No <code>src/</code> layers. Tests live beside the source they test, such as <code>pipelines/cnec/test_publication.py</code> and <code>frontend/controls/date-time-controls.test.tsx</code>; integration tests live with the feature they exercise.</p>
+<p><b>Why this split:</b> to change a Power Flow calculation, look in powerflow; to change daily market publication, look in cnec. Each feature keeps its pure models/calculations and a <code>data_sources/</code> boundary for file, network and process access. A shared helper earns a shared home only when both features use it.</p>
+<p><b>“Daily” is behavior, not a component.</b> The CNEC job fetches and publishes data. Infrastructure provisions the scheduler, retry workflow and Lambda that run it. These are different responsibilities, shown separately below.</p>
+</section>
+<section>
+<h2>5. Dataflow through the components</h2>
+<p>Both diagrams show the proposed target. Boxes name responsibilities, not new services.</p>
+<h3>Power Flow: prepare once, render in the browser</h3>
+<svg class="dag" viewBox="0 0 600 430" role="img" aria-label="Solved network flows through Power Flow data export to S3 and CloudFront, then the Power Flow frontend and shared map controls."><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+<path d="M0 0 L8 4 L0 8Z"/></marker></defs>
+<g class="edges">
+<path d="M300 55 V85"/>
+<path d="M300 145 V175"/>
+<path d="M300 235 V265"/>
+<path d="M300 325 V355"/>
+</g>
+<g class="nodes">
+<rect x="100" y="5" width="400" height="50"/>
+<text x="300" y="35">Solved network · 29 August 2024</text>
+<rect x="100" y="85" width="400" height="60"/>
+<text x="300" y="110">pipelines/powerflow</text>
+<text x="300" y="132">Calculate and export geometry + hourly values</text>
+<rect x="100" y="175" width="400" height="60"/>
+<text x="300" y="201">S3 + CloudFront</text>
+<text x="300" y="223">Validated static files and manifest</text>
+<rect x="100" y="265" width="400" height="60"/>
+<text x="300" y="290">frontend/pages/powerflow</text>
+<text x="300" y="312">Read values; construct browser map layers</text>
+<rect x="100" y="355" width="400" height="60"/>
+<text x="300" y="381">Shared map + controls</text>
+<text x="300" y="403">Render map, legend and hourly navigation</text>
+</g>
+</svg>
+<h3>Critical Elements: prepare inputs, publish each day</h3>
+<svg class="dag" viewBox="0 0 600 540" role="img" aria-label="Grid preparation and external market sources feed the scheduled CNEC publisher. It publishes to S3 and CloudFront, read by the CNEC frontend.">
+<g class="edges">
+<path d="M105 70 V110 H245 V160"/>
+<path d="M300 70 V160"/>
+<path d="M495 70 V110 H355 V160"/>
+<path d="M300 230 V270"/>
+<path d="M300 330 V410"/>
+</g>
+<g class="nodes">
+<rect x="10" y="5" width="190" height="65"/>
+<text x="105" y="30">pipelines/grid</text>
+<text x="105" y="52">Prepared catalog + outlines</text>
+<rect x="210" y="5" width="180" height="65"/>
+<text x="300" y="30">JAO + prices</text>
+<text x="300" y="52">Daily external inputs</text>
+<rect x="400" y="5" width="190" height="65"/>
+<text x="495" y="30">Job infrastructure</text>
+<text x="495" y="52">Schedule + retries</text>
+<rect x="100" y="160" width="400" height="70"/>
+<text x="300" y="186">pipelines/cnec · producer Lambda</text>
+<text x="300" y="210">Fetch → validate → publish a complete day</text>
+<rect x="100" y="270" width="400" height="60"/>
+<text x="300" y="295">S3 + CloudFront</text>
+<text x="300" y="317">Data files + complete manifests</text>
+<rect x="100" y="410" width="400" height="90"/>
+<text x="300" y="438">frontend/pages/cnec</text>
+<text x="300" y="461">Market calculations and layers</text>
+<text x="300" y="484">Shared map + controls</text>
+</g>
+</svg>
+</section>
+<section id="implementation">
+<h2>Implementation contract</h2>
+<p>These details are part of the spec. Keep the existing repository contracts where this spec does not change them.</p>
+<details>
+<summary>Power Flow data and browser rendering</summary>
+<p>Export the existing solved 29 August 2024 network as a versioned dataset. Static tables contain stable node/branch IDs, branch type, endpoint IDs and geometry. Interval tables contain explicit timestamps, signed flows, capacities, node net power, load and generation by technology needed by existing tooltips. Preserve line, link and transformer identity. Define signed flow relative to the stored endpoint order.</p>
+<p>Use typed Python models and generated browser schemas; validate on export and browser entry. Reject dangling IDs, duplicate timestamps, invalid coordinates, non-finite values and incomplete intervals. Declare units and missing-value semantics; missing values are not zero. Reuse existing snapshot calculations rather than porting solver logic to JavaScript.</p>
+<p>Python exports data only—no Plotly traces, figures, HTML tooltips or access tokens. React builds layers, tooltips and legends. Match existing flow directions, loading emphasis, node sizing, hover contents, initial camera and scale semantics. Retain the existing hourly sequence and Central European display time (CEST for this date); never relabel source timestamps to force a calendar date. If the source sequence conflicts with the fixed-date requirement, resolve that explicitly before cutover rather than silently dropping or shifting hours.</p>
+<p>Publish metadata and interval files under an immutable generation, then replace its manifest. Load the selected interval first; share caching and prefetch mechanics where useful. Keep CNEC’s existing v2 contract and object paths. A failed publication leaves the last complete generation available.</p>
+</details>
+<details>
+<summary>Shared frontend and controls</summary>
+<p>A MapControls component composes the upper-left legend, optional upper-right reference selector, and bottom date/time controls. Its inputs include title, units, scale, date mode, interval labels, selected interval and navigation callbacks. Fixed date mode renders plain date text: no chevrons or calendar. Power Flow has no reference-country selector or reference gestures. Its time chevrons advance one hour and stop at either end.</p>
+<p>Move CNEC publication-availability queries out of DateTimeControls into the CNEC page. Share the timeline and visual controls without fetching CNEC data from the Power Flow page. Reuse the existing shared Plot and render-state lifecycle; keep CNEC country labels, contribution overlays and selection behavior in its page. Reuse the shell, navigation, basemap loading and CSS. Keep map camera stable while time changes.</p>
+<p>Retain /, /cnec/:day?, /embed/cnec/:day?, /opf-2024 and /embed/opf-2024. Preserve CNEC URL selection and back/forward behavior; Power Flow interval selection should also survive a reload. Embedded routes omit navigation. Show loading, missing-data and retry states; do not present a stale interval as the requested one.</p>
+</details>
+<details>
+<summary>Infrastructure and daily job boundaries</summary>
+<p>The job is Python code that checks source readiness, fetches constraints/prices/context, validates a complete day and publishes it. Infrastructure is Terraform that provisions its scheduler, retry workflow, producer Lambda and permissions. Renaming folders must not merge these responsibilities.</p>
+<p>Preserve the existing 15:50 Europe/Brussels schedule, delivery date pinned to the scheduled instant, completeness checks, retries, backfill behavior and manifest-last publication. Preserve existing CNEC routes and S3 keys. Power Flow and the frontend use static S3 delivery through CloudFront; the daily producer Lambda stays; do not reintroduce the retired Dash serving Lambda.</p>
+<p>Publish Power Flow data and frontend assets before changing routing. Keep previous frontend assets and manifests for rollback. Test both normal and embed routes against the new data format; the serving infrastructure is already static. Preserve Terraform resource addresses and authoritative state; use explicit state moves if resource addresses must change. A directory rename must not replace the bucket, distribution or scheduler.</p>
+</details>
+<details>
+<summary>Migration steps and completion checks</summary><ol>
+<li><b>Migrate in the existing layout.</b> Replace the figure payloads with typed Power Flow data and browser layer construction; extract shared controls while retaining the existing static routes. Compare all source snapshots against the old calculations and page behavior. Keep candidate-network preview usable through local static export before deleting app.py and Dash-only assets/dependencies.</li>
+<li><b>Cut over delivery.</b> Verify no Power Flow request reaches Dash or an application Lambda; confirm CNEC publication still runs independently. Exercise loading failures, first/last intervals, fixed-date controls, legends, tooltips, camera, mobile layout, normal/embed paths and reloads. Check rendered results, console errors and failed requests.</li>
+<li><b>Reorganize ownership.</b> Move product files, update package discovery, path constants, imports, Pixi tasks, Docker copies/entry points, CI, asset build paths and local preview commands. Keep .github/workflows at the repository root. Do not move ignored deployment state or rewrite production object keys merely to match folders. Preserve blog behavior and forecasting code/configuration.</li></ol>
+<p>Run existing Python tests, type checks, frontend tests/build, architecture checks and relevant blog/hosting checks. Forecast tests provide a regression check without changing forecast files. Update root/product architecture diagrams and runbooks with the implementation. Read infra/lambda/README.md before deployment; its authoritative-state instructions continue to apply after relocation.</p>
+<p><b>Done means:</b> both map pages share the frontend and controls, Power Flow serves typed static data without Dash, daily publication behaves as before, the documented folder boundaries match the code, and forecasting remains unchanged.</p>
+</details>
+<details>
+<summary>Move map, package layout and shared utilities</summary>
+<table>
+<tr><th>Current home</th><th>Target home</th></tr>
+<tr><td>frontend/; infra/lambda/</td><td>coppersushi/frontend/; coppersushi/infra/</td></tr>
+<tr><td>frontend/src/ page composition</td><td>coppersushi/frontend/pages/powerflow/ and pages/cnec/; shared folders directly under frontend/</td></tr>
+<tr><td>coppersushi/opf/</td><td>coppersushi/pipelines/powerflow/</td></tr>
+<tr><td>publication/ and CNEC-only package modules</td><td>coppersushi/pipelines/cnec/</td></tr>
+<tr><td>grid_catalog/ and geographic models</td><td>coppersushi/pipelines/grid/</td></tr>
+<tr><td>Product tests</td><td>Beside their source; integration tests with their feature</td></tr>
+<tr><td>Product config, networks and Docker files</td><td>Under the coppersushi/ product directory</td></tr>
+<tr><td>Shared workspace, agent tooling, wiki and GitHub workflows</td><td>Stay at repository root</td></tr></table>
+<p>The coppersushi directory is the product root; pipelines is its Python code home. Use imports under coppersushi.pipelines, updating callers and entry points during relocation. Keep Python package markers only where needed, and configure explicit root setuptools discovery for coppersushi.pipelines and the unchanged forecasts package. Frontend, infrastructure and generated data must not become accidental Python packages. Verify the built distribution and installed entry points. There is no src directory or repeated coppersushi package directory.</p>
+<p>Replace the existing ambiguous REPO = PACKAGE.parent assumption with explicit product-root and repository-root paths. Audit every consumer, fixture path, LFS rule and ignore rule. Keep root pyproject.toml and pixi.lock in place: forecasting uses them for environment/provenance. Shared dependency cleanup may update the lock, but must not change forecast dependencies or behavior.</p>
+<p>Models live with their feature. Keep shared time types at the pipelines root and shared storage/configuration I/O in pipelines/data_sources only where genuinely reused. Reusable publication helpers likewise need demonstrated callers; do not recreate domain/adapters/publishing layers. Each component’s external I/O remains under its data_sources directory.</p>
+<p>Keep one Copper Sushi Terraform configuration under infra, with descriptive source files such as hosting.tf and producer.tf rather than an ambiguous daily directory. It provisions resources; cnec contains the executable daily job. Moving source files does not move or recreate authoritative state.</p>
+</details>
+<details>
+<summary>Where an implementing agent should start</summary>
+<p>Inspect frontend/src/opf/ and coppersushi/opf/ for static Power Flow behavior, and app.py for local candidates; frontend/src/index.tsx, controls/ and map/ for CNEC composition; coppersushi/publication/ and frontend/src/data/ for existing schemas and publication mechanics; coppersushi/grid_catalog/ and data_sources/runtime_data.py for static inputs; frontend/publish.py, Dockerfile, pyproject.toml and infra/lambda/ for delivery. Read applicable AGENTS.md files, especially the per-component data_sources I/O boundary.</p>
+<p>This spec describes the target, not completed work. Implement the migration before broad moves. Repository behavior and tests supply details not restated here; surface conflicts with this spec instead of silently changing meaning. Do not create a new collection of agent rules for the proposed folder names.</p>
+</details>
+</section>
+<footer>
+<p class="note">Implementation spec for review · No application changes. Design-only proposal; data catalog is deferred.</p></footer><script src="demo.js"></script>
+</main></html>

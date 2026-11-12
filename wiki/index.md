@@ -34,6 +34,7 @@
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026
 
 ## Specs (working memory — burn-down state, not settled knowledge)
+- [Copper Sushi reorganization](specs/coppersushi-reorganization/index.html) — typed Power Flow data, shared controls and product folders; includes a [deferred data catalog idea board](specs/coppersushi-reorganization/data-catalog-draft.html). Open the HTML locally; GitHub shows its source.
 - [specs/day-ahead-price-forecast.md](specs/day-ahead-price-forecast.md) — first forecast build: validated S3 snapshots, then local model/evaluation and reproducible experiment records
 
 ## Literature (one digest per authoritative document, link only)
