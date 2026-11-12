@@ -15,7 +15,7 @@
 
 ## Price forecasting
 
-- [price-forecasting.md](price-forecasting.md) — independent forecast product, architecture graph and links to design and implementation
+- [price-forecasting.md](price-forecasting.md) — independent forecast product, canonical frontend explanation and scientific contracts
 - [price-forecasting/forecast-infrastructure.md](price-forecasting/forecast-infrastructure.md) — S3 snapshots, local execution, wiki research planning and MLflow evidence
 - [price-forecasting/germany-luxembourg.md](price-forecasting/germany-luxembourg.md) — independent Germany–Luxembourg quarter-hour forecast: agreed CatBoost quantiles, public fundamentals and implementation handover
 - [price-forecasting/data-sources.md](price-forecasting/data-sources.md) — verified price, weather and demand contracts, twelve locations, timing gaps and diagnostic evidence
@@ -35,7 +35,6 @@
 
 ## Specs (working memory — burn-down state, not settled knowledge)
 - [Copper Sushi reorganization](specs/coppersushi-reorganization/index.html) — typed Power Flow data, shared controls and product folders; includes a [deferred data catalog idea board](specs/coppersushi-reorganization/data-catalog-draft.html).
-- [Forecast product explainer](../explainers/forecast-product.html) — visual design for results, metrics and the forecasting method
 - [specs/day-ahead-price-forecast.md](specs/day-ahead-price-forecast.md) — verified first baseline and conditional research-history follow-up
 
 ## Literature (one digest per authoritative document, link only)
