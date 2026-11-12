@@ -32,17 +32,6 @@ then reorganizes product files. This is planned, not implemented. The separate
 [data catalog draft](specs/coppersushi-reorganization/data-catalog-draft.html)
 is deferred and is not a delivery dependency.
 
-```mermaid
-flowchart LR
-  solved["Solved network"] -.-> export["Typed Power Flow export"]
-  export -.-> store["Existing S3 / CloudFront"]
-  store -.-> layers["Browser-built Power Flow layers"]
-  layers -.-> controls["Shared map controls"]
-  cnec["Critical Elements"] -.-> controls
-  classDef planned fill:#eee,color:#222,stroke:#777,stroke-dasharray:5 5
-  class export,layers,controls planned
-```
-
 ## Future chapters
 
 True-up to actuals — renewable dispatch calibrated to zonal actuals, units ≥ 100 MW fixed to measured output, validation against measured cross-border flows ([nodal-disaggregation](nodal-disaggregation.md) for what is and is not measurable). Then flow-traced nodal carbon intensity and OPF counterfactuals.
