@@ -35,12 +35,12 @@ pages or a diagram for every utility folder.
 
 Update the affected parent and component diagrams in the implementation PR that
 changes their boundaries or data paths. Describe that revision's implemented
-system; keep target designs separate until implemented.
+system. Keep proposed dataflows in their spec until implemented.
 
 Use the Mermaid skill for GitHub Markdown. Render the first working slice early,
 then inspect it at README width. Shorten labels, combine internal steps or change
 layout when readers must zoom to follow the main paths. Check arrows against the
-implementation and distinguish any explicitly requested plans from implemented parts.
+implementation.
 
 Generate the PR's Architecture delta section from committed README diagrams with
 `python .agents/skills/system-design-diagram/scripts/architecture_delta.py --base <pr-base> --head <pr-head>`.
