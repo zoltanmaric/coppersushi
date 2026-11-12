@@ -4,3 +4,5 @@
 .cnec-map-tools .cnec-price-legend {position:static;box-sizing:border-box;max-width:100%}
 .cnec-bottom-controls {pointer-events:none}
 .cnec-bottom-controls>* {pointer-events:auto}
+
+.map-tools-without-reference .cnec-help-trigger {grid-column:2;grid-row:1;align-self:start}

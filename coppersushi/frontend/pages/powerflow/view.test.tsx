@@ -6,7 +6,7 @@ import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {OpfView} from './view';
 const metadata={version:2,nodes:[{id:'n',longitude:1,latitude:2,country:'DE',voltage_kv:220}],branches:[],net_power_scale_mw:10};
 const interval=(i:number)=>({timestamp:`2024-08-29T${10+i}:00:00Z`,nodes:[{node:'n',net_power_mw:i,load_mw:null,generators:[]}],branches:[]});
-vi.mock('./render',()=>({renderHour:(_metadata:unknown,value:{nodes:{net_power_mw:number}[]})=>({data:[{name:`hour ${value.nodes[0].net_power_mw}`}],layout:{mapbox:{}}})}));
+vi.mock('./render',()=>({POWER_SCALE_MW:150,renderHour:(_metadata:unknown,value:{nodes:{net_power_mw:number}[]})=>({data:[{name:`hour ${value.nodes[0].net_power_mw}`}],layout:{mapbox:{}}})}));
 const plot = vi.hoisted(()=>({auto:true,complete:()=>{}}));
 vi.mock('../../map/plot',()=>({Plot:({data,onRendered}:{data:{name:string}[];onRendered:()=>void})=>{
   React.useEffect(()=>{plot.complete=onRendered;if(plot.auto) onRendered();},[data]);return <div data-testid="hour">{data[0].name}</div>;

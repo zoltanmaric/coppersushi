@@ -3,7 +3,7 @@ import addFormats from 'ajv-formats';
 import schema from './contracts.json';
 import {PRICE_COLORSCALE} from '../../map/price-scale';
 import type {Dataset} from './contracts';
-import {renderHour} from './render';
+import {renderHour,POWER_SCALE_MW} from './render';
 import type {PlotlyFigure} from '../../map/figure';
 
 export interface OpfHour {scale?:number;data:PlotlyFigure['data']; layout:{mapbox:Record<string,unknown>;[key:string]:unknown}}
@@ -46,7 +46,7 @@ export async function fetchHour(generation:string,index:number,signal:AbortSigna
     throw new Error('Incomplete Power Flow topology or interval');
   if(new Set(candidate.intervals[0].nodes.map(node=>node.node)).size!==ids.size || candidate.intervals[0].nodes.some(node=>!ids.has(node.node))) throw new Error('Incomplete Power Flow interval');
   const colorscale=PRICE_COLORSCALE;
-  return {...renderHour(metadata,candidate.intervals[0],colorscale),scale:metadata.net_power_scale_mw} as OpfHour;
+  return {...renderHour(metadata,candidate.intervals[0],colorscale),scale:POWER_SCALE_MW} as OpfHour;
 }
 export function defaultHour(times:string[]):number {
   return times.reduce((best,time,index)=>Math.abs(Number(hour.format(new Date(time)))-12)<Math.abs(Number(hour.format(new Date(times[best])))-12)?index:best,0);
