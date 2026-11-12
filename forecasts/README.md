@@ -56,7 +56,7 @@ The shared `InputReader.features()` path applies historical or live eligibility 
 
 `forecasts.dataset --snapshot ...` writes a diagnostic `quarters.csv` and `report.json` under ignored `data/forecasts/dataset/`. These are feature/report outputs; the S3 input contract is the three Parquet tables. The raw-archive CLI remains available for evidence reconciliation. Targets, archive timestamps and audit metadata are not model features; explicit feature lists must be frozen before fitting.
 
-Historical price publication/revision timing and original weather publication times remain unverified. Demand timing depends on the meaning of its update timestamp. The manifest/report state these assumptions. Live selection requires an explicit actual issue timestamp, no later than the deadline, and rejects inputs retrieved or updated after it. Selector tests append late source revisions, realised weather and new labels, and retain a future-valid forecast retrieved before cutoff. The full test covering fitting, learned transformations, reference calibration and predictions remains part of the model step.
+Historical price publication/revision timing and original weather publication times remain unverified. Demand timing depends on the meaning of its update timestamp. The manifest/report state these assumptions. Live selection requires an explicit actual issue timestamp, no later than the deadline, and rejects inputs retrieved or updated after it. Selector tests append late source revisions, realised weather and new labels, and retain a future-valid forecast retrieved before cutoff. The fitting leakage test also checks learned transformations, reference calibration and predictions.
 
 ## Infrastructure
 
@@ -72,7 +72,17 @@ terraform -chdir=forecasts/infra output -state="$PWD/data/forecasts/terraform.tf
 
 For an existing bucket, import the bucket and its public-access, ownership, encryption, versioning, lifecycle and policy resources before applying, with `-var=bucket_name=YOUR_PRIVATE_BUCKET`. Inspect the plan; adoption must not replace the bucket. [Terraform S3 import documentation](https://registry.terraform.io/providers/hashicorp/aws/5.100.0/docs/resources/s3_bucket).
 
-Uploads and provider installation may exceed a minute; follow the repository's job-supervision workflow. As of 2026-10-09, input collection/storage and feature replay are implemented. Local Metaflow training, MLflow comparisons, quantile fitting and accepted-run reproduction remain in the next spec step.
+Uploads and provider installation may exceed a minute; follow the repository's job-supervision workflow.
+
+## Local model evaluation
+
+[`evaluation.evaluate()`](evaluation.py) runs the fixed [scientific configuration](run-config.json): eligible features, monthly fitting, daily prediction and scoring. The [table contracts](tables.py) declare each stage's inputs and outputs. The [evaluation contract](../wiki/price-forecasting/evaluation.md) owns the method and limitations.
+
+```sh
+pixi run --locked python -m forecasts.evaluation --snapshot data/forecasts/loaded-snapshot --output data/forecasts/evaluations/baseline
+```
+
+Choose a new output directory. The command checks the snapshot identity and writes features, models, predictions and a report. This command does not preserve an execution environment or register a tracking run.
 
 ## Type checks
 
@@ -89,7 +99,7 @@ The normal test suite also rejects missing function annotations anywhere under `
 The recorded year's coverage is a regression fixture, not a constraint on newly collected data. To check the exact baseline snapshot explicitly:
 
 ```sh
-FORECAST_BASELINE_SNAPSHOT=data/forecasts/loaded-snapshot data/forecasts/venv/bin/python -m unittest forecasts.tests.test_baseline -v
+FORECAST_BASELINE_SNAPSHOT=data/forecasts/loaded-snapshot pixi run --locked python -m unittest forecasts.tests.test_baseline -v
 ```
 
 The test requires the snapshot ID recorded in its fixture. Ordinary dataset generation reports coverage without requiring it to match that historical year. Raw baseline archives belong at `data/forecasts/inputs/prices.zip`, `weather.zip` and `demand.zip`; existing saved S3 snapshots remain readable without relocating anything.

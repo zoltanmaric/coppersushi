@@ -81,3 +81,5 @@ Rules older than this page carry no row and are the first ablation candidates.
 | PR complexity section | On 2026-11-06, the user explicitly requested a mandatory template section prompting implementers and reviewers to simplify unusually complex parts or explain why they are necessary, with "None" when no special attention is needed. The user further requested questions challenging whether the requirement itself justifies the complexity, including relaxing or deleting it for a simpler system. This is an explicitly requested procedure, not a claim of repeated evidence. |
 
 | `product-names` | On 2026-11-12, the help-panel blog link and shared navigation both omitted the lightning emoji from Critical Elements ⚡️. The user requested consistent naming and a harness rule, and clarified that Power Flow also includes 🍣. |
+
+| `pull-request`: CI-first checks | On 2026-11-12, the user requested pushing when work is ready and delegating covered checks to GitHub CI rather than waiting for local runs. This is an explicit preference, not a claim of repeated evidence. |
