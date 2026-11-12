@@ -15,6 +15,7 @@ import {mapSelection} from './map/map-selection';
 import {initialCoreCamera} from './map/initial-camera';
 import type {PlotlyFigure} from './map/figure';
 import {PriceLegend} from './controls/price-legend';
+import {MapHelp} from './controls/map-help';
 
 import {overlayModel} from './map/overlay-model';
 import './style.css';
@@ -126,6 +127,7 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
             {CORE_ZONES.map(zone => <option key={zone} value={zone}>{zone}</option>)}
           </select>
         </label>
+        <MapHelp/>
       </div>
 
       <aside className="cnec-progress" aria-live="polite">

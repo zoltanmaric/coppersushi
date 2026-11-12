@@ -48,3 +48,5 @@
 - **architecture-delta** — Keep the root and affected component README architecture diagrams accurate; use the `system-design-diagram` skill when they need updating. Every PR carries an "Architecture delta" section: "None", or the changed component boundaries and data paths, with their owning README diagrams updated in the same PR.
 
 - **css-styling** — Put styling in CSS files. Use inline styles or embedded style blocks only when a strong technical constraint requires them (for example, a self-contained iframe); explain the constraint beside the exception.
+
+- **product-names** — Use “Critical Elements ⚡️” and “Power Flow 🍣”, including their emojis, in user-facing titles, navigation and links.
