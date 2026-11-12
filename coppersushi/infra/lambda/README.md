@@ -22,8 +22,10 @@ Use one merged checkout for preparation, publication and rollback notes:
 2. Generate token-free OPF files with
    `pixi run --locked -e build python -m coppersushi.pipelines.powerflow.data_sources.dataset coppersushi/networks/opf-2024-08-29.nc coppersushi/data/browser/data/opf/v2/opf-2024`.
 3. Before overwriting UI or the OPF manifest, archive `data/cnec/v1/ui/` and
-   `data/opf/v1/opf-2024/manifest.json` under a unique `ui-rollback/<release>/`
-   prefix. Use `aws s3 cp --copy-props default` to preserve encoding, MIME types
+   `data/opf/v2/opf-2024/manifest.json` when present under a unique `ui-rollback/<release>/`
+   prefix. If the active frontend still uses v1, archive its v1 manifest as well.
+   Preserve the manifest matching the frontend release being saved.
+   Use `aws s3 cp --copy-props default` to preserve encoding, MIME types
    and cache headers. Record the release revision and previous publisher digest
    in ignored deployment notes. Keep private rollback prefixes out of origin policy.
 4. Publish immutable hours first:

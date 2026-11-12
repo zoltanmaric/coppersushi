@@ -37,3 +37,5 @@ data/
 coppersushi/testdata/
 **/test_*.py
 coppersushi/networks/candidates/
+
+/infra/

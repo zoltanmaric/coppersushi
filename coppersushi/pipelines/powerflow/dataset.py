@@ -69,7 +69,6 @@ class Dataset(Contract):
     nodes: list[Node] = Field(min_length=1)
     branches: list[Branch]
     intervals: list[Interval] = Field(min_length=1)
-    net_power_scale_mw: Finite = Field(gt=0)
 
     @model_validator(mode='after')
     def validate_network(self) -> Self:

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-import numpy as np
 import pandas as pd
 import pyproj
 if TYPE_CHECKING:
@@ -108,31 +107,4 @@ def get_branch_info_for_snapshot(
     transformers_t_p0 = to_branches_by_component_and_name(n.transformers_t.p0.loc[snapshot], 'Transformer', 'p0')
     branch_info_t = branch_info.join(pd.concat([lines_t_p0, links_t_p0, transformers_t_p0]))
 
-    branch_info_t['branch_loading'] = abs(branch_info_t.p0) / branch_info_t.p_max * 100
-    branch_info_t['arrow_angle'] = branch_info_t.apply(
-        lambda row: row.direction if row.p0 >= 0 else row.inverse_direction, axis='columns'
-    )
-
     return branch_info_t.pipe(BranchInfoForSnapshot.validate)
-
-
-
-
-
-
-
-
-
-
-
-
-def get_interquartile_range(df: pd.DataFrame) -> tuple[float, float]:
-
-    q1 = np.quantile(df, 0.25)
-    q3 = np.quantile(df, 0.75)
-    iqr = q3 - q1
-
-    min = q1 - 1.5 * iqr
-    max = q3 + 1.5 * iqr
-
-    return min, max

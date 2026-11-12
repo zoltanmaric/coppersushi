@@ -31,7 +31,6 @@ def extract(network: 'pypsa.Network') -> Dataset:
                        midpoint_longitude=row.mid_x, midpoint_latitude=row.mid_y,
                        forward_bearing=row.direction, reverse_bearing=row.inverse_direction)
                 for _, row in geometry.join(topology[['bus0', 'bus1']]).reset_index().iterrows()]
-    low, high = power_flow.get_interquartile_range(network.buses_t.p)
     intervals = []
     for timestamp in network.snapshots:
         snapshot = NetworkSnapshot(network, timestamp)
@@ -48,5 +47,4 @@ def extract(network: 'pypsa.Network') -> Dataset:
         intervals.append(Interval(timestamp=pd.to_datetime(timestamp, utc=True).to_pydatetime(), nodes=values,
             branches=[BranchValues(component=row.component, name=str(row['name']), flow_mw=row.p0)
                       for _, row in flows.reset_index().iterrows()]))
-    return Dataset(version=2, nodes=nodes, branches=branches, intervals=intervals,
-                   net_power_scale_mw=max(abs(low), abs(high)) or 1.0)
+    return Dataset(version=2, nodes=nodes, branches=branches, intervals=intervals)

@@ -1,6 +1,6 @@
 # Publication loading
 
-[Browser architecture](../../README.md)
+[Browser architecture](../README.md)
 
 Validates the generated Python contract at entry. Shared query keys keep selected-interval and background loading on the same requests. Immutable generation URLs prevent mixed revisions.
 
@@ -13,4 +13,4 @@ flowchart LR
     validation --> cache["TanStack Query cache"]
 ```
 
-[market](../market/README.md) · [map](../map/README.md) · [controls](../controls/README.md)
+[market](../pages/cnec/market/README.md) · [map](../map/README.md) · [controls](../controls/README.md)

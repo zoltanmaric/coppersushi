@@ -44,3 +44,9 @@ dist/
 
 /coppersushi/data/*
 /coppersushi/frontend/dist/
+
+# Product Terraform scratch/state is private in either source layout.
+/coppersushi/infra/lambda/*.tfstate*
+/coppersushi/infra/lambda/*.tfvars
+/coppersushi/infra/lambda/*.tfvars.json
+/coppersushi/infra/lambda/*.tfplan

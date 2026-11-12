@@ -1,6 +1,6 @@
 # Selection and controls
 
-[Browser architecture](../../README.md)
+[Browser architecture](../README.md)
 
 A pure reducer handles intent; URL parsing validates deep links. History replacement keeps interval browsing from flooding browser history. Controls describe the requested view while pending data remains visible.
 
@@ -12,4 +12,4 @@ flowchart LR
     reducer -->|replace| url
 ```
 
-[market](../market/README.md) · [data](../data/README.md) · [map](../map/README.md)
+[market](../pages/cnec/market/README.md) · [data](../data/README.md) · [map](../map/README.md)

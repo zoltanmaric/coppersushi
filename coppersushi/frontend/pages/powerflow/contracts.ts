@@ -42,7 +42,6 @@ export type Component1 = "Line" | "Link" | "Transformer";
 export type Name1 = string;
 export type FlowMw = number;
 export type Branches1 = BranchValues[];
-export type NetPowerScaleMw = number;
 
 /**
  * Validated producer-side dataset; null denotes unavailable optional values.
@@ -52,7 +51,6 @@ export interface Dataset {
   nodes: Nodes;
   branches: Branches;
   intervals: Intervals;
-  net_power_scale_mw: NetPowerScaleMw;
 }
 /**
  * A network bus; coordinates are WGS84 degrees and voltage is kV.

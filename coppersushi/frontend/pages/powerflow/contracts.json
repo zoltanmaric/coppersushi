@@ -277,19 +277,13 @@
       "minItems": 1,
       "title": "Intervals",
       "type": "array"
-    },
-    "net_power_scale_mw": {
-      "exclusiveMinimum": 0,
-      "title": "Net Power Scale Mw",
-      "type": "number"
     }
   },
   "required": [
     "version",
     "nodes",
     "branches",
-    "intervals",
-    "net_power_scale_mw"
+    "intervals"
   ],
   "title": "Dataset",
   "type": "object"

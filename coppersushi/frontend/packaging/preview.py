@@ -31,24 +31,29 @@ def index(day: str | None = None) -> str | Response:
             pass
     return render_shell(credentials.token('MAPBOX_TOKEN', Path('.secrets/.mapbox_token')), embed=embed)
 
+def production_file(path: str) -> Response:
+    url = 'https://coppersushi.121gigawatts.org/data/' + quote(path, safe='/')
+    # Full-day prefetch can encounter transient connection resets at the edge.
+    for attempt in range(3):
+        try:
+            with urlopen(url, timeout=20) as response:
+                body = response.read()
+                if response.headers.get('Content-Encoding') == 'gzip':
+                    body = decompress(body)
+                return Response(body, content_type='application/json')
+        except HTTPError as error:
+            if error.code not in (502, 503, 504) or attempt == 2:
+                return Response(status=error.code)
+        except (URLError, OSError, HTTPException):
+            if attempt == 2:
+                return Response('Production data is unavailable', status=502)
+
+    return Response('Production data is unavailable', status=502)
+
 @routes.get('/data/cnec/v2/<path:filename>')
 def local_data(filename: str) -> Response:
     if current_app.config.get('PRODUCTION_DATA', False):
-        url = 'https://coppersushi.121gigawatts.org/data/cnec/v2/' + quote(filename, safe='/')
-        # Full-day prefetch can encounter transient connection resets at the edge.
-        for attempt in range(3):
-            try:
-                with urlopen(url, timeout=20) as response:
-                    body = response.read()
-                    if response.headers.get('Content-Encoding') == 'gzip':
-                        body = decompress(body)
-                    return Response(body, content_type='application/json')
-            except HTTPError as error:
-                if error.code not in (502, 503, 504) or attempt == 2:
-                    return Response(status=error.code)
-            except (URLError, OSError, HTTPException):
-                if attempt == 2:
-                    return Response('Production data is unavailable', status=502)
+        return production_file('cnec/v2/' + filename)
     return send_from_directory(REPO / 'coppersushi/data/browser/data/cnec/v2',filename)
 
 
@@ -64,7 +69,12 @@ def opf_index() -> str:
 
 @opf_routes.get('/data/opf/v2/opf-2024/<path:filename>')
 def opf_data(filename: str) -> Response:
-    return send_from_directory(current_app.config.get('OPF_PREVIEW_DIRECTORY', REPO / 'coppersushi/data/browser/data/opf/v2/opf-2024'), filename)
+    directory = current_app.config.get('OPF_PREVIEW_DIRECTORY')
+    if directory is not None:
+        return send_from_directory(directory, filename)
+    if current_app.config.get('PRODUCTION_DATA', False):
+        return production_file('opf/v2/opf-2024/' + filename)
+    return send_from_directory(REPO / 'coppersushi/data/browser/data/opf/v2/opf-2024', filename)
 
 
 def create_app(*, production_data: bool) -> Flask:

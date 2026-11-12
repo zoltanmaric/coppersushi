@@ -96,8 +96,6 @@ class BranchInfoForSnapshot(BranchInfo):
     """`BranchInfo` plus per-snapshot flow."""
 
     p0: Series[float] = pa.Field(nullable=True)  # Active power at bus0 [MW]. PyPSA: Line/Link/Transformer.p0
-    branch_loading: Series[float] = pa.Field(nullable=True)  # Ours: abs(p0) / p_max * 100
-    arrow_angle: Series[float] = pa.Field(nullable=True)  # Ours: direction if p0 >= 0 else inverse_direction
 
     class Config:
         strict = False

@@ -60,7 +60,8 @@ def test_unsupported_embed_date_stays_in_the_embed():
     assert response.headers['Location'] == '/embed/cnec'
 
 
-def test_production_preview_proxies_data_but_keeps_local_assets(monkeypatch):
+@pytest.mark.parametrize('path', ['/data/cnec/v2/2026-11-09/manifest.json', '/data/opf/v2/opf-2024/manifest.json'])
+def test_production_preview_proxies_data_but_keeps_local_assets(monkeypatch, path):
     from io import BytesIO
     from coppersushi.frontend.packaging import preview as cnec_server
     calls = []
@@ -74,9 +75,9 @@ def test_production_preview_proxies_data_but_keeps_local_assets(monkeypatch):
 
     monkeypatch.setattr(cnec_server, 'urlopen', public_file)
     client = cnec_server.create_app(production_data=True).test_client()
-    response = client.get('/data/cnec/v2/2026-11-09/manifest.json')
+    response = client.get(path)
     assert response.json == {'day': '2026-11-09'}
-    assert calls == [('https://coppersushi.121gigawatts.org/data/cnec/v2/2026-11-09/manifest.json', 20)]
+    assert calls == [('https://coppersushi.121gigawatts.org' + path, 20)]
     assert client.get('/assets/cnec-app.css').status_code == 200
     assert len(calls) == 1
 
@@ -124,3 +125,16 @@ def test_opf_shell_uses_shared_static_navigation(path, embed, monkeypatch):
     assert f'data-embed="{str(embed).lower()}"' in page
     assert '/assets/navigation.css' in page
     assert '/assets/opf-app.js' in page
+
+
+def test_explicit_opf_directory_overrides_production_mode(monkeypatch):
+    from coppersushi import PRODUCT
+    from coppersushi.frontend.packaging import preview
+    def unexpected(*args, **kwargs):
+        raise AssertionError('Local candidate preview must not fetch production')
+    monkeypatch.setattr(preview, 'urlopen', unexpected)
+    app = preview.create_app(production_data=True)
+    app.config['OPF_PREVIEW_DIRECTORY'] = PRODUCT / 'testdata/opf-embed'
+    response = app.test_client().get('/data/opf/v2/opf-2024/snapshots.csv')
+    assert response.status_code == 200
+    assert b'snapshot' in response.data

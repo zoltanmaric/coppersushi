@@ -60,7 +60,7 @@ flowchart TB
     click catalog "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/grid/README.md" "Grid catalog"
     click opf "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/powerflow/README.md" "OPF"
     click publication "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/cnec/README.md" "Publication"
-    click browser "https://github.com/zoltanmaric/coppersushi/blob/main/frontend/README.md" "CNEC browser"
+    click browser "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/frontend/README.md" "CNEC browser"
 ```
 
 Components: [CNEC browser](coppersushi/frontend/README.md), [publication](coppersushi/pipelines/cnec/README.md),
@@ -125,29 +125,22 @@ A Mapbox access token is required to run the app. Tokenless startup is unsupport
 Register for a free token at [mapbox.com](https://www.mapbox.com/), then paste it into
 `.secrets/.mapbox_token`, or export it as `MAPBOX_TOKEN`.
 
-Prepare all application data before starting the app:
+Start the frontend preview against published data for both maps:
 
-```bash
-pixi run --locked setup-app
-```
-
-This runs dependency setup, pulls the solved network from Git LFS, downloads the
-pinned locator and OSM buses, fetches a fixed JAO domain seed, and builds the four
-catalog tables and country outlines. Downloads are cached in ignored `data/`;
-rerunning the command reuses them and recompiles the catalog from reviewed mappings.
-No earlier worktree or annual research cache is required. The first run needs network
-access; credentials are only needed when viewing maps and prices. Tests still use
-the lightweight `setup` command above.
-
-`pixi run --locked check-data` validates required tables without network access.
-Startup stops with the setup command when tables are missing or invalid. To refresh
-downloaded inputs, run `pixi run --locked setup-data --refresh`. For an additional
-domain seed day, use `pixi run --locked setup-data --day YYYY-MM-DD --refresh`.
-
-Then start the server by running
 ```bash
 pixi run --locked dev
 ```
+
+This builds local frontend assets and reads public datasets; it does not require a
+local solved network or producer catalogs. To preview an unpublished Power Flow
+network, use the exporter’s `--serve` command in [Power Flow preparation](coppersushi/pipelines/powerflow/README.md).
+
+Producer preparation is separate: `pixi run --locked setup-app` pulls the solved
+network, downloads cached locator inputs and builds catalogs and country outlines
+under ignored `coppersushi/data/`. `pixi run --locked check-data` validates those
+local inputs. Use `pixi run --locked setup-data --refresh` to refresh them, or add
+`--day YYYY-MM-DD` to select an additional domain seed day.
+
 
 Once the server starts, the web app will be available at http://localhost:8050
 
