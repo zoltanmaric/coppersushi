@@ -3,6 +3,7 @@ import {useQuery} from '@tanstack/react-query';
 import {Plot} from '../map/plot';
 import {reduceRender} from '../map/render-state';
 import type {PlotlyFigure} from '../map/figure';
+import {MapHelp} from '../controls/map-help';
 import {IntervalControls} from '../controls/interval-controls';
 import {fetchManifest,fetchHour,defaultHour,fullLabel} from './data';
 
@@ -34,7 +35,7 @@ export function OpfView({token}:{token:string}) {
   const current = !!figure && !hour.isPlaceholderData && renderedFigure===figure;
   const loading = !error && !mapError && (manifest.isFetching || hour.isFetching || (!!figure && !current));
   return <section className="opf-static" aria-label="Power Flow">
-    <div className="opf-map-host">{figure && <HourMap figure={figure} onError={e=>setMapError(e.message)} onRendered={completed=>{setRenderedFigure(completed);setMapError(null);}}/>}
+    <div className="opf-map-host"><div className="cnec-map-tools"><MapHelp page="powerflow"/></div>{figure && <HourMap figure={figure} onError={e=>setMapError(e.message)} onRendered={completed=>{setRenderedFigure(completed);setMapError(null);}}/>}
       {loading && <div className="opf-notice" role="status">Loading Power Flow…</div>}
       {error && <div className="opf-notice" role="alert">{error.message} <button onClick={()=>void (manifest.error?manifest:hour).refetch()}>Retry</button></div>}
       {mapError && <div className="opf-notice" role="alert">Map: {mapError}</div>}
