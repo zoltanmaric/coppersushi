@@ -8,7 +8,7 @@ import {dayFigure, zoneFeatures, selectionIds} from '../../map/day-figure';
 import {Timeline} from '../../controls/timeline';
 import {MapGraph} from '../../map/map-graph';
 import {CORE_ZONES} from './market/reference';
-import {DateTimeControls} from '../../controls/date-time-controls';
+import {DateTimeControls} from './date-time-controls';
 import {reduceSelection} from '../../controls/state';
 import type {Selection, Action} from '../../controls/state';
 import {viewFromUrl, viewSearch} from '../../controls/view-url';

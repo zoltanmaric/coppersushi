@@ -3,7 +3,7 @@ import React from 'react';
 import {act, cleanup, render, screen, waitFor} from '@testing-library/react';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {afterEach, expect, test, vi} from 'vitest';
-import {DateTimeControls} from './date-time-controls';
+import {DateTimeControls} from '../pages/cnec/date-time-controls';
 import {marketDay} from './market-day';
 
 const props = {day:'2026-11-09', minDay:'2026-11-01', time:'00:00 CET',

@@ -3,7 +3,7 @@ import React from 'react';
 import {cleanup, render, screen} from '@testing-library/react';
 import {afterEach, expect, test, vi} from 'vitest';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
-import {DateTimeControls} from './date-time-controls';
+import {DateTimeControls} from '../pages/cnec/date-time-controls';
 
 afterEach(() => {cleanup(); vi.unstubAllGlobals();});
 

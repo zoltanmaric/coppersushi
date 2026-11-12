@@ -1,9 +1,6 @@
 import {StepButton} from './step-button';
 import React, {useId, useRef} from 'react';
 import {autoUpdate, offset, shift, size, useFloating} from '@floating-ui/react-dom';
-import {useQuery} from '@tanstack/react-query';
-import {publicationOptions} from '../data/day-data';
-import {useMarketToday} from './market-day';
 import {DayPicker} from '@daypicker/react';
 import '@daypicker/react/style.css';
 
@@ -26,13 +23,6 @@ interface Props {
   day: string; minDay: string; time: string; previousDisabled: boolean; nextDisabled: boolean;
   onDay: (day: string) => void; onPrevious: () => void; onNext: () => void;
 }
-export function DateTimeControls(props:Props) {
-  const today = useMarketToday();
-  const tomorrow = stepDay(today, 1);
-  const publication = useQuery(publicationOptions(tomorrow));
-  return <CalendarTimeControls {...props} today={today} maxDay={publication.data ? tomorrow : today}/>;
-}
-
 /** Calendar presentation receives availability from its owning market page. */
 export function CalendarTimeControls({day, minDay, time, previousDisabled, nextDisabled, onDay, onPrevious, onNext,today,maxDay}: Props & {today:string;maxDay:string}) {
   const calendar = useRef<HTMLDivElement | null>(null);
