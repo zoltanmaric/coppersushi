@@ -30,6 +30,7 @@ export function MapHelp({page='cnec'}:{page?:'cnec'|'powerflow'}) {
         <p>Node colours show net power feed-in: generation minus demand. Larger nodes have larger absolute net power.</p>
         <p>Purple branches are loaded above 99% of their modelled capacity. Arrows show the direction of power flow; hover for values.</p>
         <p>Use the hourly controls to explore the fixed study day. These are model results, not live measurements.</p>
+        <a href="https://121gigawatts.org/copper-sushi-power-flow-european-grid/" target="_blank" rel="noopener noreferrer">Read the full post: Power Flow 🍣</a>
         </> : <>
         <p>Country colours show day-ahead electricity prices for the selected time.</p>
         <p>Purple highlights mark grid constraints that limit access to cheaper power.</p>
