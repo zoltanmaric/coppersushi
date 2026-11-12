@@ -1,0 +1,2272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>A forecast you can understand · Copper Sushi design spec</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --paper: #191b1f;
+        --surface: #222128;
+        --ink: #e9e5ef;
+        --muted: #b4acbf;
+        --line: #484052;
+        --green: #65dfdc;
+        --copper: #c49bff;
+        --soft: #2d2439;
+        --band: #72519a;
+        --band-wide: #342b43;
+        --warning: #ffd180;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+        scroll-padding-top: 25px;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font:
+          16px/1.65 system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      a {
+        color: var(--green);
+        text-underline-offset: 4px;
+      }
+      a:hover {
+        color: var(--copper);
+      }
+      .wrap {
+        width: min(1160px, calc(100% - 64px));
+        margin: auto;
+      }
+      .mast {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        align-items: center;
+        padding: 22px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .brand {
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        color: var(--ink);
+      }
+      .tag {
+        font-size: 11px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 5px 12px;
+      }
+      .hero {
+        padding: 78px 0 50px;
+        display: grid;
+        grid-template-columns: 1.6fr 1fr;
+        gap: 50px;
+        align-items: end;
+      }
+      .eyebrow {
+        font-size: 11px;
+        letter-spacing: 2px;
+        font-weight: 750;
+        color: var(--copper);
+        margin: 0 0 14px;
+      }
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+      h1 {
+        font:
+          normal clamp(48px, 6.7vw, 82px) / 1.04 system-ui, sans-serif;
+        letter-spacing: -2.5px;
+        margin-bottom: 25px;
+      }
+      h1 em,
+      h2 em {
+        color: var(--green);
+        font-weight: normal;
+      }
+      h2 {
+        font:
+          normal clamp(30px, 4vw, 48px) / 1.15 system-ui, sans-serif;
+        letter-spacing: -1px;
+      }
+      h3 {
+        font:
+          normal 26px/1.2 system-ui, sans-serif;
+      }
+      p {
+        margin-bottom: 18px;
+      }
+      .lead {
+        font-size: 20px;
+        color: var(--muted);
+        max-width: 650px;
+      }
+      .aside-note {
+        padding: 24px;
+        border-left: 2px solid var(--copper);
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .aside-note strong {
+        color: var(--ink);
+      }
+      nav {
+        display: flex;
+        gap: 30px;
+        border-bottom: 1px solid var(--line);
+        padding: 20px 0;
+        flex-wrap: wrap;
+      }
+      nav a {
+        font-size: 13px;
+        text-decoration: none;
+        color: var(--ink);
+      }
+      section {
+        padding: 65px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .section-top {
+        display: grid;
+        grid-template-columns: 65px 1fr;
+        gap: 20px;
+        margin-bottom: 25px;
+      }
+      .number {
+        font:
+          italic 25px system-ui, sans-serif;
+        color: var(--copper);
+      }
+      .section-top p {
+        max-width: 790px;
+        color: var(--muted);
+      }
+      .trio {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+      .card {
+        padding: 26px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 9px;
+      }
+      .card p {
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .card .question {
+        color: var(--green);
+        font:
+          italic 22px system-ui, sans-serif;
+      }
+      .card .mini {
+        height: 72px;
+        margin: 22px 0;
+      }
+      .mini svg {
+        width: 100%;
+        height: 100%;
+      }
+      .statement {
+        background: linear-gradient(135deg, #30203f, #202832);
+        color: var(--ink);
+        border: 1px solid #674584;
+        padding: 32px 38px;
+        border-radius: 9px;
+        margin: 30px 0;
+      }
+      .statement h3 {
+        font-size: 31px;
+      }
+      .statement p {
+        font-size: 15px;
+        color: var(--muted);
+        margin-bottom: 0;
+      }
+      .statement em {
+        color: var(--green);
+      }
+      .preview {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .preview-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        background: var(--soft);
+        padding: 15px 24px;
+        font-size: 11px;
+        letter-spacing: 1px;
+      }
+      .preview-body {
+        padding: 26px;
+      }
+      .metric-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 25px;
+        padding-bottom: 24px;
+      }
+      .metric-value {
+        font:
+          42px/1.4 system-ui, sans-serif;
+      }
+      .metric-value small {
+        font: 16px system-ui;
+        color: var(--muted);
+      }
+      .metric-label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .warning {
+        color: var(--copper);
+        font-size: 13px;
+      }
+      .chart-caption {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        font-size: 13px;
+        margin-bottom: 10px;
+      }
+      .legend {
+        display: flex;
+        gap: 18px;
+        font-size: 11px;
+        flex-wrap: wrap;
+        color: var(--muted);
+      }
+      .legend span:before {
+        content: "";
+        display: inline-block;
+        width: 15px;
+        height: 3px;
+        background: var(--ink);
+        margin-right: 6px;
+        vertical-align: middle;
+      }
+      .legend span:nth-child(2):before {
+        background: var(--green);
+      }
+      .legend span:nth-child(3):before {
+        background: var(--band);
+        height: 9px;
+      }
+      .legend span:nth-child(4):before {
+        background: var(--band-wide);
+        height: 9px;
+      }
+      .chart svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .axis {
+        font: 12px system-ui;
+        fill: var(--muted);
+      }
+      .small {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .intent {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        margin-top: 28px;
+      }
+      .intent p {
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .pill-list {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 15px 0;
+      }
+      .pill {
+        font-size: 12px;
+        padding: 6px 11px;
+        background: var(--soft);
+        border-radius: 20px;
+      }
+      .diagram-layout {
+        display: grid;
+        grid-template-columns: 1.45fr 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+      .graph {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px;
+      }
+      .graph svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .edge {
+        stroke: var(--muted);
+        stroke-width: 2;
+        fill: none;
+      }
+      .edge.train {
+        stroke-dasharray: 6 4;
+      }
+      .edge.truth {
+        stroke-dasharray: 2 5;
+      }
+      svg a rect {
+        fill: var(--paper);
+        stroke: var(--line);
+        stroke-width: 1.5;
+      }
+      svg a:hover rect,
+      svg a.active rect {
+        fill: var(--soft);
+        stroke: var(--green);
+        stroke-width: 2.5;
+      }
+      .node-title {
+        font: 600 14px system-ui;
+        fill: var(--ink);
+      }
+      .node-sub {
+        font: 11px system-ui;
+        fill: var(--muted);
+      }
+      .edge-label {
+        font: 11px system-ui;
+        fill: var(--muted);
+      }
+      .stage {
+        background: var(--soft);
+        border-radius: 10px;
+        padding: 26px;
+        margin-bottom: 20px;
+      }
+      .stage h3 {
+        font-size: 29px;
+      }
+      .stage dt {
+        font-size: 11px;
+        letter-spacing: 1px;
+        font-weight: 750;
+        text-transform: uppercase;
+        color: var(--green);
+        margin: 20px 0 7px;
+      }
+      .stage dd {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      .source {
+        font-size: 12px;
+      }
+      .graph-note {
+        font-size: 12px;
+        color: var(--muted);
+        margin: 15px 0 0;
+      }
+      .principles {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px 40px;
+      }
+      .principle {
+        border-top: 1px solid var(--line);
+        padding-top: 20px;
+      }
+      .principle h3 {
+        font-size: 23px;
+      }
+      .principle p {
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .sequence {
+        display: flex;
+        gap: 15px;
+        align-items: stretch;
+      }
+      .sequence > div {
+        flex: 1;
+        padding: 20px;
+        background: var(--soft);
+        border-radius: 7px;
+      }
+      .sequence b {
+        display: block;
+        color: var(--copper);
+        font-size: 12px;
+        margin-bottom: 12px;
+      }
+      .sequence p {
+        font-size: 14px;
+        margin: 0;
+      }
+      .review {
+        background: var(--soft);
+        border-radius: 10px;
+        padding: 30px;
+        margin: 28px 0;
+      }
+      .review ul {
+        padding-left: 20px;
+      }
+      .review li {
+        margin: 12px 0;
+      }
+      .source-list {
+        font-size: 13px;
+      }
+      .source-list li {
+        margin: 12px 0;
+      }
+      footer {
+        padding: 35px 0 55px;
+      }
+      .revision {
+        font:
+          11px ui-monospace,
+          monospace;
+        overflow-wrap: anywhere;
+      }
+      a:focus-visible {
+        outline: 3px solid var(--copper);
+        outline-offset: 4px;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+      @media (max-width: 850px) {
+        .hero {
+          grid-template-columns: 1fr;
+          gap: 15px;
+          padding-top: 45px;
+        }
+        .trio {
+          grid-template-columns: 1fr;
+        }
+        .card {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0 20px;
+        }
+        .card .mini {
+          grid-column: 2;
+          grid-row: 1/5;
+          align-self: center;
+        }
+        .diagram-layout {
+          grid-template-columns: 1fr;
+        }
+        .sequence {
+          flex-wrap: wrap;
+        }
+        .sequence > div {
+          min-width: 40%;
+        }
+        .stage {
+          padding: 24px;
+        }
+        .intent {
+          gap: 22px;
+        }
+      }
+      @media (max-width: 550px) {
+        .wrap {
+          width: calc(100% - 36px);
+        }
+        .mast .tag {
+          font-size: 9px;
+        }
+        .brand {
+          font-size: 11px;
+        }
+        .hero {
+          padding-top: 35px;
+        }
+        h1 {
+          letter-spacing: -1.5px;
+        }
+        .lead {
+          font-size: 17px;
+        }
+        nav {
+          gap: 14px;
+        }
+        nav a {
+          font-size: 12px;
+        }
+        .section-top {
+          grid-template-columns: 30px 1fr;
+          gap: 10px;
+        }
+        section {
+          padding: 40px 0;
+        }
+        .card {
+          display: block;
+        }
+        .card .mini {
+          height: 55px;
+        }
+        .metric-row {
+          gap: 15px;
+        }
+        .metric-value {
+          font-size: 31px;
+        }
+        .metric-value small {
+          font-size: 12px;
+        }
+        .preview-body {
+          padding: 18px 12px;
+        }
+        .preview-bar {
+          padding: 13px;
+          font-size: 9px;
+        }
+        .chart-caption {
+          display: block;
+        }
+        .intent,
+        .principles {
+          grid-template-columns: 1fr;
+        }
+        .graph {
+          padding: 4px;
+          overflow: auto;
+        }
+        .graph svg {
+          min-width: 560px;
+        }
+        .statement {
+          padding: 25px;
+        }
+        .statement h3 {
+          font-size: 27px;
+        }
+        .review {
+          padding: 22px;
+        }
+        .sequence > div {
+          min-width: 100%;
+        }
+      }
+
+      .wis-explanation {
+        margin: 22px 0;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+      }
+      .wis-explanation summary {
+        cursor: pointer;
+        padding: 20px 25px;
+        font-weight: 650;
+        color: var(--green);
+      }
+      .wis-explanation summary:focus-visible {
+        outline: 3px solid var(--copper);
+        outline-offset: 3px;
+      }
+      .wis-body {
+        padding: 8px 25px 25px;
+      }
+      .wis-body > p {
+        max-width: 90ch;
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .wis-cases {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+        margin: 25px 0;
+      }
+      .wis-case {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+      }
+      .wis-case h4,
+      .wis-caveat h4 {
+        font:
+          normal 23px system-ui, sans-serif;
+        margin: 0 0 16px;
+      }
+      .wis-case svg {
+        width: 100%;
+        height: auto;
+      }
+      .wis-case p {
+        font-size: 13px;
+      }
+      .wis-case .wis-score {
+        font:
+          32px system-ui, sans-serif;
+        color: var(--ink);
+        margin: 8px 0 12px;
+      }
+      .wis-score small {
+        font: 12px system-ui;
+        color: var(--muted);
+      }
+      .wis-caveat {
+        padding: 23px;
+        background: var(--soft);
+        border-left: 3px solid var(--copper);
+        border-radius: 5px;
+      }
+      .wis-caveat p {
+        font-size: 14px;
+        margin: 0;
+      }
+      @media (max-width: 700px) {
+        .wis-cases {
+          grid-template-columns: 1fr;
+        }
+        .wis-body {
+          padding: 8px 18px 18px;
+        }
+      }
+      /* Keep the explanation within the metric it teaches. */
+      .metric-row > div {
+        min-width: 0;
+      }
+      .metric-row .wis-explanation {
+        margin: 16px 0 0;
+      }
+      .metric-row .wis-explanation summary {
+        padding: 12px 14px;
+        font-size: 13px;
+      }
+      .metric-row .wis-body {
+        padding: 8px 14px 14px;
+      }
+      .metric-row .wis-cases {
+        grid-template-columns: 1fr;
+      }
+      @media (max-width: 700px) {
+        .metric-row {
+          grid-template-columns: 1fr;
+        }
+      }
+      .wis-recipe {
+        border-top: 1px solid var(--line);
+        padding-top: 20px;
+        margin-top: 24px;
+      }
+      .wis-recipe h4 {
+        font:
+          24px system-ui, sans-serif;
+        margin: 0 0 15px;
+      }
+      .wis-recipe p,
+      .wis-recipe dd {
+        font-size: 13px;
+      }
+      .wis-recipe dt {
+        font-weight: 650;
+        font-size: 13px;
+        margin-top: 14px;
+      }
+      .wis-recipe dd {
+        margin: 4px 0 14px;
+      }
+      .wis-arithmetic {
+        font-size: 13px;
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+      }
+      .wis-arithmetic dt {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--muted);
+        margin: 12px 0 4px;
+      }
+      .wis-arithmetic dd {
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+        overflow-wrap: anywhere;
+      }
+      .wis-case .wis-sum {
+        font-size: 17px;
+        padding: 12px 0;
+        border-top: 1px solid var(--line);
+        color: var(--green);
+        font-variant-numeric: tabular-nums;
+      }
+
+      body { background-image: radial-gradient(ellipse at 85% 0, #8d41d226, transparent 650px); }
+      h1, h2, h3 { color: #f3eef8; font-weight: 750; }
+      h1 em, h2 em { font-weight: 650; font-style: normal; }
+      a { color: var(--copper); }
+      a:hover { color: var(--green); }
+      .diagram-layout > * { min-width: 0; }
+      .hero { border-bottom: 2px solid #aa66ed; box-shadow: 0 12px 20px -20px #d75bd0; }
+      .tag { background: var(--soft); color: #d5b8ff; }
+      .number, .metric-value { color: #dec5ff; }
+      .warning { color: var(--warning); }
+      a:focus-visible, summary:focus-visible { outline: 3px solid var(--green); outline-offset: 4px; }
+      ::selection { background: #7643a2; color: #fff; }
+      svg [fill="#e9eddf"] { fill: var(--soft); }
+      svg [fill="#547768"] { fill: var(--green); }
+      svg [stroke="#b0bfaa"] { stroke: var(--line); }
+      svg [fill="#aa502d"] { fill: var(--warning); }
+      svg [stroke="#aa502d"] { stroke: var(--warning); }
+      svg [fill="#d4e4d5"] { fill: var(--band-wide); }
+      svg [stroke="#287967"] { stroke: var(--green); }
+      svg [stroke="#879b87"] { stroke: var(--muted); }
+      svg [fill="#e4e9da"] { fill: var(--soft); }
+      svg [stroke="#bcc9b9"] { stroke: var(--line); }
+      svg [fill="#dbe8dd"] { fill: var(--band-wide); }
+      svg [fill="#abcbb9"] { fill: var(--band); }
+      svg [stroke="#dce1d9"] { stroke: var(--line); }
+      svg [stroke="#27796b"] { stroke: var(--green); }
+      svg [stroke="#273b42"] { stroke: var(--ink); }
+      svg [fill="#7b9386"] { fill: var(--muted); }
+      @media print {
+        :root { color-scheme: light; --paper: #fff; --surface: #fff; --ink: #20182a; --muted: #51475b; --line: #cfc6d7; --green: #226d73; --copper: #64339a; --soft: #f4f0f7; --band: #b49acb; --band-wide: #e6ddec; --warning: #805116; }
+        body { background: #fff; } h1, h2, h3, .number, .metric-value { color: var(--ink); }
+        .hero { box-shadow: none; } .statement { background: var(--soft); } .tag { color: var(--copper); }
+      }
+</style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="mast">
+        <span class="brand">COPPER SUSHI / DESIGN NOTES</span
+        ><span class="tag">DESIGN APPROVED · IMPLEMENTATION NEXT</span>
+      </header>
+      <div class="hero">
+        <div>
+          <p class="eyebrow">
+            FORECAST PRODUCT · SPECIFICATION · 13 OCTOBER 2026
+          </p>
+          <h1>A forecast you<br />can <em>understand.</em></h1>
+          <p class="lead">
+            See what it predicts. Judge how well it works.<br />Understand how
+            the pieces come together.
+          </p>
+        </div>
+        <aside class="aside-note">
+          <strong>The question for this design</strong>
+          <p>
+            How should we turn a reproducible forecasting experiment into a
+            product that explains itself?
+          </p>
+          <p>
+            This page proposes the experience. The historical results exist; the
+            product interface is awaiting approval.
+          </p>
+        </aside>
+      </div>
+      <nav aria-label="Specification sections">
+        <a href="#experience">01 · The experience</a
+        ><a href="#results">02 · Forecast results</a
+        ><a href="#pipeline">03 · How it works</a
+        ><a href="#workflow">04 · Agent workflow</a
+        ><a href="#review">05 · Review & scope</a>
+      </nav>
+      <section id="experience">
+        <div class="section-top">
+          <span class="number">01</span>
+          <div>
+            <h2>Three ways in.<br /><em>One coherent explanation.</em></h2>
+            <p>
+              The reader can move between purpose, evidence and method. Each
+              surface answers a different question; shared terms and links keep
+              them connected.
+            </p>
+          </div>
+        </div>
+        <div class="trio">
+          <article class="card">
+            <p class="eyebrow">UNDERSTAND THE PRODUCT</p>
+            <h3>The illustrated spec</h3>
+            <p class="question">What are we building, and why?</p>
+            <div class="mini">
+              <svg viewBox="0 0 260 75" aria-hidden="true">
+                <rect
+                  x="0"
+                  y="0"
+                  width="260"
+                  height="75"
+                  rx="6"
+                  fill="#e9eddf"
+                />
+                <rect x="18" y="15" width="85" height="7" fill="#547768" />
+                <path
+                  d="M18 35 H136 M18 47 H118 M18 59 H132"
+                  stroke="#b0bfaa"
+                  stroke-width="4"
+                />
+                <circle
+                  cx="204"
+                  cy="36"
+                  r="22"
+                  fill="none"
+                  stroke="#aa502d"
+                  stroke-width="2"
+                />
+                <path
+                  d="M192 37 l8 8 16-19"
+                  fill="none"
+                  stroke="#aa502d"
+                  stroke-width="2"
+                />
+              </svg>
+            </div>
+            <p>
+              A readable, visual proposal backed by the wiki. Explain the
+              forecast contract, choices, limitations and open decisions before
+              building.
+            </p>
+          </article>
+          <article class="card">
+            <p class="eyebrow">EXPLORE RESULTS</p>
+            <h3>The forecast itself</h3>
+            <p class="question">What happened, and how well?</p>
+            <div class="mini">
+              <svg viewBox="0 0 260 75" aria-hidden="true">
+                <path
+                  d="M0 60 L30 24 60 45 90 12 120 20 150 40 180 20 210 28 260 8 V40 L210 62 180 51 150 68 120 53 90 48 60 69 30 61 0 74 Z"
+                  fill="#d4e4d5"
+                />
+                <path
+                  d="M0 70 L30 47 60 59 90 30 120 38 150 54 180 35 210 43 260 24"
+                  fill="none"
+                  stroke="#287967"
+                  stroke-width="3"
+                />
+              </svg>
+            </div>
+            <p>
+              Daily prices and quantile bands, observed outcomes, meaningful
+              comparisons and metrics that reveal both strengths and failures.
+            </p>
+          </article>
+          <article class="card">
+            <p class="eyebrow">HOW IT WORKS</p>
+            <h3>The method made visible</h3>
+            <p class="question">How does this become a forecast?</p>
+            <div class="mini">
+              <svg viewBox="0 0 260 75" aria-hidden="true">
+                <path
+                  d="M52 18 H105 V38 H151 M52 58 H105 V38 M202 38 H247"
+                  fill="none"
+                  stroke="#879b87"
+                  stroke-width="2"
+                />
+                <g fill="#e4e9da" stroke="#879b87">
+                  <rect x="0" y="3" width="52" height="29" rx="4" />
+                  <rect x="0" y="44" width="52" height="29" rx="4" />
+                  <rect x="151" y="23" width="52" height="29" rx="4" />
+                </g>
+                <circle cx="248" cy="38" r="7" fill="#aa502d" />
+              </svg>
+            </div>
+            <p>
+              A first-class system diagram. Teach what comes from where, what
+              each transformation means, and what it contributes to the result.
+            </p>
+          </article>
+        </div>
+      </section>
+      <section id="results">
+        <div class="section-top">
+          <span class="number">02</span>
+          <div>
+            <h2>
+              Let the result be seen.<br /><em>Let its limits be seen too.</em>
+            </h2>
+            <p>
+              A large daily chart is the centre of the results page. The
+              evaluation summary gives it context; the reader can then explore
+              dates, compare models and inspect difficult periods.
+            </p>
+          </div>
+        </div>
+        <div class="preview">
+          <div class="preview-bar">
+            <strong>PROPOSED PRESENTATION · REAL SAVED EVIDENCE</strong
+            ><span>HISTORICAL EVALUATION</span>
+          </div>
+          <div class="preview-body">
+            <div class="metric-row">
+              <div>
+                <div class="metric-label">
+                  Full evaluation · weighted interval score (WIS) ↓
+                </div>
+                <div class="metric-value">
+                  16.34 <small>vs 19.43 reference</small>
+                </div>
+                <div class="small">
+                  Balances median error, band width and misses outside the
+                  bands. Lower is better.<br /><strong
+                    >About 16% lower score than the reference</strong
+                  >
+                  on the same January–September 2026 observations. This is not a
+                  typical price error or a percentage improvement in accuracy.
+                </div>
+                <details class="wis-explanation" id="wis-explanation">
+                  <summary>How weighted interval score (WIS) works</summary>
+                  <div class="wis-body">
+                    <p class="eyebrow">READING WEIGHTED INTERVAL SCORE</p>
+                    <h3>Be precise. But pay for being wrong.</h3>
+                    <p>
+                      A very wide band is easy to land inside, but gives little
+                      useful precision. A very narrow band looks precise, but
+                      can miss badly.
+                      <strong>Weighted interval score (WIS)</strong> balances
+                      those costs and includes the median prediction’s error.
+                    </p>
+                    <p>
+                      <strong
+                        >Illustrative numbers, not another experiment.</strong
+                      >
+                      In all three examples below, the predicted median is 100
+                      and the observed price is 110 €/MWh. Only the bands
+                      change. Pale green is the 95% band, darker green the 50%
+                      band; the copper dot is the observed price. All diagrams
+                      use the same scale.
+                    </p>
+                    <div class="wis-recipe">
+                      <h4>The calculation, in three costs</h4>
+                      <p>
+                        For the five quantiles used here, this is an exact
+                        rewrite of WIS, with the weights and normalization
+                        already combined:
+                      </p>
+                      <dl>
+                        <dt>1 · Median-error cost</dt>
+                        <dd>
+                          0.2 × distance between the actual price and the
+                          median.
+                        </dd>
+                        <dt>2 · Band-width cost</dt>
+                        <dd>
+                          0.1 × width of the 50% band<br />+ 0.01 × width of the
+                          95% band.
+                        </dd>
+                        <dt>3 · Outside-band cost</dt>
+                        <dd>
+                          0.4 × distance outside the 50% band<br />+ 0.4 ×
+                          distance outside the 95% band.
+                        </dd>
+                      </dl>
+                      <p>
+                        <strong>Add the three costs to get WIS.</strong> Width
+                        means upper edge minus lower edge. Outside distance is
+                        zero when the actual price is inside a band; otherwise
+                        it is the distance to the nearest edge. A price outside
+                        both bands contributes to both miss terms.
+                      </p>
+                      <p class="small">
+                        These fixed weights come from the scoring definition for
+                        our five quantiles; they are not fitted to these
+                        results. All distances and score contributions are in
+                        €/MWh.
+                      </p>
+                    </div>
+                    <div class="wis-cases">
+                      <article class="wis-case">
+                        <h4>Too wide</h4>
+                        <svg
+                          viewBox="0 0 300 100"
+                          role="img"
+                          aria-label="Too wide: quantiles 60, 80, 100, 120, 140, median 100, observed price 110 euros per megawatt-hour"
+                        >
+                          <path d="M20 65 H280" stroke="#bcc9b9" />
+                          <rect
+                            x="46.0"
+                            y="30"
+                            width="208.0"
+                            height="24"
+                            fill="#dbe8dd"
+                          />
+                          <rect
+                            x="98.0"
+                            y="30"
+                            width="104.0"
+                            height="24"
+                            fill="#abcbb9"
+                          />
+                          <path
+                            d="M150.0 26 V59"
+                            stroke="#287967"
+                            stroke-width="2"
+                          />
+                          <circle cx="176.0" cy="42" r="5" fill="#aa502d" />
+                          <text
+                            x="176.0"
+                            y="18"
+                            text-anchor="middle"
+                            class="axis"
+                          >
+                            actual 110
+                          </text>
+                          <text x="20" y="87" class="axis">50</text>
+                          <text
+                            x="150"
+                            y="87"
+                            text-anchor="middle"
+                            class="axis"
+                          >
+                            100
+                          </text>
+                          <text x="280" y="87" text-anchor="end" class="axis">
+                            150 €/MWh
+                          </text>
+                        </svg>
+                        <dl class="wis-arithmetic">
+                          <dt>Median error</dt>
+                          <dd>0.2 × |110 − 100| = <strong>2.00</strong></dd>
+                          <dt>Band widths</dt>
+                          <dd>
+                            0.1 × (120 − 80) + 0.01 × (140 − 60) =
+                            <strong>4.80</strong>
+                          </dd>
+                          <dt>Outside misses</dt>
+                          <dd>
+                            Inside both bands: 0.4 × 0 + 0.4 × 0 =
+                            <strong>0.00</strong>
+                          </dd>
+                        </dl>
+                        <p class="wis-sum">
+                          2.00 + 4.80 + 0.00 = <strong>6.80 WIS</strong>
+                        </p>
+                        <p>
+                          The observed price is inside both bands, but their
+                          width costs points.
+                        </p>
+                        <p class="small">
+                          50% band: 80–120 · 95% band: 60–140 €/MWh
+                        </p>
+                      </article>
+                      <article class="wis-case">
+                        <h4>A better balance</h4>
+                        <svg
+                          viewBox="0 0 300 100"
+                          role="img"
+                          aria-label="A better balance: quantiles 85, 95, 100, 105, 115, median 100, observed price 110 euros per megawatt-hour"
+                        >
+                          <path d="M20 65 H280" stroke="#bcc9b9" />
+                          <rect
+                            x="111.0"
+                            y="30"
+                            width="78.0"
+                            height="24"
+                            fill="#dbe8dd"
+                          />
+                          <rect
+                            x="137.0"
+                            y="30"
+                            width="26.0"
+                            height="24"
+                            fill="#abcbb9"
+                          />
+                          <path
+                            d="M150.0 26 V59"
+                            stroke="#287967"
+                            stroke-width="2"
+                          />
+                          <circle cx="176.0" cy="42" r="5" fill="#aa502d" />
+                          <text
+                            x="176.0"
+                            y="18"
+                            text-anchor="middle"
+                            class="axis"
+                          >
+                            actual 110
+                          </text>
+                          <text x="20" y="87" class="axis">50</text>
+                          <text
+                            x="150"
+                            y="87"
+                            text-anchor="middle"
+                            class="axis"
+                          >
+                            100
+                          </text>
+                          <text x="280" y="87" text-anchor="end" class="axis">
+                            150 €/MWh
+                          </text>
+                        </svg>
+                        <dl class="wis-arithmetic">
+                          <dt>Median error</dt>
+                          <dd>0.2 × |110 − 100| = <strong>2.00</strong></dd>
+                          <dt>Band widths</dt>
+                          <dd>
+                            0.1 × (105 − 95) + 0.01 × (115 − 85) =
+                            <strong>1.30</strong>
+                          </dd>
+                          <dt>Outside misses</dt>
+                          <dd>
+                            5 above the 50% band, inside the 95% band:<br />0.4
+                            × (110 − 105) + 0.4 × 0 = <strong>2.00</strong>
+                          </dd>
+                        </dl>
+                        <p class="wis-sum">
+                          2.00 + 1.30 + 2.00 = <strong>5.30 WIS</strong>
+                        </p>
+                        <p>
+                          Narrower bands save more width cost than the 50%
+                          band’s miss adds in this example.
+                        </p>
+                        <p class="small">
+                          50% band: 95–105 · 95% band: 85–115 €/MWh
+                        </p>
+                      </article>
+                      <article class="wis-case">
+                        <h4>Too narrow</h4>
+                        <svg
+                          viewBox="0 0 300 100"
+                          role="img"
+                          aria-label="Too narrow: quantiles 98, 99, 100, 101, 102, median 100, observed price 110 euros per megawatt-hour"
+                        >
+                          <path d="M20 65 H280" stroke="#bcc9b9" />
+                          <rect
+                            x="144.8"
+                            y="30"
+                            width="10.4"
+                            height="24"
+                            fill="#dbe8dd"
+                          />
+                          <rect
+                            x="147.4"
+                            y="30"
+                            width="5.2"
+                            height="24"
+                            fill="#abcbb9"
+                          />
+                          <path
+                            d="M150.0 26 V59"
+                            stroke="#287967"
+                            stroke-width="2"
+                          />
+                          <circle cx="176.0" cy="42" r="5" fill="#aa502d" />
+                          <text
+                            x="176.0"
+                            y="18"
+                            text-anchor="middle"
+                            class="axis"
+                          >
+                            actual 110
+                          </text>
+                          <text x="20" y="87" class="axis">50</text>
+                          <text
+                            x="150"
+                            y="87"
+                            text-anchor="middle"
+                            class="axis"
+                          >
+                            100
+                          </text>
+                          <text x="280" y="87" text-anchor="end" class="axis">
+                            150 €/MWh
+                          </text>
+                        </svg>
+                        <dl class="wis-arithmetic">
+                          <dt>Median error</dt>
+                          <dd>0.2 × |110 − 100| = <strong>2.00</strong></dd>
+                          <dt>Band widths</dt>
+                          <dd>
+                            0.1 × (101 − 99) + 0.01 × (102 − 98) =
+                            <strong>0.24</strong>
+                          </dd>
+                          <dt>Outside misses</dt>
+                          <dd>
+                            9 above the 50% band, 8 above the 95% band:<br />0.4
+                            × (110 − 101) + 0.4 × (110 − 102) =
+                            <strong>6.80</strong>
+                          </dd>
+                        </dl>
+                        <p class="wis-sum">
+                          2.00 + 0.24 + 6.80 = <strong>9.04 WIS</strong>
+                        </p>
+                        <p>
+                          The observed price falls outside both bands. Larger
+                          miss penalties outweigh the small widths.
+                        </p>
+                        <p class="small">
+                          50% band: 99–101 · 95% band: 98–102 €/MWh
+                        </p>
+                      </article>
+                    </div>
+                    <p>
+                      The median error is identical in all three cases. Wider
+                      bands add cost; when a price falls outside a band, the
+                      score adds a penalty that grows with the distance beyond
+                      its edge. WIS weights the two band scores and the median
+                      error together.
+                    </p>
+                    <p>
+                      These are scores for <strong>one quarter-hour</strong>.
+                      The headline averages quarter-hour scores over all
+                      available outcomes in the selected period. Its units are
+                      €/MWh, but
+                      <strong>16.34 is not the typical price error</strong>; the
+                      median’s MAE answers that question.
+                      <a
+                        href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/evaluation.md#wis"
+                        >Exact formula and weights ↗</a
+                      >
+                    </p>
+                    <div class="wis-caveat">
+                      <h4>How can the score improve while coverage is poor?</h4>
+                      <p>
+                        The reference’s bands are much wider. WIS combines that
+                        width cost with errors and misses; coverage asks only
+                        how often the outcome lands inside. Our system wins that
+                        combined comparison while its nominal 95% band contains
+                        only 63.7% of outcomes.
+                        <strong
+                          >The better score does not make those bands well
+                          calibrated.</strong
+                        >
+                        Both results belong in the headline.
+                      </p>
+                    </div>
+                  </div>
+                </details>
+              </div>
+              <div>
+                <div class="metric-label">
+                  Full evaluation · observed coverage of the 95% band
+                </div>
+                <div class="metric-value">
+                  63.7% <small>vs 95% nominal</small>
+                </div>
+                <div class="warning">
+                  The uncertainty bands substantially under-cover.
+                </div>
+              </div>
+            </div>
+            <div class="chart-caption">
+              <strong>15 January 2026 · one saved day</strong
+              ><span class="small">96 quarters · Europe/Berlin</span>
+            </div>
+            <div class="legend">
+              <span>Realised price</span><span>Predicted median</span
+              ><span>Central 50%</span><span>Central 95%</span>
+            </div>
+            <div class="chart">
+              <svg
+                viewBox="0 0 1040 290"
+                role="img"
+                aria-labelledby="chart-title chart-description"
+              >
+                <title id="chart-title">
+                  Saved forecast and realised prices for 15 January 2026
+                </title>
+                <desc id="chart-description">
+                  A real 96-quarter excerpt from the accepted historical
+                  evaluation, showing the system median and central 50 and 95
+                  percent bands with realised prices. Aggregate statistics
+                  elsewhere describe the full evaluation.
+                </desc>
+                <path d="M60 240.0 H1020" stroke="#dce1d9" />
+                <text x="45" y="244.0" text-anchor="end" class="axis">42</text>
+                <path d="M60 186.2 H1020" stroke="#dce1d9" />
+                <text x="45" y="190.2" text-anchor="end" class="axis">79</text>
+                <path d="M60 132.5 H1020" stroke="#dce1d9" />
+                <text x="45" y="136.5" text-anchor="end" class="axis">117</text>
+                <path d="M60 78.8 H1020" stroke="#dce1d9" />
+                <text x="45" y="82.8" text-anchor="end" class="axis">154</text>
+                <path d="M60 25.0 H1020" stroke="#dce1d9" />
+                <text x="45" y="29.0" text-anchor="end" class="axis">191</text>
+                <path
+                  d="M60.0,149.6 L70.1,151.8 L80.2,151.7 L90.3,154.6 L100.4,156.7 L110.5,160.2 L120.6,159.8 L130.7,162.0 L140.8,160.4 L150.9,162.4 L161.1,162.9 L171.2,165.5 L181.3,163.3 L191.4,163.3 L201.5,163.3 L211.6,164.0 L221.7,164.5 L231.8,162.6 L241.9,159.1 L252.0,161.2 L262.1,156.7 L272.2,147.0 L282.3,141.8 L292.4,138.8 L302.5,127.3 L312.6,93.2 L322.7,74.6 L332.8,39.4 L342.9,136.3 L353.1,126.9 L363.2,112.9 L373.3,110.5 L383.4,109.6 L393.5,111.4 L403.6,113.2 L413.7,113.3 L423.8,91.4 L433.9,95.0 L444.0,94.7 L454.1,92.1 L464.2,110.5 L474.3,114.8 L484.4,113.5 L494.5,113.7 L504.6,126.0 L514.7,123.2 L524.8,127.0 L534.9,134.8 L545.1,88.4 L555.2,96.9 L565.3,98.1 L575.4,97.3 L585.5,101.7 L595.6,101.4 L605.7,101.4 L615.8,92.9 L625.9,88.2 L636.0,79.2 L646.1,88.4 L656.2,91.9 L666.3,71.0 L676.4,70.7 L686.5,72.1 L696.6,72.5 L706.7,45.7 L716.8,48.4 L726.9,47.8 L737.1,73.9 L747.2,104.7 L757.3,124.1 L767.4,124.2 L777.5,123.1 L787.6,131.0 L797.7,128.5 L807.8,128.4 L817.9,129.3 L828.0,154.5 L838.1,159.4 L848.2,162.6 L858.3,165.9 L868.4,162.3 L878.5,170.4 L888.6,177.5 L898.7,181.9 L908.8,173.9 L918.9,178.3 L929.1,182.9 L939.2,184.7 L949.3,179.9 L959.4,182.4 L969.5,186.6 L979.6,193.0 L989.7,174.7 L999.8,187.5 L1009.9,193.7 L1020.0,199.8 L1020.0,220.0 L1009.9,221.9 L999.8,225.6 L989.7,204.5 L979.6,214.6 L969.5,207.7 L959.4,200.5 L949.3,192.3 L939.2,206.1 L929.1,199.9 L918.9,196.1 L908.8,193.4 L898.7,198.4 L888.6,195.8 L878.5,190.0 L868.4,182.6 L858.3,183.0 L848.2,175.8 L838.1,172.3 L828.0,191.6 L817.9,140.9 L807.8,140.1 L797.7,139.7 L787.6,140.2 L777.5,136.2 L767.4,134.0 L757.3,133.9 L747.2,144.2 L737.1,110.3 L726.9,133.9 L716.8,138.4 L706.7,146.8 L696.6,136.7 L686.5,137.6 L676.4,142.8 L666.3,147.9 L656.2,144.1 L646.1,149.0 L636.0,153.3 L625.9,155.3 L615.8,158.7 L605.7,159.7 L595.6,159.6 L585.5,160.4 L575.4,147.4 L565.3,150.1 L555.2,149.9 L545.1,148.9 L534.9,148.8 L524.8,143.4 L514.7,143.4 L504.6,143.6 L494.5,137.7 L484.4,137.3 L474.3,137.6 L464.2,134.7 L454.1,143.3 L444.0,138.4 L433.9,132.8 L423.8,132.3 L413.7,148.7 L403.6,148.4 L393.5,149.7 L383.4,154.2 L373.3,158.7 L363.2,159.4 L353.1,161.5 L342.9,176.9 L332.8,141.4 L322.7,149.8 L312.6,159.9 L302.5,166.7 L292.4,168.1 L282.3,169.2 L272.2,171.8 L262.1,172.9 L252.0,172.7 L241.9,174.0 L231.8,175.4 L221.7,181.4 L211.6,175.5 L201.5,175.8 L191.4,175.8 L181.3,175.8 L171.2,176.5 L161.1,173.0 L150.9,172.6 L140.8,171.4 L130.7,177.2 L120.6,176.9 L110.5,175.9 L100.4,176.1 L90.3,183.6 L80.2,182.7 L70.1,175.5 L60.0,169.5 Z"
+                  fill="#dbe8dd"
+                />
+                <path
+                  d="M60.0,165.2 L70.1,168.0 L80.2,170.0 L90.3,171.6 L100.4,163.2 L110.5,170.0 L120.6,171.2 L130.7,173.2 L140.8,169.0 L150.9,172.2 L161.1,172.0 L171.2,173.7 L181.3,174.5 L191.4,174.5 L201.5,174.6 L211.6,174.7 L221.7,176.6 L231.8,174.9 L241.9,171.6 L252.0,168.9 L262.1,170.6 L272.2,169.1 L282.3,165.6 L292.4,162.0 L302.5,159.7 L312.6,145.7 L322.7,134.0 L332.8,106.6 L342.9,152.4 L353.1,134.1 L363.2,121.0 L373.3,118.7 L383.4,111.2 L393.5,112.4 L403.6,117.1 L413.7,116.4 L423.8,93.6 L433.9,97.1 L444.0,98.3 L454.1,97.4 L464.2,128.3 L474.3,129.4 L484.4,130.8 L494.5,130.1 L504.6,138.0 L514.7,137.5 L524.8,138.6 L534.9,142.7 L545.1,99.8 L555.2,107.1 L565.3,107.6 L575.4,105.1 L585.5,118.8 L595.6,118.3 L605.7,118.2 L615.8,110.9 L625.9,107.2 L636.0,99.9 L646.1,99.9 L656.2,99.7 L666.3,96.7 L676.4,90.9 L686.5,87.1 L696.6,86.8 L706.7,90.7 L716.8,85.2 L726.9,82.2 L737.1,87.4 L747.2,116.4 L757.3,129.1 L767.4,129.2 L777.5,128.9 L787.6,131.1 L797.7,130.6 L807.8,130.5 L817.9,135.8 L828.0,157.5 L838.1,164.1 L848.2,165.7 L858.3,171.5 L868.4,166.7 L878.5,178.8 L888.6,188.6 L898.7,191.2 L908.8,184.8 L918.9,186.6 L929.1,190.1 L939.2,192.1 L949.3,187.1 L959.4,190.9 L969.5,193.5 L979.6,199.2 L989.7,188.6 L999.8,198.7 L1009.9,201.0 L1020.0,205.6 L1020.0,207.1 L1009.9,204.5 L999.8,204.1 L989.7,191.2 L979.6,201.1 L969.5,194.8 L959.4,191.4 L949.3,188.0 L939.2,195.1 L929.1,191.3 L918.9,187.1 L908.8,184.9 L898.7,192.2 L888.6,190.1 L878.5,180.5 L868.4,172.0 L858.3,175.9 L848.2,171.1 L838.1,166.4 L828.0,168.3 L817.9,137.1 L807.8,133.9 L797.7,134.0 L787.6,134.4 L777.5,132.0 L767.4,131.6 L757.3,131.5 L747.2,133.0 L737.1,106.1 L726.9,117.9 L716.8,122.2 L706.7,129.5 L696.6,119.6 L686.5,120.5 L676.4,126.6 L666.3,131.7 L656.2,130.1 L646.1,132.9 L636.0,134.4 L625.9,137.6 L615.8,145.5 L605.7,147.9 L595.6,147.9 L585.5,147.9 L575.4,131.8 L565.3,133.1 L555.2,133.0 L545.1,130.6 L534.9,145.5 L524.8,142.9 L514.7,142.1 L504.6,142.5 L494.5,135.0 L484.4,134.7 L474.3,135.1 L464.2,130.4 L454.1,134.5 L444.0,131.2 L433.9,126.2 L423.8,125.8 L413.7,144.4 L403.6,144.1 L393.5,143.8 L383.4,145.8 L373.3,151.0 L363.2,152.3 L353.1,156.6 L342.9,165.5 L332.8,133.3 L322.7,147.8 L312.6,158.5 L302.5,166.3 L292.4,166.9 L282.3,169.0 L272.2,171.3 L262.1,172.5 L252.0,172.6 L241.9,173.8 L231.8,175.2 L221.7,176.9 L211.6,175.0 L201.5,175.4 L191.4,175.4 L181.3,175.4 L171.2,174.0 L161.1,172.9 L150.9,172.6 L140.8,170.9 L130.7,173.6 L120.6,172.8 L110.5,171.9 L100.4,170.3 L90.3,175.6 L80.2,174.6 L70.1,171.9 L60.0,169.1 Z"
+                  fill="#abcbb9"
+                />
+                <path
+                  d="M60.0,168.0 L70.1,170.4 L80.2,171.9 L90.3,173.6 L100.4,163.8 L110.5,171.7 L120.6,172.6 L130.7,173.3 L140.8,169.4 L150.9,172.2 L161.1,172.5 L171.2,173.9 L181.3,174.7 L191.4,174.7 L201.5,174.7 L211.6,174.8 L221.7,176.8 L231.8,175.0 L241.9,172.8 L252.0,171.3 L262.1,171.1 L272.2,170.9 L282.3,168.2 L292.4,165.5 L302.5,163.4 L312.6,153.6 L322.7,141.4 L332.8,122.7 L342.9,159.2 L353.1,147.8 L363.2,141.4 L373.3,139.6 L383.4,134.9 L393.5,133.5 L403.6,134.4 L413.7,134.6 L423.8,113.5 L433.9,114.6 L444.0,118.6 L454.1,120.6 L464.2,128.7 L474.3,131.2 L484.4,132.0 L494.5,132.2 L504.6,138.2 L514.7,137.6 L524.8,139.9 L534.9,144.6 L545.1,122.5 L555.2,126.3 L565.3,126.5 L575.4,125.0 L585.5,137.3 L595.6,137.8 L605.7,137.8 L615.8,134.1 L625.9,126.4 L636.0,121.9 L646.1,121.9 L656.2,119.5 L666.3,118.7 L676.4,113.8 L686.5,107.3 L696.6,106.5 L706.7,116.9 L716.8,110.6 L726.9,106.4 L737.1,104.7 L747.2,129.8 L757.3,129.9 L767.4,129.9 L777.5,130.3 L787.6,132.4 L797.7,132.2 L807.8,132.6 L817.9,135.9 L828.0,163.6 L838.1,165.8 L848.2,169.7 L858.3,173.2 L868.4,170.5 L878.5,179.7 L888.6,189.4 L898.7,191.5 L908.8,184.9 L918.9,187.0 L929.1,190.7 L939.2,195.0 L949.3,187.8 L959.4,191.3 L969.5,194.4 L979.6,200.4 L989.7,190.8 L999.8,202.3 L1009.9,203.4 L1020.0,206.2"
+                  fill="none"
+                  stroke="#27796b"
+                  stroke-width="2.5"
+                />
+                <path
+                  d="M60.0,141.6 L70.1,151.5 L80.2,162.7 L90.3,166.9 L100.4,158.8 L110.5,163.8 L120.6,167.2 L130.7,170.9 L140.8,164.9 L150.9,171.5 L161.1,175.3 L171.2,176.1 L181.3,176.0 L191.4,177.2 L201.5,178.9 L211.6,181.9 L221.7,181.8 L231.8,182.0 L241.9,181.4 L252.0,179.6 L262.1,179.7 L272.2,179.7 L282.3,176.0 L292.4,171.7 L302.5,165.8 L312.6,161.6 L322.7,159.5 L332.8,149.7 L342.9,155.5 L353.1,151.9 L363.2,148.2 L373.3,141.1 L383.4,149.3 L393.5,145.4 L403.6,149.3 L413.7,153.4 L423.8,146.8 L433.9,151.9 L444.0,157.0 L454.1,162.3 L464.2,146.0 L474.3,154.1 L484.4,160.2 L494.5,163.7 L504.6,154.2 L514.7,159.0 L524.8,161.6 L534.9,163.8 L545.1,161.6 L555.2,165.3 L565.3,165.0 L575.4,161.6 L585.5,158.8 L595.6,156.4 L605.7,154.1 L615.8,153.4 L625.9,154.5 L636.0,149.3 L646.1,150.5 L656.2,139.3 L666.3,151.9 L676.4,127.6 L686.5,117.5 L696.6,95.9 L706.7,121.8 L716.8,106.5 L726.9,101.2 L737.1,92.5 L747.2,82.7 L757.3,77.3 L767.4,93.2 L777.5,110.4 L787.6,108.2 L797.7,132.8 L807.8,131.3 L817.9,140.0 L828.0,138.9 L838.1,150.7 L848.2,151.8 L858.3,153.1 L868.4,155.0 L878.5,156.3 L888.6,159.6 L898.7,165.9 L908.8,166.1 L918.9,170.3 L929.1,170.9 L939.2,170.9 L949.3,165.1 L959.4,172.5 L969.5,174.3 L979.6,181.5 L989.7,171.0 L999.8,179.5 L1009.9,182.7 L1020.0,201.9"
+                  fill="none"
+                  stroke="#273b42"
+                  stroke-width="2.3"
+                />
+                <text x="60.0" y="270" text-anchor="middle" class="axis">
+                  00:00
+                </text>
+                <text
+                  x="221.68421052631578"
+                  y="270"
+                  text-anchor="middle"
+                  class="axis"
+                >
+                  04:00
+                </text>
+                <text
+                  x="383.36842105263156"
+                  y="270"
+                  text-anchor="middle"
+                  class="axis"
+                >
+                  08:00
+                </text>
+                <text
+                  x="545.0526315789473"
+                  y="270"
+                  text-anchor="middle"
+                  class="axis"
+                >
+                  12:00
+                </text>
+                <text
+                  x="706.7368421052631"
+                  y="270"
+                  text-anchor="middle"
+                  class="axis"
+                >
+                  16:00
+                </text>
+                <text
+                  x="868.421052631579"
+                  y="270"
+                  text-anchor="middle"
+                  class="axis"
+                >
+                  20:00
+                </text>
+                <text x="1020.0" y="270" text-anchor="middle" class="axis">
+                  23:45
+                </text>
+                <text x="60" y="15" class="axis">€/MWh</text>
+              </svg>
+            </div>
+            <p class="small">
+              This chart uses the accepted run’s actual predictions and
+              outcomes. It illustrates the proposed layout; it is not a new
+              model run or a finished interactive results page.
+              <a
+                href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/forecasts/reports/evaluation.json"
+                >Saved evaluation summary ↗</a
+              >
+            </p>
+          </div>
+        </div>
+
+        <div class="intent">
+          <div>
+            <h3>What the reader can do</h3>
+            <div class="pill-list">
+              <span class="pill">Choose a delivery day</span
+              ><span class="pill">Step through days</span
+              ><span class="pill">Compare the reference</span
+              ><span class="pill">Full period / month</span>
+            </div>
+            <p>
+              These are proposed controls. Comparisons retain the same observed
+              quarters, with dates, counts and missing outcomes visible.
+              Negative prices and clock-change days remain intact. Daily charts use one fixed price scale across all saved days and methods, including the reference overlay. Hover reveals quarter-hour values; the table supplies exact values without a slider.
+            </p>
+          </div>
+          <div>
+            <h3>What the numbers mean</h3>
+            <p>
+              <strong>WIS</strong> balances narrow bands against errors outside
+              them. <strong>MAE / RMSE</strong> measure error in the median
+              prediction. <strong>Coverage and width</strong> show whether
+              uncertainty is useful and calibrated.
+            </p>
+            <p>
+              The <strong>reference</strong> uses yesterday’s and last week’s
+              same-clock prices, plus training-only historical error quantiles.
+              Its definition is available beside the comparison.
+              <a
+                href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/evaluation.md#reference"
+                >Method ↗</a
+              >
+            </p>
+          </div>
+        </div>
+        <div class="intent">
+          <div>
+            <h3>Know which forecast you are reading</h3>
+            <p>The picker says <strong>Forecast method</strong>. Its guide distinguishes three trained CatBoost models from a simple reference and automatic method selection. All are saved historical predictions.</p>
+            <p><strong>Automatic selection (with fallbacks)</strong> chooses the demand model when inputs and execution permit, then falls back through weather, price history and the reference. Show the actual method used beside the daily result.</p>
+          </div>
+          <div>
+            <h3>Names explain the inputs</h3>
+            <p><strong>Price-history model</strong> uses earlier same-clock prices, daily price summaries and calendar features.</p>
+            <p><strong>Price-history + weather model</strong> adds forecast temperature, wind and radiation at twelve locations. <strong>Price-history + weather + demand model</strong> also adds German electricity-demand forecasts.</p>
+            <p><strong>Yesterday / last-week reference</strong> averages those same-clock prices; when neither exists, it uses an earlier same-quarter median. Bands are calibrated from training-period errors. A failed trained model also uses reference predictions.</p>
+          </div>
+        </div>
+        <div class="statement">
+          <h3>
+            “Better score” is a finding.<br /><em
+              >It is not the whole conclusion.</em
+            >
+          </h3>
+          <p>
+            One retrospective evaluation and uncertain historical input
+            availability do not establish daily readiness, reliable
+            extreme-price risk or trading profitability. The interface should
+            make that understandable alongside the result.
+          </p>
+        </div>
+      </section>
+      <section id="pipeline">
+        <div class="section-top">
+          <span class="number">03</span>
+          <div>
+            <h2>
+              Explain the computation.<br /><em
+                >Make the connections legible.</em
+              >
+            </h2>
+            <p>
+              The default is a system-level view. The diagram explains the full
+              method independently of any selected delivery day. Select a stage
+              to see its inputs, transformation and outputs.
+            </p>
+          </div>
+        </div>
+        <div class="diagram-layout">
+          <div>
+            <div
+              class="graph"
+              tabindex="0"
+              role="region"
+              aria-label="Pipeline diagram; scroll horizontally on narrow screens"
+            >
+              <svg
+                viewBox="0 0 790 900"
+                role="group"
+                aria-labelledby="dag-title dag-desc"
+              >
+                <title id="dag-title">
+                  From forecast sources to an evaluated result
+                </title>
+                <desc id="dag-desc">
+                  Three sources feed validation and deadline selection, then
+                  feature construction. Historical feature rows and eligible
+                  labels train monthly models. Delivery-day features and fitted
+                  models produce quantiles. Availability rules select the usable
+                  forecast, which is scored against realised prices. Select a
+                  stage for its input, operation and output.
+                </desc>
+                <defs>
+                  <marker
+                    id="arrow"
+                    markerWidth="7"
+                    markerHeight="7"
+                    refX="6"
+                    refY="3.5"
+                    orient="auto"
+                  >
+                    <path d="M0 0 L7 3.5 L0 7 Z" fill="#7b9386" />
+                  </marker>
+                </defs>
+                <path
+                  class="edge"
+                  d="M120 119 V142 H360 V165"
+                  marker-end="url(#arrow)"
+                />
+                <path class="edge" d="M360 119 V165" marker-end="url(#arrow)" />
+                <path
+                  class="edge"
+                  d="M600 119 V142 H360 V165"
+                  marker-end="url(#arrow)"
+                />
+                <path class="edge" d="M360 239 V285" marker-end="url(#arrow)" />
+                <path class="edge" d="M360 359 V405" marker-end="url(#arrow)" />
+                <path
+                  class="edge train"
+                  d="M360 479 V545"
+                  marker-end="url(#arrow)"
+                />
+                <path
+                  class="edge train"
+                  d="M260 202 H240 V582 H220"
+                  marker-end="url(#arrow)"
+                />
+                <path
+                  class="edge train"
+                  d="M220 582 H260"
+                  marker-end="url(#arrow)"
+                />
+                <path class="edge" d="M460 582 H540" marker-end="url(#arrow)" />
+                <path
+                  class="edge"
+                  d="M460 442 H650 V545"
+                  marker-end="url(#arrow)"
+                />
+                <path class="edge" d="M650 619 V675" marker-end="url(#arrow)" />
+                <path
+                  class="edge"
+                  d="M650 749 V832 H460"
+                  marker-end="url(#arrow)"
+                />
+                <path
+                  class="edge truth"
+                  d="M220 832 H260"
+                  marker-end="url(#arrow)"
+                />
+                <text x="375" y="514" class="edge-label">
+                  historical feature rows
+                </text>
+                <text x="494" y="426" class="edge-label">
+                  delivery-day features
+                </text>
+                <text x="482" y="568" class="edge-label">models</text>
+                <a
+                  href="#stage-price"
+                  data-stage="price"
+                  aria-label="Explain SMARD prices"
+                >
+                  <rect x="20" y="45" width="200" height="74" rx="10" />
+                  <text x="34" y="75" class="node-title">SMARD prices</text>
+                  <text x="34" y="98" class="node-sub">
+                    Past auction prices · €/MWh
+                  </text>
+                </a>
+                <a
+                  href="#stage-weather"
+                  data-stage="weather"
+                  aria-label="Explain Weather forecasts"
+                >
+                  <rect x="260" y="45" width="200" height="74" rx="10" />
+                  <text x="274" y="75" class="node-title">
+                    Weather forecasts
+                  </text>
+                  <text x="274" y="98" class="node-sub">
+                    Open-Meteo · ICON-EU
+                  </text>
+                </a>
+                <a
+                  href="#stage-demand"
+                  data-stage="demand"
+                  aria-label="Explain Demand forecasts"
+                >
+                  <rect x="500" y="45" width="200" height="74" rx="10" />
+                  <text x="514" y="75" class="node-title">
+                    Demand forecasts
+                  </text>
+                  <text x="514" y="98" class="node-sub">
+                    ENTSO-E · Germany · MW
+                  </text>
+                </a>
+                <a
+                  href="#stage-load"
+                  data-stage="load"
+                  aria-label="Explain Load &amp; validate"
+                >
+                  <rect x="260" y="165" width="200" height="74" rx="10" />
+                  <text x="274" y="195" class="node-title">
+                    Load &amp; validate
+                  </text>
+                  <text x="274" y="218" class="node-sub">
+                    Source versions → typed tables
+                  </text>
+                </a>
+                <a
+                  href="#stage-select"
+                  data-stage="select"
+                  aria-label="Explain Select available inputs"
+                >
+                  <rect x="260" y="285" width="200" height="74" rx="10" />
+                  <text x="274" y="315" class="node-title">
+                    Select available inputs
+                  </text>
+                  <text x="274" y="338" class="node-sub">
+                    The historical 11:00 deadline
+                  </text>
+                </a>
+                <a
+                  href="#stage-features"
+                  data-stage="features"
+                  aria-label="Explain Make model features"
+                >
+                  <rect x="260" y="405" width="200" height="74" rx="10" />
+                  <text x="274" y="435" class="node-title">
+                    Make model features
+                  </text>
+                  <text x="274" y="458" class="node-sub">
+                    Clock lags · align hours · flags
+                  </text>
+                </a>
+                <a
+                  href="#stage-labels"
+                  data-stage="labels"
+                  aria-label="Explain Eligible price labels"
+                >
+                  <rect x="20" y="545" width="200" height="74" rx="10" />
+                  <text x="34" y="575" class="node-title">
+                    Eligible price labels
+                  </text>
+                  <text x="34" y="598" class="node-sub">
+                    Past outcomes at the fit cutoff
+                  </text>
+                </a>
+                <a
+                  href="#stage-train"
+                  data-stage="train"
+                  aria-label="Explain Learn from history"
+                >
+                  <rect x="260" y="545" width="200" height="74" rx="10" />
+                  <text x="274" y="575" class="node-title">
+                    Learn from history
+                  </text>
+                  <text x="274" y="598" class="node-sub">
+                    Three models + reference
+                  </text>
+                </a>
+                <a
+                  href="#stage-predict"
+                  data-stage="predict"
+                  aria-label="Explain Produce quantiles"
+                >
+                  <rect x="540" y="545" width="220" height="74" rx="10" />
+                  <text x="554" y="575" class="node-title">
+                    Produce quantiles
+                  </text>
+                  <text x="554" y="598" class="node-sub">
+                    Feature row + fitted model
+                  </text>
+                </a>
+                <a
+                  href="#stage-fallback"
+                  data-stage="fallback"
+                  aria-label="Explain Choose usable output"
+                >
+                  <rect x="540" y="675" width="220" height="74" rx="10" />
+                  <text x="554" y="705" class="node-title">
+                    Choose usable output
+                  </text>
+                  <text x="554" y="728" class="node-sub">
+                    Availability / execution rules
+                  </text>
+                </a>
+                <a
+                  href="#stage-truth"
+                  data-stage="truth"
+                  aria-label="Explain Realised prices"
+                >
+                  <rect x="20" y="795" width="200" height="74" rx="10" />
+                  <text x="34" y="825" class="node-title">Realised prices</text>
+                  <text x="34" y="848" class="node-sub">
+                    Joined after prediction
+                  </text>
+                </a>
+                <a
+                  href="#stage-score"
+                  data-stage="score"
+                  aria-label="Explain Evaluate together"
+                >
+                  <rect x="260" y="795" width="200" height="74" rx="10" />
+                  <text x="274" y="825" class="node-title">
+                    Evaluate together
+                  </text>
+                  <text x="274" y="848" class="node-sub">
+                    Forecasts + common outcomes
+                  </text>
+                </a>
+              </svg>
+            </div>
+            <p class="graph-note">
+              Arrows show required inputs. Dashed paths carry training examples;
+              dotted paths carry scoring outcomes. The selection and feature
+              code is reused across historical days. This is a teaching diagram,
+              not a live execution monitor.
+            </p>
+          </div>
+          <div id="stage-panels">
+            <article id="stage-price" class="stage">
+              <p class="eyebrow">PRICE / STAGE EXPLANATION</p>
+              <h3>Start with the market price</h3>
+              <dl>
+                <dt>What comes in</dt>
+                <dd>
+                  Weekly quarter-hour JSON series from Bundesnetzagentur |
+                  SMARD.de, for the Germany–Luxembourg bidding zone. Values are
+                  in €/MWh.
+                </dd>
+                <dt>What happens, and why</dt>
+                <dd>
+                  Parse delivery timestamps into UTC, check duplicates and
+                  retain negative prices. A price below zero is a market
+                  outcome, not a missing value.
+                </dd>
+                <dt>What goes out</dt>
+                <dd>
+                  Earlier eligible prices supply lag features and training
+                  labels. Delivery-day outcomes are joined separately for
+                  evaluation.
+                </dd>
+              </dl>
+              <a
+                class="source"
+                href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/data-sources.md#prices"
+                >Source contract ↗</a
+              >
+            </article>
+            <article id="stage-weather" class="stage">
+              <p class="eyebrow">WEATHER / STAGE EXPLANATION</p>
+              <h3>Describe the weather the market could anticipate</h3>
+              <dl>
+                <dt>What comes in</dt>
+                <dd>
+                  Open-Meteo Previous Runs, explicit German Weather Service
+                  ICON-EU model: hourly temperature at 2 m, wind at 120 m and
+                  shortwave radiation at twelve locations.
+                </dd>
+                <dt>What happens, and why</dt>
+                <dd>
+                  Use the fixed previous_day2 forecast lead, documented as 48
+                  hours. Keep temperature in °C, wind in km/h and radiation in
+                  W/m². These are forecast conditions, not realised weather.
+                </dd>
+                <dt>What goes out</dt>
+                <dd>
+                  Geographical weather features provide information about
+                  weather-sensitive demand and renewable supply. They do not
+                  directly calculate generation.
+                </dd>
+              </dl>
+              <a
+                class="source"
+                href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/data-sources.md#weather"
+                >Source contract ↗</a
+              >
+            </article>
+            <article id="stage-demand" class="stage">
+              <p class="eyebrow">DEMAND / STAGE EXPLANATION</p>
+              <h3>Add the forecast level of electricity demand</h3>
+              <dl>
+                <dt>What comes in</dt>
+                <dd>
+                  ENTSO-E monthly file extracts of Germany country day-ahead
+                  total load, in MW at quarter-hour resolution.
+                </dd>
+                <dt>What happens, and why</dt>
+                <dd>
+                  Keep the Germany country series and its version timestamps.
+                  The input area is Germany; the target price area is
+                  Germany–Luxembourg. Preserve that distinction.
+                </dd>
+                <dt>What goes out</dt>
+                <dd>
+                  A demand value for each eligible delivery quarter, or a
+                  missing value with an availability indicator.
+                </dd>
+              </dl>
+              <a
+                class="source"
+                href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/data-sources.md#demand"
+                >Source contract ↗</a
+              >
+            </article>
+            <article id="stage-load" class="stage">
+              <p class="eyebrow">LOAD / STAGE EXPLANATION</p>
+              <h3>Make inputs stable enough to reproduce</h3>
+              <dl>
+                <dt>What comes in</dt>
+                <dd>Archived source responses and retrieval metadata.</dd>
+                <dt>What happens, and why</dt>
+                <dd>
+                  Validate units, resolution, keys and conflicting rows. Store
+                  three typed Parquet tables with a fixed checksum manifest.
+                  Publish the manifest last, so an incomplete S3 snapshot cannot
+                  load.
+                </dd>
+                <dt>What goes out</dt>
+                <dd>
+                  A versioned input snapshot. Local evaluation reads it without
+                  calling source providers again. Reproducibility alone does not
+                  establish historical availability.
+                </dd>
+              </dl>
+              <a
+                class="source"
+                href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/forecast-infrastructure.md#promise"
+                >Source contract ↗</a
+              >
+            </article>
+            <article id="stage-select" class="stage">
+              <p class="eyebrow">SELECT / STAGE EXPLANATION</p>
+              <h3>Separate future delivery from future knowledge</h3>
+              <dl>
+                <dt>What comes in</dt>
+                <dd>
+                  Versioned prices, weather and demand, with delivery, source
+                  update and retrieval times kept distinct.
+                </dd>
+                <dt>What happens, and why</dt>
+                <dd>
+                  For each forecast day, use the preceding day’s 11:00 Berlin
+                  deadline. Demand selects the latest nonmissing archived
+                  revision updated by that cutoff. Price and weather eligibility
+                  retain their stated timing assumptions. A forecast valid
+                  tomorrow can be eligible today.
+                </dd>
+                <dt>What goes out</dt>
+                <dd>
+                  Only inputs eligible under the declared policy, with gaps and
+                  timing limitations visible. A later archived revision cannot
+                  reconstruct an earlier missing value.
+                </dd>
+              </dl>
+              <a
+                class="source"
+                href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/data-sources.md#point-in-time"
+                >Source contract ↗</a
+              >
+            </article>
+            <article id="stage-features" class="stage">
+              <p class="eyebrow">FEATURES / STAGE EXPLANATION</p>
+              <h3>Turn different clocks and meanings into model inputs</h3>
+              <dl>
+                <dt>What comes in</dt>
+                <dd>
+                  Eligible price history, hourly forecast weather, quarter-hour
+                  demand and the local calendar.
+                </dd>
+                <dt>What happens, and why</dt>
+                <dd>
+                  Price lags match the same local quarter 1, 2, 7 and 14 days
+                  earlier; daily summaries capture recent levels. Hourly weather
+                  is repeated across quarters. Radiation is shifted back an hour
+                  because its timestamp describes the preceding hour. Add
+                  calendar features and explicit missing-value flags.
+                </dd>
+                <dt>What goes out</dt>
+                <dd>
+                  One feature row per delivery quarter. The three feature sets
+                  add weather and demand to the shared prices/calendar inputs.
+                  Future realised observations never fill gaps.
+                </dd>
+              </dl>
+              <a
+                class="source"
+                href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/evaluation.md#controls"
+                >Source contract ↗</a
+              >
+            </article>
+            <article id="stage-labels" class="stage">
+              <p class="eyebrow">LABELS / STAGE EXPLANATION</p>
+              <h3>
+                Give training the right answers without leaking the future
+              </h3>
+              <dl>
+                <dt>What comes in</dt>
+                <dd>
+                  Realised prices for delivery dates before the monthly fit.
+                </dd>
+                <dt>What happens, and why</dt>
+                <dd>
+                  Select label versions eligible at the fold’s first issue
+                  cutoff. Historical feature rows keep their original daily
+                  cutoffs; fitting later does not replace them with revised
+                  information.
+                </dd>
+                <dt>What goes out</dt>
+                <dd>
+                  Past feature/price pairs for learning. These labels are
+                  distinct from the later outcomes used to score this fold.
+                </dd>
+              </dl>
+              <a
+                class="source"
+                href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/evaluation.md#replay"
+                >Source contract ↗</a
+              >
+            </article>
+            <article id="stage-train" class="stage">
+              <p class="eyebrow">TRAIN / STAGE EXPLANATION</p>
+              <h3>Learn relationships; keep the comparison controlled</h3>
+              <dl>
+                <dt>What comes in</dt>
+                <dd>
+                  The same eligible historical examples for three fixed CatBoost
+                  feature sets.
+                </dd>
+                <dt>What happens, and why</dt>
+                <dd>
+                  Boosting combines decision trees to reduce quantile loss. Each
+                  percentile penalises errors asymmetrically. Expand training
+                  history at each month boundary, then reuse that month’s fitted
+                  models. Separately, estimate the reference’s error quantiles
+                  using training data only.
+                </dd>
+                <dt>What goes out</dt>
+                <dd>
+                  Three fitted quantile models and a calibrated historical-price
+                  reference. The method and settings are fixed before the
+                  evaluation.
+                </dd>
+              </dl>
+              <a
+                class="source"
+                href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/evaluation.md#freeze"
+                >Source contract ↗</a
+              >
+            </article>
+            <article id="stage-predict" class="stage">
+              <p class="eyebrow">PREDICT / STAGE EXPLANATION</p>
+              <h3>Convert a feature row into five prices</h3>
+              <dl>
+                <dt>What comes in</dt>
+                <dd>Delivery-day features and the saved monthly models.</dd>
+                <dt>What happens, and why</dt>
+                <dd>
+                  Evaluate the fitted trees to obtain five quantile outputs.
+                  Sort their values into increasing order when raw outputs
+                  cross. The reference averages yesterday/last-week same-clock
+                  prices, with documented missing-history fallbacks, then adds
+                  training-error offsets.
+                </dd>
+                <dt>What goes out</dt>
+                <dd>
+                  The 2.5th, 25th, 50th, 75th and 97.5th percentiles for each
+                  quarter. These describe marginal uncertainty, not a joint
+                  daily price path.
+                </dd>
+              </dl>
+              <a
+                class="source"
+                href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/evaluation.md#quantiles"
+                >Source contract ↗</a
+              >
+            </article>
+            <article id="stage-fallback" class="stage">
+              <p class="eyebrow">FALLBACK / STAGE EXPLANATION</p>
+              <h3>Keep the forecasting system defined when inputs fail</h3>
+              <dl>
+                <dt>What comes in</dt>
+                <dd>
+                  Candidate model predictions, whole-source availability and
+                  execution status.
+                </dd>
+                <dt>What happens, and why</dt>
+                <dd>
+                  Choose demand → weather → prices/calendar → reference as
+                  permitted by source availability and execution success.
+                  Partial gaps remain missing values. Never choose a model using
+                  the realised price or its score.
+                </dd>
+                <dt>What goes out</dt>
+                <dd>
+                  A selected system forecast and an explicit fallback reason,
+                  both retained in the evaluation.
+                </dd>
+              </dl>
+              <a
+                class="source"
+                href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/evaluation.md#defaults"
+                >Source contract ↗</a
+              >
+            </article>
+            <article id="stage-truth" class="stage">
+              <p class="eyebrow">TRUTH / STAGE EXPLANATION</p>
+              <h3>Bring in outcomes only after forecasting</h3>
+              <dl>
+                <dt>What comes in</dt>
+                <dd>
+                  Realised SMARD auction prices for evaluated delivery quarters.
+                </dd>
+                <dt>What happens, and why</dt>
+                <dd>
+                  Join by UTC delivery timestamp after generating predictions.
+                  This preserves both repeated autumn clock quarters. Leave
+                  absent truth missing and exclude those rows from every
+                  comparison together.
+                </dd>
+                <dt>What goes out</dt>
+                <dd>
+                  Matched forecast/outcome rows for evaluation, without feeding
+                  outcomes back into historical prediction.
+                </dd>
+              </dl>
+              <a
+                class="source"
+                href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/evaluation.md#replay"
+                >Source contract ↗</a
+              >
+            </article>
+            <article id="stage-score" class="stage">
+              <p class="eyebrow">SCORE / STAGE EXPLANATION</p>
+              <h3>Measure accuracy and uncertainty on the same evidence</h3>
+              <dl>
+                <dt>What comes in</dt>
+                <dd>
+                  System, model and reference forecasts paired with the same
+                  available outcomes.
+                </dd>
+                <dt>What happens, and why</dt>
+                <dd>
+                  Measure median errors, band width and observed coverage.
+                  Weighted interval score balances narrow bands against
+                  penalties outside them. Aggregate by day, month and full
+                  period; use seven-day blocks for uncertainty in the
+                  full-period score difference.
+                </dd>
+                <dt>What goes out</dt>
+                <dd>
+                  Comparable results with sample counts and limitations. A lower
+                  score does not by itself establish reliable bands, live
+                  readiness or trading value.
+                </dd>
+              </dl>
+              <a
+                class="source"
+                href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/evaluation.md#wis"
+                >Source contract ↗</a
+              >
+            </article>
+          </div>
+        </div>
+        <div class="intent">
+          <div>
+            <h3>Teach the transformation</h3>
+            <p>
+              “Build features” is not enough. Explain a same-clock price lag,
+              how hourly weather aligns with quarter-hour prices, and why
+              radiation timestamps shift. Explain what a fitted model learns and
+              how predictions differ from training.
+            </p>
+          </div>
+          <div>
+            <h3>Evidence supports the explanation</h3>
+            <p>
+              Source versions, configuration, model artifacts and run provenance
+              belong in expandable details. They let a reader verify the method.
+              A per-quarter walkthrough is not required for this design.
+            </p>
+          </div>
+        </div>
+      </section>
+      <section id="workflow">
+        <div class="section-top">
+          <span class="number">04</span>
+          <div>
+            <h2>Design in the open.<br /><em>Build after the review.</em></h2>
+            <p>
+              The agent harness should make the explanation part of the design
+              work. Every spec is an HTML review artifact; the wiki supplies
+              durable knowledge. The product’s own result and method views carry
+              that clarity into use.
+            </p>
+          </div>
+        </div>
+        <div class="sequence">
+          <div>
+            <b>01 / EXPLAIN</b>
+            <p>
+              Present the question, proposed experience and reasoning in an
+              illustrated HTML spec.
+            </p>
+          </div>
+          <div>
+            <b>02 / REVIEW</b>
+            <p>
+              Resolve material choices with the human before implementing the
+              proposal.
+            </p>
+          </div>
+          <div>
+            <b>03 / BUILD</b>
+            <p>
+              Use wiki contracts for meaning and saved artifacts for numerical
+              facts.
+            </p>
+          </div>
+          <div>
+            <b>04 / VERIFY</b>
+            <p>
+              Check rendered behaviour, numerical fidelity and independent
+              comprehension.
+            </p>
+          </div>
+        </div>
+        <p class="small" style="margin-top: 20px">
+          The root design-first rule and shared spec skill have been updated
+          locally. They accompany this specification. Approval of these rules is
+          distinct from approval of this proposed product interface.
+        </p>
+      </section>
+      <section id="review">
+        <div class="section-top">
+          <span class="number">05</span>
+          <div>
+            <h2>What this review decides.</h2>
+            <p>
+              Agree the experience and explanatory depth first. The initial
+              scope uses #105’s existing saved evaluation; it does not add model
+              experiments, a scheduler or cloud deployment.
+            </p>
+          </div>
+        </div>
+        <div class="principles">
+          <div class="principle">
+            <h3>A reader can interpret the output</h3>
+            <p>
+              They can distinguish the median, quantile bands, realised price
+              and reference, and understand what each metric says.
+            </p>
+          </div>
+          <div class="principle">
+            <h3>A reader can follow the method</h3>
+            <p>
+              They can explain where the inputs came from, how they were
+              transformed and how training, prediction and scoring fit together.
+            </p>
+          </div>
+          <div class="principle">
+            <h3>A reader can judge the evidence</h3>
+            <p>
+              They can find the data period, source assumptions and limitations,
+              and distinguish historical evaluation from live operation.
+            </p>
+          </div>
+          <div class="principle">
+            <h3>The views remain consistent</h3>
+            <p>
+              Names, definitions and facts agree across spec, results and
+              pipeline. Provenance points to the exact evidence being shown.
+            </p>
+          </div>
+        </div>
+        <div class="review">
+          <h3>For your review</h3>
+          <ul>
+            <li>Does this three-surface experience match what you want?</li>
+            <li>
+              Does the system diagram and its stage explanation show the right
+              depth?
+            </li>
+            <li>Is this visual direction right for the forecast product?</li>
+          </ul>
+          <p class="small">
+            Implementation follows this reviewed design in a separate PR. The graph interaction on this
+            page demonstrates the design; approval of the product proposal is
+            still pending.
+          </p>
+        </div>
+      </section>
+      <footer id="sources">
+        <p class="eyebrow">SOURCES & REVIEW STATUS</p>
+        <p class="small">
+          Updated 13 October 2026 · Product direction approved 13 October 2026 · Independent
+          comprehension review pending; browser rendering not yet verified
+        </p>
+        <ul class="source-list">
+          <li>
+            <a
+              href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/germany-luxembourg.md"
+              >wiki/price-forecasting/germany-luxembourg.md</a
+            >
+          </li>
+          <li>
+            <a
+              href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/evaluation.md"
+              >wiki/price-forecasting/evaluation.md</a
+            >
+          </li>
+          <li>
+            <a
+              href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/data-sources.md"
+              >wiki/price-forecasting/data-sources.md</a
+            >
+          </li>
+          <li>
+            <a
+              href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/forecast-infrastructure.md"
+              >wiki/price-forecasting/forecast-infrastructure.md</a
+            >
+          </li>
+          <li>
+            <a
+              href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/forecasts/reports/evaluation.json"
+              >forecasts/reports/evaluation.json</a
+            >
+          </li>
+        </ul>
+        <p class="revision">
+          Wiki and report source revision:
+          d536ba4d1d07759a8cd04d234869d13ffd3b585b<br />Accepted evaluation run:
+          3db10bdf199fdbaa012525ce
+        </p>
+        <p class="small">
+          The HTML spec is newly authored and uncommitted. The chart is a
+          saved-run excerpt; its visual arrangement and the pipeline interaction
+          are proposed product design. External source links require a network
+          connection; the explanation itself works offline.
+        </p>
+      </footer>
+    </div>
+    <script>
+      const panels = [...document.querySelectorAll(".stage")];
+      const nodes = [...document.querySelectorAll("[data-stage]")];
+      function selectStage(id) {
+        if (!panels.some((p) => p.id === "stage-" + id)) return;
+        for (const p of panels) p.hidden = p.id !== "stage-" + id;
+        for (const n of nodes) {
+          const active = n.dataset.stage === id;
+          n.classList.toggle("active", active);
+          if (active) n.setAttribute("aria-current", "true");
+          else n.removeAttribute("aria-current");
+        }
+      }
+      for (const node of nodes)
+        node.addEventListener("click", (event) => {
+          event.preventDefault();
+          selectStage(node.dataset.stage);
+          history.replaceState(null, "", "#stage-" + node.dataset.stage);
+        });
+      selectStage(
+        location.hash.startsWith("#stage-")
+          ? location.hash.slice(7)
+          : "features",
+      );
+    </script>
+  </body>
+</html>
