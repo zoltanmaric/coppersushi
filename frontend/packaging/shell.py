@@ -17,5 +17,5 @@ def render_shell(token: str, *, embed: bool = False, view: Literal['cnec', 'opf'
     template = (REPO / 'frontend/index.html').read_text()
     template = template.replace('__APP_BUNDLE__', f'{view}-app')
     if view == 'opf':
-        template = template.replace('Critical Elements', 'Power Flow').replace('A tool that shows exactly why day-ahead prices split between countries.', 'Hourly optimal power flow on the European grid.').replace('/cnec"', '/opf-2024"').replace('critical-elements-preview.png', 'copper-sushi-screenshot.png')
+        template = template.replace('Critical Elements ⚡️', 'Power Flow 🍣').replace('A tool that shows exactly why day-ahead prices split between countries.', 'Hourly optimal power flow on the European grid.').replace('/cnec"', '/opf-2024"').replace('critical-elements-preview.png', 'copper-sushi-screenshot.png')
     return template.replace('__APP_NAVIGATION__', navigation_html()).replace('__CNEC_EMBED__', str(embed).lower()).replace('__CNEC_CONFIG__', config)
