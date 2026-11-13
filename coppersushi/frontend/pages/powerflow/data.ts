@@ -1,3 +1,4 @@
+import type {MapBounds} from '../../map/initial-camera';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import schema from './contracts.json';
@@ -6,7 +7,7 @@ import type {Dataset} from './contracts';
 import {renderHour,POWER_SCALE_MW} from './render';
 import type {PlotlyFigure} from '../../map/figure';
 
-export interface OpfHour {scale?:number;data:PlotlyFigure['data']; layout:{mapbox:Record<string,unknown>;[key:string]:unknown}}
+export interface OpfHour {bounds:MapBounds;scale?:number;data:PlotlyFigure['data']; layout:{mapbox:Record<string,unknown>;[key:string]:unknown}}
 export interface OpfManifest {generation:string; snapshots:string[]}
 const ajv = new Ajv();
 addFormats(ajv);
@@ -45,8 +46,12 @@ export async function fetchHour(generation:string,index:number,signal:AbortSigna
     values.branches.some(branch=>!branchIds.has(branchKey(branch))) || values.nodes.length!==ids.size)
     throw new Error('Incomplete Power Flow topology or interval');
   if(new Set(candidate.intervals[0].nodes.map(node=>node.node)).size!==ids.size || candidate.intervals[0].nodes.some(node=>!ids.has(node.node))) throw new Error('Incomplete Power Flow interval');
+  const bounds:MapBounds = [
+    Math.min(...metadata.nodes.map(n=>n.longitude)), Math.min(...metadata.nodes.map(n=>n.latitude)),
+    Math.max(...metadata.nodes.map(n=>n.longitude)), Math.max(...metadata.nodes.map(n=>n.latitude)),
+  ];
   const colorscale=PRICE_COLORSCALE;
-  return {...renderHour(metadata,candidate.intervals[0],colorscale),scale:POWER_SCALE_MW} as OpfHour;
+  return {...renderHour(metadata,candidate.intervals[0],colorscale),scale:POWER_SCALE_MW,bounds} as OpfHour;
 }
 export function defaultHour(times:string[]):number {
   return times.reduce((best,time,index)=>Math.abs(Number(hour.format(new Date(time)))-12)<Math.abs(Number(hour.format(new Date(times[best])))-12)?index:best,0);
