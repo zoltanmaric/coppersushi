@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 ghcr.io/prefix-dev/pixi:0.77.1-noble AS dependencies
+FROM ghcr.io/prefix-dev/pixi:0.77.1-noble AS dependencies
 WORKDIR /opt/webapp
 COPY pyproject.toml pixi.lock ./
 
@@ -16,7 +16,7 @@ RUN .pixi/envs/publisher/bin/python -c "from coppersushi.pipelines.data_sources.
 RUN rm -rf coppersushi/networks assets coppersushi/frontend .pixi/envs/default
 RUN .pixi/envs/publisher/bin/python -m compileall -q coppersushi
 
-FROM --platform=linux/amd64 ubuntu:24.04 AS publisher
+FROM ubuntu:24.04 AS publisher
 WORKDIR /opt/webapp
 COPY --from=publisher-environment /opt/webapp /opt/webapp
 ENV PATH="/opt/webapp/.pixi/envs/publisher/bin:${PATH}" \
