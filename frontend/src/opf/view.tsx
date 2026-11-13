@@ -3,7 +3,10 @@ import {useQuery} from '@tanstack/react-query';
 import {Plot} from '../map/plot';
 import {reduceRender} from '../map/render-state';
 import type {PlotlyFigure} from '../map/figure';
-import {fetchManifest,fetchHour,defaultHour,timeLabel,fullLabel} from './data';
+import {ScaleLegend} from '../controls/price-legend';
+import {MapHelp} from '../controls/map-help';
+import {IntervalControls} from '../controls/interval-controls';
+import {fetchManifest,fetchHour,defaultHour,fullLabel} from './data';
 
 const config = {responsive:true,displayModeBar:false,scrollZoom:true};
 const ignoreClick = () => {};
@@ -33,19 +36,14 @@ export function OpfView({token}:{token:string}) {
   const current = !!figure && !hour.isPlaceholderData && renderedFigure===figure;
   const loading = !error && !mapError && (manifest.isFetching || hour.isFetching || (!!figure && !current));
   return <section className="opf-static" aria-label="Power Flow">
-    <div className="opf-map-host">{figure && <HourMap figure={figure} onError={e=>setMapError(e.message)} onRendered={completed=>{setRenderedFigure(completed);setMapError(null);}}/>}
+    <div className="opf-map-host"><ScaleLegend title="Net power feed-in · MW" description="Node net power scale" range={hour.data?.scale ? [-hour.data.scale,hour.data.scale] : null}/><div className="cnec-map-tools"><MapHelp page="powerflow"/></div>{figure && <HourMap figure={figure} onError={e=>setMapError(e.message)} onRendered={completed=>{setRenderedFigure(completed);setMapError(null);}}/>}
       {loading && <div className="opf-notice" role="status">Loading Power Flow…</div>}
       {error && <div className="opf-notice" role="alert">{error.message} <button onClick={()=>void (manifest.error?manifest:hour).refetch()}>Retry</button></div>}
       {mapError && <div className="opf-notice" role="alert">Map: {mapError}</div>}
     </div>
     {times.length>0 && <div className="opf-controls">
-      <output>{fullLabel.format(new Date(times[selected]))}{!current && !error && ' · loading selected hour'}</output>
-      <input aria-label="Power Flow hour" type="range" min={0} max={times.length-1} step={1} value={selected}
-        onChange={event=>{setMapError(null);setSelection(Number(event.target.value));}}/>
-      <div className="opf-marks">{times.map((time,index)=>{
-        const label = timeLabel.format(new Date(time));
-        return <div className="opf-mark-slot" key={time}><span>{Number(label.slice(0,2))%4===0 || index===times.length-1 ? label : ''}</span></div>;
-      })}</div>
+      <IntervalControls date={<span className="opf-fixed-date">29 Aug 2024</span>} labels={times.map(time=>fullLabel.format(new Date(time)).split(', ').at(-1)!)} interval={selected} onChange={value=>{setMapError(null);setSelection(value);}}/>
+      {!current && !error && <span role="status">loading selected hour</span>}
     </div>}
   </section>;
 }
