@@ -85,6 +85,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: coppersushi/infra/lambda/Dockerfile
           target: publisher-check
           platforms: linux/amd64
           outputs: type=cacheonly

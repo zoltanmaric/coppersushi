@@ -1,0 +1,47 @@
+"""The small Core-zone outline bundle, derived from the sanctioned network at build time."""
+from coppersushi import PRODUCT
+import json
+from pathlib import Path
+
+import pandas as pd
+from pandera.typing import DataFrame
+from shapely.geometry import mapping, shape
+
+from coppersushi.pipelines.grid import bidding_zones
+from coppersushi.pipelines.data_model.network_views import BiddingZoneShapes
+from coppersushi.pipelines.powerflow.data_sources import networks
+
+BUNDLE = PRODUCT / "data" / "core-zone-shapes.geojson"
+
+
+def write(zones: DataFrame[BiddingZoneShapes], path: Path) -> None:
+    BiddingZoneShapes.validate(zones)
+    features = [{"type": "Feature", "properties": {"zone": zone},
+                 "geometry": mapping(geometry)} for zone, geometry in zip(zones.zone, zones.geometry)]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"type": "FeatureCollection", "features": features}))
+
+
+def read(path: Path) -> DataFrame[BiddingZoneShapes]:
+    features = json.loads(path.read_text())["features"]
+    frame = pd.DataFrame({"zone": [f["properties"]["zone"] for f in features],
+                          "geometry": [shape(f["geometry"]) for f in features]})
+    return frame.astype({"geometry": object}).pipe(BiddingZoneShapes.validate)
+
+
+def load() -> DataFrame[BiddingZoneShapes]:
+    try:
+        return read(BUNDLE)
+    except FileNotFoundError as error:
+        raise FileNotFoundError(
+            "Country-outline bundle is missing. Run `pixi run --locked build-zone-shapes`."
+        ) from error
+
+
+def build() -> None:
+    """Derive the outline bundle from the solved network, replacing any old bundle."""
+    write(bidding_zones.core_zone_shapes(networks.load(networks.solved("2024-08-29")).shapes), BUNDLE)
+
+
+if __name__ == "__main__":
+    build()

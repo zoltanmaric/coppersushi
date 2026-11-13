@@ -1,0 +1,290 @@
+{
+  "$defs": {
+    "Branch": {
+      "additionalProperties": false,
+      "description": "A physical branch, identified by component and name, oriented bus0 to bus1.",
+      "properties": {
+        "component": {
+          "enum": [
+            "Line",
+            "Link",
+            "Transformer"
+          ],
+          "title": "Component",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "bus0": {
+          "title": "Bus0",
+          "type": "string"
+        },
+        "bus1": {
+          "title": "Bus1",
+          "type": "string"
+        },
+        "capacity_mw": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Capacity Mw"
+        },
+        "midpoint_longitude": {
+          "maximum": 180,
+          "minimum": -180,
+          "title": "Midpoint Longitude",
+          "type": "number"
+        },
+        "midpoint_latitude": {
+          "maximum": 90,
+          "minimum": -90,
+          "title": "Midpoint Latitude",
+          "type": "number"
+        },
+        "forward_bearing": {
+          "title": "Forward Bearing",
+          "type": "number"
+        },
+        "reverse_bearing": {
+          "title": "Reverse Bearing",
+          "type": "number"
+        }
+      },
+      "required": [
+        "component",
+        "name",
+        "bus0",
+        "bus1",
+        "capacity_mw",
+        "midpoint_longitude",
+        "midpoint_latitude",
+        "forward_bearing",
+        "reverse_bearing"
+      ],
+      "title": "Branch",
+      "type": "object"
+    },
+    "BranchValues": {
+      "additionalProperties": false,
+      "description": "Signed bus0-end active flow in MW; positive means bus0 to bus1.",
+      "properties": {
+        "component": {
+          "enum": [
+            "Line",
+            "Link",
+            "Transformer"
+          ],
+          "title": "Component",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "flow_mw": {
+          "title": "Flow Mw",
+          "type": "number"
+        }
+      },
+      "required": [
+        "component",
+        "name",
+        "flow_mw"
+      ],
+      "title": "BranchValues",
+      "type": "object"
+    },
+    "Generation": {
+      "additionalProperties": false,
+      "description": "A generator's technology, output and available capacity, in MW.",
+      "properties": {
+        "technology": {
+          "title": "Technology",
+          "type": "string"
+        },
+        "power_mw": {
+          "title": "Power Mw",
+          "type": "number"
+        },
+        "available_mw": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Available Mw"
+        }
+      },
+      "required": [
+        "technology",
+        "power_mw",
+        "available_mw"
+      ],
+      "title": "Generation",
+      "type": "object"
+    },
+    "Interval": {
+      "additionalProperties": false,
+      "description": "Complete network values at one timezone-aware solved snapshot.",
+      "properties": {
+        "timestamp": {
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "nodes": {
+          "items": {
+            "$ref": "#/$defs/NodeValues"
+          },
+          "title": "Nodes",
+          "type": "array"
+        },
+        "branches": {
+          "items": {
+            "$ref": "#/$defs/BranchValues"
+          },
+          "title": "Branches",
+          "type": "array"
+        }
+      },
+      "required": [
+        "timestamp",
+        "nodes",
+        "branches"
+      ],
+      "title": "Interval",
+      "type": "object"
+    },
+    "Node": {
+      "additionalProperties": false,
+      "description": "A network bus; coordinates are WGS84 degrees and voltage is kV.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "longitude": {
+          "maximum": 180,
+          "minimum": -180,
+          "title": "Longitude",
+          "type": "number"
+        },
+        "latitude": {
+          "maximum": 90,
+          "minimum": -90,
+          "title": "Latitude",
+          "type": "number"
+        },
+        "country": {
+          "title": "Country",
+          "type": "string"
+        },
+        "voltage_kv": {
+          "exclusiveMinimum": 0,
+          "title": "Voltage Kv",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "longitude",
+        "latitude",
+        "country",
+        "voltage_kv"
+      ],
+      "title": "Node",
+      "type": "object"
+    },
+    "NodeValues": {
+      "additionalProperties": false,
+      "description": "One bus's power and tooltip inputs; absent load is distinct from zero.",
+      "properties": {
+        "node": {
+          "title": "Node",
+          "type": "string"
+        },
+        "net_power_mw": {
+          "title": "Net Power Mw",
+          "type": "number"
+        },
+        "load_mw": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Load Mw"
+        },
+        "generators": {
+          "items": {
+            "$ref": "#/$defs/Generation"
+          },
+          "title": "Generators",
+          "type": "array"
+        }
+      },
+      "required": [
+        "node",
+        "net_power_mw",
+        "load_mw",
+        "generators"
+      ],
+      "title": "NodeValues",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Validated producer-side dataset; null denotes unavailable optional values.",
+  "properties": {
+    "version": {
+      "const": 2,
+      "title": "Version",
+      "type": "integer"
+    },
+    "nodes": {
+      "items": {
+        "$ref": "#/$defs/Node"
+      },
+      "minItems": 1,
+      "title": "Nodes",
+      "type": "array"
+    },
+    "branches": {
+      "items": {
+        "$ref": "#/$defs/Branch"
+      },
+      "title": "Branches",
+      "type": "array"
+    },
+    "intervals": {
+      "items": {
+        "$ref": "#/$defs/Interval"
+      },
+      "minItems": 1,
+      "title": "Intervals",
+      "type": "array"
+    }
+  },
+  "required": [
+    "version",
+    "nodes",
+    "branches",
+    "intervals"
+  ],
+  "title": "Dataset",
+  "type": "object"
+}
