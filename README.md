@@ -47,6 +47,9 @@ flowchart TB
     schedule["EventBridge schedule"] --> workflow["Step Functions"]
     workflow -->|Retryable attempt| publication
     market["JAO and Electricity Maps"] -->|Market inputs| publication["Native Lambda market-day publisher"]
+    pse["PSE morning reserve purchases + requirements"] --> investigation["Offline Polish export-cap analysis"]
+    market --> investigation
+    investigation --> research[("Local CSV and HTML explainer")]
     catalog["Grid catalog"] -->|Located elements and outlines| publication
     publication -->|Immutable generation and manifest| prepared[("Prepared market files")]
     prepared -->|Private S3 objects| edge["CloudFront"]
@@ -195,3 +198,18 @@ Dependencies compose in `pyproject.toml`: `build` adds PyPSA for offline figures
 `dev` adds local analysis and development tools. The native publisher image has its
 own handler and omits the frontend and solved networks. Candidate solves remain
 viewable locally through Dash.
+
+## Polish export-cap investigation
+
+`python -m scripts.polish_export_caps --start 2026-05-06 --end 2026-11-13`
+collects published caps, Polish positions, Germany–Luxembourg/Czechia/Slovakia prices and PSE morning upward-reserve
+purchases and requirements. The explainer counts active export caps, strict price comparisons,
+and pre-clearing procurement with explicit coverage gaps. The default zero-cap view includes
+nonbinding limits; linked views cover binding caps and all published caps. Nonzero morning
+procurement differences are coloured by cap status, with separate population and coverage counts.
+The linked case table lists every published-cap MTU with purchased upward capacity at least
+equal to the pre-clearing requirement, including filters and a full CSV export. It writes resumable inputs, interval and summary CSVs, coverage, failures and an
+interactive `report.html` under ignored `data/polish-export-caps/`. Electricity Maps credentials
+use the existing environment/file configuration; `--price-token-file` selects another local file.
+The output contains licensed price data and must not be committed or published.
+See the [investigation](wiki/polish-export-cap-investigation.md) for interpretation.

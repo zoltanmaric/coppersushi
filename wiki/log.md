@@ -366,7 +366,7 @@ The project treats its free, noncommercial explanation of market constraints as
 Legitimate Use under JAO's terms. This is a project interpretation, not written
 redistribution permission. Reviewed mappings remain tracked; bulk endpoint tables,
 generated catalogs and the separately unlicensed locator remain locally rebuilt
-inputs. [Source provenance and setup](../config/element-catalog/README.md#sources-and-educational-use).
+inputs. [Source provenance and setup](../coppersushi/config/element-catalog/README.md#sources-and-educational-use).
 
 ## [2026-11-05] decision | Native API comparison in architecture review
 
@@ -395,3 +395,37 @@ The camera review reproduced electricity hidden after an initial programmatic fi
 ## [2026-11-09] decision | Accept nine unavailable June days
 
 [Historical coverage](jao-availability.md#historical-gaps) accepts June 2–9 and June 11 as unavailable. End recovery investigation; finish and verify the other 352 requested days. Missing inputs remain missing, and these accepted gaps do not block extending the supported historical window.
+
+## [2026-11-12] ingest | Core day-ahead fourth-amendment explanatory document
+
+Added a [source digest](literature/core-da-ccm-fourth-amendment-explanatory-document.md) and linked it from the country-cap analysis and 2018 explanatory note. Kept the source rationale separate from evidence about an individual limit and from operational coverage.
+
+## [2026-11-12] query | Safeguards and debate on Polish allocation constraints
+
+Filed the [binding safeguards](literature/core-da-ccm-allocation-constraint-safeguards.md) and [CREG critique](literature/creg-core-market-coupling-first-100-days.md). The [country-cap page](country-import-export-caps.md#safeguards) connects them with the EU Council’s 2026 concern and Poland’s regulator recommendations. Distinguishes permission for the mechanism from evidence supporting an individual limit.
+
+## [2026-11-12] ingest | PSE Q4 2025 allocation-constraint assessment and oversight evidence
+
+Read the PDF embedded in JAO’s quarterly Word annex and filed its [simulation results and limits](literature/pse-allocation-constraints-q4-2025.md). Added [oversight evidence](literature/core-da-ccm-allocation-constraint-safeguards.md#oversight) from URE’s full assessment and the Central Europe consultation. Public review and recommendations do not establish independent replication or completion of all alternatives.
+
+## [2026-11-12] query | Polish export caps and reserve evidence
+
+Started an interval-level investigation. November 13 evening export caps coexist with later PSE reserve surpluses; pre-auction upward procurement matches published requirements for 19:00–20:00. Original morning cap inputs remain missing. Preserved public response snapshots and distinguished this export-side question from Q4 2025 import-side curtailment findings.
+
+The same-hour comparison for November 10–12 also shows filled upward procurement, but much smaller afternoon operational margins. The explanatory document says procured capacity should be withheld from day-ahead energy offers; an unfilled-auction explanation does not fit these sampled evening procurement volumes.
+
+## [2026-11-13] ingest | ACER integration monitoring 2026
+
+Read section 2.4.4 after the public LinkedIn reference. It confirms material cap effects, but its premise of no pre-day-ahead reserve procurement conflicts with URE’s reform account and actual publications. Preserved this contradiction without inferring motive or interval-level necessity. Full-range local collection completed with no failed days; alternative-price classification still has gaps.
+
+## [2026-11-13] query | Export-cap activity and morning procurement
+
+[Interval analysis](polish-export-cap-investigation.md#analysis) distinguishes active export constraints from published limits, uses strict comparisons with Poland’s three Core neighbours, and joins actual primary reserve purchases instead of afternoon forecasts. The shared 0.11 MW publication tolerance recovers 806 active MTUs missed by a narrower threshold. Missing pre-clearing requirement versions remain explicit; total procurement sufficiency does not prove physical deliverability.
+
+## [2026-11-13] query | Polish cap reserve evidence
+
+Separated the Polish cap source contract from pre-day-ahead procurement: independently timestamped required and purchased capacity, hourly end stamps, eligible publication versions, and the limits of comparing aggregate totals. Display uses Europe/Brussels, consistent with the market-day model.
+
+## [2026-11-13] decision | Polish API evidence provenance
+
+Keep source queries, fetch dates and findings in the wiki, with a caveat that refetching may return revised values. Raw API response archives are not required for this investigation.
