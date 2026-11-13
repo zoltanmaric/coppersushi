@@ -40,8 +40,10 @@ test('loading stays visible until Plotly finishes the selected hour',async()=>{
   render(<QueryClientProvider client={client}><OpfView token="test"/></QueryClientProvider>);
   await screen.findByText('hour 0');
   expect(screen.getByText('Loading Power Flow…').getAttribute('role')).toBe('status');
-  expect(screen.getByText(/loading selected hour/)).toBeTruthy();
+  const controls = screen.getByRole('slider').closest('.cnec-bottom-controls')!;
+  const controlsBefore = controls.innerHTML;
+  expect(controls.querySelector('[role=status]')).toBeNull();
   act(()=>plot.complete());
   await waitFor(()=>expect(screen.queryByText('Loading Power Flow…')).toBeNull());
-  expect(screen.queryByText(/loading selected hour/)).toBeNull();
+  expect(controls.innerHTML).toBe(controlsBefore);
 });

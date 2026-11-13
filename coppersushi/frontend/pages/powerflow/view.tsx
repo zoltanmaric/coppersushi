@@ -52,7 +52,7 @@ export function OpfView({token}:{token:string}) {
       {error && <div className="opf-notice" role="alert">{error.message} <button onClick={()=>void (manifest.error?manifest:hour).refetch()}>Retry</button></div>}
       {mapError && <div className="opf-notice" role="alert">Map: {mapError}</div>}
     </div>
-    <MapControls legend={<ScaleLegend reversed saturated title="Net power feed-in · MW" description="Node net power scale" range={hour.data?.scale ? [-hour.data.scale,hour.data.scale] : null}/>} help={<MapHelp page="powerflow"/>} footer={!current && !error ? <span role="status">loading selected hour</span> : null} controls={times.length ?       <IntervalControls date={<span className="opf-fixed-date">{times.length ? new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Brussels',day:'numeric',month:'short',year:'numeric'}).format(new Date(times[0])) : ''}</span>} labels={times.map(time=>fullLabel.format(new Date(time)).split(', ').at(-1)!)} interval={selected} onChange={value=>{setMapError(null);setSelection(value);}}/> : null}/>
+    <MapControls legend={<ScaleLegend reversed saturated title="Net power feed-in · MW" description="Node net power scale" range={hour.data?.scale ? [-hour.data.scale,hour.data.scale] : null}/>} help={<MapHelp page="powerflow"/>} controls={times.length ?       <IntervalControls date={<span className="opf-fixed-date">{times.length ? new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Brussels',day:'numeric',month:'short',year:'numeric'}).format(new Date(times[0])) : ''}</span>} labels={times.map(time=>fullLabel.format(new Date(time)).split(', ').at(-1)!)} interval={selected} onChange={value=>{setMapError(null);setSelection(value);}}/> : null}/>
 
   </section>;
 }
