@@ -88,7 +88,7 @@ assets must also be restored. Immutable hours do not need overwriting.
 ## Publisher deployment
 
 For changes to market preparation, run `pixi run --locked setup-app`, build
-`docker build --platform linux/amd64 --provenance=false --target publisher -t <image> .`,
+`docker build -f coppersushi/infra/lambda/Dockerfile --platform linux/amd64 --provenance=false --target publisher -t <image> .`,
 authenticate Docker to ECR with the configured AWS profile, and push a fresh immutable
 tag to the `repository_url` output. Set `producer_image_uri` to its digest URI,
 review a full saved Terraform plan, and apply it. Verify the publisher update,
@@ -117,7 +117,7 @@ an empty GHCR auth entry and retain the current daemon endpoint:
   printf '%s\n' '{"auths":{"ghcr.io":{}}}' > "$registry_config/config.json"
   docker_endpoint=$(docker context inspect --format '{{.Endpoints.docker.Host}}')
   DOCKER_CONFIG="$registry_config" DOCKER_HOST="$docker_endpoint" \
-    docker build --platform linux/amd64 --provenance=false --target publisher -t <image> .
+    docker build -f coppersushi/infra/lambda/Dockerfile --platform linux/amd64 --provenance=false --target publisher -t <image> .
 )
 ```
 

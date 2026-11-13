@@ -12,3 +12,7 @@ addresses. Code relocation does not recreate cloud resources. Ignored authoritat
 state remains in its existing location; read the deployment runbook before invoking
 Terraform, and pass that state explicitly after relocation. Never infer state from
 the new source directory or move production S3 keys to imitate repository folders.
+
+`lambda/Dockerfile` builds the daily publisher. Run Docker from the repository
+root with `-f coppersushi/infra/lambda/Dockerfile`: the build context includes the
+shared `pyproject.toml` and `pixi.lock`, and uses the root `.dockerignore`.

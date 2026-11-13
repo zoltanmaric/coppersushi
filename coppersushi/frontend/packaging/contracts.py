@@ -1,8 +1,9 @@
 """Export the prepared-publication boundary for frontend validation and type generation."""
 import json
 import sys
-from pathlib import Path
 from pydantic import BaseModel
+
+from coppersushi import PRODUCT
 
 from coppersushi.pipelines.powerflow.dataset import Dataset
 from coppersushi.pipelines.cnec.models import DayBundle
@@ -17,7 +18,7 @@ class CnecContracts(BaseModel):
     manifest: DayManifest
 
 if __name__ == '__main__':
-    target = Path(__file__).resolve().parents[1] / 'coppersushi/frontend/data/contracts.json'
+    target = PRODUCT / 'frontend/data/contracts.json'
     content = json.dumps(CnecContracts.model_json_schema(), indent=2) + '\n'
     if '--check' in sys.argv:
         assert target.read_text() == content, 'Run pixi run frontend-contracts'

@@ -24,7 +24,8 @@ calendar capabilities. Power Flow uses a fixed day; Critical Elements supplies d
 availability. Domain fetching stays out of shared presentation components.
 
 `map/` owns plotting primitives; feature-specific layers and calculations stay with
-the page. Python shell assembly and asset publication live in `packaging/`; they do
+the page. Python shell assembly, browser schema generation (`contracts.py`) and asset
+publication live in `packaging/`; they do
 not fetch upstream market data or publish domain datasets.
 
 From the repository root: `pixi run frontend-build`, `pixi run frontend-test` and

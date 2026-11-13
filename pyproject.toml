@@ -97,5 +97,5 @@ hosting-restore = "make -C 121gigawatts/hosting restore"
 
 frontend-install = { cmd = "npm ci", cwd = "coppersushi/frontend" }
 frontend-build = { cmd = "npm run build", cwd = "coppersushi/frontend", depends-on = ["frontend-install"] }
-frontend-test = "python -m scripts.cnec_contracts --check && npm run --prefix coppersushi/frontend types -- --check && npm run --prefix coppersushi/frontend typecheck && npm test --prefix coppersushi/frontend"
-frontend-contracts = "python -m scripts.cnec_contracts && npm run --prefix coppersushi/frontend types"
+frontend-test = "python -m coppersushi.frontend.packaging.contracts --check && npm run --prefix coppersushi/frontend types -- --check && npm run --prefix coppersushi/frontend typecheck && npm test --prefix coppersushi/frontend"
+frontend-contracts = "python -m coppersushi.frontend.packaging.contracts && npm run --prefix coppersushi/frontend types"

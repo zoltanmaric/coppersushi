@@ -23,7 +23,7 @@ Short checks share a job because another environment download can cost more than
 
 The native publisher smoke stage verifies the deployed handler imports without web frameworks.
 It has no remote layer cache: downloading and publishing layers can cost more than rebuilding.
-Run it locally with `docker buildx build --platform linux/amd64 --target publisher-check .`.
+Run it locally with `docker buildx build -f coppersushi/infra/lambda/Dockerfile --platform linux/amd64 --target publisher-check .`.
 
 The performance target is elapsed workflow time, including runner setup and cache
 transfers. More jobs, cache hits or faster individual steps do not necessarily shorten
