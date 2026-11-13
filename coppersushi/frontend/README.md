@@ -4,17 +4,19 @@
 
 Owns the React map pages and their browser presentation. `pages/powerflow/` constructs
 network layers and tooltips from numeric snapshots; `pages/cnec/` owns market selection,
-contributions and reference-country behavior. Both use shared `controls/` and `map/` primitives. Data loading and contracts
+contributions and reference-country behavior. Both use the same map interface. Data loading and contracts
 live with each page. There is no intermediate source directory.
 
 ```mermaid
-flowchart LR
-  files["Published manifests and intervals"] --> powerflow["Power Flow: loading and rendering"]
-  files --> cnec["Critical Elements: loading and rendering"]
-  powerflow --> controls["Shared MapControls overlay"]
-  cnec --> controls
-  powerflow --> plot["Shared MapFrame and MapGraph"]
-  cnec --> plot
+flowchart TB
+  data["Published data"]
+  data --> powerflow["Power Flow 🍣"]
+  data --> cnec["Critical Elements ⚡️"]
+  powerflow --> shared["Shared map UI"]
+  cnec --> shared
+  click powerflow "https://github.com/zoltanmaric/coppersushi/tree/main/coppersushi/frontend/pages/powerflow/README.md"
+  click cnec "https://github.com/zoltanmaric/coppersushi/tree/main/coppersushi/frontend/pages/cnec/README.md"
+  click shared "https://github.com/zoltanmaric/coppersushi/tree/main/coppersushi/frontend/map/README.md"
 ```
 
 `controls/map-controls.tsx` owns overlay composition and placement for both pages,

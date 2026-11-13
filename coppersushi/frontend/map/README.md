@@ -2,18 +2,13 @@
 
 [Browser architecture](../README.md)
 
-Owns both pages’ measured map frame, render queue, tooltip gestures and Plotly lifecycle and native Mapbox adapter. Page-specific figure construction lives beside each page. Stable layout and insertion targets retain layers across updates. Mapbox owns country labels, collision placement and camera movement. Prices update through one persistent GeoJSON source with fading disabled. Electric decoration uses the same camera.
+Owns both pages’ measured map frame, render queue, tooltip gestures, the Plotly lifecycle and native Mapbox adapter. Page-specific figure construction lives beside each page. Stable layout and insertion targets retain layers across updates. Mapbox owns country labels, collision placement and camera movement. Prices update through one persistent GeoJSON source with fading disabled. Electric decoration uses the same camera.
 
 ```mermaid
-flowchart LR
-    data["Page figures in measured MapFrame"] --> figures["Plotly figures"]
-    figures --> latest["MapGraph: active and latest pending view"]
-    latest -->|Await Plotly.react promise| renderer["Plotly renderer"]
-    renderer --> map["Native Mapbox map"]
-    map -->|Symbol placement| labels["Country prices: persistent native layer"]
-    map -->|Projection and movement| decoration["Electric decoration"]
-    map -->|Click| intent["Selection intent"]
-    labels -->|Pointer-down hit| intent
+flowchart TB
+  page["Page supplies map layers"] --> queue["Keep latest requested view"]
+  queue -->|Previous render finished| plot["Plotly renders into Mapbox"]
+  plot -->|User interaction| page
 ```
 
 [market](../pages/cnec/market/README.md) · [data](../pages/cnec/data/README.md) · [controls](../controls/README.md)
