@@ -21,3 +21,16 @@ test.each([[1280,720],[1199,1314],[390,844]])('Core fits the starting viewport %
   expect((y(35)-y(71))*scale).toBeLessThanOrEqual(height-(width<=650?299:239));
   expect(camera.pitch).toBe(0);
 });
+
+test.each([[1743,1267],[1280,674],[390,798]])('tilted network fits projected corners at %i×%i', (width,height)=>{
+  const camera=initialBoundsCamera([-10,35,33,71],width,height,60);
+  const y=(lat:number)=>(1-Math.asinh(Math.tan(lat*Math.PI/180))/Math.PI)/2;
+  const scale=512*2**camera.zoom, distance=1.5*height;
+  for(const lon of [-10,33]) for(const lat of [35,71]) {
+    const dy=(y(lat)-y(camera.center.lat))*scale;
+    const perspective=distance/(distance-dy*Math.sin(Math.PI/3));
+    expect(Math.abs((lon-camera.center.lon)/360*scale*perspective)).toBeLessThanOrEqual((width-56)/2+1e-6);
+    expect(Math.abs(dy*.5*perspective)).toBeLessThanOrEqual((height-(width<=650?300:240))/2+1e-6);
+  }
+  expect(camera.pitch).toBe(60);
+});

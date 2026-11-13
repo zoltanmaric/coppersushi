@@ -35,7 +35,7 @@ export function OpfView({token}:{token:string}) {
   const initialCamera = useRef<ReturnType<typeof initialBoundsCamera> | null>(null);
   if (hour.data && !initialCamera.current) {
     const size = viewport.current!.getBoundingClientRect();
-    initialCamera.current = initialBoundsCamera(hour.data.bounds, size.width, size.height);
+    initialCamera.current = initialBoundsCamera(hour.data.bounds, size.width, size.height, 60);
   }
   const [renderedFigure,setRenderedFigure] = useState<PlotlyFigure|null>(null);
   const [mapError,setMapError] = useState<string|null>(null);
