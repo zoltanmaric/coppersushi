@@ -121,7 +121,10 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
         config={plotConfig}/>
 
 
-      <aside className="cnec-progress" aria-live="polite">
+
+
+<MapControls status={<>
+
         {metadata.data && !validInterval && <div role="alert">This interval is outside the selected day.{' '}
           <button onClick={() => {dispatch({type:'interval',interval:0});}}>Go to first interval</button>
         </div>}
@@ -129,9 +132,8 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
         {publication.isSuccess && !publication.data && <div role="status">Data is unavailable for this day. <button onClick={() => void publication.refetch()}>Check again</button></div>}
         {notes.map(note => <div role="status" key={note}>{note}</div>)}
         {([['Publication',publication],['Metadata',metadata],['Interval',intervalQuery]] as const).map(([name,query])=>query.error && <div role="alert" key={name}>{name}: {query.error.message}{data && !mapCurrent && ` Showing ${data.label.split(' · ')[1]}.`} <button onClick={()=>void query.refetch()}>Retry</button></div>)}
-      </aside>
 
-<MapControls legend={<PriceLegend range={metadata.data?.price_range ?? null}/>} reference={<label className="cnec-reference cnec-panel">Reference
+</>} legend={<PriceLegend range={metadata.data?.price_range ?? null}/>} reference={<label className="cnec-reference cnec-panel">Reference
           <select aria-label="Reference country" value={reference}
             onChange={e => dispatch({type: 'reference', reference: CORE_ZONES.find(zone => zone === e.target.value)!})}>
             {CORE_ZONES.map(zone => <option key={zone} value={zone}>{zone}</option>)}

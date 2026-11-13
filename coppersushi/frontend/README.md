@@ -17,7 +17,8 @@ flowchart LR
   cnec --> plot
 ```
 
-`controls/map-controls.tsx` owns overlay composition and placement for both pages.
+`controls/map-controls.tsx` owns overlay composition and placement for both pages,
+including loading and error messages in the grid row below help.
 Pages supply legend units and range, help content, optional reference controls and
 calendar capabilities. Power Flow uses a fixed day; Critical Elements supplies daily
 availability. Domain fetching stays out of shared presentation components.

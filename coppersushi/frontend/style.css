@@ -6,10 +6,6 @@ a {color:#00bc8c}
 .cnec-sources {width:max-content;max-width:calc(100% - 48px);color:#aaa;font-size:11px;line-height:1.2;text-align:center;pointer-events:none}
 .cnec-sources a {color:inherit;pointer-events:auto;text-decoration:none}
 .cnec-sources a:hover,.cnec-sources a:focus-visible {color:#eee;text-decoration:underline}
-.cnec-progress {position:absolute;right:12px;top:12px;max-width:min(30em,70%);font-size:.85rem;background:rgba(20,20,20,.88);border-radius:4px;z-index:5}
-.cnec-progress:empty {display:none}
-.cnec-progress>div {padding:6px 10px}
-.cnec-progress [role=alert] {color:#ffc4bd}
 .cnec-panel {background:rgba(18,18,18,.85);border-radius:5px;color:#eee}
 .cnec-footer {display:grid;place-items:center;min-height:24px}
 .cnec-time-controls {padding:8px 6px;display:flex;flex-wrap:wrap;align-items:flex-start;column-gap:12px;z-index:3;border-radius:10px}
@@ -30,7 +26,6 @@ a {color:#00bc8c}
 .cnec-control-row output {min-width:80px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .cnec-slider-panel {flex:1 1 320px;box-sizing:border-box;padding:0 12px;min-width:0}
 .cnec-react {position:relative;height:100%}
-.cnec-progress {top:168px}
 
 .cnec-timeline {position:relative;min-width:0;height:52px;--cnec-time-progress:0%}
 .cnec-timeline input {appearance:none;height:44px;background:transparent;margin:0;padding:0;border:0;box-sizing:border-box;display:block;width:100%;cursor:ew-resize}

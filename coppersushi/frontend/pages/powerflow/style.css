@@ -10,7 +10,6 @@ a {color:#00bc8c;}
 .opf-mark-slot>span {position:absolute;left:0;transform:translateX(-50%);white-space:nowrap;}
 .opf-mark-slot:first-child>span {transform:none;}
 .opf-mark-slot:last-child>span {transform:translateX(-100%);}
-.opf-notice {position:absolute;top:12px;right:12px;background:#222;padding:8px;}
 
 .opf-fixed-date {grid-column:1 / -1;white-space:nowrap;padding-inline:8px}
 

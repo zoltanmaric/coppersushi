@@ -48,11 +48,13 @@ export function OpfView({token}:{token:string}) {
   const loading = !error && !mapError && (manifest.isFetching || hour.isFetching || (!!figure && !current));
   return <section ref={viewport} className="opf-static" aria-label="Power Flow 🍣">
     <div className="opf-map-host">{figure && <HourMap figure={figure} onError={e=>setMapError(e.message)} onRendered={completed=>{setRenderedFigure(completed);setMapError(null);}}/>}
-      {loading && <div className="opf-notice" role="status">Loading Power Flow…</div>}
-      {error && <div className="opf-notice" role="alert">{error.message} <button onClick={()=>void (manifest.error?manifest:hour).refetch()}>Retry</button></div>}
-      {mapError && <div className="opf-notice" role="alert">Map: {mapError}</div>}
+
     </div>
-    <MapControls legend={<ScaleLegend reversed saturated title="Net power feed-in · MW" description="Node net power scale" range={hour.data?.scale ? [-hour.data.scale,hour.data.scale] : null}/>} help={<MapHelp page="powerflow"/>} controls={times.length ?       <IntervalControls date={<span className="opf-fixed-date">{times.length ? new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Brussels',day:'numeric',month:'short',year:'numeric'}).format(new Date(times[0])) : ''}</span>} labels={times.map(time=>fullLabel.format(new Date(time)).split(', ').at(-1)!)} interval={selected} onChange={value=>{setMapError(null);setSelection(value);}}/> : null}/>
+    <MapControls status={<>
+      {loading && <div role="status">Loading Power Flow…</div>}
+      {error && <div role="alert">{error.message} <button onClick={()=>void (manifest.error?manifest:hour).refetch()}>Retry</button></div>}
+      {mapError && <div role="alert">Map: {mapError}</div>}
+</>} legend={<ScaleLegend reversed saturated title="Net power feed-in · MW" description="Node net power scale" range={hour.data?.scale ? [-hour.data.scale,hour.data.scale] : null}/>} help={<MapHelp page="powerflow"/>} controls={times.length ?       <IntervalControls date={<span className="opf-fixed-date">{times.length ? new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Brussels',day:'numeric',month:'short',year:'numeric'}).format(new Date(times[0])) : ''}</span>} labels={times.map(time=>fullLabel.format(new Date(time)).split(', ').at(-1)!)} interval={selected} onChange={value=>{setMapError(null);setSelection(value);}}/> : null}/>
 
   </section>;
 }
