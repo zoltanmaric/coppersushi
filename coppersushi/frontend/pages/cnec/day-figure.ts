@@ -1,9 +1,9 @@
-import {contributions} from '../pages/cnec/market/contributions';
-import type {DayBundle, BindingRow, MarketInterval, ElementGeometry} from '../data/contracts';
-import type {PlotlyFigure} from './figure';
-import type { CoreZone } from "../pages/cnec/market/reference";
-import {layerAnchor} from './map-layer-order';
-import {PRICE_COLORSCALE} from './price-scale';
+import {contributions} from './market/contributions';
+import type {DayBundle, BindingRow, MarketInterval, ElementGeometry} from './data/contracts';
+import type {PlotlyFigure} from '../../map/figure';
+import type { CoreZone } from "./market/reference";
+import {layerAnchor} from '../../map/map-layer-order';
+import {PRICE_COLORSCALE} from '../../map/price-scale';
 
 type Trace = PlotlyFigure["data"][number];
 const purple = "#a72af5",

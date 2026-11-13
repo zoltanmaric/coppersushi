@@ -4,7 +4,7 @@ import {cleanup, fireEvent, render, screen} from '@testing-library/react';
 import {afterEach, expect, test} from 'vitest';
 import {Timeline, timelineLabels} from './timeline';
 // Responses from the real calendar endpoint: hourly and quarter-hourly clock changes.
-import calendars from '../fixtures/calendars.json';
+import calendars from './testdata/calendars.json';
 
 afterEach(cleanup);
 

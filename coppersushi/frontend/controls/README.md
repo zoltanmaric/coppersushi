@@ -12,4 +12,4 @@ flowchart LR
     reducer -->|replace| url
 ```
 
-[market](../pages/cnec/market/README.md) · [data](../data/README.md) · [map](../map/README.md)
+[market](../pages/cnec/market/README.md) · [data](../pages/cnec/data/README.md) · [map](../map/README.md)

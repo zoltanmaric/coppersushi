@@ -1,11 +1,10 @@
 import React from 'react';
-import type {PriceRange} from '../data/contracts';
 import {PRICE_COLORSCALE} from '../map/price-scale';
 
 const background = `linear-gradient(to right, ${PRICE_COLORSCALE.map(([at, color]) => `${color} ${at * 100}%`).join(',')})`;
 const format = (value: number) => value.toLocaleString(undefined, {maximumFractionDigits: 2});
 
-export function ScaleLegend({range,title,description,reversed=false,saturated=false}: {range: PriceRange | null;title:string;description:string;reversed?:boolean;saturated?:boolean}) {
+export function ScaleLegend({range,title,description,reversed=false,saturated=false}: {range: [number, number] | null;title:string;description:string;reversed?:boolean;saturated?:boolean}) {
   return <div className="cnec-price-legend" aria-label={description} aria-busy={range === null}>
     <div>{title}</div>
     <div className="cnec-price-gradient" style={{background:reversed ? background.replace('to right','to left') : background}}/>
@@ -13,4 +12,4 @@ export function ScaleLegend({range,title,description,reversed=false,saturated=fa
   </div>;
 }
 
-export function PriceLegend({range}:{range:PriceRange|null}) {return <ScaleLegend range={range} title="Day-ahead · €/MWh" description="Daily day-ahead price scale"/>;}
+export function PriceLegend({range}:{range:[number, number]|null}) {return <ScaleLegend range={range} title="Day-ahead · €/MWh" description="Daily day-ahead price scale"/>;}

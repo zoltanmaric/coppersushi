@@ -1,8 +1,8 @@
 import {expect, test} from 'vitest';
 // Geometry is schematic here; the price arithmetic above uses published observations.
 import {dayFigure, zoneFeatures} from './day-figure';
-import type {DayBundle} from '../data/contracts';
-import {orderedMapLayers} from './map-layer-order';
+import type {DayBundle} from './data/contracts';
+import {orderedMapLayers} from '../../map/map-layer-order';
 function drawingFixture(): DayBundle {
   return {version:2,day:'2026-11-03',labels:['Tue 03 Nov 2026 · 00:00 CET'],price_range:[90,100],
     zones:[{zone:'DE',name:'Germany',centre:[10,50],rings:[[[9,49],[11,49],[11,51],[9,49]]]},{zone:'PL',name:'Poland',centre:[20,52],rings:[[[19,51],[21,51],[21,53],[19,51]]]}],

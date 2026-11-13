@@ -1,5 +1,5 @@
-import schema from '../../../data/contracts.json';
-import type {ZoneGeometry} from '../../../data/contracts';
+import schema from '../data/contracts.json';
+import type {ZoneGeometry} from '../data/contracts';
 
 export type CoreZone = ZoneGeometry['zone'];
 export const CORE_ZONES = schema.$defs.ZoneGeometry.properties.zone.enum as CoreZone[];

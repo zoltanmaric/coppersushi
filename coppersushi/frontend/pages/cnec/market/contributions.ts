@@ -1,4 +1,4 @@
-import type {MarketInterval} from '../../../data/contracts';
+import type {MarketInterval} from '../data/contracts';
 import type {CoreZone} from './reference';
 
 /** Normalized-FB contribution; missing inputs remain unavailable. */

@@ -1,6 +1,6 @@
 import React from 'react';
 import {useQuery} from '@tanstack/react-query';
-import {publicationOptions} from '../../data/day-data';
+import {publicationOptions} from './data/day-data';
 import {useMarketToday} from '../../controls/market-day';
 import {CalendarTimeControls,stepDay} from '../../controls/date-time-controls';
 

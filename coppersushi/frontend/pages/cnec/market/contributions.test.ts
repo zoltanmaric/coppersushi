@@ -5,7 +5,7 @@ import contextCsv from '../../../../pipelines/cnec/testdata/cnec-attribution/obs
 import selection from '../../../../pipelines/cnec/testdata/cnec-attribution/observed/selection.json';
 import { describe, expect, test } from "vitest";
 import { contributions } from "./contributions";
-import type { MarketInterval } from "../../../data/contracts";
+import type { MarketInterval } from "../data/contracts";
 import { CORE_ZONES } from "./reference";
 
 // Independently published JAO/SMARD observations verify the browser-owned calculation.
