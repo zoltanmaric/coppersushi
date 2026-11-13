@@ -138,7 +138,7 @@ Once the server starts, the web app will be available at http://localhost:8050
 
 The CNEC view uses JAO constraints and Electricity Maps day-ahead prices. Put an
 Electricity Maps key in `.secrets/.electricity_maps_api_key`, or export
-`ELECTRICITY_MAPS_API_KEY`. Prepare a complete day before browsing:
+`ELECTRICITY_MAPS_API_KEY`. To prepare an unpublished day locally:
 
 ```sh
 pixi run --locked python -m coppersushi.pipelines.cnec.data_sources.bundles 2026-11-03 --directory coppersushi/data/browser
