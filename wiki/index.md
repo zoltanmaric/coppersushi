@@ -33,10 +33,6 @@
 - [copper-sushi-app.md](copper-sushi-app.md) — the 2024 OPF, staged article embed, CNEC price-influence map, model caveats, map-renderer tradeoffs, native-camera evidence and hosting direction
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026
 
-## Specs (working memory — burn-down state, not settled knowledge)
-- [Data catalog idea board](specs/coppersushi-reorganization/data-catalog-draft.html) — deferred options for internal data discovery; outside the completed reorganization.
-- [specs/day-ahead-price-forecast.md](specs/day-ahead-price-forecast.md) — first forecast build: validated S3 snapshots, then local model/evaluation and reproducible experiment records
-
 ## Literature (one digest per authoritative document, link only)
 - [literature/sdac-allocation-constraints-2026.md](literature/sdac-allocation-constraints-2026.md) — April 2026 Europe-wide inventory: Poland alone has an aggregate net-position cap; cable ramping and line sets are separate
 - [literature/core-da-ccm-explanatory-note.md](literature/core-da-ccm-explanatory-note.md) — Core TSOs' explanatory note on the flow-based capacity calculation methodology, June 2018, with what the amendments changed

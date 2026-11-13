@@ -2,7 +2,6 @@
 __pycache__/
 .secrets/
 .DS_Store
-/specs/
 /worktrees/
 # Downloaded build inputs.
 /data/*
@@ -49,3 +48,6 @@ dist/
 /coppersushi/infra/lambda/*.tfvars
 /coppersushi/infra/lambda/*.tfvars.json
 /coppersushi/infra/lambda/*.tfplan
+
+# Unpublished upstream issue/PR drafts are not implementation specs.
+/specs/upstream/
