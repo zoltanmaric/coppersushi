@@ -1,6 +1,6 @@
 # Forecasts
 
-Independent Germany–Luxembourg price forecasting. The [implementation spec](../wiki/specs/day-ahead-price-forecast.md) lists remaining work; the [infrastructure design](../wiki/price-forecasting/forecast-infrastructure.md) owns the storage contract.
+Independent Germany–Luxembourg price forecasting. The [implementation spec](../specs/day-ahead-price-forecast.html) lists remaining work; the [infrastructure design](../wiki/price-forecasting/forecast-infrastructure.md) owns the storage contract.
 
 ## Setup
 

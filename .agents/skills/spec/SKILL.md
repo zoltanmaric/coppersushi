@@ -1,12 +1,14 @@
 ---
 name: spec
-description: Maintain a concise burn-down spec as the working memory of a large or multi-session task. Use when work spans sessions, when the user asks for a spec or brief, or when a grill ends on a task too big to carry in a confirmed summary alone.
+description: Maintain a concise HTML explainer spec as the working memory of a large or multi-session task. Use when work spans sessions, when the user asks for a spec or brief, or when a grill ends on a task too big to carry in a confirmed summary alone.
 ---
 
-# spec — a task-scoped burn-down file
+# spec — a task-scoped HTML explainer
 
-Keep one authoritative artifact for the task’s remaining intent. Use the requested
-format; an HTML explainer can be the spec without a parallel Markdown copy.
+Maintain one authoritative HTML explainer in top-level `specs/` for the task’s
+remaining intent. Commit it for review. Do not create Markdown specs, parallel
+copies, or specs in the wiki. Use the repository’s [html-explainer skill](../html-explainer/SKILL.md) for visual
+teaching, project styling and rendered verification.
 
 Lead with a short overview; put necessary implementation contracts in linked or
 expandable detail. Preserve enough context for a fresh agent to act with the repo.
@@ -22,11 +24,6 @@ do not enter implementation steps or completion criteria.
 
 Guardrails:
 
-- Two homes, chosen by weight. Default: `specs/` (gitignored, dies with the task,
-  never lands on main). A spec big enough that its burn-down history or surviving
-  slivers have long-term value lives in `wiki/specs/` instead — committed, and listed
-  in the wiki index under a separate "Specs (working memory)" section so queries never
-  mistake burn-down state for settled knowledge.
 - Link to owning READMEs and wiki pages rather than copying their facts.
 - Reconcile with current code before handoff; remove work already landed and verified.
 - Keep agreed boundaries and acceptance criteria explicit; detail near-term work and

@@ -8,7 +8,7 @@ An independent forecasting product under `forecasts/`, with no dependency on the
 - [Storage and execution](price-forecasting/forecast-infrastructure.md): reproducibility promise, selection principle, local first iteration and later AWS deployment.
 - [Data sources](price-forecasting/data-sources.md): verified contracts and availability limits.
 - [Evaluation](price-forecasting/evaluation.md): chronological comparisons and scoring.
-- [Implementation spec](specs/day-ahead-price-forecast.md): remaining work and acceptance checks.
+- [Implementation spec](../specs/day-ahead-price-forecast.html): remaining work and acceptance checks.
 
 ## Dataflow
 

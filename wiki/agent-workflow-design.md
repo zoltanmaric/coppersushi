@@ -44,16 +44,7 @@ public sources and one design conversation.
   the requirement; right question → proceed silently. *Rejected:* requiring every
   challenge to come with a concrete alternative — it would incentivize confabulated
   alternatives and suppress honest "smells wrong because X" signal.
-- **Spec = task-scoped burn-down file; two homes by weight** (amended 2026-08-19,
-  Zoltán). Default: gitignored `specs/`. Large specs whose burn-down history or
-  surviving slivers have long-term value live in committed `wiki/specs/`, indexed
-  under a separate "Specs (working memory)" section so they're never read as settled
-  knowledge — the rot risk is mislabeling, not location. Resolves
-  Rensin-vs-Hirschfeld: re-bootstrap and shared-intent benefits without committed-doc
-  rot. Lifetime is the task, not a PR (repo is solo, main-push). Acceptance criteria
-  are the load-bearing section; no file-by-file plan. Links to the wiki instead of
-  restating it. *Rejected:* durable four-section design docs enumerating every file —
-  the fastest-rotting layer, and unreadable.
+- **Spec = one reviewable HTML explainer in top-level `specs/`.** Commit it for review, keep the overview readable and implementation detail accessible, and reconcile remaining work against the code. No Markdown twin or wiki spec. The wiki holds lasting knowledge; the spec lives only as long as the task.
 - **Goldfish facets are a menu, not a mandate:** requirement deleter (whole before
   parts), comprehension, simplifier, critic, readiness — deleter runs first (Musk
   ordering). Comprehension tests *reachability from fresh context* (repo, wiki, links),
@@ -70,5 +61,4 @@ public sources and one design conversation.
   proof of aggressive-enough deletion.
 - **Wiki symbiosis:** spec = working memory (dies at task end), wiki = durable
   decision layer (this repo's `llm-wiki` skill owns the schema; its `log.md` serves as
-  the append-only decision log — no separate ADR system). Spec completion ends with an
-  *offer* to distill into the wiki, then deletion.
+  the append-only decision log — no separate ADR system). Spec completion ends with filing lasting facts in the owning README or wiki, then deleting the completed spec.
