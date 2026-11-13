@@ -3,11 +3,10 @@ import React from 'react';
 import {act, cleanup, render, screen, waitFor} from '@testing-library/react';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {afterEach, expect, test, vi} from 'vitest';
-import {DateTimeControls} from '../pages/cnec/date-time-controls';
+import {DateControls} from '../pages/cnec/date-time-controls';
 import {marketDay} from './market-day';
 
-const props = {day:'2026-11-09', minDay:'2026-11-01', time:'00:00 CET',
-  previousDisabled:true, nextDisabled:false, onDay:vi.fn(), onPrevious:vi.fn(), onNext:vi.fn()};
+const props = {day:'2026-11-09', minDay:'2026-11-01', onDay:vi.fn()};
 
 afterEach(() => {cleanup(); vi.useRealTimers(); vi.unstubAllGlobals();});
 
@@ -18,7 +17,7 @@ test('tomorrow enables asynchronously from its manifest and shares the publicati
   const fetch = vi.fn().mockResolvedValueOnce(new Response('',{status:404}))
     .mockResolvedValueOnce(new Response(JSON.stringify({version:2,day:'2026-11-10',generation:'a'.repeat(24)})));
   vi.stubGlobal('fetch',fetch);
-  const view = render(<QueryClientProvider client={client}><DateTimeControls {...props}/></QueryClientProvider>);
+  const view = render(<QueryClientProvider client={client}><DateControls {...props}/></QueryClientProvider>);
   const next = () => screen.getByRole('button',{name:'Next day'}) as HTMLButtonElement;
   expect(next().disabled).toBe(true);
   await waitFor(() => expect(client.getQueryData(['publication','2026-11-10'])).toBeNull());
@@ -27,7 +26,7 @@ test('tomorrow enables asynchronously from its manifest and shares the publicati
   await waitFor(() => expect(next().disabled).toBe(false));
   expect(fetch.mock.calls.map(call=>call[0])).toEqual([
     '/data/cnec/v2/2026-11-10/manifest.json','/data/cnec/v2/2026-11-10/manifest.json']);
-  view.rerender(<QueryClientProvider client={client}><DateTimeControls {...props} day="2026-11-10"/></QueryClientProvider>);
+  view.rerender(<QueryClientProvider client={client}><DateControls {...props} day="2026-11-10"/></QueryClientProvider>);
   expect(next().disabled).toBe(true);
   client.clear();
 });
@@ -39,7 +38,7 @@ test('market date and an open page roll over at Brussels midnight', async () => 
   vi.setSystemTime(new Date('2026-11-09T22:59:00Z'));
   vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response('',{status:404})));
   const client = new QueryClient({defaultOptions:{queries:{retry:false}}});
-  render(<QueryClientProvider client={client}><DateTimeControls {...props} day="2026-11-10"/></QueryClientProvider>);
+  render(<QueryClientProvider client={client}><DateControls {...props} day="2026-11-10"/></QueryClientProvider>);
   await waitFor(() => expect(client.getQueryData(['publication','2026-11-10'])).toBeNull());
   vi.setSystemTime(new Date('2026-11-09T23:01:00Z'));
   act(() => window.dispatchEvent(new Event('focus')));

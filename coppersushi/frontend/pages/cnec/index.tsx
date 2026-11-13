@@ -1,3 +1,4 @@
+import {MapFrame,useMapViewport} from '../../map/map-frame';
 import {MapControls} from '../../controls/map-controls';
 import {contributions} from './market/contributions';
 import React, {useEffect, useMemo, useRef, useState} from 'react';
@@ -5,10 +6,10 @@ import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate, useParams} from 'react-router-dom';
 import {useDayData, IntervalPrefetch} from './data/day-data';
 import {dayFigure, zoneFeatures, selectionIds} from './day-figure';
-import {Timeline} from '../../controls/timeline';
+import {IntervalControls} from '../../controls/interval-controls';
 import {MapGraph} from '../../map/map-graph';
 import {CORE_ZONES} from './market/reference';
-import {DateTimeControls} from './date-time-controls';
+import {DateControls} from './date-time-controls';
 import {reduceSelection} from '../../controls/state';
 import type {Selection, Action} from '../../controls/state';
 import {viewFromUrl, viewSearch} from '../../controls/view-url';
@@ -77,7 +78,6 @@ function shell(token: string, basemap: Props['basemap'], camera: ReturnType<type
 function View({id, min_day, token, basemap, selection, onAction: dispatch}: PageProps) {
   const {day, interval, selected, reference} = selection;
 
-
   const [compactTooltips, setCompactTooltips] = useState(() => window.matchMedia?.('(pointer: coarse)').matches ?? false);
   useEffect(() => {
     const media = window.matchMedia?.('(pointer: coarse)');
@@ -86,7 +86,9 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
     media.addEventListener('change', update);
     return () => media.removeEventListener('change', update);
   }, []);
-  const [initialCamera] = useState(() => initialCoreCamera(window.innerWidth, window.innerHeight));
+  const viewport = useMapViewport();
+  const initialCamera = useMemo(()=>initialCoreCamera(viewport.size?.width ?? 160,viewport.size?.height ?? 160),[viewport.size]);
+  const [mapError,setMapError] = useState<Error|null>(null);
   const {publication,metadata,current: intervalQuery,data,labels,generation} = useDayData(day,interval);
   const previousControlLabels = useRef(labels);
   useEffect(()=>{if (labels.length) previousControlLabels.current = labels;},[labels]);
@@ -113,47 +115,35 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
     if (action) dispatch(action);
   }
 
-  return <section id={id} className="cnec-react">
+  return <MapFrame ref={viewport.ref} id={id}>
     <IntervalPrefetch day={day} generation={generation} count={labels.length} enabled={!!data && !!metadata.data}/>
-    <div className="cnec-map-container">
-      <MapGraph compactTooltips={compactTooltips} id={`${id}-map`} figure={graphFigure} onClick={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
+    <div className="map-canvas">
+      {viewport.size && <MapGraph onError={setMapError} compactTooltips={compactTooltips} id={`${id}-map`} figure={graphFigure} onClick={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
         countries={countries} onReference={reference=>dispatch({type:'reference',reference})}
-        config={plotConfig}/>
+        config={plotConfig}/>}
+    </div>
 
+<MapControls loading={publication.isFetching || metadata.isFetching || (!mapCurrent && intervalQuery.isFetching)} showing={data && !mapCurrent ? data.label.split(' · ')[1] : undefined} status={<>
+{mapError && <div role="alert">Map: {mapError.message}</div>}
 
-      <aside className="cnec-progress" aria-live="polite">
         {metadata.data && !validInterval && <div role="alert">This interval is outside the selected day.{' '}
           <button onClick={() => {dispatch({type:'interval',interval:0});}}>Go to first interval</button>
         </div>}
-        {(publication.isFetching || metadata.isFetching || (!mapCurrent && intervalQuery.isFetching)) && <div role="status" aria-label="Map loading">Loading interval…{data && !mapCurrent && <div>Showing {data.label.split(' · ')[1]}.</div>}</div>}
         {publication.isSuccess && !publication.data && <div role="status">Data is unavailable for this day. <button onClick={() => void publication.refetch()}>Check again</button></div>}
         {notes.map(note => <div role="status" key={note}>{note}</div>)}
         {([['Publication',publication],['Metadata',metadata],['Interval',intervalQuery]] as const).map(([name,query])=>query.error && <div role="alert" key={name}>{name}: {query.error.message}{data && !mapCurrent && ` Showing ${data.label.split(' · ')[1]}.`} <button onClick={()=>void query.refetch()}>Retry</button></div>)}
-      </aside>
 
-<MapControls legend={<PriceLegend range={metadata.data?.price_range ?? null}/>} reference={<label className="cnec-reference cnec-panel">Reference
+</>} legend={<PriceLegend range={metadata.data?.price_range ?? null}/>} reference={<label className="cnec-reference cnec-panel">Reference
           <select aria-label="Reference country" value={reference}
             onChange={e => dispatch({type: 'reference', reference: CORE_ZONES.find(zone => zone === e.target.value)!})}>
             {CORE_ZONES.map(zone => <option key={zone} value={zone}>{zone}</option>)}
           </select>
-        </label>} help={<MapHelp/>} controls={<div className="cnec-time-controls cnec-panel" aria-busy={!labels.length}>
-
-      <DateTimeControls day={day} minDay={min_day} time={controlLabels[interval]?.split(' · ')[1] ?? ''}
-        previousDisabled={!labels.length || interval === 0}
-        nextDisabled={!labels.length || interval === labels.length - 1}
-        onDay={day => dispatch({type: 'day', day})} onPrevious={() => dispatch({type: 'interval', interval: interval - 1})}
-        onNext={() => dispatch({type: 'interval', interval: interval + 1})}/>
-      <div className="cnec-slider-panel">
-      <Timeline labels={controlLabels} interval={interval} disabled={!labels.length}
-        onChange={interval => dispatch({type: 'interval', interval})}/>
-      </div>
-    </div>} footer={<footer className="cnec-footer">
+        </label>} help={<MapHelp/>} controls={<IntervalControls labels={controlLabels} busy={!labels.length} interval={interval} onChange={interval=>dispatch({type:'interval',interval})} date={<DateControls day={day} minDay={min_day} onDay={day=>dispatch({type:'day',day})}/>}/>} footer={<footer className="cnec-footer">
       <small className="cnec-sources">
         Data: <a href="https://publicationtool.jao.eu/core/" target="_blank" rel="noopener noreferrer">JAO</a> · {' '}
         <a href="https://www.electricitymaps.com/" target="_blank" rel="noopener noreferrer">Electricity Maps</a> · {' '}
         <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>
       </small>
     </footer>}/>
-    </div>
-  </section>;
+  </MapFrame>;
 }

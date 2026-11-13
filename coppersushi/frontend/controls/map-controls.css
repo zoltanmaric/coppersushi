@@ -6,3 +6,8 @@
 .cnec-bottom-controls>* {pointer-events:auto}
 
 .map-tools-without-reference .cnec-help-trigger {grid-column:2;grid-row:1;align-self:start}
+
+.map-status {grid-column:1 / -1;justify-self:end;max-width:min(30em,100%);font-size:.85rem;background:rgba(20,20,20,.88);border-radius:4px;pointer-events:auto}
+.map-status:empty {display:none}
+.map-status>div {padding:6px 10px}
+.map-status [role=alert] {color:#ffc4bd}
