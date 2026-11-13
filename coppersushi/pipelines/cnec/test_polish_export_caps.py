@@ -83,3 +83,36 @@ def test_reserve_satisfied_cases_include_equal_and_excess_not_missing():
     result = reserve_satisfied_cases(frame)
     assert result.index.tolist() == [0, 1]
     assert result.purchased_above_required_mw.tolist() == [0, 100]
+
+
+def test_retrieval_coverage_keeps_legacy_caches_undated(tmp_path):
+    from scripts.polish_export_caps import retrieval_coverage
+    from shutil import copyfile
+    copyfile(FIXTURES / 'empty-pse.json', tmp_path / '2026-11-13-wmb.json')
+    coverage = retrieval_coverage(tmp_path, ['2026-11-13'])
+    assert coverage.dated_inputs == 0
+    assert coverage.earliest_retrieval_utc is None
+    assert coverage.latest_retrieval_utc is None
+    assert not coverage.span_complete
+    assert coverage.inputs[-1].status == 'undated'
+    assert coverage.inputs[0].status == 'source_cache_missing'
+
+
+def test_pse_cache_preserves_original_fetch_and_rejects_changed_bytes(tmp_path, monkeypatch):
+    from scripts.polish_export_caps import pse, retrieval_coverage
+    calls = []
+    def fetch(url, timeout):
+        calls.append(url)
+        return (FIXTURES / 'empty-pse.json').open()
+    monkeypatch.setattr('urllib.request.urlopen', fetch)
+    assert pse('wmb', '2026-11-13', tmp_path) == []
+    first = retrieval_coverage(tmp_path, ['2026-11-13'])
+    assert first.dated_inputs == 1
+    assert first.inputs[-1].retrieval.urls == calls
+    assert first.earliest_retrieval_utc <= first.latest_retrieval_utc
+    assert pse('wmb', '2026-11-13', tmp_path) == []
+    assert len(calls) == 1
+    assert retrieval_coverage(tmp_path, ['2026-11-13']) == first
+    path = tmp_path / '2026-11-13-wmb.json'
+    path.write_text(path.read_text() + '\n')
+    assert retrieval_coverage(tmp_path, ['2026-11-13']).inputs[-1].status == 'provenance_mismatch'

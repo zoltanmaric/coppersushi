@@ -212,4 +212,5 @@ equal to the pre-clearing requirement, including filters and a full CSV export. 
 interactive `report.html` under ignored `data/polish-export-caps/`. Electricity Maps credentials
 use the existing environment/file configuration; `--price-token-file` selects another local file.
 The output contains licensed price data and must not be committed or published.
+Each newly fetched input has a retrieval sidecar with query URLs, UTC fetch start/end and a content hash. `coverage.json` includes the observed retrieval span and marks legacy undated or missing source caches explicitly; resuming never invents their fetch date.
 See the [investigation](wiki/polish-export-cap-investigation.md) for interpretation.

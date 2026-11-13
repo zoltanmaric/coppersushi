@@ -5,14 +5,16 @@ Outputs and licensed price responses stay in ignored data/, never in the wiki.
 """
 import argparse
 import json
+import hashlib
 import logging
 import urllib.parse
 import urllib.request
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from typing import Literal
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, FiniteFloat
+from pydantic import BaseModel, ConfigDict, FiniteFloat, AwareDatetime
 
 from coppersushi.pipelines.cnec import attribution as cnec_attribution
 from coppersushi.pipelines.data_model.cnec_attribution import AllocationConstraint, NetPosition, PolishAlternative, JaoRecord
@@ -76,6 +78,61 @@ def procurement_frame(purchases: list[dict], requirements: list[dict]) -> pd.Dat
                       for m in (0, 15, 30, 45)], ignore_index=True)
 
 
+class Retrieval(BaseModel):
+    """Observed fetch window and requests for one cached input's exact bytes."""
+    urls: list[str]
+    started_at: AwareDatetime
+    completed_at: AwareDatetime
+    sha256: str
+
+
+def record_retrieval(path: Path, urls: list[str], started_at: datetime) -> None:
+    record = Retrieval(urls=urls, started_at=started_at, completed_at=datetime.now(UTC),
+                       sha256=hashlib.sha256(path.read_bytes()).hexdigest())
+    path.with_suffix(path.suffix + ".retrieval.json").write_text(record.model_dump_json(indent=2))
+
+
+class InputRetrieval(BaseModel):
+    """Whether retrieval evidence is available for an input used by the collection."""
+    input: str
+    status: Literal["dated", "undated", "source_cache_missing", "provenance_mismatch"]
+    retrieval: Retrieval | None = None
+
+
+class RetrievalCoverage(BaseModel):
+    """Observed fetch span; incomplete when any contributing cache is undated."""
+    inputs: list[InputRetrieval]
+    dated_inputs: int
+    undated_inputs: int
+    earliest_retrieval_utc: AwareDatetime | None
+    latest_retrieval_utc: AwareDatetime | None
+    span_complete: bool
+
+
+def retrieval_coverage(cache: Path, days: list[str]) -> RetrievalCoverage:
+    records = []
+    for day in days:
+        for suffix in ("allocationConstraint.json", "netPos.json", "DA_PL_AC.json",
+                       "prices.csv", "mbp-tp.json", "wmb.json"):
+            path = cache / f"{day}-{suffix}"
+            sidecar = path.with_suffix(path.suffix + ".retrieval.json")
+            entry = InputRetrieval(input=path.name, status="undated")
+            if not path.exists():
+                entry.status = "source_cache_missing"
+            elif sidecar.exists():
+                record = Retrieval.model_validate_json(sidecar.read_text())
+                if record.sha256 == hashlib.sha256(path.read_bytes()).hexdigest():
+                    entry.status, entry.retrieval = "dated", record
+                else:
+                    entry.status = "provenance_mismatch"
+            records.append(entry)
+    dated = [r.retrieval for r in records if r.retrieval is not None]
+    return RetrievalCoverage(inputs=records, dated_inputs=len(dated), undated_inputs=len(records) - len(dated),
+                earliest_retrieval_utc=min((r.started_at for r in dated), default=None),
+                latest_retrieval_utc=max((r.completed_at for r in dated), default=None),
+                span_complete=len(dated) == len(records))
+
+
 def pse(endpoint: str, day: str, cache: Path) -> list[dict]:
     path = cache / f"{day}-{endpoint}.json"
     if path.exists():
@@ -83,7 +140,10 @@ def pse(endpoint: str, day: str, cache: Path) -> list[dict]:
     query = urllib.parse.urlencode({"$filter": f"business_date eq '{day}'", "$first": 1000})
     url = f"https://api.raporty.pse.pl/api/{endpoint}?{query}"
     rows = []
+    urls = []
+    started_at = datetime.now(UTC)
     while url:
+        urls.append(url)
         with urllib.request.urlopen(url, timeout=30) as response:
             payload = json.load(response)
         rows.extend(payload["value"])
@@ -91,6 +151,7 @@ def pse(endpoint: str, day: str, cache: Path) -> list[dict]:
         if url and not url.startswith("https://api.raporty.pse.pl/api/"):
             raise ValueError("Unexpected PSE pagination host")
     path.write_text(json.dumps({"value": rows}))
+    record_retrieval(path, urls, started_at)
     return rows
 
 
@@ -105,8 +166,13 @@ def collect(day: MarketDay, cache: Path) -> pd.DataFrame:
         target = cache / f"{key}-{endpoint}.json"
         if not target.exists():
             kwargs = {"base_url": "https://publicationtool.jao.eu/crossCCR/api/data"} if cross else {}
+            started_at = datetime.now(UTC)
             rows = jao._get(endpoint, day.start_time_utc, day.end_time_utc, timeout=30, **kwargs)
             target.write_text(json.dumps(rows))
+            base_url = kwargs.get("base_url", jao.BASE_URL)
+            query = urllib.parse.urlencode(dict(FromUtc=jao._stamp(day.start_time_utc),
+                                                ToUtc=jao._stamp(day.end_time_utc), Take=100_000_000))
+            record_retrieval(target, [f"{base_url}/{endpoint}?{query}"], started_at)
         return [model.model_validate(row) for row in json.loads(target.read_text())]
     context = cnec_attribution.context(day, [], feed("allocationConstraint", AllocationConstraint),
                                       feed("netPos", NetPosition), feed("DA_PL_AC", PolishAlternative, True))
@@ -114,8 +180,12 @@ def collect(day: MarketDay, cache: Path) -> pd.DataFrame:
     if price_path.exists():
         prices = electricity_maps.read_day(price_path)
     else:
+        started_at = datetime.now(UTC)
         prices = electricity_maps.fetch_day(key, ZONES)
         prices.to_csv(price_path, index=False)
+        urls = [f"{electricity_maps.BASE_URL}?{urllib.parse.urlencode(electricity_maps.query(zone, day))}"
+                for zone in ZONES]
+        record_retrieval(price_path, urls, started_at)
     prices = prices[prices.zone.isin(ZONES)]
     electricity_maps.market.check_complete(prices, day, ZONES)
     frame = context.drop(columns="alpha").merge(
@@ -185,7 +255,8 @@ def main() -> None:
         raise RuntimeError("No complete days collected; see failures.json")
     frame = classify(pd.concat(frames, ignore_index=True), args.price_tolerance)
     purchases = []
-    for key in sorted(frame.interval.dt.tz_convert("Europe/Warsaw").dt.date.unique()):
+    completed_dates = sorted(frame.interval.dt.tz_convert("Europe/Warsaw").dt.date.unique())
+    for key in completed_dates:
         purchases.append(procurement_frame(pse("mbp-tp", str(key), cache), pse("wmb", str(key), cache)))
     frame = frame.merge(pd.concat(purchases, ignore_index=True), on="interval", how="left", validate="one_to_one")
     frame.to_csv(args.output / "intervals.csv", index=False)
@@ -198,7 +269,8 @@ def main() -> None:
                     binding_known=int(frame.binding_known.sum()),
                     procurement_intervals=int(frame.procured_mw.notna().sum()),
                     active_procurement_intervals=int(frame.loc[frame.binding_export, "procured_mw"].notna().sum()),
-                    price_tolerance_eur_mwh=args.price_tolerance)
+                    price_tolerance_eur_mwh=args.price_tolerance,
+                    retrieval=retrieval_coverage(cache, [str(day) for day in completed_dates]).model_dump(mode="json"))
     (args.output / "coverage.json").write_text(json.dumps(coverage, indent=2))
     print(summary.to_string(index=False), flush=True)
     if failures:
