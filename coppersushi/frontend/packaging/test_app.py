@@ -6,7 +6,7 @@ from coppersushi import REPO
 
 @pytest.fixture(autouse=True)
 def synthetic_catalog(monkeypatch):
-    monkeypatch.setenv('COPPERSUSHI_ELEMENT_CATALOG', str(REPO/'coppersushi/testdata/element-catalog'))
+    monkeypatch.setenv('COPPERSUSHI_ELEMENT_CATALOG', str(REPO/'coppersushi/pipelines/grid/testdata/element-catalog'))
 
 
 

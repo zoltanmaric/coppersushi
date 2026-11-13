@@ -6,7 +6,7 @@ from coppersushi.pipelines.grid.data_sources import element_catalog
 from coppersushi.pipelines.cnec.data_sources import jao
 from coppersushi.pipelines.grid.data_sources import osm_locator
 
-FIXTURE = REPO/'coppersushi/testdata/element-catalog'
+FIXTURE = REPO/'coppersushi/pipelines/grid/testdata/element-catalog'
 
 
 def test_runtime_discovers_absent_and_missing_publications_without_replacing_reviewed_rows(monkeypatch):

@@ -34,7 +34,7 @@ coppersushi/infra/lambda/*.tfplan
 121gigawatts
 coppersushi/frontend/dist
 data/
-coppersushi/testdata/
+**/testdata/
 **/test_*.py
 coppersushi/networks/candidates/
 

@@ -6,7 +6,7 @@ from coppersushi.pipelines.powerflow.snapshot import NetworkSnapshot
 
 class TestNetworkSnapshot:
     def test_node_infos(self):
-        n = pypsa.Network('coppersushi/testdata/networks/v1-sample.nc')
+        n = pypsa.Network('coppersushi/pipelines/powerflow/testdata/networks/v1-sample.nc')
         ns = NetworkSnapshot(n, n.snapshots[6])
         assert len(ns.buses) == 13
 

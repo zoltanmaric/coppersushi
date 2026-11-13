@@ -6,8 +6,8 @@ from pathlib import Path
 
 from coppersushi import PACKAGE
 
-ILLEGAL_TRANSFORM = REPO / 'coppersushi/testdata' / "io-boundary" / "illegal_transform.py"
-NAIVE_TIME = REPO / 'coppersushi/testdata' / "naive-time" / "naive_time.py"
+ILLEGAL_TRANSFORM = REPO / 'coppersushi/pipelines/testdata/io-boundary' / "illegal_transform.py"
+NAIVE_TIME = REPO / 'coppersushi/pipelines/testdata/naive-time' / "naive_time.py"
 
 # These are the direct APIs the project currently promises to keep in adapters.
 # Dynamic calls and transitive third-party I/O are intentionally outside the check.
@@ -56,7 +56,7 @@ def test_transformations_do_not_perform_direct_io():
     violations = [
         violation
         for path in PACKAGE.rglob("*.py")
-        if not path.name.startswith("test_") and not is_boundary(path)
+        if "testdata" not in path.parts and not path.name.startswith("test_") and not is_boundary(path)
         for violation in direct_io_violations(path)
     ]
     assert violations == []
@@ -90,7 +90,7 @@ def test_timestamps_state_their_timezone():
     violations = [
         violation
         for path in PACKAGE.rglob("*.py")
-        if not path.name.startswith("test_")
+        if "testdata" not in path.parts and not path.name.startswith("test_")
         for violation in implicit_timezone_violations(path)
     ]
     assert violations == []

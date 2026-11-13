@@ -15,7 +15,6 @@ __pycache__/
 # Bulk JAO observations and generated catalogs are rebuilt locally; reviewed mappings
 # are tracked in config/. See config/element-catalog/README.md for source terms.
 /data/jao/
-/coppersushi/testdata/jao/
 /wiki/.obsidian/
 *.code-workspace
 

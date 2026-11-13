@@ -8,7 +8,7 @@ from coppersushi import REPO
 from coppersushi.pipelines.grid.data_sources.element_catalog import InvalidCatalog
 from coppersushi.pipelines.grid.data_sources.element_catalog import load
 
-FIXTURE = REPO / 'coppersushi/testdata' / 'element-catalog'
+FIXTURE = REPO / 'coppersushi/pipelines/grid/testdata/element-catalog'
 
 
 def test_valid_catalog_preserves_ambiguous_names_and_distinct_legs():

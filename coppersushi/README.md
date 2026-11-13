@@ -22,7 +22,7 @@ and `data/` contains ignored local caches and generated publications. Shared wor
 tooling, dependency locks and credentials remain at the repository root. `PRODUCT`
 and `REPO` in `__init__.py` distinguish these two roots explicitly.
 
-Tests are colocated with their source. Shared checked-in fixtures live in `testdata/`.
+Tests are colocated with their source. Checked-in fixtures live in each owning component’s `testdata/`; cross-component tests reuse them there.
 Run `pixi run test-app` from the repository root. Agent files link to local READMEs;
 architecture explanations belong in these READMEs, while local instructions describe
 how to work within each boundary.

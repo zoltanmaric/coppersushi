@@ -8,7 +8,7 @@ from shapely.geometry import shape
 from coppersushi import REPO
 from coppersushi.pipelines.grid import bidding_zones
 
-FIXTURE = REPO / 'coppersushi/testdata' / "bidding-zones" / "zone-shapes.geojson"
+FIXTURE = REPO / 'coppersushi/pipelines/grid/testdata/bidding-zones' / "zone-shapes.geojson"
 
 
 def zone_shapes() -> gpd.GeoDataFrame:

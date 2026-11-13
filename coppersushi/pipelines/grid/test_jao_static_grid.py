@@ -5,7 +5,7 @@ from coppersushi import REPO
 from coppersushi.pipelines.grid import static_grid
 from coppersushi.pipelines.grid.data_sources import jao_static_grid
 
-FIXTURES = REPO / 'coppersushi/testdata' / "static-grid"
+FIXTURES = REPO / 'coppersushi/pipelines/grid/testdata/static-grid'
 
 
 def sheet(name: str) -> pd.DataFrame:

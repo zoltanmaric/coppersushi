@@ -6,7 +6,7 @@ import pytest
 
 from coppersushi.pipelines.powerflow.data_sources import networks
 
-FIXTURE = REPO / 'coppersushi/testdata' / "networks" / "v1-sample.nc"
+FIXTURE = REPO / 'coppersushi/pipelines/powerflow/testdata/networks' / "v1-sample.nc"
 
 
 def test_pointer_is_reported_readably(tmp_path):

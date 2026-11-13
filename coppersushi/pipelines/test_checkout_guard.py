@@ -8,7 +8,7 @@ import unittest
 
 
 ROOT = REPO
-FIXTURES = REPO / 'coppersushi/testdata/checkout-guard'
+FIXTURES = REPO / 'coppersushi/pipelines/testdata/checkout-guard'
 
 
 class CheckoutGuardTests(unittest.TestCase):

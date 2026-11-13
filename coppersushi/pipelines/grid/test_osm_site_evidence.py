@@ -7,8 +7,7 @@ import pytest
 from coppersushi import REPO
 from coppersushi.pipelines.grid.data_sources import catalog_backfill
 
-FIXTURES = REPO/'coppersushi/testdata'
-SUPPLEMENT = FIXTURES/'catalog-sweep/supplement'
+SUPPLEMENT = (REPO / 'coppersushi/pipelines/grid/testdata/catalog-sweep/supplement')
 
 
 @pytest.fixture
@@ -25,7 +24,7 @@ def evidence_cache(tmp_path, monkeypatch):
 @pytest.mark.parametrize('invalid', ['truncated.json', 'incomplete-osm.json'])
 def test_invalid_cached_evidence_is_fetched_again(evidence_cache, monkeypatch, invalid):
     path = evidence_cache/'osm-way-424242.json'
-    shutil.copyfile(FIXTURES/'runtime-data'/invalid, path)
+    shutil.copyfile((REPO / 'coppersushi/pipelines/data_sources/testdata/runtime-data')/invalid, path)
     calls = []
     valid = (SUPPLEMENT/'osm-way-424242.json').read_bytes()
     def download(*args, **kwargs):
@@ -58,7 +57,7 @@ def test_invalid_download_cannot_replace_valid_evidence(evidence_cache, monkeypa
     shutil.copyfile(SUPPLEMENT/'osm-way-424242.json', path)
     before = path.read_bytes()
     monkeypatch.setattr(catalog_backfill.urllib.request, 'urlopen',
-                        lambda *args, **kwargs: (FIXTURES/'runtime-data/incomplete-osm.json').open('rb'))
+                        lambda *args, **kwargs: ((REPO / 'coppersushi/pipelines/data_sources/testdata/runtime-data/incomplete-osm.json')).open('rb'))
     with pytest.raises(ValueError, match='complete closed'):
         catalog_backfill.fetch_site_evidence(evidence_cache, refresh=True)
     assert path.read_bytes() == before

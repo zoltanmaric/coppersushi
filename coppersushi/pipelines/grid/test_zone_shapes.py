@@ -10,7 +10,7 @@ from coppersushi.pipelines.grid.data_sources import zone_shapes
 
 
 def test_bundled_outlines_preserve_the_same_zone_polygons(tmp_path):
-    features = json.loads((REPO / 'coppersushi/testdata/bidding-zones/zone-shapes.geojson').read_text())['features']
+    features = json.loads((REPO / 'coppersushi/pipelines/grid/testdata/bidding-zones/zone-shapes.geojson').read_text())['features']
     source = gpd.GeoDataFrame.from_features(features, crs='EPSG:4326')
     expected = bidding_zones.core_zone_shapes(source, ('AT', 'BE', 'DE'))
     path = tmp_path / 'zones.geojson'

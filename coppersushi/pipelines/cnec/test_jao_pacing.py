@@ -13,7 +13,7 @@ from coppersushi.pipelines.cnec.data_sources import jao
 
 START = pd.Timestamp('2026-01-01', tz='UTC')
 END = pd.Timestamp('2026-01-02', tz='UTC')
-PAYLOAD = REPO / 'coppersushi/testdata/synthetic-jao/active-fb-day.json'
+PAYLOAD = REPO / 'coppersushi/pipelines/cnec/testdata/synthetic-jao/active-fb-day.json'
 
 
 @pytest.mark.parametrize('rate', [40, 90, 180])

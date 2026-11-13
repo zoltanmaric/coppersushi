@@ -15,7 +15,7 @@ from coppersushi.pipelines.data_model.network_views import BiddingZoneShapes
 from coppersushi.pipelines.market_day import MarketDay
 from coppersushi.pipelines.market_day import MARKET_TZ
 
-ROOT = REPO / 'coppersushi/testdata/cnec-attribution/observed'
+ROOT = REPO / 'coppersushi/pipelines/cnec/testdata/cnec-attribution/observed'
 
 def table(name, schema):
     frame = pd.read_csv(ROOT / f'{name}.csv')
@@ -84,7 +84,7 @@ def test_geometry_budget_retains_locations_and_every_interval():
     row = table('physical', ActiveConstraints).iloc[[0]]
     constraints = pd.concat([row.assign(interval=t, source_id=i) for i, t in enumerate(times)], ignore_index=True).pipe(ActiveConstraints.validate)
     empty = MappedCnecElements.validate(pd.DataFrame(columns=list(MappedCnecElements.to_schema().columns)))
-    located = mapped_elements(REPO / 'coppersushi/testdata/element-catalog')
+    located = mapped_elements(REPO / 'coppersushi/pipelines/grid/testdata/element-catalog')
     ticks = iter([0., 0., 30., 61.])
     calls = []
 

@@ -10,7 +10,7 @@ from coppersushi.pipelines.grid.country_outline import country_rings
 
 
 def test_real_polish_riverbanks_do_not_become_an_inland_cap_border():
-    fixture = REPO / 'coppersushi/testdata/cnec-price-map/poland-inland-channel.geojson'
+    fixture = REPO / 'coppersushi/pipelines/cnec/testdata/cnec-price-map/poland-inland-channel.geojson'
     land = shape(json.loads(fixture.read_text())['geometry'])
     inland = box(18.1, 52.6, 19.4, 54.0)
     assert land.boundary.intersects(inland)  # This source reproduced the visible false border.

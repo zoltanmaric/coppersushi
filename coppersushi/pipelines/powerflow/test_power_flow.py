@@ -10,7 +10,7 @@ from coppersushi.pipelines.powerflow import power_flow as ppf
 class TestPlotPowerFlow:
     @pytest.fixture
     def n(self):
-        return pypsa.Network('coppersushi/testdata/networks/v1-sample.nc')
+        return pypsa.Network('coppersushi/pipelines/powerflow/testdata/networks/v1-sample.nc')
 
     def test_get_branch_info_for_snapshot(self, n):
         branch_info = ppf.get_branch_info(n)

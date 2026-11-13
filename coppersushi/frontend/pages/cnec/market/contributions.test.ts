@@ -1,8 +1,8 @@
-import physicalCsv from '../../../../testdata/cnec-attribution/observed/physical.csv?raw';
-import ptdfsCsv from '../../../../testdata/cnec-attribution/observed/ptdfs.csv?raw';
-import pricesCsv from '../../../../testdata/cnec-attribution/observed/prices.csv?raw';
-import contextCsv from '../../../../testdata/cnec-attribution/observed/context.csv?raw';
-import selection from '../../../../testdata/cnec-attribution/observed/selection.json';
+import physicalCsv from '../../../../pipelines/cnec/testdata/cnec-attribution/observed/physical.csv?raw';
+import ptdfsCsv from '../../../../pipelines/cnec/testdata/cnec-attribution/observed/ptdfs.csv?raw';
+import pricesCsv from '../../../../pipelines/cnec/testdata/cnec-attribution/observed/prices.csv?raw';
+import contextCsv from '../../../../pipelines/cnec/testdata/cnec-attribution/observed/context.csv?raw';
+import selection from '../../../../pipelines/cnec/testdata/cnec-attribution/observed/selection.json';
 import { describe, expect, test } from "vitest";
 import { contributions } from "./contributions";
 import type { MarketInterval } from "../../../data/contracts";

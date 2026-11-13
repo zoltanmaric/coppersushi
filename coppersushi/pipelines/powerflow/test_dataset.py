@@ -12,7 +12,7 @@ from coppersushi.pipelines.powerflow import power_flow
 
 @pytest.fixture(scope='module')
 def dataset() -> tuple[pypsa.Network, Dataset]:
-    network = pypsa.Network(Path(__file__).parents[3] / 'coppersushi/testdata/networks/v1-sample.nc')
+    network = pypsa.Network(Path(__file__).parents[3] / 'coppersushi/pipelines/powerflow/testdata/networks/v1-sample.nc')
     return network, extract(network)
 
 

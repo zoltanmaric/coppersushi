@@ -134,7 +134,7 @@ def test_explicit_opf_directory_overrides_production_mode(monkeypatch):
         raise AssertionError('Local candidate preview must not fetch production')
     monkeypatch.setattr(preview, 'urlopen', unexpected)
     app = preview.create_app(production_data=True)
-    app.config['OPF_PREVIEW_DIRECTORY'] = PRODUCT / 'testdata/opf-embed'
+    app.config['OPF_PREVIEW_DIRECTORY'] = PRODUCT / 'frontend/packaging/testdata/opf-embed'
     response = app.test_client().get('/data/opf/v2/opf-2024/snapshots.csv')
     assert response.status_code == 200
     assert b'snapshot' in response.data

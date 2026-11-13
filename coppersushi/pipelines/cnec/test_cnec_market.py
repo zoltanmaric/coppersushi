@@ -8,14 +8,14 @@ from coppersushi.pipelines.cnec import elements as cnecs
 from coppersushi.pipelines.cnec import prices as market
 from coppersushi.pipelines.data_model.market import ElectricityMapsPriceResponse
 
-FIXTURE = REPO / 'coppersushi/testdata' / "synthetic-jao" / "active-fb-day.json"
+FIXTURE = REPO / 'coppersushi/pipelines/cnec/testdata/synthetic-jao' / "active-fb-day.json"
 
 
 def active_rows() -> list[dict]:
     return json.loads(FIXTURE.read_text())["data"]
 
 
-PRICE_FIXTURE = REPO / 'coppersushi/testdata' / "synthetic-electricity-maps" / "day-ahead-prices-day.json"
+PRICE_FIXTURE = REPO / 'coppersushi/pipelines/cnec/testdata/synthetic-electricity-maps' / "day-ahead-prices-day.json"
 
 
 def price_payloads() -> list[ElectricityMapsPriceResponse]:

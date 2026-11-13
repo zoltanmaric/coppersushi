@@ -17,7 +17,7 @@ from coppersushi.pipelines.data_model.cnec_attribution import AllocationConstrai
 from coppersushi.pipelines.data_model.cnec_attribution import NetPosition
 from coppersushi.pipelines.data_model.cnec_attribution import PolishAlternative
 
-FIXTURE = REPO / "coppersushi/testdata/cnec-attribution"
+FIXTURE = REPO / "coppersushi/pipelines/cnec/testdata/cnec-attribution"
 
 
 def inputs():

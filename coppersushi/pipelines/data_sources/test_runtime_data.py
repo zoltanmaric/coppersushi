@@ -13,32 +13,34 @@ from coppersushi.pipelines.cnec.data_sources import jao
 from coppersushi.pipelines.grid.data_sources import osm_locator
 from coppersushi.pipelines.grid.data_sources import zone_shapes
 
-FIXTURES = REPO/'coppersushi/testdata'
+GRID = REPO / 'coppersushi/pipelines/grid/testdata'
+CNEC = REPO / 'coppersushi/pipelines/cnec/testdata'
+FIXTURES = REPO / 'coppersushi/pipelines/data_sources/testdata'
 
 
 def test_missing_catalog_has_actionable_setup_command(tmp_path, monkeypatch):
     monkeypatch.setenv('COPPERSUSHI_ELEMENT_CATALOG', str(tmp_path/'absent'))
-    monkeypatch.setattr(jao, 'read_element_ends', lambda: pd.read_csv(FIXTURES/'element-catalog/discovered-ends.csv'))
-    monkeypatch.setattr(osm_locator, 'read_csvs', lambda: pd.read_csv(FIXTURES/'cnec-price-map/located-substations.csv'))
+    monkeypatch.setattr(jao, 'read_element_ends', lambda: pd.read_csv(GRID / 'element-catalog/discovered-ends.csv'))
+    monkeypatch.setattr(osm_locator, 'read_csvs', lambda: pd.read_csv(CNEC / 'cnec-price-map/located-substations.csv'))
     with pytest.raises(RuntimeError, match='pixi run --locked setup-app'):
         runtime_data.check()
 
 
 def test_empty_required_table_is_not_ready(tmp_path, monkeypatch):
-    shutil.copytree(FIXTURES/'element-catalog', tmp_path/'catalog')
+    shutil.copytree(GRID / 'element-catalog', tmp_path/'catalog')
     monkeypatch.setenv('COPPERSUSHI_ELEMENT_CATALOG', str(tmp_path/'catalog'))
     # An empty catalog is relationally valid, but cannot serve an application.
     for table in element_catalog.TABLES:
         path = tmp_path/'catalog'/f'{table}.csv'
         path.write_text(path.read_text().splitlines()[0]+'\n')
-    monkeypatch.setattr(jao, 'read_element_ends', lambda: pd.read_csv(FIXTURES/'element-catalog/discovered-ends.csv'))
-    monkeypatch.setattr(osm_locator, 'read_csvs', lambda: pd.read_csv(FIXTURES/'cnec-price-map/located-substations.csv'))
+    monkeypatch.setattr(jao, 'read_element_ends', lambda: pd.read_csv(GRID / 'element-catalog/discovered-ends.csv'))
+    monkeypatch.setattr(osm_locator, 'read_csvs', lambda: pd.read_csv(CNEC / 'cnec-price-map/located-substations.csv'))
     with pytest.raises(RuntimeError, match='table sites is empty'):
         runtime_data.check()
 
 
 def test_preparation_compiles_fresh_checkout_and_reuses_downloads(tmp_path, monkeypatch):
-    root = FIXTURES/'catalog-sweep'
+    root = GRID / 'catalog-sweep'
     monkeypatch.setattr(osm_locator, 'EXPECTED_TEMPLATES', frozenset({'AT'}))
     monkeypatch.setattr(runtime_data, 'PRODUCT', tmp_path)
     monkeypatch.delenv('COPPERSUSHI_ELEMENT_CATALOG', raising=False)
@@ -79,7 +81,7 @@ def test_preparation_compiles_fresh_checkout_and_reuses_downloads(tmp_path, monk
     monkeypatch.setattr(runtime_data.catalog_sweep, 'sweep', compile_catalog)
     def outlines():
         calls.append('outlines')
-        shutil.copyfile(FIXTURES/'runtime-data/zones.geojson', zone_shapes.BUNDLE)
+        shutil.copyfile(FIXTURES / 'runtime-data/zones.geojson', zone_shapes.BUNDLE)
     monkeypatch.setattr(zone_shapes, 'build', outlines)
     monkeypatch.setattr(zone_shapes, 'load', lambda: zone_shapes.read(zone_shapes.BUNDLE))
     monkeypatch.setattr(runtime_data.networks, 'solved', lambda day: buses)
@@ -100,17 +102,17 @@ def test_preparation_compiles_fresh_checkout_and_reuses_downloads(tmp_path, monk
     runtime_data.prepare(MarketDay.on('2026-01-01'))
     assert calls == ['domain', 'seed', 'compile', 'outlines']
 
-    shutil.copyfile(FIXTURES/'runtime-data/missing-hour.csv', jao.day_dir('2026-01-01')/'elements.csv')
+    shutil.copyfile(FIXTURES / 'runtime-data/missing-hour.csv', jao.day_dir('2026-01-01')/'elements.csv')
     calls.clear()
     runtime_data.prepare(MarketDay.on('2026-01-01'))
     assert calls == ['domain', 'compile']
 
 
 def test_truncated_catalog_reports_setup_command(tmp_path, monkeypatch):
-    shutil.copytree(FIXTURES/'element-catalog', tmp_path/'catalog')
-    shutil.copyfile(FIXTURES/'runtime-data/truncated.csv', tmp_path/'catalog/site_names.csv')
+    shutil.copytree(GRID / 'element-catalog', tmp_path/'catalog')
+    shutil.copyfile(FIXTURES / 'runtime-data/truncated.csv', tmp_path/'catalog/site_names.csv')
     monkeypatch.setenv('COPPERSUSHI_ELEMENT_CATALOG', str(tmp_path/'catalog'))
-    monkeypatch.setattr(jao, 'read_element_ends', lambda: pd.read_csv(FIXTURES/'element-catalog/discovered-ends.csv'))
-    monkeypatch.setattr(osm_locator, 'read_csvs', lambda: pd.read_csv(FIXTURES/'cnec-price-map/located-substations.csv'))
+    monkeypatch.setattr(jao, 'read_element_ends', lambda: pd.read_csv(GRID / 'element-catalog/discovered-ends.csv'))
+    monkeypatch.setattr(osm_locator, 'read_csvs', lambda: pd.read_csv(CNEC / 'cnec-price-map/located-substations.csv'))
     with pytest.raises(RuntimeError, match='pixi run --locked setup-app'):
         runtime_data.check()

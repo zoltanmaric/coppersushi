@@ -79,7 +79,7 @@ def test_attribution_boundary_rejects_out_of_range_alpha(alpha):
     import pandas as pd
     from pandera.errors import SchemaError
     from coppersushi.pipelines.data_model.cnec_attribution import AttributionContext
-    path = REPO / 'coppersushi/testdata/cnec-attribution/observed/context.csv'
+    path = REPO / 'coppersushi/pipelines/cnec/testdata/cnec-attribution/observed/context.csv'
     frame = pd.read_csv(path)
     frame.interval = pd.to_datetime(frame.interval, utc=True)
     with pytest.raises(SchemaError):
@@ -92,7 +92,7 @@ def test_interrupted_checkpoint_preserves_report_and_resume_skips_existing_manif
     from coppersushi.pipelines.cnec.data_sources import backfill
     monkeypatch.setattr(backfill.jao, '_pacer', backfill.jao.RequestPacer())
     report = tmp_path / 'report.jsonl'
-    original = (REPO / 'coppersushi/testdata/backfill/blocked.json').read_text()
+    original = (REPO / 'coppersushi/pipelines/cnec/testdata/backfill/blocked.json').read_text()
     report.write_text(original)
     result = backfill.Coverage.model_validate_json(original).model_copy(
         update={'status':'eligible', 'errors':[]})

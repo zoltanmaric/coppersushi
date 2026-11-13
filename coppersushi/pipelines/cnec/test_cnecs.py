@@ -9,7 +9,7 @@ from coppersushi.pipelines.cnec import elements as cnecs
 from coppersushi.pipelines.data_model.jao import Elements
 from coppersushi.pipelines.data_model.jao import ZonedTimestamp
 
-FIXTURES = REPO / 'coppersushi/testdata' / "synthetic-jao"
+FIXTURES = REPO / 'coppersushi/pipelines/cnec/testdata/synthetic-jao'
 
 
 def rows(name: str) -> list[dict]:

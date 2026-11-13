@@ -13,6 +13,6 @@ configuration and credentials access live in `data_sources/`. A shared helper ne
 actual callers in multiple features. No request-serving application is required for
 published map data.
 
-Tests sit beside source; fixture files live in `../testdata/`. Run the root Pixi test
+Tests sit beside source; fixtures live in the owning component’s `testdata/`. Run the root Pixi test
 and typecheck tasks. Update this overview and the owning feature README when changing
 responsibility or a publication boundary.

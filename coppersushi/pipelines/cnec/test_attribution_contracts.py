@@ -12,7 +12,7 @@ from coppersushi import REPO
 from coppersushi.pipelines.data_model.cnec_attribution import AlphaFactor
 from coppersushi.pipelines.cnec.data_sources import cnec_attribution as source
 
-FIXTURE = REPO / "coppersushi/testdata/cnec-attribution"
+FIXTURE = REPO / "coppersushi/pipelines/cnec/testdata/cnec-attribution"
 CASES = json.loads((FIXTURE / "alpha-records.json").read_text())
 
 

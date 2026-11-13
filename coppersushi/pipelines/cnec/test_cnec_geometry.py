@@ -19,7 +19,7 @@ from coppersushi.pipelines.data_model.jao import Elements
 from coppersushi.pipelines.data_model.osm_locator import LocatedSubstations
 from coppersushi.pipelines.cnec.data_sources import jao
 
-FIXTURES = REPO / 'coppersushi/testdata' / "cnec-geometry"
+FIXTURES = REPO / 'coppersushi/pipelines/cnec/testdata/cnec-geometry'
 
 ALIASES = {"Suedhafen": "Nordkamp"}
 NORDKAMP = (13.5, 48.5)

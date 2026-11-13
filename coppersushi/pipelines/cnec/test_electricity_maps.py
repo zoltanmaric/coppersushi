@@ -14,7 +14,7 @@ from coppersushi.pipelines.data_model.market import ElectricityMapsPriceResponse
 from coppersushi.pipelines.cnec.data_sources import electricity_maps
 from coppersushi.pipelines.market_day import MarketDay
 
-FIXTURES = REPO / 'coppersushi/testdata' / "synthetic-electricity-maps"
+FIXTURES = REPO / 'coppersushi/pipelines/cnec/testdata/synthetic-electricity-maps'
 
 
 def hourly_day() -> ElectricityMapsPriceResponse:

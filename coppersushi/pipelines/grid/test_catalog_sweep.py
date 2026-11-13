@@ -1,6 +1,6 @@
 """Synthetic cache imports and backfill coverage."""
 from coppersushi import REPO
-FIXTURE = REPO / 'coppersushi/testdata' / 'element-catalog'
+FIXTURE = REPO / 'coppersushi/pipelines/grid/testdata/element-catalog'
 
 
 import pytest
@@ -31,7 +31,7 @@ def test_sweep_is_repeatable_and_keeps_conflicting_source_names(tmp_path):
 def test_backfill_includes_nonpresolved_physical_elements():
     import json
     from coppersushi.pipelines.grid.data_sources.catalog_backfill import endpoints
-    path = FIXTURE.parent/'synthetic-jao'/'final-computation-hour.json'
+    path = REPO/'coppersushi/pipelines/cnec/testdata/synthetic-jao'/'final-computation-hour.json'
     frame = endpoints(json.loads(path.read_text())['data'])
     line = frame[frame.eic.eq('94T-220-0-N203AR')].iloc[0]
     assert line.substation_from == 'Silverbeck 2'
@@ -279,7 +279,7 @@ def test_sweep_rebuilds_damaged_generated_catalog(tmp_path, damage):
         elif damage == 'bad_header':
             shutil.copyfile(FIXTURE/'invalid.sql', path)
         else:
-            shutil.copyfile(FIXTURE.parent/'runtime-data/truncated.csv', path)
+            shutil.copyfile(REPO/'coppersushi/pipelines/data_sources/testdata/runtime-data/truncated.csv', path)
     sweep(root/'cache', root/'backfill', output, root/'config')
     with load(output) as db:
         assert db.execute('SELECT count(*) FROM elements').fetchone()[0] > 0

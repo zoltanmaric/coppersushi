@@ -8,7 +8,7 @@ from coppersushi.pipelines.cnec import prices as market
 from coppersushi.pipelines.data_model.market import ElectricityMapsPriceResponse
 from coppersushi.pipelines.market_day import MarketDay
 
-FIXTURES = REPO / 'coppersushi/testdata' / "synthetic-electricity-maps"
+FIXTURES = REPO / 'coppersushi/pipelines/cnec/testdata/synthetic-electricity-maps'
 
 
 def payloads() -> list[ElectricityMapsPriceResponse]:

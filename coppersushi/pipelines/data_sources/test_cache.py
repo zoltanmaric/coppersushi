@@ -7,7 +7,7 @@ import pytest
 from coppersushi import REPO
 from coppersushi.pipelines.data_sources import cache
 
-FILES = json.loads((REPO / "coppersushi/testdata/cache-bundle.json").read_text())
+FILES = json.loads((REPO / "coppersushi/pipelines/data_sources/testdata/cache-bundle.json").read_text())
 NAMES = tuple(FILES)
 
 

@@ -11,7 +11,7 @@ import pytest
 from coppersushi import REPO
 from coppersushi.pipelines.grid.data_sources import osm_locator
 
-FIXTURES = REPO / 'coppersushi/testdata' / "synthetic-osm-locator"
+FIXTURES = REPO / 'coppersushi/pipelines/grid/testdata/synthetic-osm-locator'
 
 
 @pytest.fixture(autouse=True)
