@@ -44,5 +44,5 @@ export function renderHour(metadata:Metadata, interval:Interval, colorscale:unkn
     {type:'scattermapbox',...easy,mode:'lines',line:{width:.5,color:'gray'},hoverinfo:'none'},
     {type:'scattermapbox',lon:arrows.lon,lat:arrows.lat,text:arrows.text,mode:'markers',hoverinfo:'text',hoverlabel:{bgcolor:'#222',bordercolor:'#666',font:{color:'#eee'}},marker:{size:7,symbol:'triangle',angle:arrows.angle}},
     {type:'scattermapbox',lon,lat,text,mode:'markers',hoverinfo:'text',marker:{color:power,colorscale,reversescale:true,cmin:-POWER_SCALE_MW,cmax:POWER_SCALE_MW,size:power.map(Math.abs),sizemin:2.5,sizemode:'area',sizeref:(Math.max(...power.map(Math.abs))||1)/121}}
-  ],layout:{uirevision:'opf-2024',showlegend:false,hovermode:'closest',margin:{l:0,r:0,t:0,b:0},mapbox:{style:'dark',center:{lat:53,lon:9},zoom:3.9,pitch:60}}};
+  ],layout:{paper_bgcolor:'#191a1a',uirevision:'opf-2024',showlegend:false,hovermode:'closest',margin:{l:0,r:0,t:0,b:0},mapbox:{style:'dark',center:{lat:53,lon:9},zoom:3.9,pitch:60}}};
 }
