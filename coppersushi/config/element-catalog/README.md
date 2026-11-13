@@ -27,9 +27,9 @@ representative hour per still-missing identity in each pass, with a request budg
 Run long backfills under the project's job-supervision procedure.
 
 ```sh
-python -m coppersushi.pipelines.grid.data_sources.catalog_backfill --cache-root data --output data/research/element-catalog --max-requests 40 --fetch-osm
-python -m coppersushi.pipelines.grid.data_sources.catalog_sweep --cache-root data --backfill data/research/element-catalog --output data/element-catalog
-python -m coppersushi.pipelines.grid.data_sources.element_catalog data/element-catalog
+python -m coppersushi.pipelines.grid.data_sources.catalog_backfill --cache-root coppersushi/data --output coppersushi/data/research/element-catalog --max-requests 40 --fetch-osm
+python -m coppersushi.pipelines.grid.data_sources.catalog_sweep --cache-root coppersushi/data --backfill coppersushi/data/research/element-catalog --output coppersushi/data/element-catalog
+python -m coppersushi.pipelines.grid.data_sources.element_catalog coppersushi/data/element-catalog
 ```
 
 The sweep also writes coverage, contingency references, source hashes and a summary.
@@ -75,7 +75,7 @@ and evidence recorded explicitly in `element-assessments.csv`.
 
 ## Serve
 
-The app defaults to `data/element-catalog`; set `COPPERSUSHI_ELEMENT_CATALOG` to
+The app defaults to `coppersushi/data/element-catalog`; set `COPPERSUSHI_ELEMENT_CATALOG` to
 select another snapshot. Known publications use validated site connections.
 New identities and publications missing endpoint metadata use the viewed-hour JAO
 fetch and live locator. Recorded conflicts, ambiguous sites and unresolved site names

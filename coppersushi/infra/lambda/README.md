@@ -43,43 +43,10 @@ Use one merged checkout for preparation, publication and rollback notes:
 Ordinary frontend updates require no image build or Terraform apply. Preserve immutable
 OPF generations so cached manifests and rollback shells continue to resolve.
 
-## Cut over from the serving Lambda
-
-Do not retire the server before static data and shells are published.
-
-1. Back up state, variables and old Terraform source revision. Record the serving
-   image digest and Function URL for rollback. Remove `image_uri` from the new
-   inputs; preserve `producer_image_uri`, bucket, repository and secret resources.
-2. Publish and verify the frontend and OPF data as above in local standalone preview.
-3. Refresh tracked Terraform source and initialize the existing working directory.
-   Save a **routing-only** plan:
-
-   ```sh
-   terraform -chdir=.secrets/aws-production plan -target=aws_cloudfront_distribution.app -target=aws_s3_bucket_policy.cache -out=static-routing.tfplan
-   terraform -chdir=.secrets/aws-production show static-routing.tfplan
-   terraform -chdir=.secrets/aws-production apply static-routing.tfplan
-   ```
-
-   Review the plan: it changes CloudFront routing and origin permissions, with the
-   serving Lambda still present in state. The default origin is S3; unrecognized
-   app paths return 404 at the edge. Direct data behaviors expose only intended
-   `data/cnec/*` and `data/opf/*` prefixes.
-4. Wait for CloudFront deployment, invalidate the paths above, and complete public
-   browser verification. Confirm there are no Dash callback/component requests.
-   Confirm the publisher Lambda, workflow and daily schedule remain unchanged.
-5. Only after that verification, review a full saved plan and apply it to remove
-   the retired serving Lambda, public Function URL, permissions, role and log group.
-   No publisher, storage, secret, repository or schedule resources should be destroyed.
-
-Targeted apply is a one-time migration step. All subsequent infrastructure updates
-use full saved plans.
-
 ## Rollback
 
-Before retirement, restore the previous Terraform source and variables and review
-and apply a full plan to return CloudFront to the existing Lambda. After retirement,
-the same rollback recreates the server from its preserved image digest. Preserve
-that digest in ECR until the release is accepted.
+Restore the frontend and OPF manifest saved for the same release. For publisher
+changes, restore its previous image digest through a reviewed Terraform plan.
 
 Restore archived UI and OPF manifest with S3-to-S3 `cp --copy-props default`, then
 invalidate and verify again. Do not use timestamp-based `sync`: same-size older

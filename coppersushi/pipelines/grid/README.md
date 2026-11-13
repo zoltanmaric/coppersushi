@@ -21,4 +21,4 @@ flowchart LR
 `catalog_backfill.py` and `catalog_sweep.py` compile source evidence.
 `cnec_geometry.py` implements matching; `bidding_zones.py` and `static_grid.py`
 handle geography. Country preparation feeds the application build alongside
-[OPF preparation](../opf/README.md).
+[OPF preparation](../powerflow/README.md).
