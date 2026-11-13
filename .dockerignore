@@ -39,3 +39,5 @@ data/
 coppersushi/networks/candidates/
 
 /infra/
+
+/git-hooks/

@@ -1,4 +1,3 @@
-from coppersushi import REPO
 """Exercise native worktree creation against a local, deliberately stale clone."""
 from pathlib import Path
 import shutil
@@ -7,8 +6,8 @@ import tempfile
 import unittest
 
 
-ROOT = REPO
-FIXTURES = REPO / 'coppersushi/pipelines/testdata/checkout-guard'
+ROOT = Path(__file__).resolve().parent
+FIXTURES = ROOT / 'testdata'
 
 
 class CheckoutGuardTests(unittest.TestCase):
@@ -29,7 +28,7 @@ class CheckoutGuardTests(unittest.TestCase):
         self.git(self.seed, "commit", "-m", "fixture base")
         self.git(self.seed, "push", "origin", "main")
         self.git(self.directory, "clone", str(self.remote), str(self.clone))
-        subprocess.run(["python3", str(ROOT / "scripts/install-checkout-guard.py"), "--repo", str(self.clone)], check=True, capture_output=True)
+        subprocess.run(["python3", str(ROOT / "install.py"), "--repo", str(self.clone)], check=True, capture_output=True)
         shutil.copyfile(FIXTURES / "update.txt", self.seed / "update.txt")
         self.git(self.seed, "add", "update.txt")
         self.git(self.seed, "commit", "-m", "fixture update")
@@ -66,7 +65,7 @@ class CheckoutGuardTests(unittest.TestCase):
         shutil.copyfile(FIXTURES / "previous-hook", hooks / "post-checkout")
         (hooks / "post-checkout").chmod(0o755)
         for _ in range(2):
-            subprocess.run(["python3", str(ROOT / "scripts/install-checkout-guard.py"), "--repo", str(self.clone)], check=True, capture_output=True)
+            subprocess.run(["python3", str(ROOT / "install.py"), "--repo", str(self.clone)], check=True, capture_output=True)
         self.assertEqual((hooks / "post-checkout.before-base-guard").read_bytes(), (FIXTURES / "previous-hook").read_bytes())
         self.git(self.clone, "fetch", "origin")
         result = self.git(self.clone, "worktree", "add", "-b", "preserved", str(self.directory / "preserved"), "origin/main", check=False)

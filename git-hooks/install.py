@@ -22,7 +22,7 @@ def install(repo):
         if backup.exists():
             raise RuntimeError("An earlier hook backup exists; refusing to overwrite it")
         shutil.copy2(target, backup)
-    source = Path(__file__).parent / "hooks/post-checkout"
+    source = Path(__file__).parent / "post-checkout"
     temporary = hooks / "post-checkout.installing"
     shutil.copyfile(source, temporary)
     temporary.chmod(0o755)
