@@ -8,8 +8,8 @@ const metadata={version:2,nodes:[{id:'n',longitude:1,latitude:2,country:'DE',vol
 const interval=(i:number)=>({timestamp:`2024-08-29T${10+i}:00:00Z`,nodes:[{node:'n',net_power_mw:i,load_mw:null,generators:[]}],branches:[]});
 vi.mock('./render',()=>({POWER_SCALE_MW:150,renderHour:(_metadata:unknown,value:{nodes:{net_power_mw:number}[]})=>({data:[{name:`hour ${value.nodes[0].net_power_mw}`}],layout:{mapbox:{}}})}));
 const plot = vi.hoisted(()=>({auto:true,complete:()=>{}}));
-vi.mock('../../map/plot',()=>({Plot:({data,onRendered}:{data:{name:string}[];onRendered:()=>void})=>{
-  React.useEffect(()=>{plot.complete=onRendered;if(plot.auto) onRendered();},[data]);return <div data-testid="hour">{data[0].name}</div>;
+vi.mock('../../map/plot',()=>({Plot:({data,onRendered}:{data:{name:string}[];onRendered:(element:HTMLDivElement)=>void})=>{
+  React.useEffect(()=>{plot.complete=()=>onRendered(document.createElement('div'));if(plot.auto) plot.complete();},[data]);return <div data-testid="hour">{data[0].name}</div>;
 }}));
 afterEach(()=>{cleanup();vi.unstubAllGlobals();plot.auto=true;});
 test('late response from an old selection cannot replace the selected hour',async()=>{
@@ -39,11 +39,11 @@ test('loading stays visible until Plotly finishes the selected hour',async()=>{
   const client = new QueryClient({defaultOptions:{queries:{retry:false}}});
   render(<QueryClientProvider client={client}><OpfView token="test"/></QueryClientProvider>);
   await screen.findByText('hour 0');
-  expect(screen.getByText('Loading Power Flow…').getAttribute('role')).toBe('status');
+  expect(screen.getByText('Loading interval…').getAttribute('role')).toBe('status');
   const controls = screen.getByRole('slider').closest('.cnec-bottom-controls')!;
   const controlsBefore = controls.innerHTML;
   expect(controls.querySelector('[role=status]')).toBeNull();
   act(()=>plot.complete());
-  await waitFor(()=>expect(screen.queryByText('Loading Power Flow…')).toBeNull());
+  await waitFor(()=>expect(screen.queryByText('Loading interval…')).toBeNull());
   expect(controls.innerHTML).toBe(controlsBefore);
 });

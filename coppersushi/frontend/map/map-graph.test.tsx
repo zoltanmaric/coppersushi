@@ -128,13 +128,15 @@ test('a complete touch gesture selects fresh hits, retains its click, and dismis
 });
 
 test('a failed replacement reports its error without enabling clicks on unconfirmed pixels',async()=>{
-  const {rerender}=render(<MapGraph {...props(figure(0))}/>);
+  const onError=vi.fn();
+  const {rerender}=render(<MapGraph {...props(figure(0))} onError={onError}/>);
   await waitFor(()=>expect(draws).toHaveLength(1));
   await settle(0);
-  rerender(<MapGraph {...props(figure(1))}/>);
+  rerender(<MapGraph {...props(figure(1))} onError={onError}/>);
   await waitFor(()=>expect(draws).toHaveLength(2));
   await act(async()=>{draws[1].reject(new Error('GPU failure'));});
-  expect(screen.getByRole('alert').textContent).toContain('GPU failure');
+  expect(onError).toHaveBeenLastCalledWith(new Error('GPU failure'));
+  expect(screen.queryByRole('alert')).toBeNull();
   await act(async()=>{await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));});
   events.get('plotly_click')?.({points:[{customdata:['invalid']}]});
   expect(selections).toEqual([]);

@@ -8,7 +8,7 @@ import type {CoreZone} from '../pages/cnec/market/reference';
 type Origin = 'canvas' | 'country' | 'tooltip' | 'other';
 
 /** One owner for gesture targeting and the independently persistent hover dismissal. */
-export function useMapGestures(host: RefObject<HTMLDivElement>, map: MapboxMap | null, dismissible: boolean, onReference: (zone: CoreZone) => void) {
+export function useMapGestures(host: RefObject<HTMLDivElement>, map: MapboxMap | null, dismissible: boolean, onReference?: (zone: CoreZone) => void) {
   const origin = useRef<Origin>('other');
   const suppressed = useRef(false);
   const country = useRef<{zone: CoreZone; x: number; y: number} | null>(null);
@@ -33,7 +33,7 @@ export function useMapGestures(host: RefObject<HTMLDivElement>, map: MapboxMap |
       onPointerDownCapture: (event: React.PointerEvent<HTMLDivElement>) => {
         const target = event.target;
         ownership(target instanceof HTMLCanvasElement ? 'canvas' : target instanceof Element && target.closest('.hovertext') ? 'tooltip' : 'other');
-        const zone = origin.current === 'canvas' && map ? countryAtPointer(map, event.clientX, event.clientY) : null;
+        const zone = origin.current === 'canvas' && map && onReference ? countryAtPointer(map, event.clientX, event.clientY) : null;
         country.current = zone ? {zone, x: event.clientX, y: event.clientY} : null;
         if (zone) ownership('country');
         suppressed.current = zone !== null;
@@ -50,7 +50,7 @@ export function useMapGestures(host: RefObject<HTMLDivElement>, map: MapboxMap |
         if (origin.current === 'country' && hit && Math.hypot(event.clientX - hit.x, event.clientY - hit.y) <= 5) {
           event.preventDefault();
           event.stopPropagation();
-          onReference(hit.zone);
+          onReference?.(hit.zone);
         } else if (origin.current === 'tooltip' && dismissible) {
           event.preventDefault();
           event.stopPropagation();

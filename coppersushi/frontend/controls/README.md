@@ -13,3 +13,5 @@ flowchart LR
 ```
 
 [market](../pages/cnec/market/README.md) · [data](../pages/cnec/data/README.md) · [map](../map/README.md)
+
+`MapControls` positions legends, help, optional reference controls, status messages and the bottom panel. `IntervalControls` owns the time buttons and slider for both pages. Its date slot takes either a fixed date or `CalendarDateControls`; the CNEC page supplies calendar availability. Loading does not change the panel geometry.

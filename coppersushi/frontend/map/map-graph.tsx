@@ -11,9 +11,10 @@ import type {CountryLabel} from './country-labels';
 import type {CoreZone} from '../pages/cnec/market/reference';
 
 interface Props {
-  id: string; figure: PlotlyFigure; config: object; overlay: OverlayModel; hidden: boolean;
-  countries: CountryLabel[]; onReference: (zone: CoreZone) => void;
-  onClick: (event: unknown) => void; compactTooltips: boolean;
+  id: string; figure: PlotlyFigure; config: object; overlay?: OverlayModel; hidden?: boolean;
+  countries?: CountryLabel[]; onReference?: (zone: CoreZone) => void;
+  onClick?: (event: unknown) => void; compactTooltips?: boolean;
+  onRendered?: (figure:PlotlyFigure)=>void; onError?: (error:Error|null)=>void;
 }
 
 type Snapshot = Pick<Props, 'figure' | 'overlay' | 'hidden' | 'countries'>;
@@ -32,7 +33,7 @@ export function MapGraph(props: Props) {
   useLayoutEffect(() => {interaction.current = {interactive, onClick:props.onClick};});
   const host = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<MapboxMap | null>(null);
-  const gestures = useMapGestures(host, map, props.compactTooltips, zone => {if (interactive) props.onReference(zone);});
+  const gestures = useMapGestures(host, map, props.compactTooltips ?? true, props.onReference ? zone => {if (interactive) props.onReference?.(zone);} : undefined);
   const completionFrame = useRef<number | null>(null);
   useEffect(() => () => {if (completionFrame.current !== null) cancelAnimationFrame(completionFrame.current);}, []);
   const complete = () => {
@@ -47,13 +48,13 @@ export function MapGraph(props: Props) {
   const data = useMemo(() => structuredClone(figure.data), [figure.data]);
   // Native Mapbox mutates this style; retain it until the actual layout input changes.
   const layout = useMemo(() => structuredClone(figure.layout), [figure.layout]);
-  return <div ref={host} style={{height:'100%'}} {...gestures.handlers}>
+  return <div ref={host} className="map-renderer" {...gestures.handlers}>
     <Plot id={id} data={data} layout={layout} config={config}
-      onRendered={element => {setError(null);setMap(mapInstance(element));complete();}}
-      onError={error => {setError(error.message);complete();}}
-      onClick={event => {if (interaction.current.interactive) interaction.current.onClick(event);}}
+      onRendered={element => {setError(null);props.onError?.(null);setMap(mapInstance(element));props.onRendered?.(figure);complete();}}
+      onError={error => {setError(error.message);props.onError?.(error);complete();}}
+      onClick={event => {if (interaction.current.interactive) interaction.current.onClick?.(event);}}
       onBeforeHover={gestures.beforeHover}/>
-    <MapDecoration map={map} model={overlay} hidden={hidden} countries={countries}/>
-    {error && <div role="alert">Map: {error}</div>}
+    {overlay && <MapDecoration map={map} model={overlay} hidden={hidden ?? false} countries={countries ?? []}/>}
+
   </div>;
 }

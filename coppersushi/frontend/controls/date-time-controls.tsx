@@ -20,11 +20,11 @@ export function stepDay(day: string, direction: number): string {
 }
 
 interface Props {
-  day: string; minDay: string; time: string; previousDisabled: boolean; nextDisabled: boolean;
-  onDay: (day: string) => void; onPrevious: () => void; onNext: () => void;
+  day: string; minDay: string; today: string; maxDay: string;
+  onDay: (day: string) => void;
 }
 /** Calendar presentation receives availability from its owning market page. */
-export function CalendarTimeControls({day, minDay, time, previousDisabled, nextDisabled, onDay, onPrevious, onNext,today,maxDay}: Props & {today:string;maxDay:string}) {
+export function CalendarDateControls({day, minDay, onDay, today, maxDay}: Props) {
   const calendar = useRef<HTMLDivElement | null>(null);
   const calendarId = useId();
   const latest = new Date(`${maxDay}T00:00:00Z`);
@@ -38,7 +38,7 @@ export function CalendarTimeControls({day, minDay, time, previousDisabled, nextD
   });
   const selected = new Date(`${day}T00:00:00Z`);
   const earliest = new Date(`${minDay}T00:00:00Z`);
-  return <div className="cnec-date-time">
+  return <>
     <div className="cnec-control-row">
       <StepButton direction="previous" aria-label="Previous day" disabled={day <= minDay} onClick={() => onDay(stepDay(day, -1))}/>
       <button {...{popovertarget: calendarId}} ref={refs.setReference} type="button" className="cnec-date-picker" aria-label={`Delivery day: ${formatDay(day)}`}
@@ -62,10 +62,5 @@ export function CalendarTimeControls({day, minDay, time, previousDisabled, nextD
       </div>
       <StepButton direction="next" aria-label="Next day" disabled={day >= maxDay} onClick={() => onDay(stepDay(day, 1))}/>
     </div>
-    <div className="cnec-control-row">
-      <StepButton direction="previous" aria-label="Previous interval" disabled={previousDisabled} onClick={onPrevious}/>
-      <output>{time || '—'}</output>
-      <StepButton direction="next" aria-label="Next interval" disabled={nextDisabled} onClick={onNext}/>
-    </div>
-  </div>;
+  </>;
 }

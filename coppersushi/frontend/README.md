@@ -13,7 +13,7 @@ flowchart LR
   files --> cnec["Critical Elements: loading and rendering"]
   powerflow --> controls["Shared MapControls overlay"]
   cnec --> controls
-  powerflow --> plot["Shared Plot lifecycle"]
+  powerflow --> plot["Shared MapFrame and MapGraph"]
   cnec --> plot
 ```
 
@@ -21,9 +21,9 @@ flowchart LR
 including loading and error messages in the grid row below help.
 Pages supply legend units and range, help content, optional reference controls and
 calendar capabilities. Power Flow uses a fixed day; Critical Elements supplies daily
-availability. Domain fetching stays out of shared presentation components.
+availability. `IntervalControls` owns both pages’ date/time panel, interval buttons and slider. Domain fetching stays out of shared presentation components.
 
-`map/` owns plotting primitives; feature-specific layers and calculations stay with
+`map/` owns the measured map frame, render queue, Plotly lifecycle and tooltip gestures; feature-specific layers and calculations stay with
 the page. Python shell assembly, browser schema generation (`contracts.py`) and asset
 publication live in `packaging/`; they do
 not fetch upstream market data or publish domain datasets.

@@ -2,7 +2,6 @@
 body {margin:0;background:#222;color:#eee;font-family:Arial,sans-serif;display:flex;flex-direction:column;height:100dvh}
 a {color:#00bc8c}
 #app-root {flex:1;min-height:0}
-.cnec-map-container {height:100%;min-height:0;position:relative}
 .cnec-sources {width:max-content;max-width:calc(100% - 48px);color:#aaa;font-size:11px;line-height:1.2;text-align:center;pointer-events:none}
 .cnec-sources a {color:inherit;pointer-events:auto;text-decoration:none}
 .cnec-sources a:hover,.cnec-sources a:focus-visible {color:#eee;text-decoration:underline}
@@ -25,7 +24,6 @@ a {color:#00bc8c}
 .cnec-calendar-close {display:block;margin:12px 0 0 auto;padding:6px 12px;background:transparent;border:1px solid #666;border-radius:6px;font:inherit}
 .cnec-control-row output {min-width:80px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .cnec-slider-panel {flex:1 1 320px;box-sizing:border-box;padding:0 12px;min-width:0}
-.cnec-react {position:relative;height:100%}
 
 .cnec-timeline {position:relative;min-width:0;height:52px;--cnec-time-progress:0%}
 .cnec-timeline input {appearance:none;height:44px;background:transparent;margin:0;padding:0;border:0;box-sizing:border-box;display:block;width:100%;cursor:ew-resize}
@@ -48,8 +46,8 @@ a {color:#00bc8c}
 }
 
 /* Plotly draws the compact attribution icon on the parent pseudo-element. */
-.cnec-map-container .mapboxgl-ctrl-attrib-button {position:absolute;inset:0;width:20px;height:20px;padding:0;border:0;background:transparent;cursor:pointer}
-.cnec-map-container .mapboxgl-ctrl-attrib::after {pointer-events:none}
+.map-frame .mapboxgl-ctrl-attrib-button {position:absolute;inset:0;width:20px;height:20px;padding:0;border:0;background:transparent;cursor:pointer}
+.map-frame .mapboxgl-ctrl-attrib::after {pointer-events:none}
 
 .cnec-price-legend {position:absolute;z-index:3;top:16px;left:16px;width:220px;padding:12px 14px;border-radius:6px;background:rgba(25,25,25,.82);color:#ddd;font-size:14px;pointer-events:auto}
 .cnec-price-gradient {height:7px;margin:9px 0 6px;border-radius:3px}
@@ -97,9 +95,13 @@ a {color:#00bc8c}
 @media(max-width:450px){.cnec-map-tools {left:12px;right:12px;max-width:none;gap:8px}.cnec-price-legend {flex:1;min-width:0}.cnec-reference {min-width:95px}}
 
 /* Keep electric decoration below Plotly’s sibling tooltip SVG. */
-.cnec-map-container .mapboxgl-canvas-container {isolation:isolate}
+.map-frame .mapboxgl-canvas-container {isolation:isolate}
 /* Touch tooltips can be dismissed without passing the tap through to the map. */
-@media (pointer:coarse) {.cnec-map-container .hoverlayer .hovertext {pointer-events:all}}
+@media (pointer:coarse) {.map-frame .hoverlayer .hovertext {pointer-events:all}}
 
 /* A tooltip revealed by a map tap must not steal that gesture's final click. */
 .cnec-map-gesture .hoverlayer .hovertext {pointer-events:none}
+
+.map-frame {position:relative;height:100%;min-height:0}
+.map-canvas {position:absolute;inset:0}
+.map-renderer {height:100%}
