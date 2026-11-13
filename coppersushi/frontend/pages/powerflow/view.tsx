@@ -1,6 +1,6 @@
 import {initialBoundsCamera} from '../../map/initial-camera';
 import {MapControls} from '../../controls/map-controls';
-import React, {useEffect, useMemo, useReducer, useState, useRef} from 'react';
+import React, {useEffect, useLayoutEffect, useMemo, useReducer, useState, useRef} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {Plot} from '../../map/plot';
 import {reduceRender} from '../../map/render-state';
@@ -32,15 +32,17 @@ export function OpfView({token}:{token:string}) {
   const hour = useQuery({queryKey:['opf-hour',generation,selected],enabled:!!generation,
     queryFn:({signal})=>fetchHour(generation!,selected,signal),placeholderData:previous=>previous});
   const viewport = useRef<HTMLElement>(null);
+  const [viewportSize,setViewportSize] = useState<{width:number;height:number}|null>(null);
+  useLayoutEffect(()=>{const rect=viewport.current!.getBoundingClientRect();setViewportSize({width:rect.width,height:rect.height});},[]);
   const initialCamera = useRef<ReturnType<typeof initialBoundsCamera> | null>(null);
-  if (hour.data && !initialCamera.current) {
-    const size = viewport.current!.getBoundingClientRect();
+  if (hour.data && viewportSize && !initialCamera.current) {
+    const size = viewportSize;
     initialCamera.current = initialBoundsCamera(hour.data.bounds, size.width, size.height, 60);
   }
   const [renderedFigure,setRenderedFigure] = useState<PlotlyFigure|null>(null);
   const [mapError,setMapError] = useState<string|null>(null);
-  const figure = useMemo(()=>hour.data ? {...hour.data,layout:{...hour.data.layout,uirevision:'opf-2024',
-    mapbox:{...hour.data.layout.mapbox,...initialCamera.current,accesstoken:token}}} : null,[hour.data,token]);
+  const figure = useMemo(()=>hour.data && initialCamera.current ? {...hour.data,layout:{...hour.data.layout,uirevision:'opf-2024',
+    mapbox:{...hour.data.layout.mapbox,...initialCamera.current,accesstoken:token}}} : null,[hour.data,token,viewportSize]);
   const error = manifest.error ?? hour.error;
   const current = !!figure && !hour.isPlaceholderData && renderedFigure===figure;
   const loading = !error && !mapError && (manifest.isFetching || hour.isFetching || (!!figure && !current));
