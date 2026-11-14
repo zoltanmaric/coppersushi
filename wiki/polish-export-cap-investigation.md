@@ -91,14 +91,14 @@ Run `python -m scripts.polish_export_caps --start 2026-08-14 --end 2026-11-13`. 
 
 All shares below use the same 8,836-MTU complete-data population. Exact zero is separate; positive intervals have exclusive lower and inclusive upper bounds.
 
-| Export limit | MTUs | Share of all MTUs |
-|---|---:|---:|
-| 0 MW | 3,881 | 43.9% |
-| >0–500 MW | 608 | 6.9% |
-| >500–1,000 MW | 479 | 5.4% |
-| >1,000–2,000 MW | 837 | 9.5% |
-| >2,000–4,000 MW | 1,460 | 16.5% |
-| >4,000 MW | 1,571 | 17.8% |
+| Export limit | MTUs | Share of all MTUs | Binding MTUs | Binding within bucket |
+|---|---:|---:|---:|---:|
+| 0 MW | 3,881 | 43.9% | 1,112 | 28.7% |
+| >0–500 MW | 608 | 6.9% | 408 | 67.1% |
+| >500–1,000 MW | 479 | 5.4% | 256 | 53.4% |
+| >1,000–2,000 MW | 837 | 9.5% | 300 | 35.8% |
+| >2,000–4,000 MW | 1,460 | 16.5% | 182 | 12.5% |
+| >4,000 MW | 1,571 | 17.8% | 4 | 0.3% |
 
 The positive-cap median is 2,645 MW and maximum 12,307 MW. Finer low-cap bands distinguish small export allowances; wider upper bands keep the distribution readable. These are descriptive thresholds, not operational-security categories. Cap size does not establish whether it binds. Rounded shares may not sum to exactly 100%.
 

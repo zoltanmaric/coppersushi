@@ -100,11 +100,11 @@ def render_cohort(frame: pd.DataFrame, output: Path, start: date, end: date,
                      '<p>Zero permits no net exports. Positive caps are grouped more finely near zero, '
                      'then into wider bands for the upper tail. These are descriptive bands, not security thresholds.</p>'
                      '<div class="scroll"><table><thead><tr><th>Export cap</th><th>MTUs</th>'
-                     '<th>Share of all observed MTUs</th></tr></thead><tbody>'
-                     + ''.join(f'<tr><th>{name}</th><td>{int(mask.sum()):,}</td><td>{percent(int(mask.sum()),total)}</td></tr>'
+                     '<th>Share of all observed MTUs</th><th>Binding MTUs</th><th>Binding share within bucket</th></tr></thead><tbody>'
+                     + ''.join(f'<tr><th>{name}</th><td>{int(mask.sum()):,}</td><td>{percent(int(mask.sum()),total)}</td><td>{int((mask & frame.binding_export).sum()):,}</td><td>{percent(int((mask & frame.binding_export).sum()),int(mask.sum()))}</td></tr>'
                                for name, mask in buckets)
                      + '</tbody></table></div><p class="note">Lower bounds are exclusive and upper bounds inclusive. '
-                     'Cap magnitude is separate from whether the cap bound. All views use the whole-period denominator.</p>')
+                     'Binding share uses all MTUs in that bucket as its denominator. Cap magnitude is separate from whether the cap bound. All views use the whole-period denominator.</p>')
     rows = ''
     for zone, name in NAMES.items():
         values = active[f'lower_{zone}'].dropna()
