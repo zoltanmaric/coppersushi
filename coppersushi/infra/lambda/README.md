@@ -129,7 +129,7 @@ was rejected.
 
 ## Prepared CNEC data
 
-Shared metadata and uniform interval objects live under `data/cnec/v2/` in the private cache bucket. The publisher writes immutable objects before replacing a manifest cached for 60 seconds. The browser loads the selected interval first and prefetches the rest in parallel through shared query keys. Dates without a prepared publication show an availability message.
+Shared metadata and uniform interval objects live under `data/cnec/v3/` in the private cache bucket. The publisher writes immutable objects before replacing a manifest cached for 60 seconds. The browser loads the selected interval first and prefetches the rest in parallel through shared query keys. Dates without a prepared publication show an availability message.
 
 Publish a day with `python -m coppersushi.pipelines.cnec.data_sources.bundles YYYY-MM-DD --bucket <cache_bucket>`. Use `--refresh` for a correction, or `--directory coppersushi/data/browser` for local static files. Frontend publication and rollback follow [Frontend and OPF publication](#frontend-and-opf-publication).
 
@@ -139,7 +139,7 @@ The scheduler skips any day whose manifest already exists. Deploying a publisher
 image does not rebuild those days. For a data-contract change:
 
 1. Save each existing supported day's manifest with the image/UI rollback notes.
-   List `data/cnec/v2/` in the private bucket and select the dated manifests in the
+   List `data/cnec/v3/` in the private bucket and select the dated manifests in the
    supported window (starting 5 November 2025).
 2. From the new checkout, run the publication CLI above for **every listed day**.
    Do not use the scheduled handler: its manifest-existence check skips the work.
@@ -148,7 +148,7 @@ image does not rebuild those days. For a data-contract change:
    attribution gaps, add `--allow-partial-attribution`; alpha and receipt checks
    still apply. Confirm every physical row has its required EIC.
 3. Each rebuild writes a new immutable content-hash generation, then replaces the
-   day manifest. Invalidate `/data/cnec/v2/*/manifest.json` on CloudFront and wait
+   day manifest. Invalidate `/data/cnec/v3/*/manifest.json` on CloudFront and wait
    for completion before publishing the new frontend. Keep the previous generations.
 4. Deploy the matching publisher and frontend following the deployment steps above.
    Existing open tabs may fail validation during this silent-release cutover; reload
@@ -163,3 +163,8 @@ the restored manifest must point to the generation matching that reader's contra
 EventBridge Scheduler starts a Step Functions Standard execution at 15:50 Europe/Brussels. The scheduled instant pins tomorrow’s delivery date, including across DST. A dedicated publisher first requires JAO monitoring to mark Active FB Constraints, Allocation Constraints, Alpha factor from MCP and Net Position as Received for that delivery day. Only then are sparse active rows meaningful: a received empty set is valid; an absent or pending publication is retried. Interval attribution and prices must also be complete before fetching geometry. Complete days are skipped. Missing publications and transient upstream failures wait two minutes before another attempt; the execution stops after five hours. Unexpected failures get three short retries, then fail visibly in the execution history. Lambda only runs during an attempt. Every deferred attempt logs its delivery date, exception type and reason to the publisher’s CloudWatch log. Unpublished days in the browser recheck the manifest every minute while visible and on return to the page; polling stops after publication.
 
 JAO’s [Core handbook](https://publicationtool.jao.eu/PublicationHandbook/Core_PublicationTool_Handbook_v2.2.pdf) lists active constraints at 13:30 D−1 and alpha/net positions at 15:50 D−1. All required feeds must be complete before the manifest is exposed.
+
+The reserve-enriched Critical Elements publication uses `data/cnec/v3`.
+Populate required historical days through the existing publisher/backfill path before
+switching the frontend to v3. Preserve v2 objects for older clients. Refresh a v3 day
+explicitly to retry missing PSE evidence; completed publications are otherwise skipped.

@@ -13,7 +13,7 @@ const validators = {
 };
 
 export async function fetchManifest(day: string, signal: AbortSignal): Promise<CnecContracts['manifest'] | null> {
-  const response = await fetch(`/data/cnec/v2/${day}/manifest.json`, {signal});
+  const response = await fetch(`/data/cnec/v3/${day}/manifest.json`, {signal});
   // Private S3 returns 403 for absent keys without bucket-list permission.
   if (response.status === 404 || response.status === 403) return null;
   if (!response.ok) throw new Error(`Publication request failed (${response.status})`);
@@ -24,7 +24,7 @@ export async function fetchManifest(day: string, signal: AbortSignal): Promise<C
 
 export async function fetchDayPart<K extends 'metadata' | 'interval'>(kind: K, day: string, generation: string, index: number, signal: AbortSignal): Promise<CnecContracts[K]> {
   const file = kind === 'metadata' ? 'metadata' : index;
-  const response = await fetch(`/data/cnec/v2/${day}/${generation}/${file}.json`, {signal});
+  const response = await fetch(`/data/cnec/v3/${day}/${generation}/${file}.json`, {signal});
   if (!response.ok) throw new Error(`Prepared data request failed (${response.status})`);
   const payload: unknown = await response.json();
   if (!validators[kind](payload)) throw new Error(`Invalid ${kind} response`);

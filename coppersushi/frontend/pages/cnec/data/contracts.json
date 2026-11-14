@@ -157,8 +157,8 @@
       "description": "Producer-side complete day; browser delivery uses separate interval objects.",
       "properties": {
         "version": {
-          "const": 2,
-          "default": 2,
+          "const": 3,
+          "default": 3,
           "title": "Version",
           "type": "integer"
         },
@@ -221,8 +221,8 @@
       "description": "Atomic pointer to a complete immutable generation of a prepared day.",
       "properties": {
         "version": {
-          "const": 2,
-          "default": 2,
+          "const": 3,
+          "default": 3,
           "title": "Version",
           "type": "integer"
         },
@@ -249,8 +249,8 @@
       "description": "Versioned, token-free data for all interactions within a delivery day.",
       "properties": {
         "version": {
-          "const": 2,
-          "default": 2,
+          "const": 3,
+          "default": 3,
           "title": "Version",
           "type": "integer"
         },
@@ -406,6 +406,17 @@
           },
           "title": "Notes",
           "type": "array"
+        },
+        "polish_upward_reserves": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PolishReserves"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -418,6 +429,70 @@
         "notes"
       ],
       "title": "MarketInterval",
+      "type": "object"
+    },
+    "PolishReserves": {
+      "description": "Independent requirement and basic purchase evidence for one delivery interval.",
+      "properties": {
+        "required": {
+          "$ref": "#/$defs/ReserveObservation"
+        },
+        "purchased": {
+          "$ref": "#/$defs/ReserveObservation"
+        }
+      },
+      "required": [
+        "required",
+        "purchased"
+      ],
+      "title": "PolishReserves",
+      "type": "object"
+    },
+    "ReserveObservation": {
+      "description": "Eligible upward capacity, or an explicit reason why it cannot be established.",
+      "properties": {
+        "status": {
+          "enum": [
+            "available",
+            "missing",
+            "incomplete",
+            "late",
+            "ambiguous",
+            "fetch_failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "mw": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mw"
+        },
+        "published_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Published At"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ReserveObservation",
       "type": "object"
     },
     "ZoneGeometry": {

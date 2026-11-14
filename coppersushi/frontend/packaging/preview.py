@@ -50,11 +50,11 @@ def production_file(path: str) -> Response:
 
     return Response('Production data is unavailable', status=502)
 
-@routes.get('/data/cnec/v2/<path:filename>')
+@routes.get('/data/cnec/v3/<path:filename>')
 def local_data(filename: str) -> Response:
     if current_app.config.get('PRODUCTION_DATA', False):
-        return production_file('cnec/v2/' + filename)
-    return send_from_directory(REPO / 'coppersushi/data/browser/data/cnec/v2',filename)
+        return production_file('cnec/v3/' + filename)
+    return send_from_directory(REPO / 'coppersushi/data/browser/data/cnec/v3',filename)
 
 
 opf_routes = Blueprint('opf_static', __name__)

@@ -47,7 +47,8 @@ flowchart TB
     schedule["EventBridge schedule"] --> workflow["Step Functions"]
     workflow -->|Retryable attempt| publication
     market["JAO and Electricity Maps"] -->|Market inputs| publication["Native Lambda market-day publisher"]
-    pse["PSE morning reserve purchases + requirements"] --> investigation["Offline Polish export-cap analysis"]
+    pse["PSE morning reserve purchases + requirements"] -->|Optional reserve evidence| publication
+    pse --> investigation["Offline Polish export-cap analysis"]
     market --> investigation
     investigation --> research[("Local CSV and HTML explainer")]
     catalog["Grid catalog"] -->|Located elements and outlines| publication

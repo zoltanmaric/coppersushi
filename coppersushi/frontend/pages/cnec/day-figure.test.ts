@@ -4,7 +4,7 @@ import {dayFigure, zoneFeatures} from './day-figure';
 import type {DayBundle} from './data/contracts';
 import {orderedMapLayers} from '../../map/map-layer-order';
 function drawingFixture(): DayBundle {
-  return {version:2,day:'2026-11-03',labels:['Tue 03 Nov 2026 · 00:00 CET'],price_range:[90,100],
+  return {version:3,day:'2026-11-03',labels:['Tue 03 Nov 2026 · 00:00 CET'],price_range:[90,100],
     zones:[{zone:'DE',name:'Germany',centre:[10,50],rings:[[[9,49],[11,49],[11,51],[9,49]]]},{zone:'PL',name:'Poland',centre:[20,52],rings:[[[19,51],[21,51],[21,53],[19,51]]]}],
     elements:{line:{branch_id:'line',kind:'line',endpoints:[[9,50],[11,50]]},pst:{branch_id:'pst',kind:'transformer',endpoints:[[15,51],[15,51]]}},
     intervals:[{index:0,label:'Tue 03 Nov 2026 · 00:00 CET',prices:{DE:100,PL:90},alpha:1,notes:[],caps:[{source_id:-2,name:'Poland export cap',direction:'export',shadow_price:5,capacity:100,delta:-5}],
