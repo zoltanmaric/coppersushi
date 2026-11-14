@@ -5,6 +5,17 @@ import type { CoreZone } from "./market/reference";
 import {layerAnchor} from '../../map/map-layer-order';
 import {PRICE_COLORSCALE} from '../../map/price-scale';
 
+export function reserveTooltip(interval: MarketInterval): string {
+  const evidence = interval.polish_upward_reserves;
+  if (!evidence) return '<br>Upward reserves: unavailable';
+  const reasons = {missing: 'no record', incomplete: 'incomplete products', late: 'no publication before cutoff', ambiguous: 'conflicting versions', fetch_failed: 'source unavailable'};
+  const format = new Intl.DateTimeFormat('en-GB', {timeZone: 'Europe/Brussels', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short'});
+  return ([['Required upward capacity', evidence.required], ['Purchased before submission target', evidence.purchased]] as const).map(([label, value]) => {
+    if (value.status !== 'available') return `<br>${label}: unavailable (${reasons[value.status]})`;
+    return `<br>${label}: ${number(value.mw!, 0)} MW<br>Published ${format.format(new Date(value.published_at!))}`;
+  }).join('') + '<br>Cutoff: 10:30 Brussels on D−1.<br>Matching totals alone does not establish that the cap was unnecessary.';
+}
+
 type Trace = PlotlyFigure["data"][number];
 const purple = "#a72af5",
   lavender = "#d4a3ff",
@@ -295,7 +306,7 @@ export function dayFigure(
         customdata: x.map(() => ['cap:PL']),
         text: x.map(
           () =>
-            `${cap.name}<br>Net ${cap.direction} limit: ${number(cap.capacity, 0)} MW<br>Cap shadow price: ${number(cap.shadow_price)} €/MWh`,
+            `${cap.name}<br>Net ${cap.direction} limit: ${number(cap.capacity, 0)} MW<br>Cap shadow price: ${number(cap.shadow_price)} €/MWh${cap.direction === "export" ? reserveTooltip(interval) : ""}`,
         ),
         hoverinfo: "text",
         hoverlabel,

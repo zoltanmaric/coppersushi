@@ -46,6 +46,9 @@ class CountryCap(Contract):
     shadow_price: float
     delta: float
 
+from coppersushi.pipelines.cnec.reserves import PolishReserves
+
+
 class MarketInterval(Contract):
     """Published values for one UTC interval, labelled in market local time."""
     index: int = Field(ge=0)
@@ -55,10 +58,11 @@ class MarketInterval(Contract):
     alpha: float | None
     caps: list[CountryCap]
     notes: list[str]
+    polish_upward_reserves: PolishReserves | None = None
 
 class DayMetadata(Contract):
     """Versioned, token-free data for all interactions within a delivery day."""
-    version: Literal[2] = 2
+    version: Literal[3] = 3
     day: date
     labels: list[str]
     zones: list[ZoneGeometry]
@@ -72,6 +76,6 @@ class DayBundle(DayMetadata):
 
 class DayManifest(Contract):
     """Atomic pointer to a complete immutable generation of a prepared day."""
-    version: Literal[2] = 2
+    version: Literal[3] = 3
     day: date
     generation: str = Field(pattern=r'^[0-9a-f]{24}$')

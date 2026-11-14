@@ -15,7 +15,7 @@ test('tomorrow enables asynchronously from its manifest and shares the publicati
   vi.setSystemTime(new Date('2026-11-09T10:00:00Z'));
   const client = new QueryClient({defaultOptions:{queries:{retry:false}}});
   const fetch = vi.fn().mockResolvedValueOnce(new Response('',{status:404}))
-    .mockResolvedValueOnce(new Response(JSON.stringify({version:2,day:'2026-11-10',generation:'a'.repeat(24)})));
+    .mockResolvedValueOnce(new Response(JSON.stringify({version:3,day:'2026-11-10',generation:'a'.repeat(24)})));
   vi.stubGlobal('fetch',fetch);
   const view = render(<QueryClientProvider client={client}><DateControls {...props}/></QueryClientProvider>);
   const next = () => screen.getByRole('button',{name:'Next day'}) as HTMLButtonElement;
@@ -25,7 +25,7 @@ test('tomorrow enables asynchronously from its manifest and shares the publicati
   await act(async () => {await client.refetchQueries({queryKey:['publication','2026-11-10']});});
   await waitFor(() => expect(next().disabled).toBe(false));
   expect(fetch.mock.calls.map(call=>call[0])).toEqual([
-    '/data/cnec/v2/2026-11-10/manifest.json','/data/cnec/v2/2026-11-10/manifest.json']);
+    '/data/cnec/v3/2026-11-10/manifest.json','/data/cnec/v3/2026-11-10/manifest.json']);
   view.rerender(<QueryClientProvider client={client}><DateControls {...props} day="2026-11-10"/></QueryClientProvider>);
   expect(next().disabled).toBe(true);
   client.clear();
@@ -42,6 +42,6 @@ test('market date and an open page roll over at Brussels midnight', async () => 
   await waitFor(() => expect(client.getQueryData(['publication','2026-11-10'])).toBeNull());
   vi.setSystemTime(new Date('2026-11-09T23:01:00Z'));
   act(() => window.dispatchEvent(new Event('focus')));
-  await waitFor(() => expect(fetch).toHaveBeenCalledWith('/data/cnec/v2/2026-11-11/manifest.json',expect.anything()));
+  await waitFor(() => expect(fetch).toHaveBeenCalledWith('/data/cnec/v3/2026-11-11/manifest.json',expect.anything()));
   client.clear();
 });
