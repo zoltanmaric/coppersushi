@@ -14,4 +14,4 @@ The app represents the aggregate constraint as Poland's outline, selected by `ca
 
 PSE's rationale concerns generation and reserve feasibility as well as transmission limits. [Pre-day-ahead procurement](polish-balancing-capacity-procurement.md#procurement) provides a check on that explanation. It does not reproduce the original cap calculation. The [investigation](polish-export-cap-investigation.md) owns case evidence and the unresolved security/welfare questions; [Article 7 safeguards](literature/core-da-ccm-allocation-constraint-safeguards.md) cover effectiveness and alternatives.
 
-Upward requirements and purchases contextualize an **export** cap. They do not explain an import cap's downward-reserve rationale.
+Upward requirements and purchases contextualize an **export** cap. They do not explain an import cap's downward-reserve rationale. The [tooltip spec](../specs/polish-cap-reserve-tooltip.html) keeps that distinction and adds source publication times without changing which caps the map highlights.
