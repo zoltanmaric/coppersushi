@@ -1,6 +1,6 @@
 """Reproduce Polish export-cap, neighbouring-price and reserve comparisons.
 
-Run: python -m scripts.polish_export_caps --start 2026-05-06 --end 2026-11-13
+Run: python -m scripts.polish_export_caps --start 2026-08-14 --end 2026-11-13
 Outputs and licensed price responses stay in ignored data/, never in the wiki.
 """
 import argparse
@@ -233,8 +233,8 @@ def main() -> None:
     parser.add_argument("--price-tolerance", type=float, default=0.01, help="EUR/MWh threshold for inferred binding effect only; neighbour comparison is strictly <")
     parser.add_argument("--price-token-file", type=Path)
     args = parser.parse_args()
-    if args.start < date(2026, 5, 6) or args.end < args.start or args.price_tolerance < 0:
-        parser.error("Require 2026-05-06 <= start <= end and nonnegative price tolerance")
+    if args.start < date(2026, 8, 14) or args.end < args.start or args.price_tolerance < 0:
+        parser.error("Require 2026-08-14 <= start <= end and nonnegative price tolerance")
     if args.price_token_file:
         electricity_maps.TOKEN_FILE = args.price_token_file
     args.output.mkdir(parents=True, exist_ok=True)

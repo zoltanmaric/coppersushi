@@ -31,7 +31,23 @@ Store UTC instants. Display delivery and publication timestamps in **Europe/Brus
 
 For delivery **13 November 2026, 19:00–20:00 CET**, the [requirement response](https://api.raporty.pse.pl/api/wmb?%24filter=business_date%20eq%20%272026-11-13%27&%24first=1000) was published **12 November at 07:06 CET** and the [basic-purchase response](https://api.raporty.pse.pl/api/mbp-tp?%24filter=business_date%20eq%20%272026-11-13%27&%24first=1000) at **09:10 CET**. Both sum to **2,347 MW**: 197 containment, 400 automatic restoration, 581 additional/direct manual restoration, and 1,169 replacement. The [investigation](polish-export-cap-investigation.md#comparison) compares adjacent days and later operational plans.
 
-In the May 6–November 13 research collection, `wmb` returned no records for May 6–August 13. Comparable requirements start August 14. This is a retrieval gap, not evidence of zero requirements. The API's publication timestamp does not by itself provide a historical as-of archive. Fetching again may return revised values; these findings describe what was retrieved.
+The [analysis](polish-export-cap-investigation.md#analysis) begins on 14 August 2026, the first date with complete comparisons. Earlier missing requirements do not mean zero requirements. Refetching may return revised values; retrieval dates and publication dates are distinct.
+
+### Rationale
+
+The connection is explicit at the metric level. The [Core TSOs’ explanatory document](literature/core-da-ccm-fourth-amendment-explanatory-document.md), printed p. 3, Figure 1, calls its measure “Scarcity of total upward reserve offers in primary procurement (volume procured - volume required).” It cites PSE’s reporting portal. URE separately identifies upward balancing capacity as a purpose of export constraints. This supports testing basic purchases against requirements; the figure does not identify API field names or publish its underlying rows, so exact reproduction of its historical series remains unverified.
+
+Do not conflate this with the [Q4 2025 simulation](literature/pse-allocation-constraints-q4-2025.md): it compares operational reserve levels with and without both cap directions, using intervention thresholds of 1,000 MW upward and 500 MW downward. Those thresholds are not our procurement totals. The [ACER monitoring report’s](literature/acer-electricity-market-integration-monitoring-report.md) claim that pre-day-ahead procurement does not exist conflicts with the documented basic process; it does not validate our field mapping.
+
+### Reconciliation
+
+A six-date arithmetic check found `fcrg + afrrg + frrg + rrg = pk5l-wp.req_pow_res` in **145/145 hours**, with an exact difference of 0 MW. Dates: August 14 (24 hours), October 25 (25), and November 10–13 (24 each), 2026. Purchases matched that margin in 137 hours and fell short in eight. This is a sampled cross-check, not a full-period identity test.
+
+Join `wmb.dtime_utc` and `mbp-tp.dtime_utc` to `pk5l-wp.plan_dtime_utc`, all hour-end timestamps, one-to-one. Query each endpoint by `business_date`. Planning records were fetched on 2026-11-14 and published on the delivery days; requirements/purchases came from the existing research cache, whose original per-file retrieval dates are unknown. These late plans validate the numerical relationship but cannot replace pre-submission evidence. An earlier November 12 evening plan also matched all 24 November 13 requirement sums.
+
+For November 13, 19:00–20:00 CET: `197 + 400 + 581 + 1,169 = 2,347 MW`, equal to the reported margin and purchases. The later plan’s net grid demand is 22,461 MW; 9% gives 2,021.49 MW, a 325.51 MW difference. [PSE’s field definition, sections 3–4](https://www.pse.pl/dane-systemowe/plany-pracy-kse/plan-koordynacyjny-5-letni/wielkosci-podstawowe/opis), uses demand to be covered by domestic plants, including plant own-use and net exchanges, rather than net grid demand alone. The implied denominator is 26,077.78 MW; its components have not been independently reconstructed.
+
+Both reserve sources are PSE feeds. JAO supplies caps, positions and alternative-price evidence. Equality with the published planning margin does not establish which margin/version entered the original cap calculation, physical deliverability or whether alternatives made the cap avoidable.
 
 ### Interpretation
 

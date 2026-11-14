@@ -201,7 +201,7 @@ viewable locally through Dash.
 
 ## Polish export-cap investigation
 
-`python -m scripts.polish_export_caps --start 2026-05-06 --end 2026-11-13`
+`python -m scripts.polish_export_caps --start 2026-08-14 --end 2026-11-13`
 collects published caps, Polish positions, Germany–Luxembourg/Czechia/Slovakia prices and PSE morning upward-reserve
 purchases and requirements. The explainer counts active export caps, strict price comparisons,
 and pre-submission procurement with explicit coverage gaps. The default zero-cap view includes

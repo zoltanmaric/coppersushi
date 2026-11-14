@@ -76,24 +76,25 @@ Remaining checks: recover the morning export calculation and any revisions; reco
 
 ## Analysis
 
-The comparison uses publications strictly before the normal 10:30 Europe/Brussels submission target on D−1. A cached rerun on 2026-11-14 changed no reserve values or case counts relative to the former noon filter. This target does not establish PSE’s actual internal cap-setting time.
+**Scope: 14 August–13 November 2026 inclusive, 92 delivery days and 8,836 quarter-hour MTUs.** All analysis populations start on August 14. The earlier missing requirements form one continuous period (May 6–August 13); excluding it gives complete caps, reserve comparisons, neighbour prices and inferred binding classifications in this collection. Future extensions must check completeness rather than assume it.
 
-The reproducible entry point is `python -m scripts.polish_export_caps --start 2026-05-06 --end 2026-11-13`. The local HTML explainer counts active export caps, compares Poland strictly against Germany–Luxembourg, Czechia and Slovakia, and joins morning upward-reserve procurement. The start follows [PSE’s documented JAO publication boundary](country-import-export-caps.md#poland-validation), not the April handbook date.
+Run `python -m scripts.polish_export_caps --start 2026-08-14 --end 2026-11-13`. Both reserve publications must be strictly before 10:30 Europe/Brussels on D−1, the normal submission target. This is not proof of availability at PSE’s actual internal cap-setting time. See the [source and time contract](polish-balancing-capacity-procurement.md#time).
 
-An active export cap requires the position at the export limit within the shared 0.11 MW publication-rounding tolerance and a positive alternative-price effect exceeding €0.01/MWh. This inherits the [empirical alternative-price adapter](country-import-export-caps.md); it is not an independently published shadow-price flag. Positions safely below the export cap establish inactivity even without an alternative price. Other missing attribution remains unresolved. Neighbour comparisons use strictly `<`, with no tolerance.
+| Measure | Numerator / denominator | Share |
+|---|---:|---:|
+| Published export cap, zero or positive | 8,836 / 8,836 | 100% |
+| Aggregate procurement shortfall | 1,076 / 8,836 | 12.2% |
+| No aggregate procurement shortfall | 7,760 / 8,836 | 87.8% |
+| Binding among no-shortfall MTUs | 2,082 / 7,760 | 26.8% |
 
-For May 6–November 13 inclusive: 18,436 MTUs, 2,599 confirmed active export caps (14.1%), 15,753 classified inactive, 84 unresolved. During active MTUs Poland is cheaper than Germany–Luxembourg in 2,462, Czechia in 2,484, Slovakia in 2,565, and all three in 2,349 (90.4%). All active MTUs have all three comparison prices.
+Zero caps occur in 3,881 MTUs and positive caps in 4,955. Binding effects are inferred in 2,262 MTUs; 6,574 are nonbinding and none unresolved. Among binding MTUs, Poland is strictly cheaper than Germany–Luxembourg in 2,142, Czechia in 2,175, Slovakia in 2,228, and all three in 2,049. These conditional price comparisons do not establish selective cap setting or motive.
 
-The retrieved `wmb` feed is empty for delivery May 6–August 13 (100 days, 9,600 MTUs). Eligible requirements begin August 14; no retrieved requirement record was excluded by the publication-time filter in this run. The early procurement-difference gap therefore reflects absent requirement records, not zero shortfalls or later revisions. This does not establish that PSE lacked a requirement at the time. Across all observed MTUs, cap publication coverage is 100%: 15,753 are classified nonbinding, 2,599 binding, and 84 unresolved. The nonzero comparison scatter contains 896 nonbinding and 180 binding MTUs; zero comparisons and unavailable pairs are omitted from the plot but retained in population denominators.
+Binding requires the position at the export limit within the shared 0.11 MW publication-rounding tolerance and an alternative-price effect exceeding €0.01/MWh. This uses the [empirical adapter](country-import-export-caps.md#poland-validation), not an independently published binding flag. Neighbour price comparisons use strictly `<`, with no tolerance.
 
-The local `cases.html` table lists all 7,760 published-cap MTUs where eligible morning upward purchases meet or exceed the published aggregate requirement, including equality: 3,728 have zero caps and 2,082 have inferred binding effects (overlapping subsets). It excludes 1,076 shortfall MTUs and 9,600 unavailable comparisons. This is a case list for reconciling PSE’s explanation, not a finding that all listed caps were unjustified. The filter and CSV retain individual MTUs, exact cap values and publication timestamps.
-
-The separate zero-export-cap cohort contains 4,621 MTUs (25.1% of all MTUs), independent of market outcome. Poland is strictly cheaper than all three Core neighbours in 1,169 (25.3%). Morning upward procurement is available for every zero-cap MTU: median 1,914 MW, range 1,286–2,403 MW. Of 3,881 with comparable requirements, 3,728 have purchased total at least equal to required total. The cohorts overlap in 1,221 MTUs; another 3 zero-cap MTUs have unresolved binding status. A zero export cap permits net imports, so it need not bind.
-
-PSE primary procurement (`mbp-tp`) is available before the normal submission target for all 2,599 active MTUs: upward capacity median 1,779 MW, range 1,205–2,487 MW. Of 2,262 active MTUs with comparable pre-submission requirement publications (`wmb`), 2,082 have purchased total at least equal to the required total. This is not a product-by-product or physical-deliverability test. Hourly observations repeat across their four quarters; statistics weight active MTUs. Missing products and publication versions at or after 10:30 Brussels time on D−1 are excluded, not zero-filled. Generated price-derived files remain local under source terms.
+The local `cases.html` table contains all 7,760 no-shortfall MTUs, including equality. It retains exact cap values, publication timestamps and filters. A matching purchase total is a reconciliation case, not proof the cap was unjustified. The [reserve cross-check](polish-balancing-capacity-procurement.md#reconciliation) tests whether the product sum equals PSE’s separately reported required margin. Generated price-derived results remain local under source terms.
 
 ## ACER-monitoring
 
 The [4 November 2026 ACER monitoring report](literature/acer-electricity-market-integration-monitoring-report.md), section 2.4.4, confirms material price-decoupling effects and falling binding frequency. Its paragraph 168 says pre-day-ahead balancing-capacity procurement does not exist, conflicting with URE’s account of the June 2024 reform and observed procurement. This appears to be an outdated explanation; it is not evidence that reserve requirements themselves are fictitious. The section does not supply the missing interval-level justification.
 
-The May 6–November 13 collection covers 192 delivery days with zero failed days. Full local results are in ignored `data/polish-export-caps/`.
+The August 14–November 13 analysis covers 92 delivery days with zero failed days. Full local results are in ignored `data/polish-export-caps/`.

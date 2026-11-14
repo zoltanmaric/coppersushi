@@ -429,3 +429,7 @@ Separated the Polish cap source contract from pre-day-ahead procurement: indepen
 ## [2026-11-13] decision | Polish API evidence provenance
 
 Keep source queries, fetch dates and findings in the wiki, with a caveat that refetching may return revised values. Raw API response archives are not required for this investigation.
+
+## [2026-11-14] decision | Complete-data Polish cap analysis
+
+Restrict all investigation populations to August 14 onward; the preceding 9,600 missing reserve comparisons form one continuous period. The 92-day cohort has complete caps, reserve pairs, neighbour prices and inferred binding classifications. Record the explicit TSO procurement-gap rationale and the 145-hour product-sum/margin cross-check, while preserving the missing original-cap-input and publication-version caveats.
