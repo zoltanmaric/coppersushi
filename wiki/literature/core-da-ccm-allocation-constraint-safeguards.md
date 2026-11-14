@@ -8,6 +8,12 @@ Annex 1 calculates Poland’s export bound from available generation less unavai
 
 See [country-cap analysis](../country-import-export-caps.md#safeguards) for the policy debate; the [proposal’s explanatory document](core-da-ccm-fourth-amendment-explanatory-document.md) is a separate source.
 
+### Beyond-procurement
+
+Annex 1, printed pp. 53–56, gives a broader rationale than morning procurement scarcity: residual demand left by market participants, forecast uncertainty, unit ramping and other plant constraints. The export formula subtracts generation unavailable through grid constraints (`PNA`) and exceptional expected unavailability (`PER`, for example cooling limitations or extended overhauls). Page 54 says balancing activation is “often exceeding the procured balancing capacity.” These are documented mechanisms and claims, not a demonstrated cause of each fully procured, binding interval in the investigation.
+
+The [December 2025 explanation](core-da-ccm-fourth-amendment-explanatory-document.md) says purchased capacity should leave day-ahead offers. Consequently, a fully procured interval requires an explanation of what additional limitation remained and whether the cap calculation incorporated those purchases. Neither document supplies the original per-interval inputs needed to resolve that question. Checked 2026-11-14.
+
 ### Oversight
 
 The [January 2025 Central Europe consultation report, response 12, printed p. 9](https://eepublicdownloads.entsoe.eu/clean-documents/nc-tasks/20250117%20CE%20DA%20CCM%20-%20Public%20Consultation%20Report.pdf) records a challenge to PSE’s evidence and analysis of alternatives. The TSOs respond that the reports are discussed at the Core Implementation Group, comprising TSOs, national regulators and ACER, and say there were no further objections. This is the TSOs’ account of review, not a published independent replication.

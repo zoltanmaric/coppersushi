@@ -52,3 +52,5 @@ Both reserve sources are PSE feeds. JAO supplies caps, positions and alternative
 ### Interpretation
 
 Purchased capacity at least equal to the published requirement establishes no aggregate procurement shortfall in the eligible records. It does **not** establish physical deliverability, sufficient reserves at every location, an independently correct requirement, or that exports could safely increase. The original cap calculation and alternatives remain necessary to assess justification. Supplementary purchases and later operating plans must not silently replace the morning comparison.
+
+For fully procured, binding intervals, test the [documented additional mechanisms](literature/core-da-ccm-allocation-constraint-safeguards.md#beyond-procurement): which limitation remained, how many MW did it justify, and did the cap calculation incorporate completed procurement? Obtain the original cap inputs and timestamps, including generation availability adjustments, demand/renewables forecasts and the reserve margin. Aggregate procurement equality alone neither reproduces nor disproves that calculation.

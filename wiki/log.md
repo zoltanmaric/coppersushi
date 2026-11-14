@@ -437,3 +437,7 @@ Restrict all investigation populations to August 14 onward; the preceding 9,600 
 ## [2026-11-14] query | Polish cap magnitude
 
 [Cap levels](polish-export-cap-investigation.md#cap-levels) separate exact zero from five positive bands. Zero covers 43.9% of the complete-data cohort; the positive-cap median is 2,645 MW. Bands describe export allowances, independently of inferred binding or reserve procurement sufficiency.
+
+## [2026-11-14] query | Caps after full reserve procurement
+
+The methodology explicitly includes residual demand, unit constraints and generation availability adjustments beyond procurement scarcity. These mechanisms do not establish why a particular fully procured interval had a binding cap. The investigation must identify the remaining limitation in MW and whether the original cap calculation incorporated the completed procurement.
