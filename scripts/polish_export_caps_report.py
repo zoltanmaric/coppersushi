@@ -85,6 +85,26 @@ def render_cohort(frame: pd.DataFrame, output: Path, start: date, end: date,
                     '<p class="note">Counts include zero differences and missing reserve comparisons; they are not shares of plotted dots. '
                     'Unknown binding status stays separate and is omitted from the scatter. '
                     'No published cap means unavailable publication, not proof that no cap was set. This table covers the whole period regardless of the selected view.</p>')
+    limits = frame.export_limit
+    buckets = [("0 MW", limits.eq(0)),
+               (">0–500 MW", limits.gt(0) & limits.le(500)),
+               (">500–1,000 MW", limits.gt(500) & limits.le(1000)),
+               (">1,000–2,000 MW", limits.gt(1000) & limits.le(2000)),
+               (">2,000–4,000 MW", limits.gt(2000) & limits.le(4000)),
+               (">4,000 MW", limits.gt(4000))]
+    if limits.lt(0).any():
+        buckets.append(("Negative cap", limits.lt(0)))
+    if limits.isna().any():
+        buckets.append(("Unavailable", limits.isna()))
+    distribution += ('<h3>How restrictive was the published export limit?</h3>'
+                     '<p>Zero permits no net exports. Positive caps are grouped more finely near zero, '
+                     'then into wider bands for the upper tail. These are descriptive bands, not security thresholds.</p>'
+                     '<div class="scroll"><table><thead><tr><th>Export cap</th><th>MTUs</th>'
+                     '<th>Share of all observed MTUs</th></tr></thead><tbody>'
+                     + ''.join(f'<tr><th>{name}</th><td>{int(mask.sum()):,}</td><td>{percent(int(mask.sum()),total)}</td></tr>'
+                               for name, mask in buckets)
+                     + '</tbody></table></div><p class="note">Lower bounds are exclusive and upper bounds inclusive. '
+                     'Cap magnitude is separate from whether the cap bound. All views use the whole-period denominator.</p>')
     rows = ''
     for zone, name in NAMES.items():
         values = active[f'lower_{zone}'].dropna()
@@ -207,7 +227,7 @@ def render_cohort(frame: pd.DataFrame, output: Path, start: date, end: date,
     <section class="method"><p class="eyebrow">Sources &amp; interpretation</p><h2>What this can—and cannot—answer</h2>
     <p>This measures price separation alongside zero or binding caps and contracted reserves. The unresolved evidence is PSE’s original cap calculation: demand, available generation, adjustments, reserve needs, and the feasibility and cost of alternatives. A filled morning auction alone does not establish the additional exports that could safely have been allowed.</p>
     <details><summary>Dates, classification and source contracts</summary>
-    <p><a href="https://www.pse.pl/web/pse-eng/redistribution-of-congestion-income-from-sdac">PSE dates the JAO cross-CCR publication to 6 May 2026</a>. April is the publication handbook’s date. The analysis starts with the verified feed boundary; caps existed earlier.</p>
+    <p><a href="https://www.pse.pl/web/pse-eng/redistribution-of-congestion-income-from-sdac">PSE dates the JAO cross-CCR publication to 6 May 2026</a>. April is the publication handbook’s date. The comparison starts on 14 August 2026, when complete reserve comparisons become available; caps existed earlier.</p>
     <p>The zero-cap view selects published export limits within 0.001 MW of zero; it does not require a net-position or price-effect test.</p>
     <p>JAO Core allocationConstraint and netPos provide limits and positions; cross-CCR DA_PL_AC provides the alternative price. Quarter-hour order is reconstructed from row IDs and accepted only when positions match the independent Core feed. Export position tolerance: {POSITION_TOLERANCE_MW:g} MW; inferred price-effect threshold: €{effect_threshold:g}/MWh. Neighbour price comparisons have no tolerance.</p>
     <p>A position more than {POSITION_TOLERANCE_MW:g} MW below the export limit is classified as not binding even if the alternative price is unavailable. At the limit, missing alternative-price evidence remains unresolved.</p>

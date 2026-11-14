@@ -87,6 +87,21 @@ Run `python -m scripts.polish_export_caps --start 2026-08-14 --end 2026-11-13`. 
 | No aggregate procurement shortfall | 7,760 / 8,836 | 87.8% |
 | Binding among no-shortfall MTUs | 2,082 / 7,760 | 26.8% |
 
+### Cap-levels
+
+All shares below use the same 8,836-MTU complete-data population. Exact zero is separate; positive intervals have exclusive lower and inclusive upper bounds.
+
+| Export limit | MTUs | Share of all MTUs |
+|---|---:|---:|
+| 0 MW | 3,881 | 43.9% |
+| >0–500 MW | 608 | 6.9% |
+| >500–1,000 MW | 479 | 5.4% |
+| >1,000–2,000 MW | 837 | 9.5% |
+| >2,000–4,000 MW | 1,460 | 16.5% |
+| >4,000 MW | 1,571 | 17.8% |
+
+The positive-cap median is 2,645 MW and maximum 12,307 MW. Finer low-cap bands distinguish small export allowances; wider upper bands keep the distribution readable. These are descriptive thresholds, not operational-security categories. Cap size does not establish whether it binds. Rounded shares may not sum to exactly 100%.
+
 Zero caps occur in 3,881 MTUs and positive caps in 4,955. Binding effects are inferred in 2,262 MTUs; 6,574 are nonbinding and none unresolved. Among binding MTUs, Poland is strictly cheaper than Germany–Luxembourg in 2,142, Czechia in 2,175, Slovakia in 2,228, and all three in 2,049. These conditional price comparisons do not establish selective cap setting or motive.
 
 Binding requires the position at the export limit within the shared 0.11 MW publication-rounding tolerance and an alternative-price effect exceeding €0.01/MWh. This uses the [empirical adapter](country-import-export-caps.md#poland-validation), not an independently published binding flag. Neighbour price comparisons use strictly `<`, with no tolerance.

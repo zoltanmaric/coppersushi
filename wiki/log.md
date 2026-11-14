@@ -433,3 +433,7 @@ Keep source queries, fetch dates and findings in the wiki, with a caveat that re
 ## [2026-11-14] decision | Complete-data Polish cap analysis
 
 Restrict all investigation populations to August 14 onward; the preceding 9,600 missing reserve comparisons form one continuous period. The 92-day cohort has complete caps, reserve pairs, neighbour prices and inferred binding classifications. Record the explicit TSO procurement-gap rationale and the 145-hour product-sum/margin cross-check, while preserving the missing original-cap-input and publication-version caveats.
+
+## [2026-11-14] query | Polish cap magnitude
+
+[Cap levels](polish-export-cap-investigation.md#cap-levels) separate exact zero from five positive bands. Zero covers 43.9% of the complete-data cohort; the positive-cap median is 2,645 MW. Bands describe export allowances, independently of inferred binding or reserve procurement sufficiency.
