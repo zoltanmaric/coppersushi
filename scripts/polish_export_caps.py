@@ -63,9 +63,9 @@ def procurement_frame(purchases: list[dict], requirements: list[dict]) -> pd.Dat
         if frame.interval.duplicated().any():
             raise ValueError("Ambiguous hourly procurement versions")
         publication = pd.to_datetime(frame.publication_ts_utc, utc=True)
-        # SDAC gate closure is noon CET/CEST on the preceding delivery day.
-        local_day = frame.interval.dt.tz_convert("Europe/Warsaw").dt.tz_localize(None).dt.normalize()
-        deadline = (local_day - pd.Timedelta(days=1) + pd.Timedelta(hours=12)).dt.tz_localize("Europe/Warsaw").dt.tz_convert("UTC")
+        # Normal SDAC capacity/allocation-constraint submission target, D−1.
+        local_day = frame.interval.dt.tz_convert("Europe/Brussels").dt.tz_localize(None).dt.normalize()
+        deadline = (local_day - pd.Timedelta(days=1) + pd.Timedelta(hours=10, minutes=30)).dt.tz_localize("Europe/Brussels").dt.tz_convert("UTC")
         frame[prefix + "_published"] = publication
         frame[prefix + "_mw"] = frame[fields].sum(axis=1, min_count=4).where(publication < deadline)
         selected = frame[["interval", prefix + "_mw", prefix + "_published"]]
@@ -255,7 +255,7 @@ def main() -> None:
         raise RuntimeError("No complete days collected; see failures.json")
     frame = classify(pd.concat(frames, ignore_index=True), args.price_tolerance)
     purchases = []
-    completed_dates = sorted(frame.interval.dt.tz_convert("Europe/Warsaw").dt.date.unique())
+    completed_dates = sorted(frame.interval.dt.tz_convert("Europe/Brussels").dt.date.unique())
     for key in completed_dates:
         purchases.append(procurement_frame(pse("mbp-tp", str(key), cache), pse("wmb", str(key), cache)))
     frame = frame.merge(pd.concat(purchases, ignore_index=True), on="interval", how="left", validate="one_to_one")
@@ -270,6 +270,7 @@ def main() -> None:
                     procurement_intervals=int(frame.procured_mw.notna().sum()),
                     active_procurement_intervals=int(frame.loc[frame.binding_export, "procured_mw"].notna().sum()),
                     price_tolerance_eur_mwh=args.price_tolerance,
+                    procurement_cutoff="10:30 Europe/Brussels D-1 (exclusive)",
                     retrieval=retrieval_coverage(cache, [str(day) for day in completed_dates]).model_dump(mode="json"))
     (args.output / "coverage.json").write_text(json.dumps(coverage, indent=2))
     print(summary.to_string(index=False), flush=True)

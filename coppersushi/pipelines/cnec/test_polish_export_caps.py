@@ -1,4 +1,5 @@
 """Denominators, directional cap effects and UTC interval alignment."""
+import json
 from pathlib import Path
 import pandas as pd
 from scripts.polish_export_caps import classify, summarize, procurement_frame
@@ -34,7 +35,7 @@ def test_procurement_clock_change_late_versions_and_missing_products():
     for stamp in ['2026-10-25 01:00:00', '2026-10-25 02:00:00', '2026-10-25 03:00:00']:
         purchases.append(dict(dtime_utc=stamp, publication_ts_utc='2026-10-24 07:10:00', fcr_g=100, afrr_g=200, mfrrd_g=300, rr_g=400))
         requirements.append(dict(dtime_utc=stamp, publication_ts_utc='2026-10-24 06:00:00', fcrg=100, afrrg=200, frrg=300, rrg=400))
-    purchases[1]['publication_ts_utc'] = '2026-10-24 10:00:00'  # Noon Warsaw: too late.
+    purchases[1]['publication_ts_utc'] = '2026-10-24 08:30:00'  # 10:30 Brussels: exactly at the cutoff, excluded.
     purchases[2]['rr_g'] = None
     result = procurement_frame(purchases, requirements).sort_values('interval')
     assert len(result) == 12
@@ -116,3 +117,13 @@ def test_pse_cache_preserves_original_fetch_and_rejects_changed_bytes(tmp_path, 
     path = tmp_path / '2026-11-13-wmb.json'
     path.write_text(path.read_text() + '\n')
     assert retrieval_coverage(tmp_path, ['2026-11-13']).inputs[-1].status == 'provenance_mismatch'
+
+
+def test_procurement_cutoff_is_1030_brussels_in_both_seasons():
+    fixture = json.loads((FIXTURES / 'submission-cutoff.json').read_text())
+    for season in fixture:
+        result = procurement_frame(season['purchases'], season['requirements']).sort_values('interval')
+        assert result.procured_mw.iloc[:4].eq(1000).all()
+        assert result.required_mw.iloc[:4].eq(1000).all()
+        assert result.procured_mw.iloc[4:].isna().all()
+        assert result.required_mw.iloc[4:].isna().all()

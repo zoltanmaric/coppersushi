@@ -146,7 +146,7 @@ def render_cohort(frame: pd.DataFrame, output: Path, start: date, end: date,
             ineligible = int((frame.required_published.notna() & frame.required_mw.isna()).sum())
             procurement += (f'<p class="insight">Requirement coverage starts <b>{first_label}</b> in the retrieved data. '
                             f'Across the whole period, {no_record:,} MTUs have no requirement record and {ineligible:,} have a record '
-                            'but no eligible pre-clearing total. Missing requirements are not zero requirements or matched purchases.</p>')
+                            'but no eligible pre-submission total. Missing requirements are not zero requirements or matched purchases.</p>')
             procurement += figure_html(chart, 'Nonzero required minus purchased capacity by cap status')
             procurement += (f'<p class="note">In this view, {int(differences.shortfall.eq(0).sum()):,} exact-zero comparisons are hidden; '
                             f'{int((~comparable).sum()):,} comparisons are unavailable. '
@@ -157,7 +157,7 @@ def render_cohort(frame: pd.DataFrame, output: Path, start: date, end: date,
             table.columns=['Delivery start (UTC)','Export cap MW','Net exports MW','FCR ↑ MW','aFRR ↑ MW','mFRR direct ↑ MW','RR ↑ MW','Purchased MW','Required MW','Purchase publication (UTC)','Requirement publication (UTC)']
             procurement += '<details><summary>Inspect every selected interval and its reserve products</summary><div class="scroll">' + table.to_html(index=False, na_rep='Unavailable', float_format=lambda x:f'{x:,.0f}') + '</div></details>'
         else:
-            procurement = '<p class="pending">No qualifying pre-clearing procurement observations were recovered for selected MTUs.</p>'
+            procurement = '<p class="pending">No qualifying pre-submission procurement observations were recovered for selected MTUs.</p>'
     definition = (
         "A zero export cap prohibits net exports but permits net imports. This view includes every published zero cap, whether or not it bound the market."
         if zero else
@@ -174,7 +174,7 @@ def render_cohort(frame: pd.DataFrame, output: Path, start: date, end: date,
     html = f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Polish export caps · Critical Elements ⚡️</title><link rel="stylesheet" href="report.css"><script src="plotly.min.js"></script></head>
     <body><main><header><p class="eyebrow">Critical Elements ⚡️ / Market investigation</p><h1>Do Poland’s export limits<br>match its reserve needs?</h1>
-    <p class="lede">When PSE sets a restrictive export cap, do reserve needs and available alternatives justify its level? Compare the limit with balancing capacity already purchased and the requirement published before day-ahead clearing.</p>
+    <p class="lede">When PSE sets a restrictive export cap, do reserve needs and available alternatives justify its level? Compare the limit with balancing capacity already purchased and the requirement published before the normal cap-submission target.</p>
     <p class="period">{start:%d %B %Y} — {end:%d %B %Y} · 15-minute market time units (MTUs)</p><nav aria-label="Choose which intervals to analyse">{navigation}</nav>
     <p class="note">The zero-cap and binding-cap groups overlap: {overlap:,} MTUs have both a zero cap and an inferred binding effect. Of the zero-cap MTUs, {zero_unknown:,} have unresolved binding status. Do not add the two group counts.</p></header>
     <aside class="insight"><b>Why the map alone cannot answer this.</b> The map highlights caps with an inferred binding price effect. An export cap tends to bind when Poland would otherwise export, and the restriction can itself lower the Polish price. Cheaper Poland during binding intervals therefore does not independently show selective cap-setting or protectionist intent. Use the zero-cap and all-published-cap views to examine the decision separately from the market outcome.</aside>
@@ -190,7 +190,7 @@ def render_cohort(frame: pd.DataFrame, output: Path, start: date, end: date,
     <table class="comparison"><thead><tr><th>Poland cheaper than…</th><th>MTUs / comparable selected MTUs</th><th>Share</th></tr></thead><tbody>{rows}</tbody></table>
     <p class="note">The joint row requires Poland to be cheaper than all three in the same MTU. Missing prices are excluded from the comparison denominator, not treated as equal.</p></section>
     <section><p class="eyebrow">03 / What had already been purchased?</p><h2>Upward reserves bought in the morning auction</h2>
-    <p>For the same {label.lower()} MTUs, use PSE’s primary balancing-capacity procurement results. Only publication versions timestamped before noon Warsaw time on the preceding day qualify.</p>
+    <p>For the same {label.lower()} MTUs, use PSE’s primary balancing-capacity procurement results. Only publication versions timestamped before 10:30 Brussels time on the preceding day qualify.</p>
     <details open><summary>Can we separate purchases before and after day-ahead?</summary>
     <p><b>Yes.</b> PSE publishes basic procurement in <code>mbp-tp</code> and supplementary procurement separately in <code>mbu-tu</code>.
     This report uses only the basic process. It does not add later supplementary purchases or activated balancing energy.</p>
@@ -199,8 +199,8 @@ def render_cohort(frame: pd.DataFrame, output: Path, start: date, end: date,
     The <a href="https://api.raporty.pse.pl/EndpointsMap.pdf">PSE endpoint map</a> separately identifies basic and supplementary purchased-capacity reports.</p>
     <p><b>The requirement is published too.</b> PSE’s <code>wmb</code> report gives required balancing capacity by product and direction. We sum the upward requirements and compare them with upward purchases.
     The additional FRR requirement is above aFRR, so it is not a duplicated total. <code>zmb</code> is a separate report of procurement demand in the balancing-capacity market; it is not used as a substitute here.</p>
-    <p>Publication timestamps matter: a retrieved revision published after day-ahead clearing cannot establish the requirement known beforehand. Such values remain unavailable here.
-    Before-clearing publication also does not prove the value was known when PSE originally calculated or submitted the cap.</p></details>
+    <p>Publication timestamps matter: a retrieved revision published at or after the normal submission target cannot establish the requirement known beforehand. Such values remain unavailable here.
+    Publication before the normal submission target also does not prove the value was known when PSE originally calculated or submitted the cap.</p></details>
     {procurement}
     <p class="note">Hourly purchases are repeated across their four delivery quarters, including both clock-change hours. The median is weighted by selected MTUs.
     Matching the total requirement does not establish product-by-product sufficiency, physical deliverability, or that the export cap was unnecessary.</p></section>
@@ -211,7 +211,7 @@ def render_cohort(frame: pd.DataFrame, output: Path, start: date, end: date,
     <p>The zero-cap view selects published export limits within 0.001 MW of zero; it does not require a net-position or price-effect test.</p>
     <p>JAO Core allocationConstraint and netPos provide limits and positions; cross-CCR DA_PL_AC provides the alternative price. Quarter-hour order is reconstructed from row IDs and accepted only when positions match the independent Core feed. Export position tolerance: {POSITION_TOLERANCE_MW:g} MW; inferred price-effect threshold: €{effect_threshold:g}/MWh. Neighbour price comparisons have no tolerance.</p>
     <p>A position more than {POSITION_TOLERANCE_MW:g} MW below the export limit is classified as not binding even if the alternative price is unavailable. At the limit, missing alternative-price evidence remains unresolved.</p>
-    <p><a href="https://api.raporty.pse.pl/api/mbp-tp">PSE mbp-tp</a>: FCR + aFRR + direct mFRR + RR upward purchases. <a href="https://api.raporty.pse.pl/api/wmb">PSE wmb</a>: FCR + aFRR + additional FRR + RR upward requirements. Missing products are not zero-filled; revised publications after clearing are excluded. These are retrieved publication versions, not a full revision archive.</p>
+    <p><a href="https://api.raporty.pse.pl/api/mbp-tp">PSE mbp-tp</a>: FCR + aFRR + direct mFRR + RR upward purchases. <a href="https://api.raporty.pse.pl/api/wmb">PSE wmb</a>: FCR + aFRR + additional FRR + RR upward requirements. Missing products are not zero-filled; revised publications at or after 10:30 Brussels time on D−1 are excluded. These are retrieved publication versions, not a full revision archive.</p>
     <p>Day-ahead prices: Electricity Maps. Price-derived files remain local. <a href="intervals.csv">Download interval data</a> · <a href="summary.csv">Download comparison counts</a>.</p>
     </details></section><footer>Critical Elements ⚡️ · Public operational sources, local price analysis · Delivery through {end.isoformat()}</footer></main></body></html>'''
     output.mkdir(parents=True, exist_ok=True)
@@ -258,7 +258,7 @@ def render_cases(frame: pd.DataFrame, output: Path, start: date, end: date) -> N
     <title>Caps with purchased reserves · Critical Elements ⚡️</title><link rel="stylesheet" href="report.css"><script src="cases.js" defer></script></head>
     <body><main><header><p class="eyebrow">Critical Elements ⚡️ / Cases to investigate</p>
     <h1>Export caps with no aggregate<br>morning procurement shortfall</h1>
-    <p class="lede">Every published-cap MTU where the upward capacity purchased before day-ahead clearing met or exceeded PSE’s published upward requirement.</p>
+    <p class="lede">Every published-cap MTU where the upward capacity purchased before the normal cap-submission target met or exceeded PSE’s published upward requirement.</p>
     <p class="period">{start:%d %B %Y} — {end:%d %B %Y} · One row per 15-minute MTU</p>
     <nav><a href="report.html">Zero caps</a><a href="binding.html">Binding caps</a><a href="all-caps.html">All published caps</a><a href="cases.html" aria-current="page">Cases to investigate</a></nav></header>
     <div class="metrics"><div><strong>{len(cases):,}</strong><span>Matching intervals, all listed below</span></div><div><strong>{zero:,}</strong><span>With a zero export cap</span></div><div><strong>{binding:,}</strong><span>With an inferred binding effect</span></div></div>
@@ -267,7 +267,7 @@ def render_cases(frame: pd.DataFrame, output: Path, start: date, end: date) -> N
     Nonbinding limits did not restrict the cleared market. Use the binding filter to focus on caps with an inferred market effect.</aside>
     <p>{len(cases):,} of {int(comparable.sum()):,} comparable published-cap MTUs meet the aggregate requirement.
     {int(comparable.sum())-len(cases):,} fall short; {missing:,} lack an eligible comparison. Published caps cover {len(published):,} of {len(frame):,} observed MTUs.</p>
-    <p class="note">Basic morning purchases only; later supplementary purchases are excluded. Both publication versions must predate noon Warsaw time on D−1.
+    <p class="note">Basic morning purchases only; later supplementary purchases are excluded. Both publication versions must predate 10:30 Brussels time on D−1.
     This does not establish what was known at the earlier cap-setting deadline. The retrieved eligible requirement coverage starts on {first_label};
     missing earlier requirements cannot be counted as satisfied. <a href="all-caps.html">Sources and method</a>.</p>
     <div class="filters"><label>Cap level <select id="level"><option value="">All caps</option><option value="zero">Zero</option><option value="positive">Above zero</option><option value="negative">Below zero</option></select></label>

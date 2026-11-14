@@ -76,6 +76,8 @@ Remaining checks: recover the morning export calculation and any revisions; reco
 
 ## Analysis
 
+The comparison uses publications strictly before the normal 10:30 Europe/Brussels submission target on D−1. A cached rerun on 2026-11-14 changed no reserve values or case counts relative to the former noon filter. This target does not establish PSE’s actual internal cap-setting time.
+
 The reproducible entry point is `python -m scripts.polish_export_caps --start 2026-05-06 --end 2026-11-13`. The local HTML explainer counts active export caps, compares Poland strictly against Germany–Luxembourg, Czechia and Slovakia, and joins morning upward-reserve procurement. The start follows [PSE’s documented JAO publication boundary](country-import-export-caps.md#poland-validation), not the April handbook date.
 
 An active export cap requires the position at the export limit within the shared 0.11 MW publication-rounding tolerance and a positive alternative-price effect exceeding €0.01/MWh. This inherits the [empirical alternative-price adapter](country-import-export-caps.md); it is not an independently published shadow-price flag. Positions safely below the export cap establish inactivity even without an alternative price. Other missing attribution remains unresolved. Neighbour comparisons use strictly `<`, with no tolerance.
@@ -88,7 +90,7 @@ The local `cases.html` table lists all 7,760 published-cap MTUs where eligible m
 
 The separate zero-export-cap cohort contains 4,621 MTUs (25.1% of all MTUs), independent of market outcome. Poland is strictly cheaper than all three Core neighbours in 1,169 (25.3%). Morning upward procurement is available for every zero-cap MTU: median 1,914 MW, range 1,286–2,403 MW. Of 3,881 with comparable requirements, 3,728 have purchased total at least equal to required total. The cohorts overlap in 1,221 MTUs; another 3 zero-cap MTUs have unresolved binding status. A zero export cap permits net imports, so it need not bind.
 
-PSE primary procurement (`mbp-tp`) is available before clearing for all 2,599 active MTUs: upward capacity median 1,779 MW, range 1,205–2,487 MW. Of 2,262 active MTUs with comparable pre-clearing requirement publications (`wmb`), 2,082 have purchased total at least equal to the required total. This is not a product-by-product or physical-deliverability test. Hourly observations repeat across their four quarters; statistics weight active MTUs. Missing products and publication versions at or after noon Warsaw time on D−1 are excluded, not zero-filled. Generated price-derived files remain local under source terms.
+PSE primary procurement (`mbp-tp`) is available before the normal submission target for all 2,599 active MTUs: upward capacity median 1,779 MW, range 1,205–2,487 MW. Of 2,262 active MTUs with comparable pre-submission requirement publications (`wmb`), 2,082 have purchased total at least equal to the required total. This is not a product-by-product or physical-deliverability test. Hourly observations repeat across their four quarters; statistics weight active MTUs. Missing products and publication versions at or after 10:30 Brussels time on D−1 are excluded, not zero-filled. Generated price-derived files remain local under source terms.
 
 ## ACER-monitoring
 

@@ -204,11 +204,11 @@ viewable locally through Dash.
 `python -m scripts.polish_export_caps --start 2026-05-06 --end 2026-11-13`
 collects published caps, Polish positions, Germany–Luxembourg/Czechia/Slovakia prices and PSE morning upward-reserve
 purchases and requirements. The explainer counts active export caps, strict price comparisons,
-and pre-clearing procurement with explicit coverage gaps. The default zero-cap view includes
+and pre-submission procurement with explicit coverage gaps. The default zero-cap view includes
 nonbinding limits; linked views cover binding caps and all published caps. Nonzero morning
 procurement differences are coloured by cap status, with separate population and coverage counts.
 The linked case table lists every published-cap MTU with purchased upward capacity at least
-equal to the pre-clearing requirement, including filters and a full CSV export. It writes resumable inputs, interval and summary CSVs, coverage, failures and an
+equal to the pre-submission requirement, including filters and a full CSV export. It writes resumable inputs, interval and summary CSVs, coverage, failures and an
 interactive `report.html` under ignored `data/polish-export-caps/`. Electricity Maps credentials
 use the existing environment/file configuration; `--price-token-file` selects another local file.
 The output contains licensed price data and must not be committed or published.
