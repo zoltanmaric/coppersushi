@@ -93,7 +93,7 @@ def publication_files(bundle: DayBundle, *, allow_partial_attribution: bool = Fa
     from coppersushi.pipelines.cnec.models import DayMetadata, DayManifest
     validate_publication(bundle, allow_partial_attribution=allow_partial_attribution)
     generation = hashlib.sha256(bundle.model_dump_json().encode()).hexdigest()[:24]
-    prefix = f'data/cnec/v2/{bundle.day}'
+    prefix = f'data/cnec/v3/{bundle.day}'
     metadata = DayMetadata.model_validate(bundle.model_dump(exclude={'intervals'}))
     files = [(f'{prefix}/{generation}/metadata.json', metadata.model_dump_json())]
     files.extend((f'{prefix}/{generation}/{i.index}.json', i.model_dump_json()) for i in bundle.intervals)

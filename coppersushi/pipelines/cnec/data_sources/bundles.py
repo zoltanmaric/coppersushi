@@ -43,7 +43,11 @@ def prepare(day: MarketDay, refresh: bool = False, *, allow_partial_attribution:
                  ZonalPrices.validate(prices), context)
     directory = Path(os.environ.get('COPPERSUSHI_ELEMENT_CATALOG', str(PRODUCT / 'data/element-catalog')))
     mapped, pending = element_catalog.resolution_inputs(directory)
-    return cnec_bundle.build(inputs, resolve_day_geometry(day, active.constraints, mapped, pending))
+    bundle = cnec_bundle.build(inputs, resolve_day_geometry(day, active.constraints, mapped, pending))
+    from coppersushi.pipelines.cnec.data_sources import pse
+    for interval, evidence in zip(bundle.intervals, pse.load(day), strict=True):
+        interval.polish_upward_reserves = evidence
+    return bundle
 
 
 def resolve_day_geometry(
@@ -73,7 +77,7 @@ def is_published(day: MarketDay, bucket: str) -> bool:
     """Completed publications stay static; explicit refresh can publish a correction."""
     from botocore.exceptions import ClientError
     try:
-        cache._client().head_object(Bucket=bucket, Key=f'data/cnec/v2/{day.date}/manifest.json')
+        cache._client().head_object(Bucket=bucket, Key=f'data/cnec/v3/{day.date}/manifest.json')
     except ClientError as error:
         if error.response['Error']['Code'] in {'NoSuchKey', '404', 'NotFound'}:
             return False

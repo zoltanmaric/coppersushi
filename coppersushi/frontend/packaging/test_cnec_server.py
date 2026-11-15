@@ -14,7 +14,7 @@ def test_dates_before_publication_history_redirect_without_credentials():
     assert response.headers['Location'] == '/cnec'
 
 def test_unprepared_local_manifest_is_an_explicit_miss():
-    response = server.test_client().get('/data/cnec/v2/2099-01-01/manifest.json')
+    response = server.test_client().get('/data/cnec/v3/2099-01-01/manifest.json')
     assert response.status_code == 404
 
 def test_opf_does_not_auto_execute_the_standalone_frontend(monkeypatch):
@@ -60,7 +60,7 @@ def test_unsupported_embed_date_stays_in_the_embed():
     assert response.headers['Location'] == '/embed/cnec'
 
 
-@pytest.mark.parametrize('path', ['/data/cnec/v2/2026-11-09/manifest.json', '/data/opf/v2/opf-2024/manifest.json'])
+@pytest.mark.parametrize('path', ['/data/cnec/v3/2026-11-09/manifest.json', '/data/opf/v2/opf-2024/manifest.json'])
 def test_production_preview_proxies_data_but_keeps_local_assets(monkeypatch, path):
     from io import BytesIO
     from coppersushi.frontend.packaging import preview as cnec_server
@@ -92,7 +92,7 @@ def test_production_preview_preserves_missing_and_failed_publications(monkeypatc
 
     monkeypatch.setattr(cnec_server, 'urlopen', missing)
     client = cnec_server.create_app(production_data=True).test_client()
-    assert client.get('/data/cnec/v2/2026-11-10/manifest.json').status_code == status
+    assert client.get('/data/cnec/v3/2026-11-10/manifest.json').status_code == status
 
 
 def test_production_preview_recovers_from_connection_reset(monkeypatch):
@@ -111,7 +111,7 @@ def test_production_preview_recovers_from_connection_reset(monkeypatch):
 
     monkeypatch.setattr(cnec_server, 'urlopen', flaky)
     client = cnec_server.create_app(production_data=True).test_client()
-    assert client.get('/data/cnec/v2/2026-11-09/manifest.json').json == {}
+    assert client.get('/data/cnec/v3/2026-11-09/manifest.json').json == {}
     assert attempts == 2
 
 

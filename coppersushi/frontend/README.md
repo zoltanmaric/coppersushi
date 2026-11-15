@@ -35,3 +35,8 @@ From the repository root: `pixi run frontend-build`, `pixi run frontend-test` an
 models. Tests are colocated. `scripts/build.mjs` builds into ignored `dist/`; source
 assets live in `assets/`. The [deployment runbook](../infra/lambda/README.md) owns
 production publication and rollback.
+
+Polish export-cap tooltips read required and purchased upward reserve capacity from
+the prepared interval object, including independent publication timestamps formatted
+in Europe/Brussels. The browser never fetches PSE on hover. Missing evidence stays
+explicit; upward capacity is not shown as an explanation of import constraints.

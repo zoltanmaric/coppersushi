@@ -1,5 +1,42 @@
 {
   "$defs": {
+    "AvailableReserve": {
+      "additionalProperties": false,
+      "description": "A complete eligible observation with its selected product contributions.",
+      "properties": {
+        "status": {
+          "const": "available",
+          "title": "Status",
+          "type": "string"
+        },
+        "mw": {
+          "title": "Mw",
+          "type": "number"
+        },
+        "published_at": {
+          "format": "date-time",
+          "title": "Published At",
+          "type": "string"
+        },
+        "products": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Products",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "mw",
+        "published_at",
+        "products"
+      ],
+      "title": "AvailableReserve",
+      "type": "object"
+    },
     "BindingRow": {
       "additionalProperties": false,
       "description": "One physical binding publication with its country sensitivities.",
@@ -157,8 +194,8 @@
       "description": "Producer-side complete day; browser delivery uses separate interval objects.",
       "properties": {
         "version": {
-          "const": 2,
-          "default": 2,
+          "const": 3,
+          "default": 3,
           "title": "Version",
           "type": "integer"
         },
@@ -221,8 +258,8 @@
       "description": "Atomic pointer to a complete immutable generation of a prepared day.",
       "properties": {
         "version": {
-          "const": 2,
-          "default": 2,
+          "const": 3,
+          "default": 3,
           "title": "Version",
           "type": "integer"
         },
@@ -249,8 +286,8 @@
       "description": "Versioned, token-free data for all interactions within a delivery day.",
       "properties": {
         "version": {
-          "const": 2,
-          "default": 2,
+          "const": 3,
+          "default": 3,
           "title": "Version",
           "type": "integer"
         },
@@ -406,6 +443,17 @@
           },
           "title": "Notes",
           "type": "array"
+        },
+        "polish_upward_reserves": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PolishReserves"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -418,6 +466,61 @@
         "notes"
       ],
       "title": "MarketInterval",
+      "type": "object"
+    },
+    "PolishReserves": {
+      "description": "Independent requirement and basic purchase evidence for one delivery interval.",
+      "properties": {
+        "required": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AvailableReserve"
+            },
+            {
+              "$ref": "#/$defs/UnavailableReserve"
+            }
+          ],
+          "title": "Required"
+        },
+        "purchased": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AvailableReserve"
+            },
+            {
+              "$ref": "#/$defs/UnavailableReserve"
+            }
+          ],
+          "title": "Purchased"
+        }
+      },
+      "required": [
+        "required",
+        "purchased"
+      ],
+      "title": "PolishReserves",
+      "type": "object"
+    },
+    "UnavailableReserve": {
+      "additionalProperties": false,
+      "description": "Reason an eligible observation cannot be established.",
+      "properties": {
+        "status": {
+          "enum": [
+            "missing",
+            "incomplete",
+            "late",
+            "ambiguous",
+            "fetch_failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "UnavailableReserve",
       "type": "object"
     },
     "ZoneGeometry": {

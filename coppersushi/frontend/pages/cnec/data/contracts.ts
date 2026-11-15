@@ -5,7 +5,7 @@
  * and run json-schema-to-typescript to regenerate this file.
  */
 
-export type Version = 2;
+export type Version = 3;
 export type Day = string;
 export type Labels = string[];
 export type Zone = "AT" | "BE" | "CZ" | "DE" | "FR" | "HR" | "HU" | "NL" | "PL" | "RO" | "SI" | "SK";
@@ -50,8 +50,19 @@ export type ShadowPrice1 = number;
 export type Delta = number;
 export type Caps = CountryCap[];
 export type Notes = string[];
+export type Required = AvailableReserve | UnavailableReserve;
+export type Status = "available";
+export type Mw = number;
+export type PublishedAt = string;
+/**
+ * @minItems 4
+ * @maxItems 4
+ */
+export type Products = [number, number, number, number];
+export type Status1 = "missing" | "incomplete" | "late" | "ambiguous" | "fetch_failed";
+export type Purchased = AvailableReserve | UnavailableReserve;
 export type Intervals = MarketInterval[];
-export type Version1 = 2;
+export type Version1 = 3;
 export type Day1 = string;
 export type Labels1 = string[];
 export type Zones1 = ZoneGeometry[];
@@ -60,7 +71,7 @@ export type Zones1 = ZoneGeometry[];
  * @maxItems 2
  */
 export type PriceRange1 = [number, number];
-export type Version2 = 2;
+export type Version2 = 3;
 export type Day2 = string;
 export type Generation = string;
 
@@ -113,6 +124,7 @@ export interface MarketInterval {
   alpha: Alpha;
   caps: Caps;
   notes: Notes;
+  polish_upward_reserves?: PolishReserves | null;
 }
 export interface Prices {
   [k: string]: number;
@@ -145,6 +157,28 @@ export interface CountryCap {
   capacity: Capacity1;
   shadow_price: ShadowPrice1;
   delta: Delta;
+}
+/**
+ * Independent requirement and basic purchase evidence for one delivery interval.
+ */
+export interface PolishReserves {
+  required: Required;
+  purchased: Purchased;
+}
+/**
+ * A complete eligible observation with its selected product contributions.
+ */
+export interface AvailableReserve {
+  status: Status;
+  mw: Mw;
+  published_at: PublishedAt;
+  products: Products;
+}
+/**
+ * Reason an eligible observation cannot be established.
+ */
+export interface UnavailableReserve {
+  status: Status1;
 }
 /**
  * Versioned, token-free data for all interactions within a delivery day.
