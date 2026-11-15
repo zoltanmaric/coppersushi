@@ -8,5 +8,8 @@ test('publication times are Brussels winter time and keep independent values', (
   expect(text).toContain('07:06');
   expect(text).toContain('09:10');
   expect(text).toContain('2026');
-  expect(text).toContain('Matching totals');
+  expect(text).toContain('Required: 2,347 MW · 07:06');
+  expect(text).toContain('Procured: 2,347 MW · 09:10');
+  expect(text.match(/12 Nov 2026/g)).toHaveLength(1);
+  expect(text).not.toContain('Matching totals');
 });

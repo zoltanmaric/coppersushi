@@ -9,11 +9,17 @@ export function reserveTooltip(interval: MarketInterval): string {
   const evidence = interval.polish_upward_reserves;
   if (!evidence) return '<br>Upward reserves: unavailable';
   const reasons = {missing: 'no record', incomplete: 'incomplete products', late: 'no publication before cutoff', ambiguous: 'conflicting versions', fetch_failed: 'source unavailable'};
-  const format = new Intl.DateTimeFormat('en-GB', {timeZone: 'Europe/Brussels', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short'});
-  return ([['Required upward capacity', evidence.required], ['Purchased before submission target', evidence.purchased]] as const).map(([label, value]) => {
+  const dateFormat = new Intl.DateTimeFormat('en-GB', {timeZone: 'Europe/Brussels', day: '2-digit', month: 'short', year: 'numeric'});
+  const timeFormat = new Intl.DateTimeFormat('en-GB', {timeZone: 'Europe/Brussels', hour: '2-digit', minute: '2-digit', timeZoneName: 'short'});
+  const rows = [['Required', evidence.required], ['Procured', evidence.purchased]] as const;
+  const dates = rows.map(([, value]) => value.status === 'available' ? dateFormat.format(new Date(value.published_at!)) : null);
+  const sharedDate = dates[0] !== null && dates[0] === dates[1] ? dates[0] : null;
+  return `<br><b>Upward reserves</b> · published${sharedDate ? ` ${sharedDate}` : ''}` + rows.map(([label, value]) => {
     if (value.status !== 'available') return `<br>${label}: unavailable (${reasons[value.status]})`;
-    return `<br>${label}: ${number(value.mw!, 0)} MW<br>Published ${format.format(new Date(value.published_at!))}`;
-  }).join('') + '<br>Cutoff: 10:30 Brussels on D−1.<br>Matching totals alone does not establish that the cap was unnecessary.';
+    const instant = new Date(value.published_at!);
+    const stamp = `${sharedDate ? '' : dateFormat.format(instant) + ', '}${timeFormat.format(instant)}`;
+    return `<br>${label}: ${number(value.mw!, 0)} MW · ${stamp}`;
+  }).join('');
 }
 
 type Trace = PlotlyFigure["data"][number];
