@@ -34,7 +34,7 @@ def fetch(day: MarketDay, endpoint: str, fields: tuple[str, str, str, str]) -> l
                 records.append(ReserveRecord.model_validate(dict(end=instant('dtime_utc'), published=instant('publication_ts_utc'),
                                              products=[row.get(f) for f in fields])))
             url = page.next_link
-        logging.getLogger(__name__).info('Retrieved PSE %s for %s at %s', endpoint, day.date, datetime.now(UTC).isoformat())
+        logging.getLogger(__name__).info('Retrieved PSE %s for %s at %s', endpoint, day.date, datetime.now(tz=UTC).isoformat())
         return records
     except (URLError, OSError, ValueError, KeyError, TypeError):
         logging.getLogger(__name__).exception('PSE %s unavailable for %s', endpoint, day.date)
