@@ -1,0 +1,110 @@
+[
+  {
+    "purchases": [
+      {
+        "dtime_utc": "2026-07-15T18:00:00Z",
+        "publication_ts_utc": "2026-07-14T08:29:59Z",
+        "fcr_g": 100,
+        "afrr_g": 200,
+        "mfrrd_g": 300,
+        "rr_g": 400
+      },
+      {
+        "dtime_utc": "2026-07-15T19:00:00Z",
+        "publication_ts_utc": "2026-07-14T08:30:00Z",
+        "fcr_g": 100,
+        "afrr_g": 200,
+        "mfrrd_g": 300,
+        "rr_g": 400
+      },
+      {
+        "dtime_utc": "2026-07-15T20:00:00Z",
+        "publication_ts_utc": "2026-07-14T08:30:01Z",
+        "fcr_g": 100,
+        "afrr_g": 200,
+        "mfrrd_g": 300,
+        "rr_g": 400
+      }
+    ],
+    "requirements": [
+      {
+        "dtime_utc": "2026-07-15T18:00:00Z",
+        "publication_ts_utc": "2026-07-14T08:29:59Z",
+        "fcrg": 100,
+        "afrrg": 200,
+        "frrg": 300,
+        "rrg": 400
+      },
+      {
+        "dtime_utc": "2026-07-15T19:00:00Z",
+        "publication_ts_utc": "2026-07-14T08:30:00Z",
+        "fcrg": 100,
+        "afrrg": 200,
+        "frrg": 300,
+        "rrg": 400
+      },
+      {
+        "dtime_utc": "2026-07-15T20:00:00Z",
+        "publication_ts_utc": "2026-07-14T08:30:01Z",
+        "fcrg": 100,
+        "afrrg": 200,
+        "frrg": 300,
+        "rrg": 400
+      }
+    ]
+  },
+  {
+    "purchases": [
+      {
+        "dtime_utc": "2026-11-13T18:00:00Z",
+        "publication_ts_utc": "2026-11-12T09:29:59Z",
+        "fcr_g": 100,
+        "afrr_g": 200,
+        "mfrrd_g": 300,
+        "rr_g": 400
+      },
+      {
+        "dtime_utc": "2026-11-13T19:00:00Z",
+        "publication_ts_utc": "2026-11-12T09:30:00Z",
+        "fcr_g": 100,
+        "afrr_g": 200,
+        "mfrrd_g": 300,
+        "rr_g": 400
+      },
+      {
+        "dtime_utc": "2026-11-13T20:00:00Z",
+        "publication_ts_utc": "2026-11-12T09:30:01Z",
+        "fcr_g": 100,
+        "afrr_g": 200,
+        "mfrrd_g": 300,
+        "rr_g": 400
+      }
+    ],
+    "requirements": [
+      {
+        "dtime_utc": "2026-11-13T18:00:00Z",
+        "publication_ts_utc": "2026-11-12T09:29:59Z",
+        "fcrg": 100,
+        "afrrg": 200,
+        "frrg": 300,
+        "rrg": 400
+      },
+      {
+        "dtime_utc": "2026-11-13T19:00:00Z",
+        "publication_ts_utc": "2026-11-12T09:30:00Z",
+        "fcrg": 100,
+        "afrrg": 200,
+        "frrg": 300,
+        "rrg": 400
+      },
+      {
+        "dtime_utc": "2026-11-13T20:00:00Z",
+        "publication_ts_utc": "2026-11-12T09:30:01Z",
+        "fcrg": 100,
+        "afrrg": 200,
+        "frrg": 300,
+        "rrg": 400
+      }
+    ]
+  }
+]

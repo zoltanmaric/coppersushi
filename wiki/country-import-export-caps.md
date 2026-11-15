@@ -1,6 +1,6 @@
 # Country import and export caps
 
-See [JAO constraint types](jao-constraint-types.md) for the complete classification problem and remaining metadata gaps.
+See [Polish allocation constraints](polish-allocation-constraints.md) for the Polish source contract and planned reserve tooltip. See [JAO constraint types](jao-constraint-types.md) for the complete classification problem and remaining metadata gaps.
 
 ### Country-cap
 
@@ -30,6 +30,21 @@ JAO distinguishes limits on Core net position, included among [external constrai
 [TenneT's official phase-out notice](https://www.jao.eu/news/ttn-phase-out-external-constraint-nl-core-day) explicitly removes the Dutch upper/lower Core net-position bound from business day 2023-12-15. An older handbook describing Dutch and Belgian cap formulations must not turn their absence in 2026 into a missing-data problem.
 
 The same 2026 overview lists cable ramping constraints and a combined flow constraint on Italy's borders with France, Austria and Slovenia. Those remain separate mechanisms, even when a country is named. A limit on interconnector flow or a line set is not automatically a cap on that country's aggregate net position. No other country is listed in the overview's net-position category; this conclusion does not claim that all countries have unrestricted trade.
+
+For the stated security rationale and its evidential limits, see the [fourth-amendment explanatory document](literature/core-da-ccm-fourth-amendment-explanatory-document.md#poland). Its proposed Irish provisions do not establish a change to this dated operational inventory.
+
+### Safeguards
+
+Permission to use a cap does not by itself establish its necessity or efficiency in a particular interval. The [Core methodology’s safeguards](literature/core-da-ccm-allocation-constraint-safeguards.md) require analysis of security effectiveness, economic-surplus loss and more efficient alternatives.
+
+The policy disagreement is documented. [CREG’s 2022 study](literature/creg-core-market-coupling-first-100-days.md) calls for discontinuation. The [EU Council recommendation of 10 July 2026, recital 33](https://eur-lex.europa.eu/eli/C/2026/3934/oj/eng/pdf) criticises Polish price decoupling and renewable curtailment linked to allocation constraints. Poland’s [regulator assessment, published 30 December 2025](https://ure.gov.pl/en/communication/news/492,Assessment-of-the-impact-of-the-balancing-market-reform-on-the-application-of-al.html), supports the security rationale while recommending broader reserve participation, better schedules and balancing incentives to reduce activation.
+
+The [Q4 2025 PSE assessment](literature/pse-allocation-constraints-q4-2025.md) contains an actual market rerun and reserve-shortfall calculation. The [oversight evidence](literature/core-da-ccm-allocation-constraint-safeguards.md#oversight) distinguishes published review from independent replication and implementation follow-up.
+
+The [Polish export-cap investigation](polish-export-cap-investigation.md) compares November 2026 interval limits with published reserve requirements, procurement and planning balances.
+
+
+A defensible challenge asks for the interval’s input calculation, security benefit and assessment of alternatives. A price spread alone does not demonstrate protectionist intent. Nor does compliance with transmission-element capacity margins alone resolve the separate net-position constraint’s efficiency.
 
 ### Coverage-validation
 

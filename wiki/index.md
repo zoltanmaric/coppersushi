@@ -1,6 +1,9 @@
 # Wiki Index
 
 ## Concepts
+- [polish-allocation-constraints.md](polish-allocation-constraints.md) — Polish cap sources, bounds, map selection and reserve context
+- [polish-balancing-capacity-procurement.md](polish-balancing-capacity-procurement.md) — required and basic purchased MW, source fields, publication versions and time alignment
+- [polish-export-cap-investigation.md](polish-export-cap-investigation.md) — interval-level investigation of Polish export caps, reserve evidence and the protectionism hypothesis
 - [virtual-hub-interconnectors.md](virtual-hub-interconnectors.md) — interface mapping, endpoint-price decomposition and deliberate exclusion from the country-spread map
 - [jao-constraint-types.md](jao-constraint-types.md) — row classification across physical assets, country caps, virtual hubs, equality and LTA constraints, with verified metadata gaps
 - [country-import-export-caps.md](country-import-export-caps.md) — all-Core country-cap coverage, price effects, Polish alternative-price evidence and publication gaps
@@ -34,6 +37,11 @@
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026
 
 ## Literature (one digest per authoritative document, link only)
+- [literature/acer-electricity-market-integration-monitoring-report.md](literature/acer-electricity-market-integration-monitoring-report.md) — 2026 monitoring: binding-cap frequency and an apparent outdated pre-auction procurement premise
+- [literature/pse-allocation-constraints-q4-2025.md](literature/pse-allocation-constraints-q4-2025.md) — extracted quarterly simulation, security valuations and limits of the counterfactual
+- [literature/core-da-ccm-allocation-constraint-safeguards.md](literature/core-da-ccm-allocation-constraint-safeguards.md) — binding conditions, welfare reporting, alternatives and transitional deadlines
+- [literature/creg-core-market-coupling-first-100-days.md](literature/creg-core-market-coupling-first-100-days.md) — Belgian regulator’s 2022 critique of structural trade restrictions
+- [literature/core-da-ccm-fourth-amendment-explanatory-document.md](literature/core-da-ccm-fourth-amendment-explanatory-document.md) — fourth-amendment proposal: Polish reserve rationale, Irish constraints and methodology changes
 - [literature/sdac-allocation-constraints-2026.md](literature/sdac-allocation-constraints-2026.md) — April 2026 Europe-wide inventory: Poland alone has an aggregate net-position cap; cable ramping and line sets are separate
 - [literature/core-da-ccm-explanatory-note.md](literature/core-da-ccm-explanatory-note.md) — Core TSOs' explanatory note on the flow-based capacity calculation methodology, June 2018, with what the amendments changed
 - [literature/jao-core-publication-handbook.md](literature/jao-core-publication-handbook.md) — JAO's Core publication handbook v1.8 and v2.2: columns, publication times, country caps and FB/LTA scaling
