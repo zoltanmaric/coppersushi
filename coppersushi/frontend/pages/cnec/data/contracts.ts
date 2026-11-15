@@ -58,7 +58,7 @@ export type PublishedAt = string;
  * @minItems 4
  * @maxItems 4
  */
-export type Products = [unknown, unknown, unknown, unknown];
+export type Products = [number, number, number, number];
 export type Status1 = "missing" | "incomplete" | "late" | "ambiguous" | "fetch_failed";
 export type Purchased = AvailableReserve | UnavailableReserve;
 export type Intervals = MarketInterval[];

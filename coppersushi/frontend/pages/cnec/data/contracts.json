@@ -19,22 +19,11 @@
           "type": "string"
         },
         "products": {
+          "items": {
+            "type": "number"
+          },
           "maxItems": 4,
           "minItems": 4,
-          "prefixItems": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "number"
-            }
-          ],
           "title": "Products",
           "type": "array"
         }
@@ -483,18 +472,7 @@
       "description": "Independent requirement and basic purchase evidence for one delivery interval.",
       "properties": {
         "required": {
-          "discriminator": {
-            "mapping": {
-              "ambiguous": "#/$defs/UnavailableReserve",
-              "available": "#/$defs/AvailableReserve",
-              "fetch_failed": "#/$defs/UnavailableReserve",
-              "incomplete": "#/$defs/UnavailableReserve",
-              "late": "#/$defs/UnavailableReserve",
-              "missing": "#/$defs/UnavailableReserve"
-            },
-            "propertyName": "status"
-          },
-          "oneOf": [
+          "anyOf": [
             {
               "$ref": "#/$defs/AvailableReserve"
             },
@@ -505,18 +483,7 @@
           "title": "Required"
         },
         "purchased": {
-          "discriminator": {
-            "mapping": {
-              "ambiguous": "#/$defs/UnavailableReserve",
-              "available": "#/$defs/AvailableReserve",
-              "fetch_failed": "#/$defs/UnavailableReserve",
-              "incomplete": "#/$defs/UnavailableReserve",
-              "late": "#/$defs/UnavailableReserve",
-              "missing": "#/$defs/UnavailableReserve"
-            },
-            "propertyName": "status"
-          },
-          "oneOf": [
+          "anyOf": [
             {
               "$ref": "#/$defs/AvailableReserve"
             },

@@ -1,7 +1,7 @@
 """Select independently published reserve evidence before the SDAC submission target."""
 from datetime import datetime, timedelta, time, UTC
-from typing import Literal, Annotated
-from pydantic import BaseModel, AwareDatetime, FiniteFloat, Field, ConfigDict
+from typing import Literal
+from pydantic import BaseModel, AwareDatetime, FiniteFloat, ConfigDict, Field
 from coppersushi.pipelines.market_day import MarketDay, MARKET_TZ
 
 
@@ -11,7 +11,7 @@ class AvailableReserve(BaseModel):
     status: Literal['available']
     mw: FiniteFloat
     published_at: AwareDatetime
-    products: tuple[FiniteFloat, FiniteFloat, FiniteFloat, FiniteFloat]
+    products: list[FiniteFloat] = Field(min_length=4, max_length=4)
 
 
 class UnavailableReserve(BaseModel):
@@ -20,7 +20,7 @@ class UnavailableReserve(BaseModel):
     status: Literal['missing', 'incomplete', 'late', 'ambiguous', 'fetch_failed']
 
 
-ReserveObservation = Annotated[AvailableReserve | UnavailableReserve, Field(discriminator='status')]
+ReserveObservation = AvailableReserve | UnavailableReserve
 
 
 class PolishReserves(BaseModel):
