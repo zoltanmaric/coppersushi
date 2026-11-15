@@ -139,8 +139,10 @@ The scheduler skips any day whose manifest already exists. Deploying a publisher
 image does not rebuild those days. For a data-contract change:
 
 1. Save each existing supported day's manifest with the image/UI rollback notes.
-   List `data/cnec/v3/` in the private bucket and select the dated manifests in the
-   supported window (starting 5 November 2025).
+   For the v2 → v3 migration, list `data/cnec/v2/` in the private bucket and select the dated manifests in the
+   supported window (starting 5 November 2025). Preserve those v2 objects; publish
+   and verify corresponding v3 manifests before frontend rollout. Use a fresh backfill
+   report for the migration; resumed reports also recheck destination manifests.
 2. From the new checkout, run the publication CLI above for **every listed day**.
    Do not use the scheduled handler: its manifest-existence check skips the work.
    The CLI prepares and publishes unconditionally; `--refresh` is only needed to

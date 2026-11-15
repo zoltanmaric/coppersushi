@@ -1,5 +1,53 @@
 {
   "$defs": {
+    "AvailableReserve": {
+      "additionalProperties": false,
+      "description": "A complete eligible observation with its selected product contributions.",
+      "properties": {
+        "status": {
+          "const": "available",
+          "title": "Status",
+          "type": "string"
+        },
+        "mw": {
+          "title": "Mw",
+          "type": "number"
+        },
+        "published_at": {
+          "format": "date-time",
+          "title": "Published At",
+          "type": "string"
+        },
+        "products": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Products",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "mw",
+        "published_at",
+        "products"
+      ],
+      "title": "AvailableReserve",
+      "type": "object"
+    },
     "BindingRow": {
       "additionalProperties": false,
       "description": "One physical binding publication with its country sensitivities.",
@@ -435,10 +483,48 @@
       "description": "Independent requirement and basic purchase evidence for one delivery interval.",
       "properties": {
         "required": {
-          "$ref": "#/$defs/ReserveObservation"
+          "discriminator": {
+            "mapping": {
+              "ambiguous": "#/$defs/UnavailableReserve",
+              "available": "#/$defs/AvailableReserve",
+              "fetch_failed": "#/$defs/UnavailableReserve",
+              "incomplete": "#/$defs/UnavailableReserve",
+              "late": "#/$defs/UnavailableReserve",
+              "missing": "#/$defs/UnavailableReserve"
+            },
+            "propertyName": "status"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableReserve"
+            },
+            {
+              "$ref": "#/$defs/UnavailableReserve"
+            }
+          ],
+          "title": "Required"
         },
         "purchased": {
-          "$ref": "#/$defs/ReserveObservation"
+          "discriminator": {
+            "mapping": {
+              "ambiguous": "#/$defs/UnavailableReserve",
+              "available": "#/$defs/AvailableReserve",
+              "fetch_failed": "#/$defs/UnavailableReserve",
+              "incomplete": "#/$defs/UnavailableReserve",
+              "late": "#/$defs/UnavailableReserve",
+              "missing": "#/$defs/UnavailableReserve"
+            },
+            "propertyName": "status"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableReserve"
+            },
+            {
+              "$ref": "#/$defs/UnavailableReserve"
+            }
+          ],
+          "title": "Purchased"
         }
       },
       "required": [
@@ -448,12 +534,12 @@
       "title": "PolishReserves",
       "type": "object"
     },
-    "ReserveObservation": {
-      "description": "Eligible upward capacity, or an explicit reason why it cannot be established.",
+    "UnavailableReserve": {
+      "additionalProperties": false,
+      "description": "Reason an eligible observation cannot be established.",
       "properties": {
         "status": {
           "enum": [
-            "available",
             "missing",
             "incomplete",
             "late",
@@ -462,37 +548,12 @@
           ],
           "title": "Status",
           "type": "string"
-        },
-        "mw": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Mw"
-        },
-        "published_at": {
-          "anyOf": [
-            {
-              "format": "date-time",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Published At"
         }
       },
       "required": [
         "status"
       ],
-      "title": "ReserveObservation",
+      "title": "UnavailableReserve",
       "type": "object"
     },
     "ZoneGeometry": {

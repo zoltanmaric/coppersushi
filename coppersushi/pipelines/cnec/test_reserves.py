@@ -22,3 +22,17 @@ def test_failure_and_missing_cover_dst_day(day,count):
     evidence = align(MarketDay.on(day), [], None)
     assert len(evidence) == count
     assert all(e.required.status == 'missing' and e.purchased.status == 'fetch_failed' for e in evidence)
+
+@pytest.mark.parametrize('payload', json.loads((Path(__file__).parent/'fixtures/polish-export-caps/invalid-timestamps.json').read_text()))
+def test_invalid_timestamps_leave_reserves_unavailable(monkeypatch, payload):
+    from io import BytesIO
+    from coppersushi.pipelines.cnec.data_sources import pse
+    monkeypatch.setattr(pse, 'urlopen', lambda *a, **kw: BytesIO(json.dumps(payload).encode()))
+    assert pse.fetch(MarketDay.on('2026-11-13'), 'wmb', ('fcrg','afrrg','frrg','rrg')) is None
+
+
+def test_available_requires_complete_values():
+    from pydantic import TypeAdapter, ValidationError
+    from coppersushi.pipelines.cnec.reserves import ReserveObservation
+    with pytest.raises(ValidationError):
+        TypeAdapter(ReserveObservation).validate_python({'status':'available'})

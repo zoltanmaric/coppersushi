@@ -50,9 +50,17 @@ export type ShadowPrice1 = number;
 export type Delta = number;
 export type Caps = CountryCap[];
 export type Notes = string[];
-export type Status = "available" | "missing" | "incomplete" | "late" | "ambiguous" | "fetch_failed";
-export type Mw = number | null;
-export type PublishedAt = string | null;
+export type Required = AvailableReserve | UnavailableReserve;
+export type Status = "available";
+export type Mw = number;
+export type PublishedAt = string;
+/**
+ * @minItems 4
+ * @maxItems 4
+ */
+export type Products = [unknown, unknown, unknown, unknown];
+export type Status1 = "missing" | "incomplete" | "late" | "ambiguous" | "fetch_failed";
+export type Purchased = AvailableReserve | UnavailableReserve;
 export type Intervals = MarketInterval[];
 export type Version1 = 3;
 export type Day1 = string;
@@ -154,16 +162,23 @@ export interface CountryCap {
  * Independent requirement and basic purchase evidence for one delivery interval.
  */
 export interface PolishReserves {
-  required: ReserveObservation;
-  purchased: ReserveObservation;
+  required: Required;
+  purchased: Purchased;
 }
 /**
- * Eligible upward capacity, or an explicit reason why it cannot be established.
+ * A complete eligible observation with its selected product contributions.
  */
-export interface ReserveObservation {
+export interface AvailableReserve {
   status: Status;
-  mw?: Mw;
-  published_at?: PublishedAt;
+  mw: Mw;
+  published_at: PublishedAt;
+  products: Products;
+}
+/**
+ * Reason an eligible observation cannot be established.
+ */
+export interface UnavailableReserve {
+  status: Status1;
 }
 /**
  * Versioned, token-free data for all interactions within a delivery day.

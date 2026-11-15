@@ -5,14 +5,29 @@ from urllib.parse import urlparse
 import json
 from urllib.request import urlopen
 from urllib.error import URLError
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from coppersushi.pipelines.cnec.reserves import ReserveRecord, PolishReserves, align
 from coppersushi.pipelines.market_day import MarketDay
 
 
+class SourceRow(BaseModel):
+    """UTC timestamp fields validated before source normalization."""
+    model_config = {'extra': 'allow'}
+    dtime_utc: datetime
+    publication_ts_utc: datetime
+
+    @field_validator('dtime_utc', 'publication_ts_utc', mode='before')
+    @classmethod
+    def timestamp(cls, value: object) -> datetime:
+        if not isinstance(value, str):
+            raise ValueError('PSE timestamps must be strings')
+        parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        return parsed.replace(tzinfo=UTC) if parsed.tzinfo is None else parsed.astimezone(UTC)
+
+
 class Page(BaseModel):
     """PSE's paginated response envelope."""
-    value: list[dict]
+    value: list[SourceRow]
     next_link: str | None = Field(default=None, alias='nextLink')
 
 
@@ -28,11 +43,8 @@ def fetch(day: MarketDay, endpoint: str, fields: tuple[str, str, str, str]) -> l
             with urlopen(url, timeout=20) as response:
                 page = Page.model_validate(json.load(response))
             for row in page.value:
-                def instant(key: str) -> datetime:
-                    value = datetime.fromisoformat(row[key].replace('Z', '+00:00'))
-                    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
-                records.append(ReserveRecord.model_validate(dict(end=instant('dtime_utc'), published=instant('publication_ts_utc'),
-                                             products=[row.get(f) for f in fields])))
+                records.append(ReserveRecord.model_validate(dict(end=row.dtime_utc, published=row.publication_ts_utc,
+                                             products=[(row.model_extra or {}).get(f) for f in fields])))
             url = page.next_link
         logging.getLogger(__name__).info('Retrieved PSE %s for %s at %s', endpoint, day.date, datetime.now(tz=UTC).isoformat())
         return records

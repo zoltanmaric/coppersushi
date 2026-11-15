@@ -91,7 +91,8 @@ def main() -> None:
         for line in args.report.read_text().splitlines():
             previous = Coverage.model_validate_json(line)
             if (previous.status == ('published' if args.bucket else 'eligible')
-                    and previous.bucket == args.bucket):
+                    and previous.bucket == args.bucket
+                    and (not args.bucket or bundles.is_published(MarketDay.on(previous.day), args.bucket))):
                 done.add(previous.day)
             else:
                 done.discard(previous.day)
