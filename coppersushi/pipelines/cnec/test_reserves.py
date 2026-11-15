@@ -36,3 +36,12 @@ def test_available_requires_complete_values():
     from coppersushi.pipelines.cnec.reserves import ReserveObservation
     with pytest.raises(ValidationError):
         TypeAdapter(ReserveObservation).validate_python({'status':'available'})
+
+
+def test_truncated_http_response_does_not_block_market(monkeypatch):
+    from http.client import IncompleteRead
+    from coppersushi.pipelines.cnec.data_sources import pse
+    def truncated(*args, **kwargs):
+        raise IncompleteRead(b'partial')
+    monkeypatch.setattr(pse, 'urlopen', truncated)
+    assert pse.fetch(MarketDay.on('2026-11-13'), 'wmb', ('fcrg','afrrg','frrg','rrg')) is None

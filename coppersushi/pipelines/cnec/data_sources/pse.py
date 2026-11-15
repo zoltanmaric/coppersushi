@@ -3,6 +3,7 @@ from datetime import datetime, UTC
 import logging
 from urllib.parse import urlparse
 import json
+from http.client import HTTPException
 from urllib.request import urlopen
 from urllib.error import URLError
 from pydantic import BaseModel, Field, field_validator
@@ -19,7 +20,7 @@ class SourceRow(BaseModel):
     @field_validator('dtime_utc', 'publication_ts_utc', mode='before')
     @classmethod
     def timestamp(cls, value: object) -> datetime:
-        if not isinstance(value, str):
+        if not isinstance(value, str) or len(value) < 19 or value[10] not in ('T', ' '):
             raise ValueError('PSE timestamps must be strings')
         parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
         return parsed.replace(tzinfo=UTC) if parsed.tzinfo is None else parsed.astimezone(UTC)
@@ -48,7 +49,7 @@ def fetch(day: MarketDay, endpoint: str, fields: tuple[str, str, str, str]) -> l
             url = page.next_link
         logging.getLogger(__name__).info('Retrieved PSE %s for %s at %s', endpoint, day.date, datetime.now(tz=UTC).isoformat())
         return records
-    except (URLError, OSError, ValueError, KeyError, TypeError):
+    except (URLError, OSError, HTTPException, ValueError, KeyError, TypeError):
         logging.getLogger(__name__).exception('PSE %s unavailable for %s', endpoint, day.date)
         return None
 
