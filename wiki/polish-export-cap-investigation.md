@@ -85,6 +85,9 @@ Run `python -m scripts.polish_export_caps --start 2026-08-14 --end 2026-11-13`. 
 | Published export cap, zero or positive | 8,836 / 8,836 | 100% |
 | Aggregate procurement shortfall | 1,076 / 8,836 | 12.2% |
 | No aggregate procurement shortfall | 7,760 / 8,836 | 87.8% |
+| Binding export cap | 2,262 / 8,836 | 25.6% |
+| Procurement shortfall among binding MTUs | 180 / 2,262 | 8.0% |
+| No procurement shortfall among binding MTUs | 2,082 / 2,262 | 92.0% |
 | Binding among no-shortfall MTUs | 2,082 / 7,760 | 26.8% |
 
 ### Cap-levels

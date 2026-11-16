@@ -105,6 +105,19 @@ def render_cohort(frame: pd.DataFrame, output: Path, start: date, end: date,
                                for name, mask in buckets)
                      + '</tbody></table></div><p class="note">Lower bounds are exclusive and upper bounds inclusive. '
                      'Binding share uses all MTUs in that bucket as its denominator. Cap magnitude is separate from whether the cap bound. All views use the whole-period denominator.</p>')
+    binding = frame[frame.binding_export]
+    comparable = binding.required_mw.notna() & binding.procured_mw.notna()
+    shortfall = comparable & binding.required_mw.gt(binding.procured_mw)
+    sufficient = comparable & ~shortfall
+    distribution += ('<h3>Did binding caps coincide with procurement shortfalls?</h3>'
+                     f'<p><b>{len(binding):,}</b> binding export-cap MTUs out of <b>{total:,}</b> observed MTUs '
+                     f'({percent(len(binding), total)}). Across the full period, '
+                     f'<b>{int((frame.required_mw > frame.procured_mw).sum()):,}</b> MTUs had a procurement shortfall.</p>'
+                     '<table><thead><tr><th>Among binding export caps</th><th>MTUs</th><th>Share of binding MTUs</th></tr></thead><tbody>'
+                     + ''.join(f'<tr><th>{label}</th><td>{int(mask.sum()):,}</td><td>{percent(int(mask.sum()),len(binding))}</td></tr>'
+                               for label, mask in [('Procurement shortfall', shortfall), ('No procurement shortfall', sufficient), ('Comparison unavailable', ~comparable)])
+                     + '</tbody></table><p class="note">Shortfall means required MW exceeded procured MW in eligible publications. '
+                     'A match does not establish that a cap was unnecessary. This summary uses the whole period regardless of the selected view.</p>')
     rows = ''
     for zone, name in NAMES.items():
         values = active[f'lower_{zone}'].dropna()
