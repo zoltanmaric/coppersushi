@@ -461,3 +461,23 @@ Recorded [Hubert Put’s post and visible comments](country-import-export-caps.m
 ## [2026-11-16] query | PSE activation versus reserve procurement
 
 Verified public [activation and covered-demand feeds](polish-balancing-capacity-procurement.md#activation) for the November 13 procurement case. Recorded quarter-hour alignment, distinct aFRR volumes and the limits of comparing them with morning purchased capacity.
+
+## [2026-11-16] query | Reserve activation resolution
+
+Distinguished interval-average MW from dispatch peaks and documented ENTSO-E's four-second exchange and one-minute imbalance publication contracts in [Polish balancing capacity procurement](polish-balancing-capacity-procurement.md#resolution). A high-resolution Polish reserve-dispatch series remains unverified.
+
+## [2026-11-16] ingest | PSE diagnosis of balancing incentives
+
+Recorded PSE's July report proposal for stronger imbalance-pricing incentives and its portfolio example in [Polish balancing capacity procurement](polish-balancing-capacity-procurement.md#incentives), separating operational evidence from proof of export-cap necessity.
+
+## [2026-11-16] query | Polish imbalance settlement prices
+
+Verified public CEN settlement-price records and distinguished them from forecasts and balancing-offer prices in [Polish balancing capacity procurement](polish-balancing-capacity-procurement.md#prices).
+
+## [2026-11-16] ingest | Full PSE July commercial-balancing report
+
+Read all 40 pages and visually inspected the charts. The [digest](literature/pse-commercial-balancing-july-2026.md) separates the surplus/curtailment reserve claim from shortage/import evidence and identifies assumptions behind PSE's estimated financial losses.
+
+## [2026-11-16] query | Imbalance prices versus Polish export limits
+
+Recorded the complete 8,836-quarter descriptive join, conditional price distributions and mobile explainer in the [export-cap investigation](polish-export-cap-investigation.md#imbalance-prices). Positive price spikes are more frequent at zero limits; this does not establish causation or cap necessity.

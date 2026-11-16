@@ -116,3 +116,16 @@ The local `cases.html` table contains all 7,760 no-shortfall MTUs, including equ
 The [4 November 2026 ACER monitoring report](literature/acer-electricity-market-integration-monitoring-report.md), section 2.4.4, confirms material price-decoupling effects and falling binding frequency. Its paragraph 168 says pre-day-ahead balancing-capacity procurement does not exist, conflicting with URE’s account of the June 2024 reform and observed procurement. This appears to be an outdated explanation; it is not evidence that reserve requirements themselves are fictitious. The section does not supply the missing interval-level justification.
 
 The August 14–November 13 analysis covers 92 delivery days with zero failed days. Full local results are in ignored `data/polish-export-caps/`.
+
+## Imbalance-prices
+
+A quick cross-reference fetched PSE `price-cost.cen_cost` on 2026-11-16 and joined it to the existing JAO cap cache by UTC delivery-quarter start, subtracting 15 minutes from PSE's interval-end timestamp. All 8,836 quarters matched for 2026-08-14–2026-11-13, including 100 quarters on the October clock-change day. Latest returned publication wins for duplicate price intervals. Original cap-cache retrieval dates remain incompletely documented.
+
+| Export limit | Quarter-hours | Median CEN, PLN/MWh | CEN > 2,000 PLN/MWh | CEN < 0 |
+|---|---:|---:|---:|---:|
+| Zero | 3,881 | 985.86 | 311 (8.0%) | 8 (0.2%) |
+| Positive | 4,955 | 615.60 | 17 (0.3%) | 387 (7.8%) |
+
+The maximum CEN is 6,339.71 PLN/MWh on 2026-11-10 at 14:30 CET, with a zero export limit. The minimum is −35,989.17 on 2026-08-15 at 11:45 CEST, with a 12,202 MW export limit. Raw quarter-hour Pearson correlation is −0.3455. The 2,000 threshold is illustrative, not an official scarcity criterion. These are descriptive associations, with no controls for time of day, season, forecasts or reserve direction, and no causal or cap-necessity interpretation.
+
+[Phone-friendly explainer and daily OHLC candles](https://coppersushi.121gigawatts.org/assets/previews/imbalance-export-limits/881a14dd90b6/index.html) and [matched public-data CSV](https://coppersushi.121gigawatts.org/assets/previews/imbalance-export-limits/881a14dd90b6/matched.csv). Daily candle extrema need not coincide between series. Open/close mean first/last delivery quarter; export limits are positive magnitudes, not actual flows.

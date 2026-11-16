@@ -37,6 +37,7 @@
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026
 
 ## Literature (one digest per authoritative document, link only)
+- [literature/pse-commercial-balancing-july-2026.md](literature/pse-commercial-balancing-july-2026.md) — full-report review: portfolio imbalances, surplus versus shortage, assumed financial savings and limits for export-cap justification
 - [literature/acer-electricity-market-integration-monitoring-report.md](literature/acer-electricity-market-integration-monitoring-report.md) — 2026 monitoring: binding-cap frequency, regulatory scrutiny and an apparent outdated pre-auction procurement premise
 - [literature/pse-allocation-constraints-q4-2025.md](literature/pse-allocation-constraints-q4-2025.md) — extracted quarterly simulation, security valuations and limits of the counterfactual
 - [literature/core-da-ccm-allocation-constraint-safeguards.md](literature/core-da-ccm-allocation-constraint-safeguards.md) — binding conditions, welfare reporting, alternatives and transitional deadlines

@@ -66,3 +66,27 @@ At 19:00–19:15 CET, upward aFRR covered demand is 15.951 MWh (63.804 MW averag
 For comparison with purchased MW, divide quarter-hour MWh by 0.25 hours and repeat the hourly procurement capacity over its four quarters. Keep directions separate; `zebpp` is signed/net and cannot recover gross opposing activations. Compare matched products: the existing total includes FCR, which this activation feed does not identify separately. Average MW cannot reveal brief within-quarter peaks. Morning procurement and final capacity after supplementary procurement answer different questions. Do not label the result a complete PSE reserve-exhaustion test without reconciling product scope, cross-border exchanges and later purchases.
 
 PSE also directly asserts that large imbalances can exceed available domestic reserves in its [July 2026 commercial-balancing report announcement](https://www.pse.pl/-/bilansowanie-handlowe-kse-w-lipcu-2026), published 2026-08-31. That operational claim is distinct from exceeding the morning procurement volume.
+
+### Resolution
+
+A quarter-hour average below purchased capacity cannot rule out a brief exceedance. Conversely, an average above a constant matched capacity implies an exceedance somewhere in that interval; it does not identify its timing or duration. Requested power, delivered power and the capacity available at dispatch are distinct quantities.
+
+Public-source review on 2026-11-16 found these publication contracts, but did not obtain a Polish seconds-resolution dispatch series:
+
+- ENTSO-E [aggregated balancing energy bids, GL EB 12.3.E](https://transparencyplatform.zendesk.com/hc/en-us/articles/12826644599572-Aggregated-Balancing-Energy-Bids-GL-EB-12-3-E), updated 2026-06-12: activated volumes are **average MW per imbalance settlement period**. MW units alone do not establish instantaneous power. Central and local aFRR selections are reported separately; FCR is excluded.
+- ENTSO-E [aFRR exchanged volumes](https://transparencyplatform.zendesk.com/hc/en-us/articles/12826567169684-Netted-and-Exchanged-Volumes-IN-IFs-3-10-aFRR-IFs-3-16-mFRR-IFs-3-17), updated 2025-08-27: operational-cycle resolution, initially four seconds. The [CSV schema](https://transparencyplatform.zendesk.com/hc/en-us/articles/47909673071505-NettedAndExchangedVolumesAfrr-IFs-aFRR3-16-r3-1), dated 2026-06-19, has cycle timestamps, PT1S/PT4S resolution, area, direction and MWh quantity. These are cross-border exchanges from the activation optimisation function, not total domestic activation or total Polish demand. Converting cycle energy to cycle-average MW preserves much more timing detail than quarter-hour settlement, but does not fill the missing domestic dispatch series. Polish coverage was not verified.
+- ENTSO-E [current balancing state, GL EB 12.3.A](https://transparencyplatform.zendesk.com/hc/en-us/articles/12824861339924-Current-Balancing-State-GL-EB-12-3-A), updated 2025-08-26: one-minute mean open-loop area control error in MW. This describes imbalance, not product-specific reserve dispatch; Polish coverage was not verified.
+
+The inspected [PSE API schema](https://api.raporty.pse.pl/api/openapi) did not identify a seconds-resolution aFRR demand, activation-setpoint or measured-delivery endpoint. This is a search limit, not proof that PSE publishes none. Grid frequency in Hz is not itself a Polish reserve-dispatch measurement.
+
+### Incentives
+
+PSE's [July 2026 commercial-balancing report](literature/pse-commercial-balancing-july-2026.md) attributes persistent imbalances to insufficient corrective trading and proposes stronger imbalance-pricing incentives. Its examples distinguish surplus/downward pressure from shortage/upward pressure; its savings estimates are counterfactual rather than audited losses. The digest owns the page-specific evidence. A high realised price alone cannot establish adequate expected incentives before delivery.
+
+This strengthens the documented operational rationale for reserves. It does not quantify the additional reserve requirement or establish the necessity or size of a specific day-ahead export cap. The [methodology safeguards](literature/core-da-ccm-allocation-constraint-safeguards.md) still require security effectiveness and comparison with alternatives; completed reserve procurement must not be counted twice as a separate reason to withhold export capability.
+
+### Prices
+
+PSE publishes the imbalance settlement price (CEN, cena energii niezbilansowania) in PLN/MWh as `price-cost.cen_cost`. The [endpoint map](https://api.raporty.pse.pl/EndpointsMap.pdf), pp. 1–2, separates settlement data (`price-cost`) from forecasts (`price-fcst.cen_fcst`). CEN must not be substituted with marginal balancing-offer price `ckoeb_cost` or average balancing-energy price `ceb_sr_cost`.
+
+A public API query for `business_date eq '2026-11-13'`, `$first=2`, fetched 2026-11-16, returned CEN 433.39 PLN/MWh for 00:00–00:15 CET and 392.51 for 00:15–00:30. Both were published 2026-11-14 at 13:01:47.666 UTC. These records establish quarter-hour settlement-price availability; the two-row sample does not establish full historical coverage. Follow `nextLink` for complete days and preserve publication timestamps for revisions.
