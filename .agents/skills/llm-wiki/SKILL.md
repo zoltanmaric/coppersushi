@@ -21,7 +21,7 @@ If nothing new was learned, leave the wiki unchanged.
 Cite the original public source with its date or edition and relevant section.
 For online posts, retain the author, date and direct link; attribute opinions and
 claims rather than presenting them as established facts. Preserve uncertainty and
-contradictions. Keep agent proposals and task plans out of the wiki.
+contradictions. Apply the wiki content policy to proposals and research records.
 
 Prefer updating an existing page over creating one. For a new literature digest,
 follow `wiki/literature/AGENTS.md`; link it from the concept page that uses it.

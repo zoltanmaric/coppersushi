@@ -444,7 +444,7 @@ The methodology explicitly includes residual demand, unit constraints and genera
 
 ## [2026-11-16] decision | Wiki recall and automatic writeback
 
-The [harness decision](rule-provenance.md) makes wiki recall the conversation entry point and saves supported findings without an explicit filing request. Agent proposals and plans remain outside the wiki.
+The [harness decision](rule-provenance.md) makes wiki recall the conversation entry point and saves supported findings without an explicit filing request. Unsolicited agent proposals and plans remain outside the wiki; explicitly requested research records retain labelled hypotheses and evaluation plans.
 
 ## [2026-11-16] query | ACER recommendation on allocation constraints
 
