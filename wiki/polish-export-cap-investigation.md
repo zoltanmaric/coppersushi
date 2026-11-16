@@ -119,13 +119,21 @@ The August 14–November 13 analysis covers 92 delivery days with zero failed da
 
 ## Imbalance-prices
 
-A quick cross-reference fetched PSE `price-cost.cen_cost` on 2026-11-16 and joined it to the existing JAO cap cache by UTC delivery-quarter start, subtracting 15 minutes from PSE's interval-end timestamp. All 8,836 quarters matched for 2026-08-14–2026-11-13, including 100 quarters on the October clock-change day. Latest returned publication wins for duplicate price intervals. Original cap-cache retrieval dates remain incompletely documented.
+[Episode explainer](https://coppersushi.121gigawatts.org/assets/previews/polish-balancing-episodes/d8b35dcf9360/index.html) · [matched quarter-hour CSV](https://coppersushi.121gigawatts.org/assets/previews/polish-balancing-episodes/d8b35dcf9360/intervals.csv). Scope: 2026-08-14–2026-11-13; all 8,836 quarters match PSE prices, contracting balance, activation and existing JAO cap data. PSE `energy-prices` and `eb-rozl` fetched 2026-11-16, with URLs and retrieval times cached. Original cap-cache retrieval dates remain incompletely documented. PSE interval-end UTC timestamps are shifted back 15 minutes; October 25 has 100 quarters. Latest returned publication wins for duplicate intervals.
 
-| Export limit | Quarter-hours | Median CEN, PLN/MWh | CEN > 2,000 PLN/MWh | CEN < 0 |
-|---|---:|---:|---:|---:|
-| Zero | 3,881 | 985.86 | 311 (8.0%) | 8 (0.2%) |
-| Positive | 4,955 | 615.60 | 17 (0.3%) | 387 (7.8%) |
+The episode screen uses CEN minus day-ahead price by default, with an absolute-CEN alternative. Surplus requires a price measure below the negative threshold and SK > 0; shortage requires a price measure above the positive threshold and SK < 0. Consecutive qualifying quarters form an episode; any intervening non-qualifying quarter ends it. Prices use a fixed 4.4113 PLN/€ (ECB, 2026-11-13), not historical daily FX settlement. Thresholds are illustrative, not official scarcity criteria.
 
-The maximum CEN is 6,339.71 PLN/MWh on 2026-11-10 at 14:30 CET, with a zero export limit. The minimum is −35,989.17 on 2026-08-15 at 11:45 CEST, with a 12,202 MW export limit. Raw quarter-hour Pearson correlation is −0.3455. The 2,000 threshold is illustrative, not an official scarcity criterion. These are descriptive associations, with no controls for time of day, season, forecasts or reserve direction, and no causal or cap-necessity interpretation.
+| Gap from day-ahead | Direction | Episodes | Hours | Net contracting mismatch, GWh | Quarters overlapping binding export cap |
+|---|---|---:|---:|---:|---:|
+| Below −€250/MWh | Surplus | 55 | 44 | 28.16 | 7/176 |
+| Above €250/MWh | Shortage | 62 | 35.25 | 43.81 | 12/141 |
+| Below −€500/MWh | Surplus | 31 | 26.75 | 20.88 | 5/107 |
+| Above €500/MWh | Shortage | 20 | 8.25 | 13.30 | 2/33 |
 
-[Phone-friendly explainer and daily OHLC candles](https://coppersushi.121gigawatts.org/assets/previews/imbalance-export-limits/881a14dd90b6/index.html) and [matched public-data CSV](https://coppersushi.121gigawatts.org/assets/previews/imbalance-export-limits/881a14dd90b6/matched.csv). Daily candle extrema need not coincide between series. Open/close mean first/last delivery quarter; export limits are positive magnitudes, not actual flows.
+At the €250 gap, event energy is 12.4% of all surplus SK energy and 4.8% of all shortage SK energy in the window. Downward supplier activation during surplus episodes totals approximately 24.0 GWh; upward activation during shortage episodes totals 55.6 GWh. These activation totals add the separately published outside-platform and aFRR components; they are not SK, gross participant imbalances, settlement costs, or measurements of reserve exhaustion. Domestic aFRR delivery can serve foreign demand. See the [source contract](polish-balancing-capacity-procurement.md#episodes).
+
+The result changes with the definition of extreme. Under absolute CEN thresholds of ±€250/MWh, surplus has 39 episodes, 34.25 hours and 24.33 GWh, versus shortage's 308 episodes, 383.75 hours and 267.65 GWh. A high positive price can also reflect an already-high day-ahead price; it is not necessarily an exceptional balancing premium. At the far tails, surplus can dominate duration and energy. Peak price magnitude alone cannot settle which direction is the larger problem.
+
+A concrete overlap is 2026-10-16 14:15–15:00 CEST: three consecutive surplus quarters with a binding day-ahead export cap, 691.515 MWh of SK surplus, and 813.1 MWh of downward supplier activation. CEN is approximately −€545.55, −€563.83 and −€564.27/MWh; cap/scheduled exports are 1,355, 1,006 and 639 MW. These are candidate intervals for a counterfactual test, not proof the earlier cap caused the later surplus. The deepest negative-price episode, on August 15, has no inferred binding export cap.
+
+The export-cap comparison uses **day-ahead scheduled net position**, not real-time measured flows. Binding is inferred using the investigation's position tolerance and alternative-price predicate. Overlap does not establish intraday feasibility, the counterfactual export response, or the necessity or harm of a cap. Neither episode energy nor quarter-hour activation reveals instantaneous reserve-power peaks.

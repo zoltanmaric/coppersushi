@@ -481,3 +481,11 @@ Read all 40 pages and visually inspected the charts. The [digest](literature/pse
 ## [2026-11-16] query | Imbalance prices versus Polish export limits
 
 Recorded the complete 8,836-quarter descriptive join, conditional price distributions and mobile explainer in the [export-cap investigation](polish-export-cap-investigation.md#imbalance-prices). Positive price spikes are more frequent at zero limits; this does not establish causation or cap necessity.
+
+## [2026-11-16] decision | Euro percentile comparison
+
+The [imbalance-price explainer](polish-export-cap-investigation.md#imbalance-prices) uses euros throughout, with a disclosed fixed ECB conversion, and daily interquartile boxes with median and full-range whiskers instead of open/close candles. The illustrative high-price threshold is €500/MWh.
+
+## [2026-11-16] query | Balancing stress episodes and export-cap overlap
+
+The [episode analysis](polish-export-cap-investigation.md#imbalance-prices) distinguishes price gaps from absolute tails, persistence from energy volume, and surplus from shortage using SK. The dominant direction depends on the cutoff. October 16 provides a concrete surplus/binding-export-cap overlap; the deepest negative-price episode does not. Recorded the distinction between contracting balance and net settled imbalance energy in the [source contract](polish-balancing-capacity-procurement.md#episodes).
