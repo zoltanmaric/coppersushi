@@ -441,3 +441,11 @@ Restrict all investigation populations to August 14 onward; the preceding 9,600 
 ## [2026-11-14] query | Caps after full reserve procurement
 
 The methodology explicitly includes residual demand, unit constraints and generation availability adjustments beyond procurement scarcity. These mechanisms do not establish why a particular fully procured interval had a binding cap. The investigation must identify the remaining limitation in MW and whether the original cap calculation incorporated the completed procurement.
+
+## [2026-11-16] decision | Wiki recall and automatic writeback
+
+The [harness decision](rule-provenance.md) makes wiki recall the conversation entry point and saves supported findings without an explicit filing request. Unsolicited agent proposals and plans remain outside the wiki; explicitly requested research records retain labelled hypotheses and evaluation plans.
+
+## [2026-11-16] query | ACER recommendation on allocation constraints
+
+Extended the [report digest](literature/acer-electricity-market-integration-monitoring-report.md) through paragraph 174: the section includes a general recommendation for alternatives and regulatory scrutiny, without a Poland-specific remedy.
