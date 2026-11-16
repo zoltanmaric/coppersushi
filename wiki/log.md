@@ -449,3 +449,7 @@ The [harness decision](rule-provenance.md) makes wiki recall the conversation en
 ## [2026-11-16] query | ACER recommendation on allocation constraints
 
 Extended the [report digest](literature/acer-electricity-market-integration-monitoring-report.md) through paragraph 174: the section includes a general recommendation for alternatives and regulatory scrutiny, without a Poland-specific remedy.
+
+## [2026-11-16] ingest | Public discussion of Polish allocation constraints
+
+Recorded [Hubert Put’s post and visible comments](country-import-export-caps.md#discussion), distinguishing public opinion from the approved methodology’s rationale. Confirmed the 2028 deadline and retained the unresolved rule-comparison and causal-evidence limits.

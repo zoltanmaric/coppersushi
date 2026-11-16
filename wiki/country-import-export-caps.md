@@ -43,6 +43,15 @@ The [Q4 2025 PSE assessment](literature/pse-allocation-constraints-q4-2025.md) c
 
 The [Polish export-cap investigation](polish-export-cap-investigation.md) compares November 2026 interval limits with published reserve requirements, procurement and planning balances.
 
+### Discussion
+
+[Hubert Put’s LinkedIn post](https://www.linkedin.com/posts/activity-7484948885728071680-23El), read 2026-11-16, discusses extending Polish allocation constraints to 8 June 2028. The accessible page supplies only a relative publication age, so its exact publication date is unverified. It concerns the extension, not the November monitoring report.
+
+Put argues that balancing responsible parties leave portfolios insufficiently balanced before real time, increasing PSE’s activation needs despite the 2024 reform. Visible commenters Andrzej Misiak and Bartolomé Mestre Fons likewise favour better forecasting and earlier portfolio adjustment; Misiak asks whether forecast errors or slow reactions dominate. These are attributed explanations, not a quantified causal test.
+
+The [approved methodology](literature/core-da-ccm-allocation-constraint-safeguards.md#beyond-procurement), Annex 1, printed pp. 54–55, already contains the same reserve-activation and portfolio-behaviour rationale. The post therefore provides public discussion, not independent corroboration. Its description of relaxed rules is unverified without comparing editions. Article 7 confirms the deadline but retains reporting and alternative-solution duties. Neither the post nor the visible comments establishes the necessity of a particular cap.
+
+
 
 A defensible challenge asks for the interval’s input calculation, security benefit and assessment of alternatives. A price spread alone does not demonstrate protectionist intent. Nor does compliance with transmission-element capacity margins alone resolve the separate net-position constraint’s efficiency.
 
