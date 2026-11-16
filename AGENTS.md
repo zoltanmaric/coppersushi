@@ -1,5 +1,7 @@
 # Agent Guidelines
 
+- **wiki-memory** — At the start of every conversation, read `wiki/index.md` and the pages relevant to the task before researching or proposing work. Treat the wiki as long-term project memory. Before finishing a turn that establishes new project knowledge, use the `llm-wiki` skill to save supported findings without waiting to be asked.
+
 - **cross-agent** — Support Codex and Claude Code (at minimum). Agent instruction files must always be created in pairs: an `AGENTS.md` holding the actual content, and a `CLAUDE.md` next to it containing only an import of it (`@AGENTS.md`). Apply the same rule to any subdirectory that gets its own agent instructions (e.g. `wiki/`). The same principle applies to skills: skills live in `.agents/skills/` (the cross-agent location), and `.claude/skills` is a symlink to that folder so Claude Code sees the identical skill set.
 
 - **public-repo** — Everything here is public: code, wiki, commit messages, PR bodies, review comments. Nothing enters that isn't already public — no secrets, no private repositories or their paths, no employer or client material, no personal information. When knowledge came from a private source, carry the idea, never the pointer. Secrets live in the gitignored `.secrets/`.
