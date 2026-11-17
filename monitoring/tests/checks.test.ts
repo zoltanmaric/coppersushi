@@ -62,4 +62,6 @@ test('analytics exclusion is narrow and later intervals are optional',()=>{
   assert.equal(required(request('/data/cnec/v3/0.json')),true);
   assert.equal(required(request('/data/cnec/v3/1.json')),false);
   assert.equal(required(request('/data/cnec/v3/0.json')),true);
+  assert.equal(required(request('/data/cnec/v3/today/manifest.json')),true);
+  assert.equal(required(request('/data/cnec/v3/tomorrow/manifest.json')),false);
 });

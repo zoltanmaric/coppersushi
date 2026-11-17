@@ -21,17 +21,18 @@ export function analytics(raw:string):boolean {
 
 /** Initial interval is required; other interval downloads are optional prefetch. */
 export function requiredRequests() {
-  let initialInterval:string|undefined;
+  const initial = new Map<string,string>();
   return (request:Pick<Request,'url'|'resourceType'>):boolean => {
     const type = request.resourceType();
     if (['document','script','stylesheet'].includes(type)) return true;
     const url = new URL(request.url());
     if (!url.pathname.startsWith('/data/')) return false;
-    if (/\/\d+\.json$/.test(url.pathname)) {
-      initialInterval ??= url.pathname;
-      return initialInterval === url.pathname;
-    }
-    return /\/(manifest|metadata)\.json$/.test(url.pathname);
+    const kind = /\/\d+\.json$/.test(url.pathname) ? 'interval'
+      : url.pathname.endsWith('/manifest.json') ? 'manifest'
+      : url.pathname.endsWith('/metadata.json') ? 'metadata' : null;
+    if (!kind) return false;
+    if (!initial.has(kind)) initial.set(kind,url.pathname);
+    return initial.get(kind) === url.pathname;
   };
 }
 
@@ -63,7 +64,7 @@ export async function checkPage(browser:Browser, check:Check, deadlineMs=45_000,
     const response = await page.goto(check.url,{waitUntil:'domcontentloaded',timeout:deadlineMs});
     if (!response?.ok()) throw new Error('Unsuccessful document response: '+response?.status());
     if (check.kind==='blog') {
-      await page.locator('.site-nav-logo').first().waitFor({state:'visible',timeout:deadlineMs});
+      await page.locator('.site-footer .copyright a').first().waitFor({state:'visible',timeout:deadlineMs});
       await page.locator('article .post-card-title').first().waitFor({state:'visible',timeout:deadlineMs});
     } else {
       const root = page.locator('[data-load-state]');
@@ -92,7 +93,7 @@ export async function checkOrigin(url=originUrl):Promise<Result> {
     if (!['BYPASS','DYNAMIC'].includes(cache ?? '')) throw new Error('Cache bypass unverified: '+cache);
     if (!response.headers.get('content-type')?.includes('text/html')) throw new Error('Not HTML');
     const html=await response.text();
-    if(!html.includes('site-nav-logo') || !html.includes('post-card-title')) throw new Error('Missing site content');
+    if(!html.includes('site-footer') || !html.includes('post-card-title')) throw new Error('Missing site content');
   } catch(error) {result.failed=true;result.diagnostics.push(String(error));}
   result.durationMs=Date.now()-start;
   return result;
