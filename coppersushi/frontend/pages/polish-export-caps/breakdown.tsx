@@ -6,11 +6,11 @@ const count=new Intl.NumberFormat('en-GB');
 const percent=(n:number,d:number)=>`${(100*n/d).toFixed(1)}%`;
 
 /** Two views of the same fixed population; table filters never change this denominator. */
-export function Breakdown({study}:{study:Investigation}){
+export function Breakdown({study,showTitle=true}:{study:Investigation;showTitle?:boolean}){
   const c=study.coverage,teal=PRICE_COLORSCALE[1][1];
   const short=1000*c.shortfall_binding/c.expected,full=1000*c.binding/c.expected,zoom=1000*c.shortfall_binding/c.binding;
-  return <section className="study-breakdown" aria-labelledby="breakdown-heading"><p className="export-cap-eyebrow">Poland · day-ahead market</p>
-    <h1 id="breakdown-heading">When export caps bind,<br/>were reserves under-procured?</h1>
+  return <section className="study-breakdown" aria-labelledby={showTitle?'breakdown-heading':undefined} aria-label={showTitle?undefined:'Polish export-cap breakdown'}><p className="export-cap-eyebrow">Poland · day-ahead market</p>
+    {showTitle&&<h1 id="breakdown-heading">When export caps bind,<br/>were reserves under-procured?</h1>}
     <p>{formatDay(study.start)}–{formatDay(study.end)} · {count.format(c.expected)} quarter-hours</p>
     <div className="study-bar-labels"><span><strong>{count.format(c.binding)} · {percent(c.binding,c.expected)}</strong>Binding export cap</span><span><strong>{count.format(c.nonbinding)} · {percent(c.nonbinding,c.expected)}</strong>Nonbinding</span></div>
     <svg className="study-bars" viewBox="0 0 1000 130" preserveAspectRatio="none" role="img" aria-label={`${c.binding} binding quarters out of ${c.expected}; ${c.shortfall_binding} with procurement shortfall and ${c.no_shortfall_binding} without.`}>

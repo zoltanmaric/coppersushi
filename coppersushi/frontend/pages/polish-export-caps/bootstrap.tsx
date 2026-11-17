@@ -12,7 +12,7 @@ root.render(<div role="status">Loading investigation…</div>);
 async function start(){
   if(window.location.pathname.replace(/\/$/,'').endsWith('/breakdown')){
     const study=await fetchStudy();
-    root.render(<article className="export-cap-page breakdown-embed"><Breakdown study={study}/><Sources study={study}/></article>);
+    root.render(<article className="export-cap-page breakdown-embed"><Breakdown study={study} showTitle={false}/><Sources study={study}/></article>);
   }else{
     const [config,study]=await Promise.all([loadBasemap(),fetchStudy()]);
     root.render(<ExportCapView {...config} study={study}/>);
