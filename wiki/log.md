@@ -580,3 +580,7 @@ The existing deployment entry point now leads to explicit
 [source/live reconciliation](../121gigawatts/hosting/README.md#deployment-reconciliation),
 including concurrent changes and post-apply comparison. [Provenance](rule-provenance.md)
 records the single incident without inventing repeated evidence for a new rule.
+
+## [2026-11-18] decision | Proportionate PR defenses
+
+Refined the existing complexity review questions to weigh failure likelihood, impact and recovery cost against defensive complexity; see [rule provenance](rule-provenance.md).

@@ -30,7 +30,13 @@ Review primarily as a Google senior principal engineer: judge whether the PR add
 
 Start with folder changes and the resulting tree at the reviewed tip (the cumulative tip for a stack), before file-level diffs. Treat new or moved folders as ownership decisions: justify their purpose against existing homes, inspect their consumers, and keep tests, fixtures and generators with their owners. Check abandoned locations and stale references; distinguish tracked structure from ignored local residue before deleting anything.
 
-Then assess interfaces, data flow, domain models, duplicated rules and dependencies. Compare the proposed design with the simplest credible alternative. For library or framework integrations, verify relevant supported APIs in the pinned version before endorsing custom machinery; state the native option or support gap and any behavior tradeoff. Do not favor a small diff when it shoehorns behavior into an awkward architecture; recommend restructuring when it removes the cause or makes responsibilities clearer. Scale the remedy to the problem, and justify its cost with concrete code and consequences rather than an idealized redesign.
+Then assess interfaces, data flow, domain models, duplicated rules and dependencies. Compare the proposed design with the simplest credible alternative. For library or framework integrations, verify relevant supported APIs in the pinned version before endorsing custom machinery; state the native option or support gap and any behavior tradeoff. Do not favor a small diff when it shoehorns behavior into an awkward architecture; recommend restructuring when it removes the cause or makes responsibilities clearer. Challenge overengineering and excessive defensive programming for this use case:
+
+- What is more complicated or conservative than the actual requirement needs?
+- Which guards, fallbacks or abstractions exist only for unlikely failures? What supports that likelihood estimate?
+- If the failure occurs, how bad is it, and how hard is recovery? Does handling it justify the added complexity, or would a clear failure suffice?
+
+Weigh likelihood, impact and recovery cost together; a claimed “under 1%” probability alone neither justifies nor rules out protection. Ground the verdict in concrete code and consequences.
 
 State the architectural verdict and remaining compromises explicitly, even when there are no correctness findings. Ground concerns in specific code, explain their practical effect and name a better direction; do not invent objections to fill a checklist. Check whether this is the right unit of review: propose a split for independently understandable changes, and keep changes together when separation would hide their reasoning.
 
