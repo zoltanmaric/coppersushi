@@ -42,8 +42,8 @@ no heartbeat.
 
 ## Success and diagnostics
 
-The blog must show its footer site identity and an article title. Map pages must expose
-`data-load-state="ready"`, a visible Mapbox canvas and interval slider. Missing expected
+The blog must show its footer site identity and a linked article title. Map pages must expose
+`data-load-state="ready"`, a visible Mapbox canvas inside the expected product renderer and an interval slider. Missing expected
 page content, readiness timeout/error and uncaught application exceptions fail a check.
 Network failures and other console errors remain diagnostics. A recovered request
 passes if the page becomes ready; the monitor does not infer required data from
@@ -58,5 +58,6 @@ The Ghost probe has ten seconds and requires HTML site content, the retained
 Cloudflare analytics and the blog’s observed Google/Fathom loaders are blocked
 before navigation; intentional aborts do not fail a page.
 
-Results contain the URL, elapsed time and bounded text diagnostics. No screenshots,
+The fixed check IDs and URLs live in `src/checks.json`, shared with Terraform alarms.
+Results contain the URL, elapsed time and bounded text diagnostics; the first fatal reason is always retained. No screenshots,
 traces, video, credentials or custom incident database are collected.

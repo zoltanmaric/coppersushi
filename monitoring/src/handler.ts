@@ -1,6 +1,6 @@
 import {CloudWatchClient, PutMetricDataCommand} from '@aws-sdk/client-cloudwatch';
 import {launchBrowser} from './browser.js';
-import {runChecks, type Result} from './checks.js';
+import {runChecks, urls, type Result} from './checks.js';
 
 export function scheduledTime(event:unknown, now:number):Date {
   if (!event || typeof event!=='object' || !('scheduledTime' in event) || typeof event.scheduledTime!=='string')
@@ -10,7 +10,7 @@ export function scheduledTime(event:unknown, now:number):Date {
   return new Date(time);
 }
 export function resultMetrics(results:Result[], timestamp:Date) {
-  if(results.length!==4 || new Set(results.map(r=>r.id)).size!==4) throw new Error('Expected four check results');
+  if(results.length!==Object.keys(urls).length || Object.keys(urls).some(id=>results.filter(result=>result.id===id).length!==1)) throw new Error('Expected four check results');
   return results.map(result=>({MetricName:'Failed',Dimensions:[{Name:'Check',Value:result.id}],Timestamp:timestamp,Value:Number(result.failed),Unit:'Count' as const}));
 }
 export async function publishResults(results:Result[], timestamp:Date, send:(metrics:ReturnType<typeof resultMetrics>)=>Promise<unknown>) {

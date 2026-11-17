@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {chromium, type Browser} from 'playwright-core';
-import {checkPage,checkOrigin,analytics} from '../src/checks.js';
+import {checkPage,checkOrigin,analytics,checks} from '../src/checks.js';
 
 let browser:Browser;
 let base:string;
@@ -16,6 +16,11 @@ const server=createServer(async(req,res)=>{
     res.setHeader('content-type','text/html');
     res.setHeader('cf-cache-status',url.searchParams.get('cache') ?? 'DYNAMIC');
     res.end(await readFile(new URL('blog.html',fixtures)));return;
+  }
+  if(url.pathname==='/blog') {
+    res.setHeader('content-type','text/html');
+    const html=await readFile(new URL('blog.html',fixtures),'utf8');
+    res.end(url.searchParams.has('unlinked') ? html.replace('<a href="/article">','<span>').replace('</h2></a>','</h2></span>') : html);return;
   }
   if(url.pathname==='/broken') {res.writeHead(502);res.end('bad gateway');return;}
   if(url.pathname==='/app.js') {
@@ -32,7 +37,7 @@ const server=createServer(async(req,res)=>{
   if(url.pathname==='/optional.js' || url.pathname==='/retry-data') {res.writeHead(503);res.end();return;}
   if(url.pathname==='/optional.ico') {res.writeHead(404);res.end();return;}
   res.setHeader('content-type','text/html');
-  res.end(await readFile(new URL('map.html',fixtures)));
+  res.end((await readFile(new URL('map.html',fixtures),'utf8')).replace('cnec-view-map',url.searchParams.get('renderer') ?? 'cnec-view-map'));
 });
 before(async()=>{
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -44,7 +49,7 @@ before(async()=>{
 after(async()=>{await browser?.close();await new Promise<void>(resolve=>server.close(()=>resolve()));});
 test('parallel pages report independently; diagnostics and blocked analytics do not fail healthy pages',async()=>{
   const results=await Promise.all(['console','exception','never','script','data'].map(scenario=>
-    checkPage(browser,{id:scenario,url:base+'/?case='+scenario,kind:'map'},2000,100)));
+    checkPage(browser,{id:scenario,url:base+'/?case='+scenario,kind:'map',renderer:'#cnec-view-map'},2000,100)));
   assert.deepEqual(results.map(result=>result.failed),[false,true,true,true,true]);
   assert.ok(results[0]!.diagnostics.some(line=>line.includes('optional diagnostic')));
   assert.equal(analyticsRequests,0);
@@ -60,7 +65,26 @@ test('analytics exclusion is narrow',()=>{
   assert.equal(analytics('https://example.com/beacon.min.js'),false);
 });
 test('optional asset failures and recovered data do not fail a ready page',async()=>{
-  const result=await checkPage(browser,{id:'recovery',url:base+'/?case=recovery',kind:'map'},2000,100);
+  const result=await checkPage(browser,{id:'recovery',url:base+'/?case=recovery',kind:'map',renderer:'#cnec-view-map'},2000,100);
   assert.equal(result.failed,false);
   assert.ok(result.diagnostics.some(line=>line.includes('503')));
+});
+
+test('blog requires a visible linked article title',async()=>{
+  for(const [query,failed] of [['',false],['?unlinked=1',true]] as const)
+    assert.equal((await checkPage(browser,{id:'blog',url:base+'/blog'+query,kind:'blog'},1000,0)).failed,failed);
+});
+test('each map check rejects the other product renderer',async()=>{
+  for(const check of checks.filter(check=>check.kind==='map')) {
+    for(const renderer of ['cnec-view-map','opf-map']) {
+      const result=await checkPage(browser,{...check,url:base+'/?renderer='+renderer},1000,0);
+      assert.equal(result.failed,check.renderer!=='#'+renderer);
+    }
+  }
+});
+test('fatal reason survives a full diagnostic buffer',async()=>{
+  const result=await checkPage(browser,{id:'noisy',url:base+'/?case=noisy',kind:'map',renderer:'#cnec-view-map'},1000,0);
+  assert.equal(result.failed,true);
+  assert.equal(result.diagnostics.length,50);
+  assert.match(result.diagnostics[0]!,/fixture fatal after noise/);
 });

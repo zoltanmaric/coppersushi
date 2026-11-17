@@ -1,13 +1,15 @@
 import type {Browser} from 'playwright-core';
+import urls from './checks.json' with {type:'json'};
+export {urls};
 
 export const checks = [
-  {id:'blog', url:'https://121gigawatts.org/', kind:'blog'},
-  {id:'critical-elements', url:'https://coppersushi.121gigawatts.org/cnec', kind:'map'},
-  {id:'power-flow', url:'https://coppersushi.121gigawatts.org/opf-2024', kind:'map'},
+  {id:'blog', url:urls.blog, kind:'blog'},
+  {id:'critical-elements', url:urls['critical-elements'], kind:'map', renderer:'#cnec-view-map'},
+  {id:'power-flow', url:urls['power-flow'], kind:'map', renderer:'#opf-map'},
 ] as const;
-export type Check = {id:string; url:string; kind:'blog'|'map'};
+export type Check = {id:string; url:string} & ({kind:'blog'} | {kind:'map'; renderer:string});
 export interface Result {id:string; url:string; failed:boolean; durationMs:number; diagnostics:string[]}
-export const originUrl = 'https://121gigawatts.org/?uptime=1';
+export const originUrl = urls['ghost-origin'];
 
 export function analytics(raw:string):boolean {
   const url = new URL(raw);
@@ -24,8 +26,10 @@ export async function checkPage(browser:Browser, check:Check, deadlineMs=45_000,
   const diagnostics:string[] = [];
   let failed = false;
   const record = (message:string, fatal=false) => {
+    if (fatal && !failed) diagnostics.unshift(message.slice(0,1500));
+    else if (diagnostics.length < 50) diagnostics.push(message.slice(0,1500));
+    diagnostics.length = Math.min(diagnostics.length,50);
     failed ||= fatal;
-    if (diagnostics.length < 50) diagnostics.push(message.slice(0,1500));
   };
   const context = await browser.newContext({viewport:{width:1280,height:900},serviceWorkers:'block'});
   const timer = setTimeout(()=>{record('Page deadline exceeded',true);void context.close().catch(()=>{});},deadlineMs);
@@ -45,14 +49,14 @@ export async function checkPage(browser:Browser, check:Check, deadlineMs=45_000,
     if (!response?.ok()) throw new Error('Unsuccessful document response: '+response?.status());
     if (check.kind==='blog') {
       await page.locator('.site-footer .copyright a').first().waitFor({state:'visible',timeout:deadlineMs});
-      await page.locator('article .post-card-title').first().waitFor({state:'visible',timeout:deadlineMs});
+      await page.locator('article a[href]:not([href=""]) .post-card-title').first().waitFor({state:'visible',timeout:deadlineMs});
     } else {
       const root = page.locator('[data-load-state]');
       await root.waitFor({state:'visible',timeout:deadlineMs});
       await page.waitForFunction(()=>['ready','error'].includes(document.querySelector('[data-load-state]')?.getAttribute('data-load-state') ?? ''),null,{timeout:deadlineMs});
       if (await root.getAttribute('data-load-state')!=='ready') throw new Error('Application reports error');
-      await page.locator('.mapboxgl-canvas').first().waitFor({state:'visible',timeout:deadlineMs});
-      await page.getByRole('slider').first().waitFor({state:'visible',timeout:deadlineMs});
+      await root.locator(check.renderer+' .mapboxgl-canvas').first().waitFor({state:'visible',timeout:deadlineMs});
+      await root.getByRole('slider').first().waitFor({state:'visible',timeout:deadlineMs});
     }
     await page.waitForTimeout(observationMs);
     if (check.kind==='map' && await page.locator('[data-load-state]').getAttribute('data-load-state')!=='ready')

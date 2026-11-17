@@ -14,6 +14,7 @@ test('a single metric per check shares the scheduled timestamp',()=>{
   assert.deepEqual(metrics.map(metric=>metric.Value),[0,1,0,0]);
   assert.ok(metrics.every(metric=>metric.Timestamp===timestamp));
   assert.throws(()=>resultMetrics(results.slice(1),timestamp));
+  assert.throws(()=>resultMetrics(results.map((result,i)=>i===0 ? {...result,id:'renamed-blog'} : result),timestamp));
 });
 
 test('heartbeat follows successful result publication and is withheld on publication failure',async()=>{
