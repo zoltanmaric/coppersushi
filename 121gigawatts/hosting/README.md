@@ -215,6 +215,45 @@ A missed purge leaves old pages until normal expiry; with the origin down, the
 last good copy may remain for the stale window, including unpublished content.
 Hard purge, eviction and cold cache locations can leave no outage copy.
 
+### Cloudflare access
+
+Run these commands from the **monorepo root**, the directory containing
+`pyproject.toml`, not the nested `121gigawatts/` theme directory. Wrangler runs
+through `npx`; no global installation is needed. The pinned version and `--yes`
+avoid an unexpected npm installation prompt. Check the saved login first:
+
+```sh
+pixi run --locked npx --yes wrangler@4.158.0 whoami
+```
+
+If login is missing, expired or belongs to the wrong account, offer browser
+login to the account that owns the site's zone:
+
+```sh
+pixi run --locked npx --yes wrangler@4.158.0 login
+```
+
+Wrangler login is account-wide and does not require a particular directory.
+The monorepo root keeps our Pixi environment and relative deployment paths
+unambiguous. From another directory, select the checkout explicitly:
+
+```sh
+pixi run --manifest-path /absolute/path/to/coppersushi/pyproject.toml --locked npx --yes wrangler@4.158.0 login
+```
+
+Check available OAuth permissions before requesting a token:
+
+```sh
+pixi run --locked npx --yes wrangler@4.158.0 login --scopes-list
+```
+
+Wrangler login supports Worker deployment. Request a scoped API token only for
+permissions OAuth does not provide or credentials the deployed service needs;
+this cache setup needs cache-rule management and a permanent purge-only token.
+A denied operation does not by itself mean browser login is unusable. Keep
+account details and command output containing private identifiers outside Git.
+See [Wrangler's authentication commands](https://developers.cloudflare.com/workers/wrangler/commands/general/).
+
 ### Activation
 
 Deployment requires explicit approval. Keep existing Cloudflare rules, settings
@@ -222,7 +261,7 @@ and private Worker variables outside Git. Deploy in this order:
 
 1. Configure the Nginx templates with the existing Ansible workflow. Check the
    private-input diff before applying; `nginx -t` precedes reload.
-2. Use a Cloudflare login authorized for the site's zone. Give the runtime token
+2. Follow [Cloudflare access](#cloudflare-access) to authorize the site's zone. Give the runtime token
    only **Cache Purge** permission for that zone. Set Worker secrets
    `GHOST_WEBHOOK_SECRET` (at least 32 random characters) and
    `CLOUDFLARE_PURGE_TOKEN`; set `CLOUDFLARE_ZONE_ID` as a private variable.

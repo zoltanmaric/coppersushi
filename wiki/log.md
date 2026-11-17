@@ -457,3 +457,7 @@ Extended the [report digest](literature/acer-electricity-market-integration-moni
 ## [2026-11-17] decision | Architecture labels
 
 [Diagram provenance](rule-provenance.md) records the clarified technology and deployment-location labels after the purge endpoint’s runtime was unclear in review.
+
+## [2026-11-17] decision | Wrangler access discovery
+
+[Rule provenance](rule-provenance.md) records the repeated token-first stumble and the root harness pointer to the owning Wrangler browser-login workflow, with explicit working-directory and installation-prompt guidance.
