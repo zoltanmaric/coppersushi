@@ -197,7 +197,10 @@ resource "aws_scheduler_schedule" "monitor" {
   target {
     arn      = aws_lambda_function.monitor[0].arn
     role_arn = aws_iam_role.scheduler.arn
-    input    = jsonencode({ scheduledTime = "<aws.scheduler.scheduled-time>" })
+    # Scheduler substitutes the literal token before JSON parsing; jsonencode escapes its brackets.
+    input = <<-JSON
+      {"scheduledTime":"<aws.scheduler.scheduled-time>"}
+    JSON
     retry_policy {
       maximum_event_age_in_seconds = 60
       maximum_retry_attempts       = 0
