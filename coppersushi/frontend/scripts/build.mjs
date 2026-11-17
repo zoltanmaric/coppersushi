@@ -11,7 +11,7 @@ await mkdir(assets,{recursive:true});
 await cp(new URL('assets/',root),assets,{recursive:true});
 await buildSprites(assets);
 await build({absWorkingDir:fileURLToPath(root),
-  entryPoints:{'cnec-app':'pages/cnec/bootstrap.tsx','opf-app':'pages/powerflow/bootstrap.tsx'},
+  entryPoints:{'cnec-app':'pages/cnec/bootstrap.tsx','opf-app':'pages/powerflow/bootstrap.tsx','polish-cap-app':'pages/polish-export-caps/bootstrap.tsx'},
   bundle:true,minify:true,format:'iife',outdir:fileURLToPath(assets),
   define:{'process.env.NODE_ENV':'"production"'}});
 await copyFile(new URL('node_modules/plotly.js/plotly-mapbox.min.js',root),

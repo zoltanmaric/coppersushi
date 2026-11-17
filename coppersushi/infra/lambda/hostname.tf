@@ -150,6 +150,10 @@ resource "aws_cloudfront_function" "cnec_static" {
         request.uri = prefix + path.slice(1);
       } else if (/^\/(embed\/)?opf-2024\/?$/.test(path)) {
         request.uri = prefix + (path.indexOf('/embed/') === 0 ? 'opf-embed.html' : 'opf.html');
+      } else if (/^\/polish-export-caps\/?$/.test(path)) {
+        request.uri = prefix + 'polish-cap.html';
+      } else if (/^\/embed\/polish-export-caps\/(breakdown|intervals)\/?$/.test(path)) {
+        request.uri = prefix + (path.indexOf('/breakdown') !== -1 ? 'polish-cap-breakdown.html' : 'polish-cap-intervals.html');
       } else if (path === '/' || /^\/(embed\/)?cnec(\/\d{4}-\d{2}-\d{2})?\/?$/.test(path)) {
         request.uri = prefix + (path.indexOf('/embed/') === 0 ? 'embed.html' : 'index.html');
       } else {

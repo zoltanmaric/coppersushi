@@ -611,3 +611,8 @@ Quota history records meaningful usage or state changes and hourly observations 
 ## [2026-11-18] query | Homepage image competition
 
 [Controlled comparisons](copper-sushi-app.md#hero-loading) separate thumbnail source sizing from request scheduling. Hero-first loading improves the tested hero paint time; resizing alone has little effect. Source inspection confirms the VR thumbnail is limited by its original resolution.
+
+## [2026-11-17] decision | Export-cap page boundary
+
+The [app](copper-sushi-app.md#export-cap-investigation) records the agreed static-page
+composition, separate embeds, shared map/table selection and fixed graphic denominator.

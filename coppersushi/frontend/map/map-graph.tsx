@@ -1,5 +1,6 @@
 import React, {useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState} from 'react';
 import {Plot} from './plot';
+import {useMapCamera, type MapCamera} from './camera';
 import {reduceRender} from './render-state';
 import {MapDecoration} from './map-decoration';
 import {mapInstance} from './mapbox-adapter';
@@ -11,6 +12,7 @@ import type {CountryLabel} from './country-labels';
 import type {CoreZone} from '../pages/cnec/market/reference';
 
 interface Props {
+  camera?: MapCamera; onCamera?: (camera: MapCamera)=>void;
   id: string; figure: PlotlyFigure; config: object; overlay?: OverlayModel; hidden?: boolean;
   countries?: CountryLabel[]; onReference?: (zone: CoreZone) => void;
   onClick?: (event: unknown) => void; compactTooltips?: boolean;
@@ -33,6 +35,7 @@ export function MapGraph(props: Props) {
   useLayoutEffect(() => {interaction.current = {interactive, onClick:props.onClick};});
   const host = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<MapboxMap | null>(null);
+  useMapCamera(map, props.camera, props.onCamera);
   const gestures = useMapGestures(host, map, props.compactTooltips ?? true, props.onReference ? zone => {if (interactive) props.onReference?.(zone);} : undefined);
   const completionFrame = useRef<number | null>(null);
   useEffect(() => () => {if (completionFrame.current !== null) cancelAnimationFrame(completionFrame.current);}, []);

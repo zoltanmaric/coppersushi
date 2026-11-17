@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from coppersushi import PRODUCT
 
+from coppersushi.pipelines.cnec.investigation import Investigation
 from coppersushi.pipelines.powerflow.dataset import Dataset
 from coppersushi.pipelines.cnec.models import DayBundle
 from coppersushi.pipelines.cnec.models import DayManifest
@@ -31,3 +32,10 @@ if __name__ == '__main__':
         assert opf_target.read_text() == opf_content, 'Run pixi run frontend-contracts'
     else:
         opf_target.write_text(opf_content)
+
+    study_target = PRODUCT / 'frontend/pages/polish-export-caps/contracts.json'
+    study_content = json.dumps(Investigation.model_json_schema(), indent=2) + '\n'
+    if '--check' in sys.argv:
+        assert study_target.read_text() == study_content, 'Run pixi run frontend-contracts'
+    else:
+        study_target.write_text(study_content)

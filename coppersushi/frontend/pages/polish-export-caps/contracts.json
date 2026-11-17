@@ -1,0 +1,251 @@
+{
+  "$defs": {
+    "AvailableReserve": {
+      "additionalProperties": false,
+      "description": "A complete eligible observation with its selected product contributions.",
+      "properties": {
+        "status": {
+          "const": "available",
+          "title": "Status",
+          "type": "string"
+        },
+        "mw": {
+          "title": "Mw",
+          "type": "number"
+        },
+        "published_at": {
+          "format": "date-time",
+          "title": "Published At",
+          "type": "string"
+        },
+        "products": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Products",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "mw",
+        "published_at",
+        "products"
+      ],
+      "title": "AvailableReserve",
+      "type": "object"
+    },
+    "BindingInterval": {
+      "additionalProperties": false,
+      "description": "One inferred binding quarter and its independently timed reserve observations.",
+      "properties": {
+        "utc": {
+          "format": "date-time",
+          "title": "Utc",
+          "type": "string"
+        },
+        "date": {
+          "format": "date",
+          "title": "Date",
+          "type": "string"
+        },
+        "index": {
+          "maximum": 99,
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "shadow": {
+          "exclusiveMinimum": 0.01,
+          "title": "Shadow",
+          "type": "number"
+        },
+        "required": {
+          "$ref": "#/$defs/AvailableReserve"
+        },
+        "procured": {
+          "$ref": "#/$defs/AvailableReserve"
+        },
+        "cap": {
+          "minimum": 0,
+          "title": "Cap",
+          "type": "number"
+        },
+        "price": {
+          "title": "Price",
+          "type": "number"
+        }
+      },
+      "required": [
+        "utc",
+        "date",
+        "index",
+        "shadow",
+        "required",
+        "procured",
+        "cap",
+        "price"
+      ],
+      "title": "BindingInterval",
+      "type": "object"
+    },
+    "Coverage": {
+      "additionalProperties": false,
+      "description": "Observed population, with missing evidence kept outside both binding classes.",
+      "properties": {
+        "expected": {
+          "exclusiveMinimum": 0,
+          "title": "Expected",
+          "type": "integer"
+        },
+        "observed": {
+          "minimum": 0,
+          "title": "Observed",
+          "type": "integer"
+        },
+        "unknown": {
+          "minimum": 0,
+          "title": "Unknown",
+          "type": "integer"
+        },
+        "binding": {
+          "minimum": 0,
+          "title": "Binding",
+          "type": "integer"
+        },
+        "nonbinding": {
+          "minimum": 0,
+          "title": "Nonbinding",
+          "type": "integer"
+        },
+        "shortfall_binding": {
+          "minimum": 0,
+          "title": "Shortfall Binding",
+          "type": "integer"
+        },
+        "no_shortfall_binding": {
+          "minimum": 0,
+          "title": "No Shortfall Binding",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "expected",
+        "observed",
+        "unknown",
+        "binding",
+        "nonbinding",
+        "shortfall_binding",
+        "no_shortfall_binding"
+      ],
+      "title": "Coverage",
+      "type": "object"
+    },
+    "SourceArtifact": {
+      "description": "Content identity and known retrieval time; labels never contain local paths.",
+      "properties": {
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "retrieved_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Retrieved At"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Url"
+        }
+      },
+      "required": [
+        "label",
+        "sha256",
+        "retrieved_at",
+        "url"
+      ],
+      "title": "SourceArtifact",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Fixed study population and audited binding rows, pinned to map generations.",
+  "properties": {
+    "version": {
+      "const": 1,
+      "default": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "start": {
+      "format": "date",
+      "title": "Start",
+      "type": "string"
+    },
+    "end": {
+      "format": "date",
+      "title": "End",
+      "type": "string"
+    },
+    "coverage": {
+      "$ref": "#/$defs/Coverage"
+    },
+    "rows": {
+      "items": {
+        "$ref": "#/$defs/BindingInterval"
+      },
+      "title": "Rows",
+      "type": "array"
+    },
+    "generations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Generations",
+      "type": "object"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/SourceArtifact"
+      },
+      "title": "Sources",
+      "type": "array"
+    },
+    "overlap_verified": {
+      "title": "Overlap Verified",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "start",
+    "end",
+    "coverage",
+    "rows",
+    "generations",
+    "sources",
+    "overlap_verified"
+  ],
+  "title": "Investigation",
+  "type": "object"
+}
