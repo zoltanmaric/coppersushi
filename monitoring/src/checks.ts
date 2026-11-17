@@ -20,6 +20,9 @@ export function analytics(raw:string):boolean {
 }
 
 /** Initial interval is required; other interval downloads are optional prefetch. */
+export function unpublishedCalendar(url:string, status:number):boolean {
+  return [403,404].includes(status) && /^\/data\/cnec\/v3\/\d{4}-\d{2}-\d{2}\/manifest\.json$/.test(new URL(url).pathname);
+}
 export function requiredRequests() {
   const initial = new Map<string,string>();
   return (request:Pick<Request,'url'|'resourceType'>):boolean => {
@@ -59,7 +62,7 @@ export async function checkPage(browser:Browser, check:Check, deadlineMs=45_000,
     });
     page.on('response', response=>{
       if (response.status()>=400 && !analytics(response.url()))
-        record('HTTP '+response.status()+' '+new URL(response.url()).origin+new URL(response.url()).pathname,required.get(response.request()));
+        record('HTTP '+response.status()+' '+new URL(response.url()).origin+new URL(response.url()).pathname,required.get(response.request()) && !unpublishedCalendar(response.url(),response.status()));
     });
     const response = await page.goto(check.url,{waitUntil:'domcontentloaded',timeout:deadlineMs});
     if (!response?.ok()) throw new Error('Unsuccessful document response: '+response?.status());

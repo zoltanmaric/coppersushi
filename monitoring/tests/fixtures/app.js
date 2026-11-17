@@ -1,3 +1,4 @@
+fetch('/data/cnec/v3/2099-01-01/manifest.json'); // Calendar availability may start first.
 const scenario = new URL(location.href).searchParams.get('case');
 if (scenario === 'exception') throw new Error('fixture application exception');
 if (scenario === 'console') console.error('optional diagnostic');

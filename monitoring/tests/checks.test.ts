@@ -26,7 +26,7 @@ const server=createServer(async(req,res)=>{
   }
   if(url.pathname.startsWith('/data/')) {
     const scenario=new URL(req.headers.referer!).searchParams.get('case');
-    res.writeHead(scenario==='data' || url.pathname.endsWith('/1.json')?404:200,{'content-type':'application/json'});
+    res.writeHead(scenario==='data' || url.pathname.includes('2099-01-01') || url.pathname.endsWith('/1.json')?404:200,{'content-type':'application/json'});
     res.end('{}');return;
   }
   if(url.pathname==='/optional.ico') {res.writeHead(404);res.end();return;}
