@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {chromium, type Browser} from 'playwright-core';
-import {checkPage,checkOrigin,analytics,requiredRequests} from '../src/checks.js';
+import {checkPage,checkOrigin,analytics} from '../src/checks.js';
 
 let browser:Browser;
 let base:string;
@@ -29,6 +29,7 @@ const server=createServer(async(req,res)=>{
     res.writeHead(scenario==='data' || url.pathname.includes('2099-01-01') || url.pathname.endsWith('/1.json')?404:200,{'content-type':'application/json'});
     res.end('{}');return;
   }
+  if(url.pathname==='/optional.js' || url.pathname==='/retry-data') {res.writeHead(503);res.end();return;}
   if(url.pathname==='/optional.ico') {res.writeHead(404);res.end();return;}
   res.setHeader('content-type','text/html');
   res.end(await readFile(new URL('map.html',fixtures)));
@@ -54,14 +55,12 @@ test('document 502 fails and uncached Ghost content passes only with verified by
   assert.equal((await checkOrigin(base+'/origin?uptime=1&cache=HIT')).failed,true);
   assert.equal((await checkOrigin(base+'/origin')).failed,true);
 });
-test('analytics exclusion is narrow and later intervals are optional',()=>{
+test('analytics exclusion is narrow',()=>{
   assert.equal(analytics('https://static.cloudflareinsights.com/beacon.min.js'),true);
   assert.equal(analytics('https://example.com/beacon.min.js'),false);
-  const required=requiredRequests();
-  const request=(path:string)=>({url:()=>base+path,resourceType:()=>'fetch'});
-  assert.equal(required(request('/data/cnec/v3/0.json')),true);
-  assert.equal(required(request('/data/cnec/v3/1.json')),false);
-  assert.equal(required(request('/data/cnec/v3/0.json')),true);
-  assert.equal(required(request('/data/cnec/v3/today/manifest.json')),true);
-  assert.equal(required(request('/data/cnec/v3/tomorrow/manifest.json')),false);
+});
+test('optional asset failures and recovered data do not fail a ready page',async()=>{
+  const result=await checkPage(browser,{id:'recovery',url:base+'/?case=recovery',kind:'map'},2000,100);
+  assert.equal(result.failed,false);
+  assert.ok(result.diagnostics.some(line=>line.includes('503')));
 });

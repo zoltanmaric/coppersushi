@@ -1,4 +1,4 @@
-import type {Browser, Request} from 'playwright-core';
+import type {Browser} from 'playwright-core';
 
 export const checks = [
   {id:'blog', url:'https://121gigawatts.org/', kind:'blog'},
@@ -19,26 +19,6 @@ export function analytics(raw:string):boolean {
     || (url.hostname === 'cdn.usefathom.com' && url.pathname === '/script.js');
 }
 
-/** Initial interval is required; other interval downloads are optional prefetch. */
-export function unpublishedCalendar(url:string, status:number):boolean {
-  return [403,404].includes(status) && /^\/data\/cnec\/v3\/\d{4}-\d{2}-\d{2}\/manifest\.json$/.test(new URL(url).pathname);
-}
-export function requiredRequests() {
-  const initial = new Map<string,string>();
-  return (request:Pick<Request,'url'|'resourceType'>):boolean => {
-    const type = request.resourceType();
-    if (['document','script','stylesheet'].includes(type)) return true;
-    const url = new URL(request.url());
-    if (!url.pathname.startsWith('/data/')) return false;
-    const kind = /\/\d+\.json$/.test(url.pathname) ? 'interval'
-      : url.pathname.endsWith('/manifest.json') ? 'manifest'
-      : url.pathname.endsWith('/metadata.json') ? 'metadata' : null;
-    if (!kind) return false;
-    if (!initial.has(kind)) initial.set(kind,url.pathname);
-    return initial.get(kind) === url.pathname;
-  };
-}
-
 export async function checkPage(browser:Browser, check:Check, deadlineMs=45_000, observationMs=3_000):Promise<Result> {
   const start = Date.now();
   const diagnostics:string[] = [];
@@ -52,17 +32,14 @@ export async function checkPage(browser:Browser, check:Check, deadlineMs=45_000,
   try {
     await context.route('**/*', route => analytics(route.request().url()) ? route.abort() : route.continue());
     const page = await context.newPage();
-    const classify = requiredRequests();
-    const required = new WeakMap<Request,boolean>();
-    page.on('request', request=>required.set(request,classify(request)));
     page.on('console', message=>{if(message.type()==='error') record('Console: '+message.text());});
     page.on('pageerror', error=>record('JavaScript: '+error.message,true));
     page.on('requestfailed', request=>{
-      if (!analytics(request.url())) record('Request: '+new URL(request.url()).origin+new URL(request.url()).pathname+' '+request.failure()?.errorText,required.get(request));
+      if (!analytics(request.url())) record('Request: '+new URL(request.url()).origin+new URL(request.url()).pathname+' '+request.failure()?.errorText);
     });
     page.on('response', response=>{
       if (response.status()>=400 && !analytics(response.url()))
-        record('HTTP '+response.status()+' '+new URL(response.url()).origin+new URL(response.url()).pathname,required.get(response.request()) && !unpublishedCalendar(response.url(),response.status()));
+        record('HTTP '+response.status()+' '+new URL(response.url()).origin+new URL(response.url()).pathname);
     });
     const response = await page.goto(check.url,{waitUntil:'domcontentloaded',timeout:deadlineMs});
     if (!response?.ok()) throw new Error('Unsuccessful document response: '+response?.status());

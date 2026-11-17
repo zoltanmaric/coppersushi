@@ -43,10 +43,11 @@ no heartbeat.
 ## Success and diagnostics
 
 The blog must show its footer site identity and an article title. Map pages must expose
-`data-load-state="ready"`, a visible Mapbox canvas and interval slider. Required
-scripts, CSS and initial data failures and uncaught exceptions fail the check.
-CNEC calendar manifest 403/404 responses are expected for unpublished days;
-a missing selected day still fails readiness. Later interval prefetch, optional resources and other console errors are diagnostics.
+`data-load-state="ready"`, a visible Mapbox canvas and interval slider. Missing expected
+page content, readiness timeout/error and uncaught application exceptions fail a check.
+Network failures and other console errors remain diagnostics. A recovered request
+passes if the page becomes ready; the monitor does not infer required data from
+request order or reproduce the app's publication rules.
 The pinned Plotly implementation waits for Mapbox `loaded()` before reporting
 figure completion; readiness does not assert pixel correctness or data freshness.
 
