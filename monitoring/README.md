@@ -97,9 +97,9 @@ and provider lockfile there before planning.
    `FunctionError`, all four returned results and CloudWatch logs. Verify real
    map readiness, no analytics collection, Ghost cache bypass and no leftover
    contexts. Runtime crashes must produce no completed heartbeat.
-6. Test the email and alarm paths below. Set `enabled=true` in a reviewed full
-   plan only after these checks pass. Both scheduling and alarm actions follow
-   that flag. Native initial OK messages and possible SNS duplicates are accepted.
+6. Set `enabled=true` in a reviewed full plan after confirmation and a successful
+   manual invocation. Verify one real scheduled invocation, then the short email
+   test below. Native initial OK messages and possible SNS duplicates are accepted.
 
 The Lambda has no VPC, repair/deployment permissions or SMTP credentials.
 Scheduler and Lambda async retries are disabled and queued-event age is bounded.
@@ -111,21 +111,15 @@ prevent alerts.
 
 ## Verify alarms without breaking production
 
-Before activation, keep the production schedule disabled. Use disposable alarms
-and synthetic metrics in a separate test namespace, with the same periods,
-statistics and missing-data settings as `infra/main.tf`. Route their ALARM and
-OK actions to the confirmed SNS topic. Keep alarm names under
-`website-monitor-*` so the topic policy permits publishing.
+After SNS confirmation, verify one scheduled run through the actual Scheduler role,
+input and Lambda delivery path. Then use `aws cloudwatch set-alarm-state` on one
+real check alarm to send ALARM followed by OK, with a reason clearly labelled
+“Monitoring delivery test — no website outage”. Confirm both emails arrive and
+restore the observed healthy state. Do not interrupt either website.
 
-Publish success, failure, success in successive periods: no outage alarm.
-Then publish two failure periods: receive ALARM. Another failure must not cause a
-new state-transition message; success must produce OK. Repeat a timestamp to
-confirm it does not count as a second period. Omit heartbeats and measure the
-missing-data alarm delay. CloudWatch may look back beyond two periods; do not
-claim an exact delivery deadline. Delete disposable alarms after testing.
-Record actual email receipt, timestamps and evaluation delay in private deployment
-notes. Unit tests validate publication ordering and Terraform tests validate
-configuration; neither substitutes for AWS delivery verification.
+This proves our wiring and recipient delivery. Do not replay hours of synthetic
+periods to re-test CloudWatch's built-in evaluation, duplicate handling or lookback.
+The heartbeat remains enabled; inspect it if the checker actually misses runs.
 
 ## Operation and cost
 
