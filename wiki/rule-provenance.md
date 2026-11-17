@@ -4,6 +4,14 @@ The stumble behind each line in `AGENTS.md` and `.agents/skills/`. Rules and ski
 
 Rules older than this page carry no row and are the first ablation candidates.
 
+The Ghost rollout on 2026-11-17 preserved live Nginx indexing rules with a targeted
+patch while the active template still omitted them; the durable correction followed
+in [#288](https://github.com/zoltanmaric/coppersushi/pull/288). This is one observed
+source-reconciliation failure, not evidence of repetition. The existing
+`information-home` deployment entry point leads to the owning runbook's
+[reconciliation procedure](../121gigawatts/hosting/README.md#deployment-reconciliation);
+no new global or skill rule was added.
+
 | Line | Stumble |
 |---|---|
 | `wiki-memory`; `llm-wiki` recall and writeback; wiki `what-is` | On 2026-11-16, an ACER report discussion began with fresh research before consulting its existing wiki digest; the user had to point out that prior knowledge existed. The newly identified paragraph 174 recommendation then remained in chat instead of updating that digest. The user explicitly approved automatic evidence-backed writeback despite limited repeated-failure evidence, excluded agent plans and suggestions, and required every conversation to begin with wiki recall. Moved the trigger into root instructions, broadened skill discovery, and replaced the ingest-only workflow with recall and reconciliation. |

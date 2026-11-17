@@ -133,6 +133,30 @@ pixi run --locked hosting-configure
 `configure` can restart services. Ansible check mode needs existing packages and
 files; it is not a first-installation test.
 
+### Deployment reconciliation
+
+Before changing an existing installation:
+
+1. Record the intended Git revision and affected components. Refresh `origin/main`
+   and inspect intervening changes to those components, including concurrent
+   deployments; do not assume the current worktree is the deployed revision.
+2. Compare the live managed configuration with the templates rendered using the
+   production inputs. `hosting-check` predicts changes but does not explain them.
+   Keep snapshots and diffs private; they may contain secrets.
+3. Resolve unexpected differences before applying. Preserve intentional behavior
+   in the owning template or an explicit private input. A hand patch on the server
+   or an uncommitted change in another checkout is not a reproducible deployment.
+4. Deploy the reviewed revision, then compare its rendered configuration with the
+   live result and check the affected behavior. Record the source revision,
+   components changed and any remaining differences in the private deployment record.
+
+Emergency repairs may precede source reconciliation, but remain incomplete until
+the durable change is captured in the owning configuration and verified. Report
+any outstanding reconciliation explicitly; a healthy HTTP response alone does
+not establish that the next deployment will preserve the repair.
+
+### Search indexing and service recovery
+
 Files can stay publicly accessible while being excluded from search results.
 Add exact URI entries to server-local `/etc/nginx/noindex-paths.conf`, for example
 `"/path/to/file.pdf" "noindex";`, then run `nginx -t` and reload Nginx.
