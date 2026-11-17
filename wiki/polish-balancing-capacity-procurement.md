@@ -81,7 +81,11 @@ The inspected [PSE API schema](https://api.raporty.pse.pl/api/openapi) did not i
 
 ### Incentives
 
+BRPs bear financial responsibility for their portfolio imbalances: [Regulation (EU) 2019/943, Article 5](https://eur-lex.europa.eu/eli/reg/2019/943/oj), and PSE's [2026-08-31 announcement](https://www.pse.pl/-/bilansowanie-handlowe-kse-w-lipcu-2026) explicitly confirm this. Consumer pass-through does not remove the BRP's settlement liability. The [podcast's two cost channels](literature/pse-stepien-commercial-balancing-podcast.md#behaviour) distinguish operator costs recovered through tariffs from costs borne by BRPs and subsequently passed to customers. It supplies neither the tariff reconciliation nor customer contracts needed to establish who bears an additional euro of imbalance cost; guaranteed reimbursement and weak marginal incentives cannot be inferred from it.
+
 PSE's [July 2026 commercial-balancing report](literature/pse-commercial-balancing-july-2026.md) attributes persistent imbalances to insufficient corrective trading and proposes stronger imbalance-pricing incentives. Its examples distinguish surplus/downward pressure from shortage/upward pressure; its savings estimates are counterfactual rather than audited losses. The digest owns the page-specific evidence. A high realised price alone cannot establish adequate expected incentives before delivery.
+
+The [full March 2026 Stępień interview](literature/pse-stepien-commercial-balancing-podcast.md) adds an attributed organisational explanation for slow adaptation and describes a predictable alpha pricing incentive. It discusses consumer cost pass-through but does not establish that this causes participants to remain unbalanced. The video labels its expert opinions educational rather than the official company position.
 
 This strengthens the documented operational rationale for reserves. It does not quantify the additional reserve requirement or establish the necessity or size of a specific day-ahead export cap. The [methodology safeguards](literature/core-da-ccm-allocation-constraint-safeguards.md) still require security effectiveness and comparison with alternatives; completed reserve procurement must not be counted twice as a separate reason to withhold export capability.
 
