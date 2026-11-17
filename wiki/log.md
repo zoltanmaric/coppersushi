@@ -461,3 +461,7 @@ Extended the [report digest](literature/acer-electricity-market-integration-moni
 ## [2026-11-17] decision | Wrangler access discovery
 
 [Rule provenance](rule-provenance.md) records the repeated token-first stumble and the root harness pointer to the owning Wrangler browser-login workflow, with explicit working-directory and installation-prompt guidance.
+
+## [2026-11-17] query | Live article-cache verification
+
+[Article-cache](copper-sushi-app.md#article-cache) now records verified public cache hits, native Ghost invalidation, expired-cache fallback during an isolated 502 and fresh content after recovery. Completed rollout scope no longer needs a spec.

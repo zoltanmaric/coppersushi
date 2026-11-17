@@ -9,9 +9,13 @@ Its [hosting runbook](../121gigawatts/hosting/README.md#configure) covers servic
 
 ### Article-cache
 
-On 2026-11-17 the article homepage and an article returned
-`CF-Cache-Status: DYNAMIC` and `Cache-Control: public, max-age=0`.
-The cache implementation and rollout checks belong to the
+The [article homepage](https://121gigawatts.org/) and
+[article page](https://121gigawatts.org/copper-sushi-power-flow-european-grid/)
+returned Cloudflare cache HITs after activation on 2026-11-17. An isolated origin
+verified expired-cache serving during a 502 and replacement after recovery,
+without stopping Ghost. Real Ghost publish, edit, slug-change and unpublish
+operations each produced successful native webhook deliveries and cache updates.
+The cache implementation and operating checks belong to the
 [Ghost hosting runbook](../121gigawatts/hosting/README.md#public-page-caching).
 
 Cloudflare supports [stale-on-error responses](https://developers.cloudflare.com/cache/concepts/cache-control/)
