@@ -584,3 +584,7 @@ records the single incident without inventing repeated evidence for a new rule.
 ## [2026-11-18] decision | Proportionate PR defenses
 
 Refined the existing complexity review questions to weigh failure likelihood, impact and recovery cost against defensive complexity; see [rule provenance](rule-provenance.md).
+
+## [2026-11-18] decision | Pragmatic delegation trial
+
+The user approved a trial of delegation and model selection; [rule provenance](rule-provenance.md) records the single observed incident and the explicit override of the repetition bar.

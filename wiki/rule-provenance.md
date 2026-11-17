@@ -92,3 +92,5 @@ no new global or skill rule was added.
 | `product-names` | On 2026-11-12, the help-panel blog link and shared navigation both omitted the lightning emoji from Critical Elements ⚡️. The user requested consistent naming and a harness rule, and clarified that Power Flow also includes 🍣. |
 
 | `pull-request`: folder-first review | On 2026-11-13, repeated user interventions found the contract generator and Dockerfile outside the product folder, central fixtures apart from their tests, and repository hook tests inside electricity pipelines. A fresh tip review then found CNEC-only code under shared frontend folders and stale fixture documentation. The user requested reviewing structural changes before file details. Replaced the generic ownership check with a concrete resulting-tree review; new folders prompt scrutiny, not automatic rejection. |
+
+| `pragmatic-delegation` | On 2026-11-18, an agent incorrectly claimed a quota tool was absent before discovering it. The user explicitly approved a delegation and model-selection trial despite the absence of repeated evidence. |
