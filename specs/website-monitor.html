@@ -4,10 +4,10 @@
 <body><main>
 <p class="eyebrow">Spec · 17 November 2026 · implementation not started</p>
 <h1>Know when a page stops working.</h1>
-<p class="lead">Every five minutes, one AWS Lambda opens the blog, Critical Elements ⚡️ and Power Flow 🍣 in Chromium. A separate uncached HTTP request checks Ghost behind the public cache. CloudWatch evaluates the results and sends outage and recovery emails through SNS.</p>
+<p class="lead">Every 30 minutes initially, one AWS Lambda concurrently opens the blog, Critical Elements ⚡️ and Power Flow 🍣 in headless Chromium. A concurrent uncached HTTP request checks Ghost behind the public cache. CloudWatch evaluates the results and sends outage and recovery emails through SNS.</p>
 <section aria-label="Monitoring flow" class="flow">
-<div><strong>Every 5 minutes</strong><span>EventBridge Scheduler</span></div><b aria-hidden="true">→</b>
-<div><strong>Open 3 pages</strong><span>Playwright + Chromium; one Ghost HTTP probe</span></div><b aria-hidden="true">→</b>
+<div><strong>Every 30 minutes</strong><span>EventBridge Scheduler</span></div><b aria-hidden="true">→</b>
+<div><strong>Open 3 pages in parallel</strong><span>Playwright + Chromium; one Ghost HTTP probe</span></div><b aria-hidden="true">→</b>
 <div><strong>Evaluate → notify</strong><span>CloudWatch alarms → SNS email</span></div>
 </section>
 <h2>Problem</h2><p>A running server can still serve a broken website. Check what a visitor receives, including browser errors and data requests. Keep the checker outside the Hetzner server and independent of the application process.</p>
@@ -40,7 +40,7 @@
 <div><strong>Second failed period</strong><span>CloudWatch enters ALARM → SNS email.</span></div><b aria-hidden="true">→</b>
 <div><strong>Successful period</strong><span>CloudWatch returns to OK → SNS email.</span></div>
 </section>
-<p class="status">With regular metric delivery, two failed five-minute periods trigger an alarm. Period alignment, evaluation and email delivery add delay; this is not an exact five-minute delivery guarantee. Missing runs are handled by a separate checker alarm.</p>
+<p class="status">With regular metric delivery, two failed periods trigger an alarm. At the initial 30-minute cadence, detection takes roughly 30–60 minutes, plus evaluation and email delivery delay. Missing runs are handled by a separate checker alarm.</p>
 <h2 id="architecture">System architecture</h2>
 <p><code>monitoring/</code> is a top-level component beside <code>121gigawatts/</code>, <code>coppersushi/</code> and <code>forecasts/</code>. It owns cross-product checks and notifications. The products remain responsible for their own serving and readiness state.</p>
 <pre class="tree" aria-label="Proposed repository structure">repository/
@@ -55,7 +55,7 @@
     ├── tests/         Controlled pages and failure cases
     └── infra/         Independent Terraform root</pre>
 <section class="flow" aria-label="Scheduled runtime architecture">
-<div><strong>EventBridge Scheduler</strong><span>Invoke every five minutes</span></div><b aria-hidden="true">→</b>
+<div><strong>EventBridge Scheduler</strong><span>Invoke every 30 minutes initially</span></div><b aria-hidden="true">→</b>
 <div><strong>Lambda · Node + Chromium</strong><span>Public HTTPS → blog and map apps<br>Uncached HTTP → Ghost origin path</span></div><b aria-hidden="true">→</b>
 <div><strong>CloudWatch alarms</strong><span>Results → alarm transitions → SNS email</span></div>
 </section>
@@ -66,15 +66,19 @@
 </tbody></table></div>
 <p>Use one Lambda outside a VPC, CloudWatch metrics/alarms, one SNS email topic and a separate monitoring Terraform state. Lambda only needs permission to write its logs and metrics; it has no permission to deploy or repair either product. No DynamoDB, SMTP token, Secrets Manager, custom incident store, public API, queue, screenshot bucket, dashboard or always-running server is needed.</p>
 <p>The only production application change belongs in <code>coppersushi/frontend/</code>: the readiness attribute described above. Monitoring reads it through the browser and does not import frontend internals. Reuse root task tooling for build and checks; keep browser dependencies and fixtures with <code>monitoring/</code>. Update the root and component README diagrams when this architecture is implemented.</p>
+<h2>Cost and initial settings</h2>
+<p>Target less than $5/month. Start with one 2 GB Lambda every 30 minutes; parallel checks are the chosen starting design, with no comparative benchmarking phase. Make the interval configurable from 5 to 60 minutes, and derive both check-alarm and heartbeat periods from it.</p>
+<p>Planning estimate: about $3.90/month at 30 seconds billed per run, or $5.40 at 60 seconds. This assumes a 30-day month, x86 compute at $0.0000166667 per GB-second and roughly $2.50 for metrics, alarms, image storage and modest logs/email. It does not rely on available Lambda free tier. These are assumptions, not measured performance; region, tax and extra website/map-provider usage can change the total. Sources: <a href="https://aws.amazon.com/lambda/pricing/">Lambda</a>, <a href="https://aws.amazon.com/cloudwatch/pricing/">CloudWatch</a> and <a href="https://aws.amazon.com/ecr/pricing/">ECR pricing</a>.</p>
+<p>After deployment, report observed billed duration, memory use and projected monthly cost from normal runs. Keep running and adjust cadence or memory later if needed; a runtime comparison or tuning exercise is not an activation prerequisite. The $5 target is not a hard spending cap. Keep image and log retention bounded.</p>
 <details><summary>Runner and managed alert contracts</summary>
 <ul>
-<li>Every five minutes, launch one browser and check the three pages with isolated contexts. Proposed limits: 45 seconds per page, a 3-second post-readiness observation window, a 10-second Ghost HTTP deadline, and a 240-second invocation timeout. Bound every wait, close the browser and prevent overlapping runs.</li>
+<li>Start with 2 GB memory and a 30-minute schedule. Launch one headless Chromium process and run all three page checks concurrently in isolated contexts, alongside the Ghost HTTP probe. Collect each result independently; a rejected check must not cancel the others. Proposed limits: 45 seconds per page, a 3-second post-readiness observation window, a 10-second Ghost HTTP deadline, and a 240-second invocation timeout. Bound every wait, close the browser and prevent overlapping runs.</li>
 <li>Before navigation, suppress Cloudflare Web Analytics in each monitor browser context using narrowly matched Playwright request routing. The <a href="../coppersushi/frontend/assets/analytics.js">production loader</a> currently loads <code>https://static.cloudflareinsights.com/beacon.min.js</code>; verify the blog’s injected beacon too. Prevent analytics collection without adding production opt-out flags or blocking application, map or data resources. Mark deliberately blocked analytics requests as monitor exclusions, not failures.</li>
 <li>Publish <code>Failed</code> as 0 (pass) or 1 (fail) for each of the four fixed check IDs. Use the scheduled slot’s timestamp, not retry time, so duplicate invocations cannot create a second failed period. Use the Maximum statistic: conflicting duplicate results conservatively fail that slot. Bound retry age and reject stale scheduled work rather than reporting old results as current health.</li>
-<li>Each check has a standard CloudWatch alarm: 300-second period, Maximum ≥ 1, two evaluation periods and two datapoints to alarm. Publish both successes and failures. Set missing-data handling to <code>ignore</code>; absence is not evidence of recovery. CloudWatch’s native evaluation/lookback rules apply rather than a custom exact incident counter.</li>
+<li>Each check has a standard CloudWatch alarm: period matching the configured schedule (initially 1,800 seconds), Maximum ≥ 1, two evaluation periods and two datapoints to alarm. Publish both successes and failures. Set missing-data handling to <code>ignore</code>; absence is not evidence of recovery. CloudWatch’s native evaluation/lookback rules apply rather than a custom exact incident counter.</li>
 <li>Send ALARM and OK transitions to one SNS email topic. Stable ALARM periods do not deliberately repeat messages. Accept native delivery semantics, possible duplicates and an initial OK notification; do not build a notification state machine to suppress them. Confirm the private recipient’s SNS subscription before activation.</li>
 <li>Use clear alarm names and descriptions containing the monitored URL and a logs-console link. Emails are the standard AWS alarm format; detailed browser errors and run timestamps stay in CloudWatch Logs. Do not promise a custom diagnosis or calculated outage duration in the email. Set explicit log retention; no screenshots.</li>
-<li>Publish a completed-run heartbeat only after all four results have been published. A separate CloudWatch alarm treats absent heartbeats as breaching, targeting two missed five-minute periods. Verify actual missing-data evaluation delay during acceptance. A page failure is still a completed run; a crash, missed schedule or failed metric publication must not look healthy.</li>
+<li>Publish a completed-run heartbeat only after all four results have been published. A separate CloudWatch alarm treats absent heartbeats as breaching, targeting two missed scheduled periods. Verify actual missing-data evaluation delay during acceptance. A page failure is still a completed run; a crash, missed schedule or failed metric publication must not look healthy.</li>
 <li>AWS hosting is independent of Hetzner but shares a provider with CopperSushi. Prefer a different AWS region where practical; a provider-wide outage remains a known blind spot.</li>
 </ul></details>
 <details><summary>Verified baseline and design choices</summary>
@@ -86,13 +90,13 @@
 <h2>Acceptance checks</h2>
 <p>All checks below are pending. They define completion, not work already done. Simulate failures against controlled fixtures or request interception; never break production to test monitoring.</p>
 <ul class="checks">
-<li><label><input type="checkbox" disabled><span>The deployed Lambda runs all three live checks, with real data and map rendering verified. One failed page does not suppress the other results.</span></label></li>
+<li><label><input type="checkbox" disabled><span>The deployed 2 GB Lambda runs all three live browser checks and the Ghost HTTP probe concurrently, with real data and map rendering verified. One failed page does not suppress the other results.</span></label></li>
 <li><label><input type="checkbox" disabled><span>On a controlled fixture, a cached public homepage passes while its uncached origin probe fails; the origin-path alarm and recovery follow the two-period rule. Live configuration confirms query-string cache bypass without disrupting production.</span></label></li>
 <li><label><input type="checkbox" disabled><span>Readiness stays loading until required data and the current map render complete; a selection change clears ready, stale completion cannot restore it, and required failures produce error.</span></label></li>
 <li><label><input type="checkbox" disabled><span>A controlled 502 document, missing required script, failed data request, uncaught exception and never-ready page each produce the intended failure and useful diagnostics.</span></label></li>
 <li><label><input type="checkbox" disabled><span>All three monitored pages send no Cloudflare analytics collection requests during a complete run, including page teardown. Deliberate analytics blocking produces no outage; required scripts and data still load.</span></label></li>
 <li><label><input type="checkbox" disabled><span>An optional-resource failure alone does not trigger an outage; its details remain available. Default-page publication behaviour is explicitly verified.</span></label></li>
-<li><label><input type="checkbox" disabled><span>Regular five-minute metrics verify failure → success causes no ALARM, two failed periods cause ALARM, stable failure causes no new alarm transition, and a successful period returns to OK. Duplicate invocation timestamps do not create extra periods. Test missing data separately; accept native initial OK and possible delivery duplicates.</span></label></li>
+<li><label><input type="checkbox" disabled><span>Regular metrics at the configured interval verify failure → success causes no ALARM, two failed periods cause ALARM, stable failure causes no new alarm transition, and a successful period returns to OK. Duplicate invocation timestamps do not create extra periods. Test missing data separately; accept native initial OK and possible delivery duplicates.</span></label></li>
 <li><label><input type="checkbox" disabled><span>The SNS subscription is confirmed and real CloudWatch ALARM and OK emails are received. Their URL and log reference identify the affected check; diagnostics are available in logs.</span></label></li>
 <li><label><input type="checkbox" disabled><span>A controlled missed/failed invocation raises the independent checker alarm. Scheduled live runs complete within their deadline without overlap.</span></label></li>
 <li><label><input type="checkbox" disabled><span>The component README documents deployment, URLs, success criteria, SNS recipient setup, alert testing, pause/resume, cache-bypass verification and retention. Owning architecture diagrams and the implementation PR’s Architecture delta are updated.</span></label></li>
