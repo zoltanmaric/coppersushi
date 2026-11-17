@@ -75,6 +75,8 @@ flowchart TB
     edge -->|Shell and selected hour| opfbrowser["OPF browser: React and Plotly"]
     maps["Mapbox"] -->|Styles and tiles| browser
     maps -->|Styles and tiles| opfbrowser
+    browser -->|Page views and performance| analytics["Cloudflare Web Analytics"]
+    opfbrowser -->|Page views and performance| analytics
     click catalog "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/grid/README.md" "Grid catalog"
     click opf "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/powerflow/README.md" "OPF"
     click publication "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/cnec/README.md" "Publication"

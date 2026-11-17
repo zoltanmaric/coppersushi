@@ -461,3 +461,8 @@ Extended the [report digest](literature/acer-electricity-market-integration-moni
 ## [2026-11-17] decision | Wrangler access discovery
 
 [Rule provenance](rule-provenance.md) records the repeated token-first stumble and the root harness pointer to the owning Wrangler browser-login workflow, with explicit working-directory and installation-prompt guidance.
+
+## [2026-11-17] decision | App web analytics
+
+[App analytics](copper-sushi-app.md#analytics) uses a manual Cloudflare beacon while
+retaining CloudFront hosting; proxying is not required for browser measurement.
