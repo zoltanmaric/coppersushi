@@ -449,3 +449,15 @@ The [harness decision](rule-provenance.md) makes wiki recall the conversation en
 ## [2026-11-16] query | ACER recommendation on allocation constraints
 
 Extended the [report digest](literature/acer-electricity-market-integration-monitoring-report.md) through paragraph 174: the section includes a general recommendation for alternatives and regulatory scrutiny, without a Poland-specific remedy.
+
+## [2026-11-17] decision | Public article cache
+
+[Article-cache](copper-sushi-app.md#article-cache) records the agreed best-effort invalidation tradeoff, native Ghost event coverage, missing POST retries and stale-serving constraints. Origin recovery remains independent.
+
+## [2026-11-17] decision | Architecture labels
+
+[Diagram provenance](rule-provenance.md) records the clarified technology and deployment-location labels after the purge endpoint’s runtime was unclear in review.
+
+## [2026-11-17] decision | Wrangler access discovery
+
+[Rule provenance](rule-provenance.md) records the repeated token-first stumble and the root harness pointer to the owning Wrangler browser-login workflow, with explicit working-directory and installation-prompt guidance.

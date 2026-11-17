@@ -1,0 +1,26 @@
+[
+  {
+    "ref": "ghost_public_html",
+    "description": "Ghost public pages: respect origin cache policy",
+    "expression": "(http.host eq \"121gigawatts.org\" and (http.request.method in {\"GET\" \"HEAD\"} and http.cookie eq \"\" and not any(http.request.headers.names[*] eq \"authorization\") and not (starts_with(http.request.uri.path, \"/ghost\") or starts_with(http.request.uri.path, \"/members\") or starts_with(http.request.uri.path, \"/p/\") or starts_with(http.request.uri.path, \"/preview\") or starts_with(http.request.uri.path, \"/private\") or starts_with(http.request.uri.path, \"/account\") or starts_with(http.request.uri.path, \"/signin\") or starts_with(http.request.uri.path, \"/signup\") or starts_with(http.request.uri.path, \"/signout\") or starts_with(http.request.uri.path, \"/unsubscribe\") or starts_with(http.request.uri.path, \"/email\") or starts_with(http.request.uri.path, \"/r/\") or starts_with(http.request.uri.path, \"/sso\") or starts_with(http.request.uri.path, \"/.ghost\") or starts_with(http.request.uri.path, \"/.well-known\"))) and (http.request.uri.path.extension eq \"\" and not starts_with(http.request.uri.path, \"/content/\") and not starts_with(http.request.uri.path, \"/assets/\") and not starts_with(http.request.uri.path, \"/public/\")) and http.request.uri.query eq \"\")",
+    "action": "set_cache_settings",
+    "action_parameters": {
+      "cache": true,
+      "edge_ttl": {
+        "mode": "respect_origin"
+      },
+      "browser_ttl": {
+        "mode": "respect_origin"
+      }
+    }
+  },
+  {
+    "ref": "ghost_private_bypass",
+    "description": "Ghost sessions, previews and APIs: bypass cache",
+    "expression": "(http.host eq \"121gigawatts.org\" and ((starts_with(http.request.uri.path, \"/ghost\") or starts_with(http.request.uri.path, \"/members\") or starts_with(http.request.uri.path, \"/p/\") or starts_with(http.request.uri.path, \"/preview\") or starts_with(http.request.uri.path, \"/private\") or starts_with(http.request.uri.path, \"/account\") or starts_with(http.request.uri.path, \"/signin\") or starts_with(http.request.uri.path, \"/signup\") or starts_with(http.request.uri.path, \"/signout\") or starts_with(http.request.uri.path, \"/unsubscribe\") or starts_with(http.request.uri.path, \"/email\") or starts_with(http.request.uri.path, \"/r/\") or starts_with(http.request.uri.path, \"/sso\") or starts_with(http.request.uri.path, \"/.ghost\") or starts_with(http.request.uri.path, \"/.well-known\")) or not (http.request.method in {\"GET\" \"HEAD\"}) or ((http.request.uri.path.extension eq \"\" and not starts_with(http.request.uri.path, \"/content/\") and not starts_with(http.request.uri.path, \"/assets/\") and not starts_with(http.request.uri.path, \"/public/\")) and (http.cookie ne \"\" or any(http.request.headers.names[*] eq \"authorization\") or http.request.uri.query ne \"\"))))",
+    "action": "set_cache_settings",
+    "action_parameters": {
+      "cache": false
+    }
+  }
+]

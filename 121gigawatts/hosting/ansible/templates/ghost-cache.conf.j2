@@ -1,0 +1,62 @@
+# CDN freshness is separate from Ghost's browser Cache-Control header.
+map $request_method $ghost_cache_read { default 0; GET 1; HEAD 1; }
+map $args $ghost_cache_no_query { default 0; "" 1; }
+map $http_cookie $ghost_cache_no_cookie { default 0; "" 1; }
+map $http_authorization $ghost_cache_no_auth { default 0; "" 1; }
+map $uri $ghost_cache_public_path {
+    default 1;
+    ~*^/(ghost|members|p|preview|private|account|signin|signup|signout|unsubscribe|email|r|sso|\.ghost|\.well-known)(/|$) 0;
+}
+map "$ghost_cache_read$ghost_cache_no_query$ghost_cache_no_cookie$ghost_cache_no_auth$ghost_cache_public_path" $ghost_cache_public_request {
+    default 0;
+    "11111" 1;
+}
+map $upstream_status $ghost_cache_ok { default 0; "200" 1; "304" 1; }
+map $upstream_http_content_type $ghost_cache_html_type {
+    default 0;
+    "~*^text/html(;|$)" 1;
+}
+map $upstream_http_set_cookie $ghost_cache_no_session { default 0; "" 1; }
+map $upstream_http_vary $ghost_cache_shared_variant {
+    default 0;
+    "" 1;
+    ~*^Accept-Encoding$ 1;
+}
+map $upstream_http_cache_control $ghost_cache_public_response {
+    default 0;
+    ~*(^|,)\s*(private|no-store|no-cache|must-revalidate|proxy-revalidate|s-maxage)([=,]|$) 0;
+    ~*(^|,)\s*public(,|$) 1;
+}
+map "$upstream_http_cloudflare_cdn_cache_control$upstream_http_cdn_cache_control" $ghost_cache_no_upstream_cdn_policy {
+    default 0;
+    "" 1;
+}
+map "$ghost_cache_ok$ghost_cache_no_session$ghost_cache_shared_variant$ghost_cache_public_response$ghost_cache_no_upstream_cdn_policy" $ghost_cache_shared_response {
+    default 0;
+    "11111" 1;
+}
+map $uri $ghost_cache_page_path {
+    default 1;
+    ~\.[^/]*$ 0;
+    ~*^/(content|assets|public)(/|$) 0;
+}
+# A 304 validates an existing page and usually has no Content-Type.
+map "$upstream_status:$ghost_cache_page_path" $ghost_cache_revalidated_page {
+    default 0;
+    "304:1" 1;
+}
+map "$ghost_cache_html_type:$ghost_cache_revalidated_page" $ghost_cache_html {
+    default 0;
+    ~1 1;
+}
+map "$ghost_cache_html:$ghost_cache_page_path:$ghost_cache_public_request:$ghost_cache_shared_response" $ghost_cdn_cache_control {
+    # Preserve normal asset caching; only HTML gets the article policy.
+    default "";
+    ~^1:[01]:1:1$ "public, max-age=300, stale-if-error=86400";
+    ~^1: "no-store";
+    ~^0:1: "no-store";
+}
+map "$ghost_cache_html:$ghost_cache_public_request:$ghost_cache_shared_response" $ghost_cdn_cache_tag {
+    default "";
+    "1:1:1" "ghost-public-html";
+}

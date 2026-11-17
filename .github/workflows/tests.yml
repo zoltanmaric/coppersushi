@@ -66,6 +66,11 @@ jobs:
       - name: Install Ghost dependencies
         if: matrix.task == 'theme-test'
         run: pixi run --locked theme-install
+      - name: Install Nginx for hosting integration checks
+        if: matrix.task == 'hosting-test'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nginx
       - name: Install hosting dependencies
         if: matrix.task == 'hosting-test'
         run: pixi run --locked hosting-setup
