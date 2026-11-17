@@ -2,7 +2,7 @@
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Spec: website outage alerts</title><link rel="icon" href="data:,"><link rel="stylesheet" href="spec.css"><link rel="stylesheet" href="website-monitor.css"></head>
 <body><main>
-<p class="eyebrow">Spec · 17 November 2026 · implementation not started</p>
+<p class="eyebrow">Spec · 17 November 2026 · implementation stack · activation pending</p>
 <h1>Know when a page stops working.</h1>
 <p class="lead">Every 30 minutes initially, one AWS Lambda concurrently opens the blog, Critical Elements ⚡️ and Power Flow 🍣 in headless Chromium. A concurrent uncached HTTP request checks Ghost behind the public cache. CloudWatch evaluates the results and sends outage and recovery emails through SNS.</p>
 <section aria-label="Monitoring flow" class="flow">
@@ -73,7 +73,7 @@
 <details><summary>Runner and managed alert contracts</summary>
 <ul>
 <li>Start with 2 GB memory and a 30-minute schedule. Launch one headless Chromium process and run all three page checks concurrently in isolated contexts, alongside the Ghost HTTP probe. Collect each result independently; a rejected check must not cancel the others. Proposed limits: 45 seconds per page, a 3-second post-readiness observation window, a 10-second Ghost HTTP deadline, and a 240-second invocation timeout. Bound every wait, close the browser and prevent overlapping runs.</li>
-<li>Before navigation, suppress Cloudflare Web Analytics in each monitor browser context using narrowly matched Playwright request routing. The <a href="../coppersushi/frontend/assets/analytics.js">production loader</a> currently loads <code>https://static.cloudflareinsights.com/beacon.min.js</code>; verify the blog’s injected beacon too. Prevent analytics collection without adding production opt-out flags or blocking application, map or data resources. Mark deliberately blocked analytics requests as monitor exclusions, not failures.</li>
+<li>Before navigation, suppress the observed Google Analytics and Fathom loaders on the blog, plus Cloudflare Web Analytics in each monitor browser context using narrowly matched Playwright request routing. The <a href="../coppersushi/frontend/assets/analytics.js">production loader</a> currently loads <code>https://static.cloudflareinsights.com/beacon.min.js</code>; verify the blog’s injected beacon too. Prevent analytics collection without adding production opt-out flags or blocking application, map or data resources. Mark deliberately blocked analytics requests as monitor exclusions, not failures.</li>
 <li>Publish <code>Failed</code> as 0 (pass) or 1 (fail) for each of the four fixed check IDs. Use the scheduled slot’s timestamp, not retry time, so duplicate invocations cannot create a second failed period. Use the Maximum statistic: conflicting duplicate results conservatively fail that slot. Bound retry age and reject stale scheduled work rather than reporting old results as current health.</li>
 <li>Each check has a standard CloudWatch alarm: period matching the configured schedule (initially 1,800 seconds), Maximum ≥ 1, two evaluation periods and two datapoints to alarm. Publish both successes and failures. Set missing-data handling to <code>ignore</code>; absence is not evidence of recovery. CloudWatch’s native evaluation/lookback rules apply rather than a custom exact incident counter.</li>
 <li>Send ALARM and OK transitions to one SNS email topic. Stable ALARM periods do not deliberately repeat messages. Accept native delivery semantics, possible duplicates and an initial OK notification; do not build a notification state machine to suppress them. Confirm the private recipient’s SNS subscription before activation.</li>
@@ -88,7 +88,7 @@
 <p>Implementation references: <a href="https://playwright.dev/docs/api/class-page">Playwright page events</a>, <a href="https://docs.aws.amazon.com/lambda/latest/dg/images-create.html">Lambda container requirements</a>, <a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/alarm-evaluation.html">CloudWatch evaluation</a> and <a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/alarms-and-missing-data.html">missing-data behaviour</a>. Reviewed 17 November 2026.</p>
 </details>
 <h2>Acceptance checks</h2>
-<p>All checks below are pending. They define completion, not work already done. Simulate failures against controlled fixtures or request interception; never break production to test monitoring.</p>
+<p>Runner fixtures and Terraform configuration tests pass. Packaged Chromium has rendered candidate frontend bundles against live public data. AWS deployment, real alarm transitions and inbox receipt remain pending; the checklist below tracks end-to-end activation. Simulate failures against controlled fixtures or request interception; never break production to test monitoring.</p>
 <ul class="checks">
 <li><label><input type="checkbox" disabled><span>The deployed 2 GB Lambda runs all three live browser checks and the Ghost HTTP probe concurrently, with real data and map rendering verified. One failed page does not suppress the other results.</span></label></li>
 <li><label><input type="checkbox" disabled><span>On a controlled fixture, a cached public homepage passes while its uncached origin probe fails; the origin-path alarm and recovery follow the two-period rule. Live configuration confirms query-string cache bypass without disrupting production.</span></label></li>
@@ -103,5 +103,5 @@
 </ul>
 <h2>Parked</h2>
 <p>Screenshots (including capture and storage), WhatsApp/Signal, data freshness, full-site crawling, interaction journeys, visual regression, CI integration, automatic repair, cache-purge delivery alerts and multi-provider monitoring. None is required to finish this version.</p>
-<p class="note"><strong>Next:</strong> review this spec, then prove the packaged browser and page-readiness checks before building the schedule and notification plumbing. This document creates no AWS resources and sends no messages.</p>
+<p class="note"><strong>Next:</strong> review the implementation stack, then follow the monitoring runbook to deploy and verify live alarm delivery. This document creates no AWS resources and sends no messages.</p>
 </main></body></html>
