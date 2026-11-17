@@ -265,6 +265,12 @@ Hard purge, eviction and cold cache locations can leave no outage copy.
 
 ### Cloudflare access
 
+Existing Cloudflare credentials are kept in ignored
+`121gigawatts/.secrets/cloudflare-api-token`; private deployment state, webhook
+secret and verification logs live in `121gigawatts/.secrets/cache-deploy/`.
+These inputs may be in the primary checkout rather than a managed worktree
+(`git worktree list`); worktrees do not copy ignored files. Keep them out of Git.
+
 Run these commands from the **monorepo root**, the directory containing
 `pyproject.toml`, not the nested `121gigawatts/` theme directory. Wrangler runs
 through `npx`; no global installation is needed. The pinned version and `--yes`
