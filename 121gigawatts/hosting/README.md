@@ -14,11 +14,20 @@ certificate issuance/renewal remain manual. Git pushes and CI never deploy.
 ## Request serving
 
 ```mermaid
-flowchart LR
-    reader["Reader"] --> cdn["Cloudflare public HTML cache"]
-    cdn -->|Miss or revalidation| origin["Nginx and Ghost"]
-    origin --> mysql[("MySQL")]
-    origin -->|Signed site.changed webhook| purge["Cache purge Worker"]
+flowchart TB
+    reader["Reader’s browser"]
+    subgraph cloudflare["Cloudflare"]
+        cdn["Public HTML cache<br/>CDN"]
+        purge["Cache purge endpoint<br/>JavaScript · Workers"]
+    end
+    subgraph hetzner["Hetzner VM · Ubuntu"]
+        origin["Blog server<br/>Nginx + Ghost (Node.js)"]
+        mysql[("Database<br/>MySQL")]
+    end
+    reader --> cdn
+    cdn -->|Miss or revalidation| origin
+    origin --> mysql
+    origin -->|Signed site.changed webhook| purge
     purge -->|Hard purge public HTML tag| cdn
     click origin "https://github.com/zoltanmaric/coppersushi/blob/main/121gigawatts/hosting/README.md" "Ghost hosting"
     click purge "https://github.com/zoltanmaric/coppersushi/blob/main/121gigawatts/hosting/README.md#public-page-caching" "Purge endpoint"

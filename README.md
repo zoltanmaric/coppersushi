@@ -44,9 +44,17 @@ Clone with `GIT_LFS_SKIP_SMUDGE=1` to skip the files, e.g. to run only the tests
 
 ```mermaid
 flowchart TB
-    articles["Article reader"] --> articleedge["Cloudflare HTML cache"]
-    articleedge -->|Miss or revalidation| articlehost["Nginx, Ghost and MySQL"]
-    articlehost -->|Signed site-change event| purge["Cache purge Worker"]
+    articles["Article reader’s browser"]
+    subgraph articlecloudflare["Cloudflare · article site"]
+        articleedge["Public HTML cache<br/>CDN"]
+        purge["Cache purge endpoint<br/>JavaScript · Workers"]
+    end
+    subgraph articlehetzner["Hetzner VM · Ubuntu"]
+        articlehost["Blog server<br/>Nginx, Ghost (Node.js), MySQL"]
+    end
+    articles --> articleedge
+    articleedge -->|Miss or revalidation| articlehost
+    articlehost -->|Signed site-change event| purge
     purge -->|Purge public HTML tag| articleedge
     click articlehost "https://github.com/zoltanmaric/coppersushi/blob/main/121gigawatts/hosting/README.md" "Ghost hosting"
     click purge "https://github.com/zoltanmaric/coppersushi/blob/main/121gigawatts/hosting/README.md#public-page-caching" "Cache purge endpoint"
