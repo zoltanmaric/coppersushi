@@ -19,8 +19,7 @@ Nodes carry WGS84 coordinates, country and voltage. Branch identity is component
 name; positive signed flow follows bus0 to bus1. Intervals retain node generation,
 available capacity and load for browser tooltips. Missing optional values are null.
 Validation rejects incomplete intervals, duplicate identities and non-finite numbers.
-The v2 format uses a separate prefix so old figure-based clients retain a compatible
-v1 manifest during cutover. Candidate networks use the same export command with `--serve`; all map rendering
+The v2 publication contains numeric data for browser rendering. Candidate networks use the same export command with `--serve`; all map rendering
 runs in the browser.
 
 From the repository root:

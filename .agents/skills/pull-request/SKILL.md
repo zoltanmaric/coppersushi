@@ -30,6 +30,13 @@ Review primarily as a Google senior principal engineer: judge whether the PR add
 
 Start with folder changes and the resulting tree at the reviewed tip (the cumulative tip for a stack), before file-level diffs. Treat new or moved folders as ownership decisions: justify their purpose against existing homes, inspect their consumers, and keep tests, fixtures and generators with their owners. Check abandoned locations and stale references; distinguish tracked structure from ignored local residue before deleting anything.
 
+Run two dedicated read-only subagents before completing review, using the cheapest available model suitable for these bounded checks. Give each the reviewed revision, diff/base and relevant repository instructions; for stacks, check the cumulative tip:
+
+- **README consistency:** compare affected READMEs and their incoming links with the actual tree, commands and component responsibilities. Flag stale paths, obsolete instructions and duplicated explanations; preserve unique operational knowledge.
+- **Wiki lint:** follow [llm-wiki’s Lint workflow](../llm-wiki/SKILL.md), focusing on pages affected by changed paths, behavior or terminology. Check links, contradictions and stale claims; preserve raw sources. Report unrelated findings separately rather than expanding the PR.
+
+Require concrete file/line findings or an explicit no-findings result from each. Verify findings before applying fixes; rerun the affected check after substantive corrections. Report unavailable checks instead of implying they ran.
+
 Then assess interfaces, data flow, domain models, duplicated rules and dependencies. Compare the proposed design with the simplest credible alternative. For library or framework integrations, verify relevant supported APIs in the pinned version before endorsing custom machinery; state the native option or support gap and any behavior tradeoff. Do not favor a small diff when it shoehorns behavior into an awkward architecture; recommend restructuring when it removes the cause or makes responsibilities clearer. Scale the remedy to the problem, and justify its cost with concrete code and consequences rather than an idealized redesign.
 
 State the architectural verdict and remaining compromises explicitly, even when there are no correctness findings. Ground concerns in specific code, explain their practical effect and name a better direction; do not invent objections to fill a checklist. Check whether this is the right unit of review: propose a split for independently understandable changes, and keep changes together when separation would hide their reasoning.
