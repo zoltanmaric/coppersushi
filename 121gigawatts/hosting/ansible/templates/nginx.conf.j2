@@ -1,3 +1,7 @@
+map $uri $indexing_directive {
+    default "";
+    include /etc/nginx/noindex-paths.conf;
+}
 server {
     listen 80;
     listen [::]:80;
@@ -22,6 +26,7 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     client_max_body_size 100m;
     location / {
+        add_header X-Robots-Tag $indexing_directive always;
         proxy_pass http://127.0.0.1:2368;
         proxy_hide_header Cloudflare-CDN-Cache-Control;
         proxy_hide_header Cache-Tag;
