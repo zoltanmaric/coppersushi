@@ -44,6 +44,20 @@ Clone with `GIT_LFS_SKIP_SMUDGE=1` to skip the files, e.g. to run only the tests
 
 ```mermaid
 flowchart TB
+    articles["Article reader’s browser"]
+    subgraph articlecloudflare["Cloudflare · article site"]
+        articleedge["Public HTML cache<br/>CDN"]
+        purge["Cache purge endpoint<br/>JavaScript · Workers"]
+    end
+    subgraph articlehetzner["Hetzner VM · Ubuntu"]
+        articlehost["Blog server<br/>Nginx, Ghost (Node.js), MySQL"]
+    end
+    articles --> articleedge
+    articleedge -->|Miss or revalidation| articlehost
+    articlehost -->|Signed site-change event| purge
+    purge -->|Purge public HTML tag| articleedge
+    click articlehost "https://github.com/zoltanmaric/coppersushi/blob/main/121gigawatts/hosting/README.md" "Ghost hosting"
+    click purge "https://github.com/zoltanmaric/coppersushi/blob/main/121gigawatts/hosting/README.md#public-page-caching" "Cache purge endpoint"
     schedule["EventBridge schedule"] --> workflow["Step Functions"]
     workflow -->|Retryable attempt| publication
     market["JAO and Electricity Maps"] -->|Market inputs| publication["Native Lambda market-day publisher"]
@@ -61,13 +75,15 @@ flowchart TB
     edge -->|Shell and selected hour| opfbrowser["OPF browser: React and Plotly"]
     maps["Mapbox"] -->|Styles and tiles| browser
     maps -->|Styles and tiles| opfbrowser
+    browser -->|Page views and performance| analytics["Cloudflare Web Analytics"]
+    opfbrowser -->|Page views and performance| analytics
     click catalog "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/grid/README.md" "Grid catalog"
     click opf "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/powerflow/README.md" "OPF"
     click publication "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/cnec/README.md" "Publication"
     click browser "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/frontend/README.md" "CNEC browser"
 ```
 
-Components: [CNEC browser](coppersushi/frontend/README.md), [publication](coppersushi/pipelines/cnec/README.md),
+Components: [Ghost hosting](121gigawatts/hosting/README.md), [CNEC browser](coppersushi/frontend/README.md), [publication](coppersushi/pipelines/cnec/README.md),
 [grid catalog](coppersushi/pipelines/grid/README.md), [OPF](coppersushi/pipelines/powerflow/README.md).
 Prepared CNEC data is independent of request-time Python calculations. CloudFront serves the static CNEC shell and prepared files from private S3; OPF uses the same static hosting boundary.
 The local Flask server previews those same files.

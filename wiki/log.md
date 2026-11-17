@@ -549,3 +549,34 @@ Saved the verified [ACER launch permalink alongside URE’s assessment announcem
 ## [2026-11-17] query | Export-cap comparison through November 17
 
 Extended the [cap/procurement comparison](polish-export-cap-investigation.md#extension) using complete retained public snapshots after direct JAO timeouts, with a full-day overlap reconciliation. The updated binding cohort remains mostly without an aggregate procurement shortfall.
+
+## [2026-11-17] decision | Public article cache
+
+[Article-cache](copper-sushi-app.md#article-cache) records the agreed best-effort invalidation tradeoff, native Ghost event coverage, missing POST retries and stale-serving constraints. Origin recovery remains independent.
+
+## [2026-11-17] decision | Architecture labels
+
+[Diagram provenance](rule-provenance.md) records the clarified technology and deployment-location labels after the purge endpoint’s runtime was unclear in review.
+
+## [2026-11-17] decision | Wrangler access discovery
+
+[Rule provenance](rule-provenance.md) records the repeated token-first stumble and the root harness pointer to the owning Wrangler browser-login workflow, with explicit working-directory and installation-prompt guidance.
+
+## [2026-11-17] query | Live article-cache verification
+
+[Article-cache](copper-sushi-app.md#article-cache) now records verified public cache hits, native Ghost invalidation, expired-cache fallback during an isolated 502 and fresh content after recovery. Completed rollout scope no longer needs a spec.
+
+## [2026-11-17] decision | App web analytics
+
+[App analytics](copper-sushi-app.md#analytics) uses a manual Cloudflare beacon while
+retaining CloudFront hosting; proxying is not required for browser measurement.
+
+## [2026-11-17] query | Ghost indexing configuration drift
+
+The live Ghost proxy retained search-index exclusions absent from the active repository template; their preservation existed only in uncommitted work in the archived checkout. A full template replacement would drop that behavior. The [hosting runbook](../121gigawatts/hosting/README.md#configure) owns the server-local input and configuration boundary.
+
+The failure was leaving that known drift unresolved after a successful live patch.
+The existing deployment entry point now leads to explicit
+[source/live reconciliation](../121gigawatts/hosting/README.md#deployment-reconciliation),
+including concurrent changes and post-apply comparison. [Provenance](rule-provenance.md)
+records the single incident without inventing repeated evidence for a new rule.

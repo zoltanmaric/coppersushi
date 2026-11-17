@@ -14,6 +14,8 @@ flowchart TB
   data --> cnec["Critical Elements ⚡️"]
   powerflow --> shared["Shared map UI"]
   cnec --> shared
+  powerflow -->|Page views and performance| analytics["Cloudflare Web Analytics"]
+  cnec -->|Page views and performance| analytics
   click powerflow "https://github.com/zoltanmaric/coppersushi/tree/main/coppersushi/frontend/pages/powerflow/README.md"
   click cnec "https://github.com/zoltanmaric/coppersushi/tree/main/coppersushi/frontend/pages/cnec/README.md"
   click shared "https://github.com/zoltanmaric/coppersushi/tree/main/coppersushi/frontend/map/README.md"
@@ -35,6 +37,14 @@ From the repository root: `pixi run frontend-build`, `pixi run frontend-test` an
 models. Tests are colocated. `scripts/build.mjs` builds into ignored `dist/`; source
 assets live in `assets/`. The [deployment runbook](../infra/lambda/README.md) owns
 production publication and rollback.
+
+The shared HTML shell loads `assets/analytics.js` for both apps and their embeds.
+It loads Cloudflare's cookie-free Web Analytics beacon only on
+`coppersushi.121gigawatts.org`; local and preview hosts send no analytics.
+The public site identifier shares the blog's analytics property; filter by Host
+and Path to separate app, article and embed traffic. An article and its embedded
+app report separate page views. CloudFront remains the app CDN; no Cloudflare
+proxy is required. The beacon measures page views and performance, not map actions.
 
 Polish export-cap tooltips read required and purchased upward reserve capacity from
 the prepared interval object, including independent publication timestamps formatted

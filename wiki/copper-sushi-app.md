@@ -4,6 +4,46 @@ Interactive map of the European transmission grid showing an **optimal power flo
 
 ## Hosting
 
+The surrounding article site has separate [Ghost theme and hosting code](../121gigawatts/README.md).
+Its [hosting runbook](../121gigawatts/hosting/README.md#configure) covers service recovery after database maintenance.
+
+### Analytics
+
+App traffic measurement does not require changing the CloudFront hosting boundary.
+Cloudflare supports a manual Web Analytics beacon on DNS-only hosts and reuse of an
+apex site's public identifier across its subdomains ([FAQ, 2026-07-14](https://developers.cloudflare.com/web-analytics/faq/)).
+The app uses that approach; [frontend documentation](../coppersushi/frontend/README.md)
+owns the loader and reporting behavior. Article and iframe page views are separate
+measurements, not unique readers. Cloudflare does not support custom interaction events.
+
+### Article-cache
+
+The [article homepage](https://121gigawatts.org/) and
+[article page](https://121gigawatts.org/copper-sushi-power-flow-european-grid/)
+returned Cloudflare cache HITs after activation on 2026-11-17. An isolated origin
+verified expired-cache serving during a 502 and replacement after recovery,
+without stopping Ghost. Real Ghost publish, edit, slug-change and unpublish
+operations each produced successful native webhook deliveries and cache updates.
+The cache implementation and operating checks belong to the
+[Ghost hosting runbook](../121gigawatts/hosting/README.md#public-page-caching).
+
+Cloudflare supports [stale-on-error responses](https://developers.cloudflare.com/cache/concepts/cache-control/)
+(documentation 2026-06-30), but eviction and hard purge can remove the fallback.
+Always Online ignores these stale directives. `s-maxage` and overriding Edge TTL
+settings can defeat stale serving. Personalized responses need exclusions.
+
+The settled invalidation choice is best effort, without a queue. In
+[Ghost 6.72](https://github.com/TryGhost/Ghost/blob/v6.72.0/ghost/core/server/web/parent/middleware/emit-events.js),
+`site.changed` follows full public-cache invalidation, including theme/settings
+changes; intercepting Admin responses adds no coverage. Its
+[webhook client](https://github.com/TryGhost/Ghost/blob/v6.72.0/ghost/core/server/services/webhooks/webhook-trigger.js)
+does not enable POST retries. [Got 16](https://github.com/sindresorhus/got/blob/v16.0.0/documentation/7-retry.md)
+excludes POST by default. A missed purge can therefore preserve an old page,
+including unpublished content, throughout an origin outage's stale window.
+Failure evidence is retained by Ghost and the purge endpoint; it is not an alert.
+
+### Application-host
+
 The [Lambda deployment README](../coppersushi/infra/lambda/README.md) defines production hosting and cache behavior.
 
 AWS Lambda with a durable S3 cache is the approved production host.

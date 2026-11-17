@@ -66,6 +66,11 @@ jobs:
       - name: Install Ghost dependencies
         if: matrix.task == 'theme-test'
         run: pixi run --locked theme-install
+      - name: Install Nginx for hosting integration checks
+        if: matrix.task == 'hosting-test'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nginx
       - name: Install hosting dependencies
         if: matrix.task == 'hosting-test'
         run: pixi run --locked hosting-setup
@@ -73,6 +78,9 @@ jobs:
         env:
           CHECK_TASK: ${{ matrix.task }}
         run: pixi run --locked "$CHECK_TASK"
+      - name: Check Ghost recovers after database maintenance
+        if: matrix.task == 'hosting-test'
+        run: sudo python3 121gigawatts/hosting/tests/check_systemd_recovery.py
 
   container:
     if: ${{ github.event_name == 'workflow_dispatch' || !github.event.pull_request.draft }}
