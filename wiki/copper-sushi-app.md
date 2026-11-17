@@ -7,6 +7,15 @@ Interactive map of the European transmission grid showing an **optimal power flo
 The surrounding article site has separate [Ghost theme and hosting code](../121gigawatts/README.md).
 Its [hosting runbook](../121gigawatts/hosting/README.md#configure) covers service recovery after database maintenance.
 
+### Analytics
+
+App traffic measurement does not require changing the CloudFront hosting boundary.
+Cloudflare supports a manual Web Analytics beacon on DNS-only hosts and reuse of an
+apex site's public identifier across its subdomains ([FAQ, 2026-07-14](https://developers.cloudflare.com/web-analytics/faq/)).
+The app uses that approach; [frontend documentation](../coppersushi/frontend/README.md)
+owns the loader and reporting behavior. Article and iframe page views are separate
+measurements, not unique readers. Cloudflare does not support custom interaction events.
+
 ### Article-cache
 
 The [article homepage](https://121gigawatts.org/) and

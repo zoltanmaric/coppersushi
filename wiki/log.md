@@ -465,3 +465,18 @@ Extended the [report digest](literature/acer-electricity-market-integration-moni
 ## [2026-11-17] query | Live article-cache verification
 
 [Article-cache](copper-sushi-app.md#article-cache) now records verified public cache hits, native Ghost invalidation, expired-cache fallback during an isolated 502 and fresh content after recovery. Completed rollout scope no longer needs a spec.
+
+## [2026-11-17] decision | App web analytics
+
+[App analytics](copper-sushi-app.md#analytics) uses a manual Cloudflare beacon while
+retaining CloudFront hosting; proxying is not required for browser measurement.
+
+## [2026-11-17] query | Ghost indexing configuration drift
+
+The live Ghost proxy retained search-index exclusions absent from the active repository template; their preservation existed only in uncommitted work in the archived checkout. A full template replacement would drop that behavior. The [hosting runbook](../121gigawatts/hosting/README.md#configure) owns the server-local input and configuration boundary.
+
+The failure was leaving that known drift unresolved after a successful live patch.
+The existing deployment entry point now leads to explicit
+[source/live reconciliation](../121gigawatts/hosting/README.md#deployment-reconciliation),
+including concurrent changes and post-apply comparison. [Provenance](rule-provenance.md)
+records the single incident without inventing repeated evidence for a new rule.

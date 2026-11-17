@@ -49,7 +49,11 @@ class CacheHeadersTests(unittest.TestCase):
             listener.bind(("127.0.0.1", 0))
             cls.port = listener.getsockname()[1]
         maps = (HOSTING / "ansible/templates/ghost-cache.conf.j2").read_text()
-        proxy = (HOSTING / "ansible/templates/nginx.conf.j2").read_text().split("    location / {", 1)[1].rsplit("\n    }", 1)[0]
+        template = (HOSTING / "ansible/templates/nginx.conf.j2").read_text()
+        excluded = root / "noindex-paths.conf"
+        excluded.write_text('"/search-excluded/" "noindex";\n')
+        maps += template.split("server {", 1)[0].replace("/etc/nginx/noindex-paths.conf", str(excluded))
+        proxy = template.split("    location / {", 1)[1].rsplit("\n    }", 1)[0]
         proxy = proxy.replace("127.0.0.1:2368", f"127.0.0.1:{cls.origin.server_port}")
         config = root / "nginx.conf"
         config.write_text(f"pid {root}/nginx.pid;\nerror_log {root}/error.log;\nevents {{}}\nhttp {{ access_log off; {maps} server {{ listen 127.0.0.1:{cls.port}; location / {{{proxy} }} }} }}")
@@ -91,6 +95,13 @@ class CacheHeadersTests(unittest.TestCase):
         self.assertEqual(headers["Cache-Tag"], "ghost-public-html")
         self.assertEqual(headers["Cache-Control"], "public, max-age=0")
 
+    def test_noindex_header_coexists_with_public_cache_headers(self):
+        headers = self.request("/search-excluded/")
+        self.assertEqual(headers["X-Robots-Tag"], "noindex")
+        self.assertEqual(headers["Cache-Tag"], "ghost-public-html")
+        self.assertEqual(headers["Cloudflare-CDN-Cache-Control"], "public, max-age=300, stale-if-error=86400")
+        self.assertIsNone(self.request("/")["X-Robots-Tag"])
+
     def test_not_modified_page_keeps_its_cdn_revalidation_policy(self):
         headers = self.request("/not-modified/")
         self.assertEqual(headers["Cloudflare-CDN-Cache-Control"], "public, max-age=300, stale-if-error=86400")
@@ -123,3 +134,24 @@ class CacheHeadersTests(unittest.TestCase):
                 headers = self.request("/asset.css?version=1", request_headers)
                 self.assertIsNone(headers["Cloudflare-CDN-Cache-Control"])
                 self.assertIsNone(headers["Cache-Tag"])
+
+
+class NoindexProvisioningTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("ansible-playbook"), "Needs the hosting Ansible environment")
+    def test_reconfigure_creates_include_without_overwriting_existing_entries(self):
+        import yaml
+
+        site = yaml.safe_load((HOSTING / "ansible/site.yml").read_text())[0]
+        task = next(task for task in site["tasks"] if task.get("ansible.builtin.copy", {}).get("dest") == "/etc/nginx/noindex-paths.conf")
+        with tempfile.TemporaryDirectory(prefix="ghost-noindex-test-") as folder:
+            target = Path(folder) / "noindex-paths.conf"
+            task["ansible.builtin.copy"]["dest"] = str(target)
+            playbook = Path(folder) / "playbook.yml"
+            playbook.write_text(yaml.safe_dump([{"hosts": "localhost", "gather_facts": False, "tasks": [task]}]))
+            command = [shutil.which("ansible-playbook"), "-i", "localhost,", "-c", "local", str(playbook)]
+            subprocess.run(command, check=True, capture_output=True, text=True, timeout=30)
+            self.assertEqual(target.read_text(), "")
+            entries = '"/search-excluded.pdf" "noindex";\n'
+            target.write_text(entries)
+            subprocess.run(command, check=True, capture_output=True, text=True, timeout=30)
+            self.assertEqual(target.read_text(), entries)

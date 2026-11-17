@@ -19,6 +19,10 @@ Suggested shape:
 - **Acceptance criteria** — as runnable checks where possible. This is the load-bearing
   section: how will both of us know it's done?
 
+When component ownership or runtime connections matter to the proposal, show
+where the work lives and how the components interact. Use a small folder tree,
+an HTML diagram, or both; omit whichever adds no useful information.
+
 Distinguish the verified baseline, agreed changes and parked ideas. Deferred ideas
 do not enter implementation steps or completion criteria.
 
