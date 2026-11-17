@@ -466,3 +466,7 @@ Extended the [report digest](literature/acer-electricity-market-integration-moni
 
 [App analytics](copper-sushi-app.md#analytics) uses a manual Cloudflare beacon while
 retaining CloudFront hosting; proxying is not required for browser measurement.
+
+## [2026-11-17] query | Ghost indexing configuration drift
+
+The live Ghost proxy retained search-index exclusions absent from the active repository template; their preservation existed only in uncommitted work in the archived checkout. A full template replacement would drop that behavior. The [hosting runbook](../121gigawatts/hosting/README.md#configure) owns the server-local input and configuration boundary.

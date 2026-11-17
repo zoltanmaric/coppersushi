@@ -133,6 +133,13 @@ pixi run --locked hosting-configure
 `configure` can restart services. Ansible check mode needs existing packages and
 files; it is not a first-installation test.
 
+Files can stay publicly accessible while being excluded from search results.
+Add exact URI entries to server-local `/etc/nginx/noindex-paths.conf`, for example
+`"/path/to/file.pdf" "noindex";`, then run `nginx -t` and reload Nginx.
+Ansible creates this include file when absent and preserves its existing entries.
+The template emits `X-Robots-Tag` alongside the cache headers. These entries control
+indexing, not access, and their contents stay outside Git.
+
 The playbook installs or reconciles the pinned Ghost version; it refuses an
 implicit version upgrade. Node 22 patch updates follow the package repository.
 OS upgrades and Ghost upgrades are separate maintenance operations. MySQL uses
