@@ -68,14 +68,23 @@ traces, video, credentials or custom incident database are collected.
 
 ## Deploy and activate
 
-Terraform 1.7+ owns an independent state in `monitoring/infra/`. Use
+Terraform 1.7+ runs from the tracked `monitoring/infra/` configuration. Use
 `AWS_PROFILE` for the existing deployment identity; the application
 [runbook](../coppersushi/infra/lambda/README.md#deployment-state) explains how to
-locate private account configuration. Do not copy application Terraform state.
-Store monitoring state, inputs and saved plans in ignored
-`.secrets/website-monitor/`; initialize that directory only for the first
-monitor deployment, then always reuse its state. Mirror the tracked `infra/*.tf`
-and provider lockfile there before planning.
+locate private account configuration. Keep monitoring state, inputs and saved plans
+in the existing ignored `.secrets/website-monitor/` directory. Do not copy
+application state or Terraform source files. Use an absolute path to the existing
+monitor state, including when switching worktrees:
+
+```sh
+# MONITOR_STATE_DIR is the absolute path to the persistent private monitoring directory.
+terraform -chdir=monitoring/infra init -reconfigure -backend-config="path=$MONITOR_STATE_DIR/terraform.tfstate"
+terraform -chdir=monitoring/infra plan -var-file="$MONITOR_STATE_DIR/terraform.tfvars.json" -out="$MONITOR_STATE_DIR/deploy.tfplan"
+terraform -chdir=monitoring/infra apply "$MONITOR_STATE_DIR/deploy.tfplan"
+```
+
+For an existing deployment, verify `terraform state list` contains its resources
+and the first plan has no unexpected creates or destroys before applying.
 
 1. Set private inputs: `region` (default Frankfurt, separate from the app's
    Ireland region), `recipient_email`, `interval_minutes=30`, `enabled=false`.

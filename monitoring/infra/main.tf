@@ -1,4 +1,5 @@
 terraform {
+  backend "local" {}
   required_version = ">= 1.7.0, < 2.0.0"
   required_providers {
     aws = { source = "hashicorp/aws", version = "6.70.0" }
@@ -43,13 +44,8 @@ locals {
   name      = "website-monitor"
   namespace = "WebsiteMonitor"
   period    = var.interval_minutes * 60
-  checks = {
-    blog              = "https://121gigawatts.org/"
-    critical-elements = "https://coppersushi.121gigawatts.org/cnec"
-    power-flow        = "https://coppersushi.121gigawatts.org/opf-2024"
-    ghost-origin      = "https://121gigawatts.org/?uptime=1"
-  }
-  logs_url = "https://${var.region}.console.aws.amazon.com/cloudwatch/home?region=${var.region}#logsV2:log-groups/log-group/$252Faws$252Flambda$252F${local.name}"
+  checks    = jsondecode(file("${path.module}/../src/checks.json"))
+  logs_url  = "https://${var.region}.console.aws.amazon.com/cloudwatch/home?region=${var.region}#logsV2:log-groups/log-group/$252Faws$252Flambda$252F${local.name}"
 }
 data "aws_caller_identity" "current" {}
 resource "aws_ecr_repository" "monitor" {
