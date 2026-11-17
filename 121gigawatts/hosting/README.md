@@ -114,6 +114,23 @@ OS upgrades and Ghost upgrades are separate maintenance operations. MySQL uses
 Ubuntu defaults. Removing an existing `99-ghost-small.cnf` override restarts
 MySQL; inspect that change before applying to a running site.
 
+Ghost stops when MySQL stops and starts after MySQL returns, including a separate
+stop/start during package updates. Its unit is enabled for both system boot and
+MySQL startup; the playbook installs the MySQL startup link when missing,
+including on existing installations. `Restart=on-failure` handles Ghost process
+failures. Automatic security updates remain enabled.
+
+To check this dependency behavior without touching the live services, run on a
+Linux host with systemd:
+
+```sh
+sudo python3 121gigawatts/hosting/tests/check_systemd_recovery.py
+```
+
+The check uses temporary services and removes them afterward. It exercises an
+existing installation's startup-link update, database stop/start, restart, and
+an intentional Ghost stop.
+
 ## Restore
 
 Use a matched SQL dump and content archive from the same validated Ghost 6
