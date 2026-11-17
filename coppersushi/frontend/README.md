@@ -38,6 +38,11 @@ models. Tests are colocated. `scripts/build.mjs` builds into ignored `dist/`; so
 assets live in `assets/`. The [deployment runbook](../infra/lambda/README.md) owns
 production publication and rollback.
 
+Both page roots expose `data-load-state="loading|ready|error"` from required data
+and current-figure completion. Background interval prefetch does not gate readiness.
+Plotly 3.7.0’s Mapbox render promise waits for `map.loaded()` before completion;
+this is lifecycle readiness, not a pixel-level assertion.
+
 The shared HTML shell loads `assets/analytics.js` for both apps and their embeds.
 It loads Cloudflare's cookie-free Web Analytics beacon only on
 `coppersushi.121gigawatts.org`; local and preview hosts send no analytics.
