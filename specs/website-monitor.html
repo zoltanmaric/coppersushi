@@ -2,7 +2,7 @@
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Spec: website outage alerts</title><link rel="icon" href="data:,"><link rel="stylesheet" href="spec.css"><link rel="stylesheet" href="website-monitor.css"></head>
 <body><main>
-<p class="eyebrow">Spec · 17 November 2026 · deployed unmerged · email activation pending</p>
+<p class="eyebrow">Spec · 17 November 2026 · deployed unmerged · activation verified</p>
 <h1>Know when a page stops working.</h1>
 <p class="lead">Every 30 minutes initially, one AWS Lambda concurrently opens the blog, Critical Elements ⚡️ and Power Flow 🍣 in headless Chromium. A concurrent uncached HTTP request checks Ghost behind the public cache. CloudWatch evaluates the results and sends outage and recovery emails through SNS.</p>
 <section aria-label="Monitoring flow" class="flow">
@@ -88,7 +88,7 @@
 <p>Implementation references: <a href="https://playwright.dev/docs/api/class-page">Playwright page events</a>, <a href="https://docs.aws.amazon.com/lambda/latest/dg/images-create.html">Lambda container requirements</a>, <a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/alarm-evaluation.html">CloudWatch evaluation</a> and <a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/alarms-and-missing-data.html">missing-data behaviour</a>. Reviewed 17 November 2026.</p>
 </details>
 <h2>Acceptance checks</h2>
-<p>Runner fixtures and Terraform configuration tests pass. The deployed AWS Lambda passed all four live checks: 38 seconds billed including cold start, 1,180 MB peak memory at a 2 GB allocation. Email confirmation, real alarm transitions and inbox receipt remain pending; the checklist below tracks end-to-end activation. Simulate failures against controlled fixtures or request interception; never break production to test monitoring.</p>
+<p>Runner fixtures and Terraform configuration tests pass. The deployed AWS Lambda passed all four live checks: 38 seconds billed including cold start, 1,180 MB peak memory at a 2 GB allocation. SNS is confirmed, both ALARM and OK test emails were received, and a one-time schedule using the production target passed all four checks. The recurring 30-minute schedule is enabled. The implementation stack remains unmerged. Simulate failures against controlled fixtures or request interception; never break production to test monitoring.</p>
 <ul class="checks">
 <li><label><input type="checkbox" disabled><span>The deployed 2 GB Lambda runs all three live browser checks and the Ghost HTTP probe concurrently, with real data and map rendering verified. One failed page does not suppress the other results.</span></label></li>
 <li><label><input type="checkbox" disabled><span>On a controlled fixture, a cached public homepage passes while its uncached origin probe fails; the failed origin probe remains independent of the readable public page. Live configuration confirms query-string cache bypass without disrupting production.</span></label></li>
@@ -103,5 +103,5 @@
 </ul>
 <h2>Parked</h2>
 <p>Screenshots (including capture and storage), WhatsApp/Signal, data freshness, full-site crawling, interaction journeys, visual regression, CI integration, automatic repair, cache-purge delivery alerts and multi-provider monitoring. None is required to finish this version.</p>
-<p class="note"><strong>Next:</strong> review the implementation stack, then follow the monitoring runbook to deploy and verify live alarm delivery. This document creates no AWS resources and sends no messages.</p>
+<p class="note"><strong>Next:</strong> review the unmerged implementation stack; use the monitoring runbook for operation and later cadence adjustments. This document creates no AWS resources and sends no messages.</p>
 </main></body></html>
