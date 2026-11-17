@@ -10,6 +10,14 @@ The 2026-11-13 evening caps are confirmed, but their original reserve calculatio
 
 The [Q4 2025 assessment](literature/pse-allocation-constraints-q4-2025.md) removes both import and export caps. Its renewable-curtailment result concerns downward reserves and cannot justify these export restrictions. The [binding safeguards](literature/core-da-ccm-allocation-constraint-safeguards.md) require assessment of security effectiveness, welfare and alternatives; legal permission does not establish necessity for an individual interval.
 
+## Public-criticism
+
+Public sources checked on 2026-11-16 establish longstanding criticism of price insulation, not an established deliberate-abuse motive or an attributable “open secret” description:
+
+- [Nico Schoutteet, 28 November 2023](https://www.linkedin.com/pulse/allocation-constraints-core-da-fbmc-project-nico-schoutteet-cs7he), section on debate, describes Poland's 2022 price separation as interference with European market coupling and says constraints kept Polish prices below their unconstrained level. He explicitly leaves the validity of security reasons outside scope and notes the price spread subsequently reversed. He quotes [CREG's call to discontinue the constraints](literature/creg-core-market-coupling-first-100-days.md).
+- [ACER, 17 February 2025](https://acer.europa.eu/news/acer-suggests-better-reflecting-benefits-europes-internal-electricity-market-polands-national-resource-adequacy-assessment), findings, says constraints sometimes prevent Polish exports when neighbours need them and stop Polish prices reflecting regional shortages. Its example is 12 December 2024, 16:00–17:00, with Poland at €165/MWh.
+- [Mateusz Gibała, BiznesAlert, 18 February 2025](https://biznesalert.pl/eksport-polskiej-energii-moze-obnizyc-ceny-w-regionie/), credited to Montel News, reports that criticism and compares Poland's €165/MWh with Germany's €936/MWh. This establishes press coverage of the effects, not independent proof of intent.
+
 ## November-13
 
 All delivery times below are **CET**, interval starts. PSE’s `dtime` is the interval **end**; use `period` to avoid shifting the comparison by 15 or 60 minutes. JAO’s allocation-constraint timestamps are UTC interval starts.
@@ -90,6 +98,18 @@ Run `python -m scripts.polish_export_caps --start 2026-08-14 --end 2026-11-13`. 
 | No procurement shortfall among binding MTUs | 2,082 / 2,262 | 92.0% |
 | Binding among no-shortfall MTUs | 2,082 / 7,760 | 26.8% |
 
+### Extension
+
+The cap/procurement graphic extends through **17 November 2026 inclusive: 96 delivery days, 9,220 quarter-hour MTUs**, with no missing or duplicate intervals. **2,359 MTUs bind (25.6%)**; among those, **197 have an aggregate procurement shortfall (8.4%)** and **2,162 do not (91.6%)**. There are 1,136 shortfall MTUs in the full population. This extension does not update the earlier cap-size buckets or imbalance-price episode analysis.
+
+Retrieved on **17 November 2026** from immutable prepared Critical Elements snapshots because direct JAO requests timed out. Immutable daily metadata: [November 14](https://coppersushi.121gigawatts.org/data/cnec/v3/2026-11-14/8c874787825dc69645deb3e9/metadata.json), [15](https://coppersushi.121gigawatts.org/data/cnec/v3/2026-11-15/1156efb6a67d1c5d060f2dd0/metadata.json), [16](https://coppersushi.121gigawatts.org/data/cnec/v3/2026-11-16/a80dee859a393c71f5b862c8/metadata.json), [17](https://coppersushi.121gigawatts.org/data/cnec/v3/2026-11-17/21257b63345cc5173ed26735/metadata.json). Each added day has all 96 intervals, complete attribution and eligible purchase/requirement observations. The snapshots retain publication timestamps and four product contributions; all totals reconcile and both publications precede the existing 10:30 D−1 cutoff. Applying the same >€0.01/MWh dual threshold preserves the research binding definition. A full overlapping November 13 check matches the original series in all 96 quarters for binding status, purchased/required MW and both publication timestamps. These are retained source-derived publications, not fresh direct JAO responses or independent measurements. The original August 14–November 13 observations remain unchanged.
+
+The added days contain respectively 4, 18, 61 and 14 binding MTUs; 0, 9, 4 and 4 also have procurement shortfalls. Local reproducibility inputs, retrieval URLs/hashes, scripts and the combined comparison are under ignored `data/polish-cap-graphic/`. Procurement sufficiency remains distinct from operational reserve adequacy.
+
+### Reporting-threshold
+
+Recounted the episode explainer's `intervals.csv` on 2026-11-16: 2,262/8,836 inferred binding export intervals (25.6%). Split by calendar quarter, the observed Q3 subset (14 August–30 September) has 822/4,608 (17.84%), and the Q4 subset (1 October–13 November) has 1,440/4,228 (34.06%). Even counting every unobserved quarter-hour as nonbinding, these represent 9.31% of full Q3 and 16.30% of full Q4 duration (2,208 and 2,209 hours respectively, including the autumn clock change). Directly checked the application's cap shadow-price definition (`country_caps`: export shadow price = `PL_ALT − P_PL`) against all classified intervals: Q3 822/822 positive, range €0.10–193.37/MWh; Q4 1,440/1,440 positive, range €0.04–245.35/MWh. No binding-classification mismatches. Thus the tracked cap dual is already part of the binding criterion, not an outstanding independent condition. This checks the same published-price-derived dual used by the application, not a second independent shadow-price feed. The [Article 7 reporting threshold](literature/core-da-ccm-allocation-constraint-safeguards.md#transparency) is exceeded by a wide margin in each quarter on that established attribution; a sample spanning quarters is not itself a calendar-quarter compliance statistic.
+
 ### Cap-levels
 
 All shares below use the same 8,836-MTU complete-data population. Exact zero is separate; positive intervals have exclusive lower and inclusive upper bounds.
@@ -116,3 +136,24 @@ The local `cases.html` table contains all 7,760 no-shortfall MTUs, including equ
 The [4 November 2026 ACER monitoring report](literature/acer-electricity-market-integration-monitoring-report.md), section 2.4.4, confirms material price-decoupling effects and falling binding frequency. Its paragraph 168 says pre-day-ahead balancing-capacity procurement does not exist, conflicting with URE’s account of the June 2024 reform and observed procurement. This appears to be an outdated explanation; it is not evidence that reserve requirements themselves are fictitious. The section does not supply the missing interval-level justification.
 
 The August 14–November 13 analysis covers 92 delivery days with zero failed days. Full local results are in ignored `data/polish-export-caps/`.
+
+## Imbalance-prices
+
+[Episode explainer](https://coppersushi.121gigawatts.org/assets/previews/polish-balancing-episodes/d8b35dcf9360/index.html) · [matched quarter-hour CSV](https://coppersushi.121gigawatts.org/assets/previews/polish-balancing-episodes/d8b35dcf9360/intervals.csv). Scope: 2026-08-14–2026-11-13; all 8,836 quarters match PSE prices, contracting balance, activation and existing JAO cap data. PSE `energy-prices` and `eb-rozl` fetched 2026-11-16, with URLs and retrieval times cached. Original cap-cache retrieval dates remain incompletely documented. PSE interval-end UTC timestamps are shifted back 15 minutes; October 25 has 100 quarters. Latest returned publication wins for duplicate intervals.
+
+The episode screen uses CEN minus day-ahead price by default, with an absolute-CEN alternative. Surplus requires a price measure below the negative threshold and SK > 0; shortage requires a price measure above the positive threshold and SK < 0. Consecutive qualifying quarters form an episode; any intervening non-qualifying quarter ends it. Prices use a fixed 4.4113 PLN/€ (ECB, 2026-11-13), not historical daily FX settlement. Thresholds are illustrative, not official scarcity criteria.
+
+| Gap from day-ahead | Direction | Episodes | Hours | Net contracting mismatch, GWh | Quarters overlapping binding export cap |
+|---|---|---:|---:|---:|---:|
+| Below −€250/MWh | Surplus | 55 | 44 | 28.16 | 7/176 |
+| Above €250/MWh | Shortage | 62 | 35.25 | 43.81 | 12/141 |
+| Below −€500/MWh | Surplus | 31 | 26.75 | 20.88 | 5/107 |
+| Above €500/MWh | Shortage | 20 | 8.25 | 13.30 | 2/33 |
+
+At the €250 gap, event energy is 12.4% of all surplus SK energy and 4.8% of all shortage SK energy in the window. Downward supplier activation during surplus episodes totals approximately 24.0 GWh; upward activation during shortage episodes totals 55.6 GWh. These activation totals add the separately published outside-platform and aFRR components; they are not SK, gross participant imbalances, settlement costs, or measurements of reserve exhaustion. Domestic aFRR delivery can serve foreign demand. See the [source contract](polish-balancing-capacity-procurement.md#episodes).
+
+The result changes with the definition of extreme. Under absolute CEN thresholds of ±€250/MWh, surplus has 39 episodes, 34.25 hours and 24.33 GWh, versus shortage's 308 episodes, 383.75 hours and 267.65 GWh. A high positive price can also reflect an already-high day-ahead price; it is not necessarily an exceptional balancing premium. At the far tails, surplus can dominate duration and energy. Peak price magnitude alone cannot settle which direction is the larger problem.
+
+A concrete overlap is 2026-10-16 14:15–15:00 CEST: three consecutive surplus quarters with a binding day-ahead export cap, 691.515 MWh of SK surplus, and 813.1 MWh of downward supplier activation. CEN is approximately −€545.55, −€563.83 and −€564.27/MWh; cap/scheduled exports are 1,355, 1,006 and 639 MW. These are candidate intervals for a counterfactual test, not proof the earlier cap caused the later surplus. The deepest negative-price episode, on August 15, has no inferred binding export cap.
+
+The export-cap comparison uses **day-ahead scheduled net position**, not real-time measured flows. Binding is inferred using the investigation's position tolerance and alternative-price predicate. Overlap does not establish intraday feasibility, the counterfactual export response, or the necessity or harm of a cap. Neither episode energy nor quarter-hour activation reveals instantaneous reserve-power peaks.

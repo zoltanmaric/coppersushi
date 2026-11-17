@@ -43,6 +43,18 @@ The [Q4 2025 PSE assessment](literature/pse-allocation-constraints-q4-2025.md) c
 
 The [Polish export-cap investigation](polish-export-cap-investigation.md) compares November 2026 interval limits with published reserve requirements, procurement and planning balances.
 
+### Discussion
+
+[Hubert Put’s LinkedIn post](https://www.linkedin.com/posts/activity-7484948885728071680-23El), read 2026-11-16, discusses extending Polish allocation constraints to 8 June 2028. The accessible page supplies only a relative publication age, so its exact publication date is unverified. It concerns the extension, not the November monitoring report.
+
+Put argues that balancing responsible parties leave portfolios insufficiently balanced before real time, increasing PSE’s activation needs despite the 2024 reform. Visible commenters Andrzej Misiak and Bartolomé Mestre Fons likewise favour better forecasting and earlier portfolio adjustment; Misiak asks whether forecast errors or slow reactions dominate. These are attributed explanations, not a quantified causal test.
+
+The [approved methodology](literature/core-da-ccm-allocation-constraint-safeguards.md#beyond-procurement), Annex 1, printed pp. 54–55, already contains the same reserve-activation and portfolio-behaviour rationale. The post therefore provides public discussion, not independent corroboration. Its description of relaxed rules is unverified without comparing editions. Article 7 confirms the deadline but retains reporting and alternative-solution duties. Neither the post nor the visible comments establishes the necessity of a particular cap.
+
+The attached chart, visually inspected on 2026-11-16, is titled *Polish allocation constraints vs residual load* for 1–28 July 2026 (MW). Its upper panel plots import limits above zero, export limits below zero and day-ahead scheduled flows in black, alongside forecast constraints and grey exchange/NTC series. A more negative export bound allows more exports; zero permits no net export. The lower green panel shows residual-load forecasts, not reserve procurement or balancing activations. Its exact residual-load formula is not supplied in the image. Do not equate this series with Annex 1’s separate use of residual demand to mean demand not covered by commercial contracts. The image cannot establish activations exceeding procured reserves. That statement comes from the methodology’s prose on printed pp. 54–55; it supplies no matched activation/procurement series there. Comparing energy (MWh) with capacity (MW) requires a common interval and consistent product/direction definitions.
+
+
+
 
 A defensible challenge asks for the interval’s input calculation, security benefit and assessment of alternatives. A price spread alone does not demonstrate protectionist intent. Nor does compliance with transmission-element capacity margins alone resolve the separate net-position constraint’s efficiency.
 
@@ -134,3 +146,9 @@ When the import bound is active, the positive difference gives its inferred shad
 ### Map-contract
 
 Highlight a country only with evidence for the intended aggregate cap. Selecting it should show its signed contribution as above, capacity in MW and the exact delivery interval. Missing duals mean unavailable attribution, never a fallback to the observed spread. Virtual-hub constraints are outside the map’s scope. For physical constraints, see [price contribution and scaling](flow-based-market-coupling.md#price-contribution). Current behavior is described in [the app page](copper-sushi-app.md#the-cnec-page).
+
+### Regulator-posts
+
+Checked on 2026-11-17. [URE's official LinkedIn announcement](https://www.linkedin.com/posts/urz%C4%85d-regulacji-energetyki_prezes-ure-opublikowa%C5%82-raport-dotycz%C4%85cy-stosowania-activity-7402004612305788928-ktai) publicises its balancing-reform/allocation-constraint assessment. URE attributes reduced cap use, especially for exports, to reforms and says the report specifies further measures to reduce activation frequency. It describes monitoring and recommendations as a recovery-plan milestone. The exact post date was not verified.
+
+[ACER's integration-report launch post](https://www.linkedin.com/feed/update/urn:li:activity:7523670575320371200/) promotes the report's market-integration benefits, congestion costs, the 70% capacity requirement and balancing-platform accession. Neither it nor the inspected Enlit follow-up on [ACER's posts page](https://www.linkedin.com/company/eu-acer/posts/) specifically addresses Polish caps or PSE's quarterly assessments. Comments were not inspected and X coverage remains incomplete; this does not establish that the regulators never discussed those issues publicly.

@@ -450,6 +450,106 @@ The [harness decision](rule-provenance.md) makes wiki recall the conversation en
 
 Extended the [report digest](literature/acer-electricity-market-integration-monitoring-report.md) through paragraph 174: the section includes a general recommendation for alternatives and regulatory scrutiny, without a Poland-specific remedy.
 
+## [2026-11-16] ingest | Public discussion of Polish allocation constraints
+
+Recorded [Hubert Put’s post and visible comments](country-import-export-caps.md#discussion), distinguishing public opinion from the approved methodology’s rationale. Confirmed the 2028 deadline and retained the unresolved rule-comparison and causal-evidence limits.
+
+## [2026-11-16] query | What the allocation-constraint chart measures
+
+[Chart interpretation](country-import-export-caps.md#discussion) separates residual-load forecasts and cross-border limits from reserve procurement and balancing activation. The chart does not test the post’s reserve-exceedance claim.
+
+## [2026-11-16] query | PSE activation versus reserve procurement
+
+Verified public [activation and covered-demand feeds](polish-balancing-capacity-procurement.md#activation) for the November 13 procurement case. Recorded quarter-hour alignment, distinct aFRR volumes and the limits of comparing them with morning purchased capacity.
+
+## [2026-11-16] query | Reserve activation resolution
+
+Distinguished interval-average MW from dispatch peaks and documented ENTSO-E's four-second exchange and one-minute imbalance publication contracts in [Polish balancing capacity procurement](polish-balancing-capacity-procurement.md#resolution). A high-resolution Polish reserve-dispatch series remains unverified.
+
+## [2026-11-16] ingest | PSE diagnosis of balancing incentives
+
+Recorded PSE's July report proposal for stronger imbalance-pricing incentives and its portfolio example in [Polish balancing capacity procurement](polish-balancing-capacity-procurement.md#incentives), separating operational evidence from proof of export-cap necessity.
+
+## [2026-11-16] query | Polish imbalance settlement prices
+
+Verified public CEN settlement-price records and distinguished them from forecasts and balancing-offer prices in [Polish balancing capacity procurement](polish-balancing-capacity-procurement.md#prices).
+
+## [2026-11-16] ingest | Full PSE July commercial-balancing report
+
+Read all 40 pages and visually inspected the charts. The [digest](literature/pse-commercial-balancing-july-2026.md) separates the surplus/curtailment reserve claim from shortage/import evidence and identifies assumptions behind PSE's estimated financial losses.
+
+## [2026-11-16] query | Imbalance prices versus Polish export limits
+
+Recorded the complete 8,836-quarter descriptive join, conditional price distributions and mobile explainer in the [export-cap investigation](polish-export-cap-investigation.md#imbalance-prices). Positive price spikes are more frequent at zero limits; this does not establish causation or cap necessity.
+
+## [2026-11-16] decision | Euro percentile comparison
+
+The [imbalance-price explainer](polish-export-cap-investigation.md#imbalance-prices) uses euros throughout, with a disclosed fixed ECB conversion, and daily interquartile boxes with median and full-range whiskers instead of open/close candles. The illustrative high-price threshold is €500/MWh.
+
+## [2026-11-16] query | Balancing stress episodes and export-cap overlap
+
+The [episode analysis](polish-export-cap-investigation.md#imbalance-prices) distinguishes price gaps from absolute tails, persistence from energy volume, and surplus from shortage using SK. The dominant direction depends on the cutoff. October 16 provides a concrete surplus/binding-export-cap overlap; the deepest negative-price episode does not. Recorded the distinction between contracting balance and net settled imbalance energy in the [source contract](polish-balancing-capacity-procurement.md#episodes).
+
+## [2026-11-16] ingest | Full Stępień balancing interview
+
+Read the complete available Polish auto-generated transcript of the [March 24 interview](literature/pse-stepien-commercial-balancing-podcast.md), which predates the July report. Added the organisational-adaptation diagnosis, consumer cost channels, predictable alpha proposal and an explicitly upward PICASSO scarcity account; retained the expert-opinion disclaimer and absence of an export-cap necessity test.
+
+## [2026-11-16] query | Imbalance liability and consumer pass-through
+
+Clarified [BRP settlement liability versus ultimate consumer cost](polish-balancing-capacity-procurement.md#incentives): tariff recovery does not replace BRP financial responsibility; the podcast does not establish contractual marginal pass-through.
+
+## [2026-11-16] ingest | Polish cap extension evidence
+
+Recovered quantitative [procurement-shortfall charts](literature/core-da-ccm-fourth-amendment-explanatory-document.md#figures) omitted from the earlier digest. Traced the [extension decision](literature/core-da-ccm-allocation-constraint-safeguards.md#oversight): joint Core proposal, regulator agreement on Polish caps, and brief published ACER reasoning with additional hearing material not retrieved.
+
+## [2026-11-16] query | ACER extension sign-off and missing submissions
+
+Traced [sign-off and public-file limits](literature/core-da-ccm-allocation-constraint-safeguards.md#sign-off): Zuleger signature, July Board approval without recorded comments, background links returning the final decision, and unretrieved hearing/AEWG material. No individual technical reviewer or negligence established.
+
+## [2026-11-16] query | Interval-level cap reporting duties
+
+Clarified [transparency obligations](literature/core-da-ccm-allocation-constraint-safeguards.md#transparency): binding-interval security/economic analysis in quarterly reports, monthly underlying data to regulators, public-data limits, complete regulator versions and URE request authority.
+
+## [2026-11-16] query | Public assessment search and reporting trigger
+
+Checked [JAO report availability](literature/core-da-ccm-allocation-constraint-safeguards.md#public-reports) and [calendar-quarter lower bounds](polish-export-cap-investigation.md#reporting-threshold) from the explainer: inferred binding export duration alone exceeds 0.1% in both Q3 and Q4 2026.
+
+## [2026-11-16] query | Verified tracked cap shadow prices
+
+Checked all 2,262 binding export intervals against the application's cap dual: every value is positive, with zero classification mismatches. Corrected the [reporting-threshold discussion](polish-export-cap-investigation.md#reporting-threshold) to recognise that the shadow-price condition is already included.
+
+## [2026-11-16] query | Expanded Q3 report search
+
+Confirmed the live JAO DA index still ends at Q4 2025 after wider source and filename searches; distinguished newer ID/KPI reports and calculated the Q3 six-week deadline as 11 November. [Search findings](literature/core-da-ccm-allocation-constraint-safeguards.md#public-reports).
+
+## [2026-11-16] query | Earlier-2026 allocation-constraint reporting
+
+[Public-report search](literature/core-da-ccm-allocation-constraint-safeguards.md#public-reports) now distinguishes available March 2026 cap-use statistics and monthly KPIs through August from the still-unlocated 2026 DA security-effectiveness annexes.
+
+## [2026-11-16] ingest | 2025 allocation-constraint assessments
+
+[All four 2025 quarters](literature/core-da-ccm-allocation-constraint-safeguards.md#2025-reports) exceeded the non-zero-shadow-price threshold, verified from the published spreadsheets. The reports price curtailment alternatives but do not compare broader reserve/market reforms. Q3’s displayed costs contradict its claim that costs exceed the Core surplus gain.
+
+## [2026-11-16] query | Public criticism of Polish price insulation
+
+[Public criticism](polish-export-cap-investigation.md#public-criticism) links Schoutteet's 2023 commentary, ACER's February 2025 findings and BiznesAlert/Montel coverage; distinguishes documented price insulation from an unproven deliberate-abuse motive.
+
+## [2026-11-16] query | Oversight complaint routes
+
+Verified [URE, ACER and European Ombudsman routes](literature/core-da-ccm-allocation-constraint-safeguards.md#contacts), separating national oversight, EU-agency administration and document access.
+
+## [2026-11-17] ingest | Regulator social announcements
+
+[URE and ACER LinkedIn posts](country-import-export-caps.md#regulator-posts) confirmed in Chrome: URE directly promotes its cap assessment; ACER promotes the integration report without Poland-specific discussion in the inspected posts. X coverage remains incomplete.
+
+## [2026-11-17] ingest | Direct regulator post links
+
+Saved the verified [ACER launch permalink alongside URE’s assessment announcement](country-import-export-caps.md#regulator-posts) for later reference.
+
+## [2026-11-17] query | Export-cap comparison through November 17
+
+Extended the [cap/procurement comparison](polish-export-cap-investigation.md#extension) using complete retained public snapshots after direct JAO timeouts, with a full-day overlap reconciliation. The updated binding cohort remains mostly without an aggregate procurement shortfall.
+
 ## [2026-11-17] decision | Public article cache
 
 [Article-cache](copper-sushi-app.md#article-cache) records the agreed best-effort invalidation tradeoff, native Ghost event coverage, missing POST retries and stale-serving constraints. Origin recovery remains independent.
