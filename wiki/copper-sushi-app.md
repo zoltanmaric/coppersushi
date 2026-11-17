@@ -4,6 +4,30 @@ Interactive map of the European transmission grid showing an **optimal power flo
 
 ## Hosting
 
+### Article-cache
+
+On 2026-11-17 the article homepage and an article returned
+`CF-Cache-Status: DYNAMIC` and `Cache-Control: public, max-age=0`.
+The cache implementation and rollout checks belong to the
+[Ghost hosting runbook](../121gigawatts/hosting/README.md#public-page-caching).
+
+Cloudflare supports [stale-on-error responses](https://developers.cloudflare.com/cache/concepts/cache-control/)
+(documentation 2026-06-30), but eviction and hard purge can remove the fallback.
+Always Online ignores these stale directives. `s-maxage` and overriding Edge TTL
+settings can defeat stale serving. Personalized responses need exclusions.
+
+The settled invalidation choice is best effort, without a queue. In
+[Ghost 6.72](https://github.com/TryGhost/Ghost/blob/v6.72.0/ghost/core/server/web/parent/middleware/emit-events.js),
+`site.changed` follows full public-cache invalidation, including theme/settings
+changes; intercepting Admin responses adds no coverage. Its
+[webhook client](https://github.com/TryGhost/Ghost/blob/v6.72.0/ghost/core/server/services/webhooks/webhook-trigger.js)
+does not enable POST retries. [Got 16](https://github.com/sindresorhus/got/blob/v16.0.0/documentation/7-retry.md)
+excludes POST by default. A missed purge can therefore preserve an old page,
+including unpublished content, throughout an origin outage's stale window.
+Failure evidence is retained by Ghost and the purge endpoint; it is not an alert.
+
+### Application-host
+
 The [Lambda deployment README](../coppersushi/infra/lambda/README.md) defines production hosting and cache behavior.
 
 AWS Lambda with a durable S3 cache is the approved production host.

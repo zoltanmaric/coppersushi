@@ -223,6 +223,12 @@
         content: 'server { listen 80 default_server; listen [::]:80 default_server; server_name _; add_header X-Robots-Tag "noindex, nofollow" always; return 503; }'
         mode: '0644'
       notify: Reload nginx
+    - name: Configure public HTML cache headers
+      ansible.builtin.template:
+        src: templates/ghost-cache.conf.j2
+        dest: /etc/nginx/conf.d/ghost-cache.conf
+        mode: '0644'
+      notify: Reload nginx
     - name: Configure HTTPS proxy
       ansible.builtin.template:
         src: templates/nginx.conf.j2

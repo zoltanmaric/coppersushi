@@ -23,6 +23,10 @@ server {
     client_max_body_size 100m;
     location / {
         proxy_pass http://127.0.0.1:2368;
+        proxy_hide_header Cloudflare-CDN-Cache-Control;
+        proxy_hide_header Cache-Tag;
+        add_header Cloudflare-CDN-Cache-Control $ghost_cdn_cache_control always;
+        add_header Cache-Tag $ghost_cdn_cache_tag always;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

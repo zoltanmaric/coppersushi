@@ -12,6 +12,7 @@ test:
 	ansible-playbook -i ansible/inventory.example.yml ansible/site.yml --syntax-check
 	ansible-playbook -i ansible/inventory.example.yml ansible/restore.yml --syntax-check
 	python -m unittest discover -s tests
+	node --test cloudflare/*.test.mjs
 
 check configure:
 	@test -n "$(DEPLOY_PRIVATE)" || (echo 'Set DEPLOY_PRIVATE to your private inputs directory'; exit 1)

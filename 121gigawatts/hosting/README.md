@@ -11,6 +11,22 @@ existing SSH public key. Paid daily backups are controlled by `backups`;
 preserve the observed setting when adopting a server. Cloudflare DNS and origin
 certificate issuance/renewal remain manual. Git pushes and CI never deploy.
 
+## Request serving
+
+```mermaid
+flowchart LR
+    reader["Reader"] --> cdn["Cloudflare public HTML cache"]
+    cdn -->|Miss or revalidation| origin["Nginx and Ghost"]
+    origin --> mysql[("MySQL")]
+    origin -->|Signed site.changed webhook| purge["Cache purge Worker"]
+    purge -->|Hard purge public HTML tag| cdn
+    click origin "https://github.com/zoltanmaric/coppersushi/blob/main/121gigawatts/hosting/README.md" "Ghost hosting"
+    click purge "https://github.com/zoltanmaric/coppersushi/blob/main/121gigawatts/hosting/README.md#public-page-caching" "Purge endpoint"
+```
+
+Ownership: [origin configuration](ansible/), [Cloudflare rules and purge endpoint](cloudflare/).
+The cache policy and activation steps are in [Public page caching](#public-page-caching).
+
 ## Quick start
 
 Use the [root Pixi setup](../../README.md#local-installation). From the monorepo root:
@@ -170,3 +186,89 @@ curl --fail --cacert "$DEPLOY_PRIVATE/origin-ca.pem" \
 
 Keep certificate verification enabled. Verify canonical links and redirects use
 the configured public HTTPS origin on production.
+
+## Public page caching
+
+Anonymous public HTML uses `Cloudflare-CDN-Cache-Control: public, max-age=300,
+stale-if-error=86400`. Browser `Cache-Control` is preserved. Nginx tags successful
+public HTML as `ghost-public-html`; session cookies, authorization, previews,
+query variants, APIs, private responses and session-setting responses are excluded.
+Any cookie bypasses HTML caching, including analytics cookies. Normal static
+asset policy remains intact. Error responses never receive the public policy.
+
+A signed Ghost `site.changed` webhook calls [the purge Worker](cloudflare/worker.mjs),
+which hard-purges that tag after public content, theme or settings changes.
+Images and unrelated hosts are not tagged or purged. This event covers the whole
+public site; there is no per-post dependency graph or queue.
+
+Purge delivery is best effort. Ghost 6.72 does not retry failed POST webhooks.
+A missed purge leaves old pages until normal expiry; with the origin down, the
+last good copy may remain for the stale window, including unpublished content.
+Hard purge, eviction and cold cache locations can leave no outage copy.
+
+### Activation
+
+Deployment requires explicit approval. Keep existing Cloudflare rules, settings
+and private Worker variables outside Git. Deploy in this order:
+
+1. Configure the Nginx templates with the existing Ansible workflow. Check the
+   private-input diff before applying; `nginx -t` precedes reload.
+2. Use a Cloudflare login authorized for the site's zone. Give the runtime token
+   only **Cache Purge** permission for that zone. Set Worker secrets
+   `GHOST_WEBHOOK_SECRET` (at least 32 random characters) and
+   `CLOUDFLARE_PURGE_TOKEN`; set `CLOUDFLARE_ZONE_ID` as a private variable.
+   Use Wrangler with [cloudflare/wrangler.jsonc](cloudflare/wrangler.jsonc).
+   The only routed path is `/.well-known/ghost-cache-purge`; workers.dev and
+   preview URLs are disabled. Account IDs and credentials stay outside Git.
+
+   ```sh
+   pixi run --locked npx --yes wrangler@4.158.0 deploy --config 121gigawatts/hosting/cloudflare/wrangler.jsonc --var "CLOUDFLARE_ZONE_ID:$CLOUDFLARE_ZONE_ID"
+   pixi run --locked npx --yes wrangler@4.158.0 secret put GHOST_WEBHOOK_SECRET --config 121gigawatts/hosting/cloudflare/wrangler.jsonc
+   pixi run --locked npx --yes wrangler@4.158.0 secret put CLOUDFLARE_PURGE_TOKEN --config 121gigawatts/hosting/cloudflare/wrangler.jsonc
+   ```
+3. Create a Ghost custom integration webhook for **Site changed (rebuild)**,
+   targeting `https://121gigawatts.org/.well-known/ghost-cache-purge`. Set its
+   `secret` through `POST /ghost/api/admin/webhooks/` or
+   `PUT /ghost/api/admin/webhooks/{id}/` to the same Worker secret. Keep the
+   request/response privately: they contain the secret. The Worker rejects
+   unsigned calls. Use Ghost's [Admin API authentication](https://docs.ghost.org/admin-api/authentication).
+4. Install the two [cache rules](cloudflare/cache-rules.json) in their listed
+   order after existing rules; keep their stable `ref` values when updating.
+   Merge them into the existing `http_request_cache_settings` ruleset, never
+   replace unrelated rules. Inspect Page Rules and Cache Response Rules too:
+   no broader setting may override this origin policy or strip session cookies.
+   Keep Edge and Browser TTL in **respect origin** mode and turn off Always
+   Online, which ignores these stale directives. Confirm cache-tag support for
+   the zone before enabling HTML caching.
+5. Verify the behavior below before treating the rollout as complete.
+
+### Verification and failure evidence
+
+After publishing or editing, inspect the integration's webhook delivery record:
+`last_triggered_at` must be newer than the edit, with no `last_triggered_error`.
+A previous success is not proof that the latest edit delivered. Ghost also logs
+`WEBHOOK_DELIVERY_FAILURE`; the Worker logs `ghost_public_html_purge_failed`
+and returns 503 when the purge fails or times out. It returns 200 only after
+Cloudflare confirms success. Cloudflare Worker observability is enabled, but
+logs do not create alerts. Logging retention is controlled by the account plan.
+
+Request the changed page anonymously twice and confirm the edited content and a
+cache HIT. Check the header with `curl -sS -D - -o /dev/null URL`, without cookies
+or query strings. Admin and a preview must stay uncached; login cookies must be
+preserved. Verify images and versioned CSS/JS still load without Ghost.
+
+On an isolated origin, warm a page, let its five-minute lifetime expire, then
+return 502. Verify the prior page is served, restore the origin, and verify it
+updates. A fresh HIT does not prove stale-on-error behavior. Do not stop the
+production origin just to run this check. Include post publication, changed
+slug, unpublishing, theme/settings edits, rejected signatures and a failed purge
+in rollout verification. On failure, disable the HTML eligibility rule, purge
+`ghost-public-html`, and investigate the two delivery logs before re-enabling.
+
+`hosting-test` runs signed-webhook and purge-response tests. Nginx is required
+for the cache-header integration tests; CI installs it, while local hosts without
+Nginx skip only those integration tests.
+
+Provider behavior: [Cloudflare cache control](https://developers.cloudflare.com/cache/concepts/cache-control/),
+[cache tags](https://developers.cloudflare.com/cache/how-to/purge-cache/purge-by-tags/),
+[Ghost site-change event](https://github.com/TryGhost/Ghost/blob/v6.72.0/ghost/core/server/web/parent/middleware/emit-events.js).
