@@ -139,6 +139,23 @@ OS upgrades and Ghost upgrades are separate maintenance operations. MySQL uses
 Ubuntu defaults. Removing an existing `99-ghost-small.cnf` override restarts
 MySQL; inspect that change before applying to a running site.
 
+Ghost stops when MySQL stops and starts after MySQL returns, including a separate
+stop/start during package updates. Its unit is enabled for both system boot and
+MySQL startup; the playbook installs the MySQL startup link when missing,
+including on existing installations. `Restart=on-failure` handles Ghost process
+failures. Automatic security updates remain enabled.
+
+To check this dependency behavior without touching the live services, run on a
+Linux host with systemd:
+
+```sh
+sudo python3 121gigawatts/hosting/tests/check_systemd_recovery.py
+```
+
+The check uses temporary services and removes them afterward. It exercises an
+existing installation's startup-link update, database stop/start, restart, and
+an intentional Ghost stop.
+
 ## Restore
 
 Use a matched SQL dump and content archive from the same validated Ghost 6
@@ -249,7 +266,7 @@ pixi run --locked npx --yes wrangler@4.158.0 login --scopes-list
 
 Wrangler login supports Worker deployment. Request a scoped API token only for
 permissions OAuth does not provide or credentials the deployed service needs;
-this cache setup needs cache-rule management and a permanent purge-only token.
+this cache setup needs cache-rule management and a runtime token with Cache Purge.
 A denied operation does not by itself mean browser login is unusable. Keep
 account details and command output containing private identifiers outside Git.
 See [Wrangler's authentication commands](https://developers.cloudflare.com/workers/wrangler/commands/general/).
@@ -261,8 +278,9 @@ and private Worker variables outside Git. Deploy in this order:
 
 1. Configure the Nginx templates with the existing Ansible workflow. Check the
    private-input diff before applying; `nginx -t` precedes reload.
-2. Follow [Cloudflare access](#cloudflare-access) to authorize the site's zone. Give the runtime token
-   only **Cache Purge** permission for that zone. Set Worker secrets
+2. Follow [Cloudflare access](#cloudflare-access) to authorize the site's zone. The runtime token needs
+   **Cache Purge** permission for that zone. A dedicated token limits its scope;
+   reusing the deployment token also grants the Worker its broader permissions. Set Worker secrets
    `GHOST_WEBHOOK_SECRET` (at least 32 random characters) and
    `CLOUDFLARE_PURGE_TOKEN`; set `CLOUDFLARE_ZONE_ID` as a private variable.
    Use Wrangler with [cloudflare/wrangler.jsonc](cloudflare/wrangler.jsonc).

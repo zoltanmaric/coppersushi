@@ -4,6 +4,9 @@ Interactive map of the European transmission grid showing an **optimal power flo
 
 ## Hosting
 
+The surrounding article site has separate [Ghost theme and hosting code](../121gigawatts/README.md).
+Its [hosting runbook](../121gigawatts/hosting/README.md#configure) covers service recovery after database maintenance.
+
 ### Article-cache
 
 On 2026-11-17 the article homepage and an article returned

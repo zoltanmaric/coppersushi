@@ -256,6 +256,11 @@
         policy: deny
     - name: Activate pending configuration
       ansible.builtin.meta: flush_handlers
+    - name: Enable Ghost on MySQL startup
+      ansible.builtin.command:
+        argv: [systemctl, enable, ghost_121gigawatts-org.service]
+        creates: /etc/systemd/system/mysql.service.wants/ghost_121gigawatts-org.service
+      when: ghost_start | default(true) | bool
     - name: Start Ghost
       ansible.builtin.systemd_service:
         name: "ghost_121gigawatts-org"

@@ -78,6 +78,9 @@ jobs:
         env:
           CHECK_TASK: ${{ matrix.task }}
         run: pixi run --locked "$CHECK_TASK"
+      - name: Check Ghost recovers after database maintenance
+        if: matrix.task == 'hosting-test'
+        run: sudo python3 121gigawatts/hosting/tests/check_systemd_recovery.py
 
   container:
     if: ${{ github.event_name == 'workflow_dispatch' || !github.event.pull_request.draft }}
