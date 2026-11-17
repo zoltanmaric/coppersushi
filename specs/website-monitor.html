@@ -33,7 +33,7 @@
 <ul>
 <li><strong>Fail the page:</strong> navigation failure, unsuccessful final document response, readiness timeout, uncaught application exception, or missing expected content.</li>
 <li><strong>Keep as diagnostics:</strong> network failures and other console errors; a recovered request may pass when the page becomes ready. A favicon or analytics failure alone does not declare an outage.</li>
-<li><strong>Keep exceptions narrow:</strong> add them only after observing a harmless failure. An expected unpublished-data response is not automatically an outage, but it does not prove the map loaded. Settle that default-page case before activation.</li>
+<li><strong>One owner for data readiness:</strong> use the application’s selected-data and render state; do not infer required requests from their order or add publication-specific exceptions.</li>
 </ul>
 <section class="flow" aria-label="Example outage timeline">
 <div><strong>First failed period</strong><span>Publish failure metric; no alarm yet.</span></div><b aria-hidden="true">→</b>
@@ -91,7 +91,7 @@
 <p>Runner fixtures and Terraform configuration tests pass. The deployed AWS Lambda passed all four live checks: 38 seconds billed including cold start, 1,180 MB peak memory at a 2 GB allocation. Email confirmation, real alarm transitions and inbox receipt remain pending; the checklist below tracks end-to-end activation. Simulate failures against controlled fixtures or request interception; never break production to test monitoring.</p>
 <ul class="checks">
 <li><label><input type="checkbox" disabled><span>The deployed 2 GB Lambda runs all three live browser checks and the Ghost HTTP probe concurrently, with real data and map rendering verified. One failed page does not suppress the other results.</span></label></li>
-<li><label><input type="checkbox" disabled><span>On a controlled fixture, a cached public homepage passes while its uncached origin probe fails; the origin-path alarm and recovery follow the two-period rule. Live configuration confirms query-string cache bypass without disrupting production.</span></label></li>
+<li><label><input type="checkbox" disabled><span>On a controlled fixture, a cached public homepage passes while its uncached origin probe fails; the failed origin probe remains independent of the readable public page. Live configuration confirms query-string cache bypass without disrupting production.</span></label></li>
 <li><label><input type="checkbox" disabled><span>On initial navigation, readiness stays loading until required data and the current map render complete; stale startup completion cannot mark ready, and required failures produce error.</span></label></li>
 <li><label><input type="checkbox" disabled><span>A controlled 502 document, uncaught exception, missing content and never-ready page each fail. Optional asset failures and recovered data requests pass once readiness is established, with useful diagnostics.</span></label></li>
 <li><label><input type="checkbox" disabled><span>All three monitored pages send no Cloudflare analytics collection requests during a complete run, including page teardown. Deliberate analytics blocking produces no outage; required scripts and data still load.</span></label></li>
