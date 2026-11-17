@@ -93,15 +93,14 @@ resource "aws_iam_role_policy" "monitor" {
   ] })
 }
 resource "aws_lambda_function" "monitor" {
-  count                          = var.image_uri == null ? 0 : 1
-  function_name                  = local.name
-  package_type                   = "Image"
-  image_uri                      = var.image_uri
-  architectures                  = ["x86_64"]
-  role                           = aws_iam_role.monitor.arn
-  memory_size                    = 2048
-  timeout                        = 240
-  reserved_concurrent_executions = 1
+  count         = var.image_uri == null ? 0 : 1
+  function_name = local.name
+  package_type  = "Image"
+  image_uri     = var.image_uri
+  architectures = ["x86_64"]
+  role          = aws_iam_role.monitor.arn
+  memory_size   = 2048
+  timeout       = 240
   ephemeral_storage { size = 1024 }
   environment { variables = { METRIC_NAMESPACE = local.namespace } }
   depends_on = [aws_iam_role_policy.monitor, aws_ecr_repository_policy.lambda]

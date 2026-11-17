@@ -88,7 +88,7 @@ and provider lockfile there before planning.
    with `aws ecr describe-images`; set `image_uri` to the repository URL plus
    `@sha256:…`, never a mutable tag.
 3. Review and apply a new full saved plan. It creates the 2 GB Lambda and a
-   **disabled** schedule. Publish the merged readiness changes through the
+   **disabled** schedule. Publish the readiness changes through the
    application runbook before evaluating the live monitor.
 4. Confirm the SNS subscription from the recipient's inbox. Terraform cannot
    click that link or prove receipt; verify the subscription is no longer
@@ -103,7 +103,9 @@ and provider lockfile there before planning.
 
 The Lambda has no VPC, repair/deployment permissions or SMTP credentials.
 Scheduler and Lambda async retries are disabled and queued-event age is bounded.
-Reserved concurrency one prevents overlap. The checker heartbeat covers crashes,
+The four-minute invocation timeout is shorter than the minimum five-minute schedule,
+preventing ordinary scheduled overlap. Rare duplicate delivery is accepted; metrics
+share the scheduled timestamp. No account concurrency reservation is required. The checker heartbeat covers crashes,
 missed delivery and metric publication failures; an AWS-wide failure can still
 prevent alerts.
 

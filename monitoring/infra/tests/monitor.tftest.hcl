@@ -39,8 +39,8 @@ run "hourly_alarm_contract" {
     error_message = "Cadence must propagate to result and missing-checker alarms."
   }
   assert {
-    condition     = aws_lambda_function.monitor[0].reserved_concurrent_executions == 1 && aws_lambda_function.monitor[0].memory_size == 2048 && aws_lambda_function_event_invoke_config.monitor[0].maximum_retry_attempts == 0 && aws_scheduler_schedule.monitor[0].schedule_expression == "rate(60 minutes)"
-    error_message = "Runner must remain bounded and prevent overlapping invocations."
+    condition     = aws_lambda_function.monitor[0].memory_size == 2048 && aws_lambda_function_event_invoke_config.monitor[0].maximum_retry_attempts == 0 && aws_scheduler_schedule.monitor[0].schedule_expression == "rate(60 minutes)"
+    error_message = "Runner must remain bounded and avoid ordinary scheduled overlap."
   }
 }
 run "reject_invalid_cadence" {
