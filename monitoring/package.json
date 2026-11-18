@@ -1,0 +1,19 @@
+{
+  "name": "website-monitor",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test dist/tests/*.test.js",
+    "probe": "npm run build && node dist/src/probe.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cloudwatch": "3.1170.0",
+    "@sparticuz/chromium": "153.0.0",
+    "playwright-core": "1.63.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.11",
+    "typescript": "5.9.3"
+  }
+}

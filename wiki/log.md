@@ -584,6 +584,9 @@ records the single incident without inventing repeated evidence for a new rule.
 ## [2026-11-18] decision | Proportionate PR defenses
 
 Refined the existing complexity review questions to weigh failure likelihood, impact and recovery cost against defensive complexity; see [rule provenance](rule-provenance.md).
+## [2026-11-17] query | Browser monitoring readiness
+
+The pinned Plotly Mapbox completion promise waits for native map loading, so monitoring can use the existing render lifecycle. CNEC calendar availability can request an unpublished day before the selected day; request order does not establish selection. The [map-rendering discussion](copper-sushi-app.md) and [monitoring runbook](../monitoring/README.md) own the readiness and failure-policy findings.
 
 ## [2026-11-18] decision | Pragmatic delegation trial
 

@@ -88,6 +88,7 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
   }, []);
   const viewport = useMapViewport();
   const initialCamera = useMemo(()=>initialCoreCamera(viewport.size?.width ?? 160,viewport.size?.height ?? 160),[viewport.size]);
+  const [renderedFigure,setRenderedFigure] = useState<PlotlyFigure|null>(null);
   const [mapError,setMapError] = useState<Error|null>(null);
   const {publication,metadata,current: intervalQuery,data,labels,generation} = useDayData(day,interval);
   const previousControlLabels = useRef(labels);
@@ -115,10 +116,11 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
     if (action) dispatch(action);
   }
 
-  return <MapFrame ref={viewport.ref} id={id}>
+  const loadState = mapError || publication.error || metadata.error || intervalQuery.error ? 'error' : mapCurrent && renderedFigure === graphFigure ? 'ready' : 'loading';
+  return <MapFrame ref={viewport.ref} id={id} loadState={loadState}>
     <IntervalPrefetch day={day} generation={generation} count={labels.length} enabled={!!data && !!metadata.data}/>
     <div className="map-canvas">
-      {viewport.size && <MapGraph onError={setMapError} compactTooltips={compactTooltips} id={`${id}-map`} figure={graphFigure} onClick={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
+      {viewport.size && <MapGraph onRendered={completed=>{setRenderedFigure(completed);setMapError(null);}} onError={setMapError} compactTooltips={compactTooltips} id={`${id}-map`} figure={graphFigure} onClick={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
         countries={countries} onReference={reference=>dispatch({type:'reference',reference})}
         config={plotConfig}/>}
     </div>

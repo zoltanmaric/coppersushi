@@ -71,6 +71,10 @@ runtime = { features = [], solve-group = "default" }
 build = { features = ["build"], solve-group = "default" }
 
 [tool.pixi.tasks]
+monitor-install = "npm ci --prefix monitoring"
+monitor-test = "npm test --prefix monitoring"
+monitor-infra-test = "terraform -chdir=monitoring/infra init -backend=false && terraform -chdir=monitoring/infra validate && terraform -chdir=monitoring/infra test"
+monitor-build = "docker build --platform linux/amd64 --provenance=false -t website-monitor:dev monitoring"
 setup = { cmd = "python -c \"import sys; print('Python interpreter:', sys.executable)\"", depends-on = ["theme-install", "hosting-setup", "frontend-build"] }
 setup-app = { depends-on = ["setup", "setup-data"] }
 setup-data = "git lfs pull && python -m coppersushi.pipelines.data_sources.runtime_data prepare"
