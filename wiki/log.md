@@ -588,3 +588,7 @@ Refined the existing complexity review questions to weigh failure likelihood, im
 ## [2026-11-18] decision | Pragmatic delegation trial
 
 The user approved a trial of delegation and model selection; [rule provenance](rule-provenance.md) records the single observed incident and the explicit override of the repetition bar.
+
+## [2026-11-18] decision | Review model selection
+
+The delegation trial now prefers Astra for reviews when quota headroom and observed usage trends support it; see [rule provenance](rule-provenance.md).
