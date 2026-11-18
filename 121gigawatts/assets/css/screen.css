@@ -218,7 +218,7 @@ body {
         background-image: url('/assets/images/w1000/Gigawatts-Landscape.jpg');
         background-image: -webkit-image-set(url('/assets/images/w1000/Gigawatts-Landscape.jpg') 1x,
             url('/assets/images/w2000/Gigawatts-Landscape.jpg') 2x);
-        background-image: image-set('/assets/images/w1000/Gigawatts-Landscape.jpg') 1x,
+        background-image: image-set(url('/assets/images/w1000/Gigawatts-Landscape.jpg') 1x,
             url('/assets/images/w2000/Gigawatts-Landscape.jpg') 2x);
     }
 }
@@ -3099,3 +3099,13 @@ Usage (In Ghost editor):
         color: color(var(--green) l(+5%) s(-5%));
     }
 /* } */
+
+/* Reserve the card box before a deferred image has a source. */
+.deferred-card-image {
+    display: block;
+}
+
+/* The no-script image replaces the deferred placeholder. */
+@media (scripting: none) {
+    .deferred-card-image { display: none; }
+}

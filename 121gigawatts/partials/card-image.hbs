@@ -1,0 +1,11 @@
+<img class="post-card-image{{#if deferred}} deferred-card-image{{/if}}"
+    {{#if deferred}}data-srcset{{else}}srcset{{/if}}="{{img_url feature_image size="s"}} 300w,
+        {{img_url feature_image size="m"}} 600w,
+        {{img_url feature_image size="l"}} 1000w,
+        {{img_url feature_image size="xl"}} 2000w"
+    {{!-- Tall featured crops keep their existing resolution; regular cards use smaller sources. --}}
+    sizes="{{#is "home"}}{{#has index="nth:6"}}(max-width: 794px) 90vw, 700px{{else}}(max-width: 650px) 90vw, (max-width: 1000px) 50vw, 400px{{/has}}{{else}}(max-width: 650px) 90vw, (max-width: 1000px) 50vw, 400px{{/is}}"
+    loading="lazy"
+    {{#if deferred}}data-src{{else}}src{{/if}}="{{img_url feature_image size="m"}}"
+    alt="{{title}}"
+/>

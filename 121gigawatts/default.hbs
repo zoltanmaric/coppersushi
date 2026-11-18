@@ -13,7 +13,15 @@
     <meta property="og:image:alt" content="1.21 Gigawatts Logo">
 
     {{!-- Styles'n'Scripts --}}
+    {{#is "home"}}
+    {{!-- Match the hero's CSS breakpoints and density candidates without waiting for CSS. --}}
+    <link rel="preload" as="image" fetchpriority="high" media="(max-width: 600px)" imagesrcset="/assets/images/w600/Gigawatts-Landscape.jpg 1x, /assets/images/w1000/Gigawatts-Landscape.jpg 2x" />
+    <link rel="preload" as="image" fetchpriority="high" media="(min-width: 600.01px) and (max-width: 1000px)" imagesrcset="/assets/images/w1000/Gigawatts-Landscape.jpg 1x, /assets/images/w2000/Gigawatts-Landscape.jpg 2x" />
+    <link rel="preload" as="image" fetchpriority="high" media="(min-width: 1000.01px)" imagesrcset="/assets/images/w2000/Gigawatts-Landscape.jpg 1x" />
+    {{/is}}
     <link rel="stylesheet" type="text/css" href="{{asset "built/screen.css"}}" />
+
+    {{#is "home"}}{{> "card-images"}}{{/is}}
 
     {{!-- This tag outputs SEO meta+structured data and other important settings --}}
     {{ghost_head}}

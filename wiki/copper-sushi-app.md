@@ -42,6 +42,29 @@ excludes POST by default. A missed purge can therefore preserve an old page,
 including unpublished content, throughout an origin outage's stale window.
 Failure evidence is retained by Ghost and the purge endpoint; it is not an alert.
 
+### Hero-loading
+
+Controlled Chrome tests on 2026-11-18 isolate competing thumbnail requests as a
+large part of homepage hero transfer time. With browser cache disabled, 150 ms
+latency and 1 MB/s throughput, three runs per case gave median hero paint times
+of 5.31 seconds on desktop and 1.34 seconds on mobile. Smaller thumbnail candidates
+alone gave 5.21 and 1.37 seconds; a bounded hero-first gate gave 1.39 and 0.73 seconds.
+These are laboratory results, not real-user percentiles or an explanation of the
+historical five-second image-discovery delay. The earlier HTML preload change
+addresses discovery ([PR #295](https://github.com/zoltanmaric/coppersushi/pull/295));
+the [scheduling comparison in PR #300](https://github.com/zoltanmaric/coppersushi/pull/300)
+records the test evidence. The [theme README](../121gigawatts/README.md#homepage-images)
+owns loading behavior.
+
+Regular desktop thumbnails render at 320 × 200 CSS pixels; featured cards range
+from 679 × 380 at a 1280-pixel viewport to 359 × 380 at 800 pixels. Source selection
+must allow for both device density and cover cropping. The verified regular-card
+candidates preserve sufficient resolution at standard and double density where
+the original supports it; tall
+featured crops retain their larger candidates. Smaller candidate URLs do not
+always save bytes: the VR image's original and 600/1000/2000-pixel URLs all return
+the same 480 × 320, 368,342-byte image. Its original resolution limits sharpness.
+
 ### Application-host
 
 The [Lambda deployment README](../coppersushi/infra/lambda/README.md) defines production hosting and cache behavior.
