@@ -599,3 +599,7 @@ The delegation trial now prefers Astra for reviews when quota headroom and obser
 ## [2026-11-18] decision | Local quota history
 
 Quota-aware delegation uses an account-separated local history outside git, recorded only during existing quota checks. The helper returns observations for agent judgment rather than forecasting consumption; see [rule provenance](rule-provenance.md).
+
+## [2026-11-18] query | Homepage image competition
+
+[Controlled comparisons](copper-sushi-app.md#hero-loading) separate thumbnail source sizing from request scheduling. Hero-first loading improves the tested hero paint time; resizing alone has little effect. Source inspection confirms the VR thumbnail is limited by its original resolution.

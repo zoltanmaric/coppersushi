@@ -46,6 +46,18 @@ it does not upgrade Ghost or restore content.
 and checks Ghost 6 compatibility. The two known, non-blocking warnings concern
 optional custom fonts and the page title/feature-image toggle.
 
+## Homepage images
+
+Responsive hero preloads start before the stylesheet. Homepage article images
+wait until the selected hero loads or fails, or two seconds after DOM readiness.
+The inline loader then requests cards within 200 pixels of the viewport and
+observes cards added by infinite scrolling. Visible cards use normal priority;
+nearby cards use low priority. Without JavaScript, native lazy images remain.
+
+Featured cards retain larger candidates for their tall crops. Regular desktop
+cards use a 400-pixel source-size hint, allowing 600-pixel candidates at standard
+density and 1000-pixel candidates at double density. Uploaded pixels are unchanged.
+
 ## Animated images
 
 Precompress animations before uploading. Ghost can recompress uploads; verify

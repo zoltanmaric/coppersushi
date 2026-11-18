@@ -3099,3 +3099,13 @@ Usage (In Ghost editor):
         color: color(var(--green) l(+5%) s(-5%));
     }
 /* } */
+
+/* Reserve the card box before a deferred image has a source. */
+.deferred-card-image {
+    display: block;
+}
+
+/* The no-script image replaces the deferred placeholder. */
+@media (scripting: none) {
+    .deferred-card-image { display: none; }
+}

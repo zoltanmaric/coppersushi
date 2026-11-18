@@ -1,0 +1,58 @@
+{{!-- Inline so deferred images do not depend on another script download. --}}
+<script>
+/* Card images wait briefly for the homepage hero, then follow the viewport. */
+(function () {
+
+    function start() {
+        var observer;
+        function load(image) {
+            image.loading = 'eager';
+            var bounds = image.getBoundingClientRect();
+            image.fetchPriority = bounds.top < innerHeight && bounds.bottom > 0 ? 'auto' : 'low';
+            image.srcset = image.dataset.srcset;
+            image.src = image.dataset.src;
+            image.removeAttribute('data-srcset');
+            image.removeAttribute('data-src');
+        }
+        if ('IntersectionObserver' in window) {
+            observer = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting) {
+                        load(entry.target);
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, {rootMargin: '200px'});
+        }
+        function scan() {
+            document.querySelectorAll('img[data-srcset]').forEach(function (image) {
+                if (observer) observer.observe(image);
+                else load(image);
+            });
+        }
+        scan();
+        var feed = document.querySelector('.post-feed');
+        if (feed) new MutationObserver(scan).observe(feed, {childList: true});
+    }
+    function ready() {
+        var preload = Array.from(document.querySelectorAll('link[rel="preload"][as="image"]'))
+            .find(function (link) { return matchMedia(link.media || 'all').matches; });
+        if (!preload) { start(); return; }
+        var released = false;
+        var timer;
+        function release() {
+            if (released) return;
+            released = true;
+            clearTimeout(timer);
+            start();
+        }
+        timer = setTimeout(release, 2000);
+        var hero = new Image();
+        hero.onload = release;
+        hero.onerror = release;
+        hero.srcset = preload.imageSrcset;
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready);
+    else ready();
+}());
+</script>
