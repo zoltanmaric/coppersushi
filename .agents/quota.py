@@ -4,7 +4,8 @@ The default log is ~/.local/state/agent-quota/usage.csv. Save changes in window 
 availability, decreases from the saved value, increases of at least one percentage
 point, or an observation after an hour when polled. Summaries always use the live
 reading. Window start is nominal (reset minus duration); coverage reports only
-actual observations, with no assumed zero-usage baseline.
+actual observations, with no assumed zero-usage baseline. Rates describe that
+coverage, not a forecast; the agent chooses the model.
 """
 
 from __future__ import annotations
@@ -37,18 +38,18 @@ MAX_SAVE_GAP = timedelta(hours=1)
 
 
 class BurnShape(TypedDict):
-    """Observed burn rates on either side of the sample closest to mid-coverage."""
+    """Earlier/later observed rates, split near mid-coverage; not predicted acceleration."""
 
     splitAt: str
     earlierRatePercentagePointsPerHour: float
     laterRatePercentagePointsPerHour: float
 
 
-class WindowSummary(UsageWindow):
-    """Current quota balance and trend over the available observations."""
+class WindowSummary(TypedDict):
+    """Quota headroom and observed rates for an agent to judge model affordability."""
 
     remainingPercent: int | float
-    windowStartsAt: int
+    resetsAt: int
     windowElapsedPercent: float
     observedFirstAt: str | None
     observedLastAt: str | None
@@ -234,13 +235,12 @@ def summarize_window(
     observed_epoch = observed_at.timestamp()
     starts_at = window_start(current)
     duration_seconds = current["windowDurationMins"] * 60
-    elapsed_seconds = min(duration_seconds, max(0, int(observed_epoch) - starts_at))
+    elapsed_seconds = min(duration_seconds, max(0, observed_epoch - starts_at))
     seconds_until_reset = max(0.0, round(current["resetsAt"] - observed_epoch, 6))
     sustainable_rate = remaining * 3600 / seconds_until_reset if seconds_until_reset else None
     return WindowSummary(
-        **current,
         remainingPercent=remaining,
-        windowStartsAt=starts_at,
+        resetsAt=current["resetsAt"],
         windowElapsedPercent=100 * elapsed_seconds / duration_seconds,
         observedFirstAt=first.at.isoformat(timespec="microseconds") if first else None,
         observedLastAt=last.at.isoformat(timespec="microseconds") if last else None,

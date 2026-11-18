@@ -69,9 +69,9 @@ class QuotaTest(unittest.TestCase):
         summaries = self.record(payload)
         primary = summaries["codex"]["primary"]
         secondary = summaries["codex"]["secondary"]
-        self.assertEqual(primary["usedPercent"], 15)
+        self.assertEqual(primary["remainingPercent"], 85)
         self.assertEqual(primary["observedCount"], 2)
-        self.assertEqual(secondary["usedPercent"], 30)
+        self.assertEqual(secondary["remainingPercent"], 70)
         self.assertEqual(secondary["observedCount"], 1)
         self.assertEqual(summaries["other-bucket"], {"primary": None, "secondary": None})
         self.assertEqual(primary["observedLastAt"], secondary["observedLastAt"])
@@ -102,7 +102,7 @@ class QuotaTest(unittest.TestCase):
                 payload["rateLimitsByLimitId"]["codex"]["secondary"] = window(30)
                 latest = self.record(payload)["codex"]
                 self.assertIsNone(latest["primary"])
-                self.assertEqual(latest["secondary"]["usedPercent"], 30)
+                self.assertEqual(latest["secondary"]["remainingPercent"], 70)
 
     def test_invalid_windows_reject_whole_response(self):
         for field, invalid in (
@@ -159,8 +159,6 @@ class QuotaTest(unittest.TestCase):
         self.assertAlmostEqual(primary["sustainableRatePercentagePointsPerHour"], 20 * 3600 / seconds_until_reset)
         self.assertEqual(primary["remainingPercent"], 20)
         self.assertEqual(primary["resetsAt"], RESET)
-        self.assertEqual(primary["windowDurationMins"], 300)
-        self.assertEqual(primary["windowStartsAt"], RESET - 300 * 60)
         self.assertAlmostEqual(primary["windowElapsedPercent"], 100 * (1 - seconds_until_reset / 18000), places=2)
         shape = primary["shape"]
         self.assertEqual(datetime.fromisoformat(shape["splitAt"]), midpoint)
@@ -227,7 +225,7 @@ class QuotaTest(unittest.TestCase):
         saved = self.log.read_bytes()
         for percent in (0.4, 0.5, 0.9):
             current = self.record(response(primary=window(percent)))["codex"]["primary"]
-            self.assertEqual(current["usedPercent"], percent)
+            self.assertEqual(current["remainingPercent"], 100 - percent)
             self.assertGreater(current["observedLastAt"], first["observedLastAt"])
             self.assertEqual(current["observedCount"], 2)
             self.assertEqual(self.log.read_bytes(), saved)
