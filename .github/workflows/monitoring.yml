@@ -1,0 +1,35 @@
+name: Website monitoring checks
+on:
+  pull_request:
+    paths:
+      - 'monitoring/**'
+      - '.github/workflows/monitoring.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: monitoring-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: monitoring/package-lock.json
+      - run: npm ci --prefix monitoring
+      - run: node monitoring/node_modules/playwright-core/cli.js install --with-deps chromium
+      - run: npm test --prefix monitoring
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.17.2'
+      - run: terraform -chdir=monitoring/infra init -backend=false
+      - run: terraform -chdir=monitoring/infra fmt -check -recursive
+      - run: terraform -chdir=monitoring/infra validate
+      - run: terraform -chdir=monitoring/infra test
+      - run: docker build --platform linux/amd64 --provenance=false -t website-monitor:ci monitoring
+      - run: docker run --rm --platform linux/amd64 -e AWS_EXECUTION_ENV=AWS_Lambda_nodejs22.x --entrypoint node website-monitor:ci dist/src/smoke.js

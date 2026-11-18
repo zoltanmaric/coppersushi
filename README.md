@@ -11,6 +11,7 @@ Product ownership: [Copper Sushi](coppersushi/README.md) contains the tools at
 coppersushi.121gigawatts.org, including their frontend, pipelines and infrastructure.
 [1.21 Gigawatts](121gigawatts/README.md) contains the blog at 121gigawatts.org.
 [Forecasting](forecasts/README.md) retains its existing independent layout.
+[Monitoring](monitoring/README.md) owns cross-product browser checks and outage emails.
 
 The web app is deployed
 [**here**](https://121gigawatts.org/copper-sushi-power-flow-european-grid/),
@@ -44,6 +45,12 @@ Clone with `GIT_LFS_SKIP_SMUDGE=1` to skip the files, e.g. to run only the tests
 
 ```mermaid
 flowchart TB
+    monitorSchedule["Monitoring schedule · EventBridge"] --> monitor["Browser checker · AWS Lambda"]
+    monitor -->|Public page and uncached probe| articleedge
+    monitor -->|Map pages and data| edge
+    monitor --> health["Health metrics and alarms · CloudWatch"]
+    health --> notify["Outage and recovery email · SNS"]
+    click monitor "https://github.com/zoltanmaric/coppersushi/blob/main/monitoring/README.md" "Website monitoring"
     articles["Article reader’s browser"]
     subgraph articlecloudflare["Cloudflare · article site"]
         articleedge["Public HTML cache<br/>CDN"]

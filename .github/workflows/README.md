@@ -29,3 +29,9 @@ The performance target is elapsed workflow time, including runner setup and cach
 transfers. More jobs, cache hits or faster individual steps do not necessarily shorten
 the longest chain of dependent work. Different runner CPUs also make a single
 before/after workflow comparison inconclusive.
+
+`monitoring.yml` checks changes to the independent monitoring component, including
+draft PRs. One job installs its pinned Node/browser dependencies, runs local failure
+fixtures, validates mocked Terraform plans and exercises three concurrent WebGL
+contexts in the Lambda container. It never checks production, publishes metrics,
+sends email or applies AWS resources. The production browser journeys are not CI tests.
