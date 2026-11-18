@@ -587,3 +587,15 @@ Refined the existing complexity review questions to weigh failure likelihood, im
 ## [2026-11-17] query | Browser monitoring readiness
 
 The pinned Plotly Mapbox completion promise waits for native map loading, so monitoring can use the existing render lifecycle. CNEC calendar availability can request an unpublished day before the selected day; request order does not establish selection. The [map-rendering discussion](copper-sushi-app.md) and [monitoring runbook](../monitoring/README.md) own the readiness and failure-policy findings.
+
+## [2026-11-18] decision | Pragmatic delegation trial
+
+The user approved a trial of delegation and model selection; [rule provenance](rule-provenance.md) records the single observed incident and the explicit override of the repetition bar.
+
+## [2026-11-18] decision | Review model selection
+
+The delegation trial now prefers Astra for reviews when quota headroom and observed usage trends support it; see [rule provenance](rule-provenance.md).
+
+## [2026-11-18] decision | Local quota history
+
+Quota-aware delegation uses an account-separated local history outside git, recorded only during existing quota checks. The helper returns observations for agent judgment rather than forecasting consumption; see [rule provenance](rule-provenance.md).
