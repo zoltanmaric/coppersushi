@@ -107,7 +107,7 @@ def record(value: object, log_path: Path) -> dict[str, list[dict[str, object]]]:
         return {}
 
     log_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    tails: dict[str, deque[list[str]]] = {bucket: deque(maxlen=100) for bucket in windows}
+    tails: dict[str, deque[list[str]]] = {bucket: deque(maxlen=20) for bucket in windows}
     descriptor = os.open(log_path, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o600)
     with os.fdopen(descriptor, "a+", encoding="utf-8", newline="") as log:
         fcntl.flock(log.fileno(), fcntl.LOCK_EX)
@@ -155,7 +155,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
             "Read a get_usage_limits JSON response from stdin. Store its quota windows "
-            "and print up to 100 readings per reported bucket for that account, newest first."
+            "and print up to 20 readings per reported bucket for that account, newest first."
         ),
         epilog="Invalid input or a log error exits with status 1 and a message on stderr.",
     )

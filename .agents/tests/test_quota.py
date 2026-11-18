@@ -125,7 +125,7 @@ class QuotaTest(unittest.TestCase):
             writer.writerows([["2000-01-01T00:00:00+00:00", *row[1:]]] * 105)
             writer.writerow(row)
         history = self.record(response(primary=window(15)))["codex"]
-        self.assertEqual(len(history), 100)
+        self.assertEqual(len(history), 20)
         self.assertEqual([item["primary"] for item in history[:2]], [window(15), window(7)])
 
 
