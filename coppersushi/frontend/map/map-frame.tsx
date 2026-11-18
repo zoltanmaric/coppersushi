@@ -1,7 +1,7 @@
 import React, {forwardRef, useLayoutEffect, useRef, useState} from 'react';
 
-export const MapFrame = forwardRef<HTMLElement, React.PropsWithChildren<{id?:string;label?:string}>>(
-  ({id,label,children},ref)=><section ref={ref} id={id} aria-label={label} className="map-frame">{children}</section>);
+export const MapFrame = forwardRef<HTMLElement, React.PropsWithChildren<{id?:string;label?:string;loadState?:'loading'|'ready'|'error'}>>(
+  ({id,label,loadState,children},ref)=><section ref={ref} id={id} aria-label={label} data-load-state={loadState} className="map-frame">{children}</section>);
 
 /** Capture the mounted container once; subsequent camera changes belong to the user. */
 export function useMapViewport() {

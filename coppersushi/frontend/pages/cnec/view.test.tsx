@@ -17,9 +17,13 @@ interface Pending {path: string; body?: {day: string; interval: number; selected
 let pending: Pending[];
 let missNextPublication: boolean;
 let graph: PlotlyFigure;
+let completeGraph: () => void;
+let failGraph: (error: Error) => void;
 let clickGraph: (change: {clickData: unknown}) => void;
-vi.mock('../../map/map-graph', () => ({MapGraph: (props: {figure: PlotlyFigure; onClick: (event: unknown) => void}) => {
+vi.mock('../../map/map-graph', () => ({MapGraph: (props: {figure: PlotlyFigure; onRendered: (figure: PlotlyFigure) => void; onError: (error: Error) => void; onClick: (event: unknown) => void}) => {
   graph = props.figure;
+  completeGraph = () => props.onRendered(props.figure);
+  failGraph = props.onError;
   clickGraph = change => props.onClick(change.clickData);
   return <div aria-label="Map">{props.figure.data.map(t=>t.name).join(',')}</div>;
 }}));
@@ -215,4 +219,14 @@ test('legend bounds appear from metadata before an interval or market figure is 
   expect(screen.getByLabelText('Daily day-ahead price scale')).toBe(legend);
   expect(graph.data.some(trace=>trace.type==='choroplethmapbox')).toBe(false);
   expect(screen.getByRole('status',{name:'Map loading'})).toBeTruthy();
+});
+
+test('readiness waits for the current map and reports rendering failure', async () => {
+  await open();
+  const root = document.getElementById('cnec')!;
+  expect(root.getAttribute('data-load-state')).toBe('loading');
+  act(()=>completeGraph());
+  expect(root.getAttribute('data-load-state')).toBe('ready');
+  act(()=>failGraph(new Error('WebGL failed')));
+  expect(root.getAttribute('data-load-state')).toBe('error');
 });

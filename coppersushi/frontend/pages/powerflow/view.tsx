@@ -33,7 +33,7 @@ export function OpfView({token}:{token:string}) {
   const error = manifest.error ?? hour.error;
   const current = !!figure && !hour.isPlaceholderData && renderedFigure===figure;
   const loading = !error && !mapError && (manifest.isFetching || hour.isFetching || (!!figure && !current));
-  return <MapFrame ref={viewport.ref} label="Power Flow 🍣">
+  return <MapFrame ref={viewport.ref} loadState={error || mapError ? 'error' : current ? 'ready' : 'loading'} label="Power Flow 🍣">
     <div className="map-canvas">{figure && <MapGraph id="opf-map" config={config} figure={figure} onError={e=>setMapError(e?.message ?? null)} onRendered={completed=>{setRenderedFigure(completed);setMapError(null);}}/>}
 
     </div>
