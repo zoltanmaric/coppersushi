@@ -9,7 +9,7 @@ from tempfile import TemporaryDirectory
 import unittest
 
 
-RECORDER = Path(__file__).resolve().parents[1] / "quota.py"
+RECORDER = Path(__file__).resolve().parents[1] / "scripts" / "quota.py"
 RESET = int(datetime.now(timezone.utc).timestamp()) + 3600
 
 
