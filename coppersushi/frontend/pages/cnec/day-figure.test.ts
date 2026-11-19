@@ -38,6 +38,20 @@ test('country cap uses the shared display boundary and reports its actual limit'
   expect((figure.data.find(t=>t.name==='ray contributions')!.text as string[])).toEqual(['−€5.00']);
 });
 
+test.each(['import', 'export'] as const)('Polish %s limit colors the outline, halo and ambient glow', direction => {
+  const data = drawingFixture();
+  data.intervals[0].caps[0].direction = direction;
+  const figure = dayFigure(data, 0, 'cap:PL', 'DE', {mapbox:{style:'dark'}, uirevision:'camera'}, zoneFeatures(data));
+  const importing = direction === 'import';
+  expect(figure.data.find(t => t.name === 'binding country cap')).toMatchObject({
+    line: {color: importing ? '#14b8a6' : '#a72af5', width: 4},
+    meta: {ambient: importing ? 'teal' : true},
+  });
+  expect(figure.data.find(t => t.name === 'binding country cap glow')).toMatchObject({
+    line: {color: importing ? '#99f6e4' : '#d4a3ff', width: 12}, opacity: 0.3,
+  });
+});
+
 test('interval and selection updates retain distinct stable map insertion points',()=>{
   const data=drawingFixture();
   const layers=orderedMapLayers([{id:'land',type:'background'},{id:'boundaries',type:'line'}]);

@@ -3,7 +3,7 @@ import type {PlotlyFigure} from './figure';
 export type LngLat = readonly [lon: number, lat: number];
 export type SelectionEffect = {kind: 'line'; endpoints: readonly [LngLat, LngLat]} |
   {kind: 'transformer'; center: LngLat};
-export interface OverlayModel {ambient: LngLat[][]; selections: SelectionEffect[]}
+export interface OverlayModel {ambient: {points: LngLat[]; teal: boolean}[]; selections: SelectionEffect[]}
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 const object = (value: unknown): Record<string, unknown> | null =>
   value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
@@ -22,7 +22,10 @@ export function overlayModel(figure: PlotlyFigure): OverlayModel {
       if (finite(x) && finite(y) && Math.abs(y) <= 85.051129) segments.at(-1)!.push([x, y]);
       else if (segments.at(-1)!.length) segments.push([]);
     });
-    if (meta.ambient === true) model.ambient.push(...segments.filter(s => s.length > 1));
+    if (meta.ambient === true || meta.ambient === "teal") {
+      for (const points of segments) if (points.length > 1)
+        model.ambient.push({points, teal: meta.ambient === "teal"});
+    }
     if (meta.effect === 'line') {
       for (const points of segments) if (points.length === 2)
         model.selections.push({kind:'line',endpoints:[points[0],points[1]]});

@@ -9,7 +9,7 @@ test('explicit metadata identifies effects independently of display names and tr
     {name: 'translated name', lon: [1, 2, null, 3, 4], lat: [50, 51, null, 52, 53], meta: {ambient: true}},
     {name: 'anything', lon: [10], lat: [50], meta: {effect: 'transformer'}},
   ]));
-  expect(model).toEqual({ambient: [[[1, 50], [2, 51]], [[3, 52], [4, 53]]],
+  expect(model).toEqual({ambient: [{points: [[1, 50], [2, 51]], teal: false}, {points: [[3, 52], [4, 53]], teal: false}],
     selections: [{kind: 'transformer', center: [10, 50]}]});
   expect(overlayModel(figure([{lon: [1, 2], lat: [50, 51], meta: {effect: 'line'}}])).selections)
     .toEqual([{kind: 'line', endpoints: [[1, 50], [2, 51]]}]);

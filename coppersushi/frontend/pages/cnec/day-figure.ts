@@ -57,14 +57,15 @@ const line = (
   lat: (number | null)[],
   width: number,
   meta = {},
+  color = purple,
 ): Trace =>
   scatter(name, lon, lat, {
     mode: "lines",
     hoverinfo: "skip",
-    line: { color: purple, width },
+    line: { color, width },
     meta,
   });
-const halo = (trace: Trace): Trace => ({
+const halo = (trace: Trace, color = lavender): Trace => ({
   ...trace,
   uid: `${trace.name} glow`,
   name: `${trace.name} glow`,
@@ -72,7 +73,7 @@ const halo = (trace: Trace): Trace => ({
   line: {
     ...(trace.line as object),
     width: Number((trace.line as { width: number }).width) * 3,
-    color: lavender,
+    color,
   },
   meta: {},
 });
@@ -296,19 +297,21 @@ export function dayFigure(
       x.push(ring.at(-1)![0], null);
       y.push(ring.at(-1)![1], null);
     }
+    const importing = cap.direction === "import";
     const outline = line(
       "binding country cap",
       x,
       y,
       selected === 'cap:PL' ? 4 : 2.5,
-      { role: "country-cap", ambient: true },
+      { role: "country-cap", ambient: importing ? "teal" : true },
+      importing ? "#14b8a6" : purple,
     );
     traces.push(
-      halo(outline),
+      halo(outline, importing ? "#99f6e4" : lavender),
       outline,
       scatter("select country cap", x, y, {
         mode: "markers",
-        marker: { size: 14, color: "rgba(128,80,255,0.01)" },
+        marker: { size: 14, color: importing ? "rgba(20,184,166,0.01)" : "rgba(128,80,255,0.01)" },
         customdata: x.map(() => ['cap:PL']),
         text: x.map(
           () =>
