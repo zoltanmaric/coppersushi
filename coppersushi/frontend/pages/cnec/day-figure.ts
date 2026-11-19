@@ -298,6 +298,7 @@ export function dayFigure(
       y.push(ring.at(-1)![1], null);
     }
     const importing = cap.direction === "import";
+    const capTint = importing ? "#99f6e4" : lavender;
     const outline = line(
       "binding country cap",
       x,
@@ -307,7 +308,7 @@ export function dayFigure(
       importing ? "#14b8a6" : purple,
     );
     traces.push(
-      halo(outline, importing ? "#99f6e4" : lavender),
+      halo(outline, capTint),
       outline,
       scatter("select country cap", x, y, {
         mode: "markers",
@@ -318,7 +319,7 @@ export function dayFigure(
             `${cap.name}<br>Net ${cap.direction} limit: ${number(cap.capacity, 0)} MW<br>Cap shadow price: ${number(cap.shadow_price)} €/MWh${cap.direction === "export" ? reserveTooltip(interval) : ""}`,
         ),
         hoverinfo: "text",
-        hoverlabel,
+        hoverlabel: { ...hoverlabel, bgcolor: capTint, bordercolor: capTint },
         meta: { role: "country-cap" },
       }),
     );

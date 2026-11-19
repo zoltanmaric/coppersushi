@@ -47,6 +47,9 @@ test.each(['import', 'export'] as const)('Polish %s limit colors the outline, ha
     line: {color: importing ? '#14b8a6' : '#a72af5', width: 4},
     meta: {ambient: importing ? 'teal' : true},
   });
+  expect(figure.data.find(t => t.name === 'select country cap')?.hoverlabel).toMatchObject({
+    bgcolor: importing ? '#99f6e4' : '#d4a3ff',
+  });
   expect(figure.data.find(t => t.name === 'binding country cap glow')).toMatchObject({
     line: {color: importing ? '#99f6e4' : '#d4a3ff', width: 12}, opacity: 0.3,
   });
