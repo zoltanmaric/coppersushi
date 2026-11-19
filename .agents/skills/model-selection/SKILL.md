@@ -70,4 +70,5 @@ task, effective model, concurrency and quota reason.
 
 Before escalating, distinguish missing context or tool failure from a capability
 gap. Give concrete feedback and escalate only when the remaining task needs it.
-The lead integrates and verifies delegated results. Keep reviewer context independent.
+The lead integrates and verifies delegated results. Give independent reviewers a fresh context and a self-contained brief, even
+when they inherit the parent model. In Codex, set `fork_turns: "none"` at launch.
