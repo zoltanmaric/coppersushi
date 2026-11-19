@@ -9,7 +9,6 @@ body:has(.export-cap-page){height:auto;min-height:100dvh}.export-cap-page{max-wi
 
 .export-cap-page button{font:inherit}.intervals-embed .study-explorer{margin-top:0}
 
-.study-no-shortfall{fill:rgb(214,145,193)}
 .study-bar-labels>span:nth-child(2):not(:last-child){text-align:center}
 .study-import-note{font-size:14px;line-height:1.5;color:#ccc;margin:12px 0}
 .study-key{display:inline-block;width:.72em;height:.72em;border-radius:2px}

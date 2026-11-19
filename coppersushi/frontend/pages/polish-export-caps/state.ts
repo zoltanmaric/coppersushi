@@ -15,7 +15,7 @@ export type NumericFilters = Partial<Record<NumericKey,{min?:number;max?:number}
 export interface ViewState {selection: Selection; camera?: MapCamera; sort: SortKey; order: 'asc'|'desc'; from?:string; to?:string; filters:NumericFilters}
 export function valueOf(row:BindingInterval,key:NumericKey):number {
   return key==='shortfall'?shortfall(row):key==='required'||key==='procured'?row[key].mw:row[key];
-} 
+}
 
 export function readState(search: string, initial: BindingInterval): ViewState {
   const params = new URLSearchParams(search);
