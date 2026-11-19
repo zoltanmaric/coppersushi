@@ -6,11 +6,10 @@ const RING_OFFSET = 4;
 
 
 /** Decorative energy only; all geographic projection belongs to the native map. */
-function SingleConstraintOverlay({model, project}: {model: {ambient: LngLat[][];selection:SelectionEffect|null}; project: ((point: LngLat) => [number, number]) | null}) {
+function SingleConstraintOverlay({model, project}: {model: {ambient: OverlayModel["ambient"];selection:SelectionEffect|null}; project: ((point: LngLat) => [number, number]) | null}) {
   const filterId = `energy-${useId().replace(/:/g, "")}`;
   const selection = project ? model.selection : null;
   const transformer = selection?.kind === 'transformer';
-  const ambient = project ? model.ambient.map(points => points.map(point => project(point).join(',')).join(' ')) : [];
   let bolts: {main: string; fork: string}[] = [];
   let blades: string[] = [];
   let maskCenter: [number, number] | null = null;
@@ -58,7 +57,9 @@ function SingleConstraintOverlay({model, project}: {model: {ambient: LngLat[][];
     <defs><filter id={filterId} x="-100%" y="-100%" width="300%" height="300%" colorInterpolationFilters="sRGB">
       <feGaussianBlur stdDeviation="3.5"/>
     </filter></defs>
-    {ambient.map((path, i) => <polyline key={i} points={path} className="cnec-ambient-glow"/>)}
+    {project && model.ambient.map(({points, teal}, i) => <polyline key={i}
+      points={points.map(point => project(point).join(',')).join(' ')}
+      className={teal ? "cnec-ambient-glow cnec-ambient-teal" : "cnec-ambient-glow"}/>)}
     <defs><mask id={`${filterId}-glyph`}>
       <rect width="100%" height="100%" fill="white"/>
       {maskCenter && <circle cx={maskCenter[0]} cy={maskCenter[1]} r="6" fill="black"/>}

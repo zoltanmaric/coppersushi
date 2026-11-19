@@ -75,6 +75,7 @@ a {color:#00bc8c}
 
 .cnec-ambient-glow {animation:cnec-ambient-breathe 4s ease-in-out infinite}
 .cnec-ambient-glow {stroke:#e0baff;stroke-width:6;filter:blur(2px)}
+.cnec-ambient-teal {stroke:#b0fff2}
 @keyframes cnec-ambient-breathe {0%,100% {opacity:.25} 50% {opacity:.45}}
 @media (prefers-reduced-motion:reduce) {.cnec-ambient-glow {animation:none;opacity:.35}}
 
