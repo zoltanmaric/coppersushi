@@ -1,4 +1,4 @@
-"""Record a quota tool response with `python3 .agents/quota.py record` on JSON stdin.
+"""Record a quota tool response with `python .agents/skills/model-selection/scripts/quota.py record` on JSON stdin.
 
 The default log is ~/.local/state/agent-quota/usage.csv. Save changes in window or
 availability, decreases from the saved value, increases of at least one percentage
