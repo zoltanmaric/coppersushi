@@ -33,7 +33,7 @@ export function MapHelp({page='cnec'}:{page?:'cnec'|'powerflow'}) {
         <a href="https://121gigawatts.org/copper-sushi-power-flow-european-grid/" target="_blank" rel="noopener noreferrer">Read the full post: Power Flow 🍣</a>
         </> : <>
         <p>Country colours show day-ahead electricity prices for the selected time.</p>
-        <p>Purple highlights mark grid constraints that limit access to cheaper power.</p>
+        <p>Purple highlights mark grid constraints that limit access to cheaper power. Poland’s border glows teal when its net import limit binds and purple when its net export limit binds.</p>
         <p>Click a highlighted element to see how much it contributes to price differences between countries and your selected reference country.</p>
         <p>Click a country’s name on the map to compare prices against that country.</p>
         <a href="https://121gigawatts.org/critical-elements/" target="_blank" rel="noopener noreferrer">Read the full post: Critical Elements ⚡️</a>
