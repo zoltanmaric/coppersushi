@@ -95,6 +95,17 @@
       "additionalProperties": false,
       "description": "Observed population, with missing evidence kept outside both binding classes.",
       "properties": {
+        "imports": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImportBreakdown"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "expected": {
           "exclusiveMinimum": 0,
           "title": "Expected",
@@ -141,6 +152,34 @@
         "no_shortfall_binding"
       ],
       "title": "Coverage",
+      "type": "object"
+    },
+    "ImportBreakdown": {
+      "additionalProperties": false,
+      "description": "Confirmed import quarters compared against required downward products.",
+      "properties": {
+        "shortfall": {
+          "minimum": 0,
+          "title": "Shortfall",
+          "type": "integer"
+        },
+        "no_shortfall": {
+          "minimum": 0,
+          "title": "No Shortfall",
+          "type": "integer"
+        },
+        "unconfirmed": {
+          "minimum": 0,
+          "title": "Unconfirmed",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "shortfall",
+        "no_shortfall",
+        "unconfirmed"
+      ],
+      "title": "ImportBreakdown",
       "type": "object"
     },
     "SourceArtifact": {

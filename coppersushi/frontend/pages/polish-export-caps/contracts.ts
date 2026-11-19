@@ -8,6 +8,9 @@
 export type Version = 1;
 export type Start = string;
 export type End = string;
+export type Shortfall = number;
+export type NoShortfall = number;
+export type Unconfirmed = number;
 export type Expected = number;
 export type Observed = number;
 export type Unknown = number;
@@ -54,6 +57,7 @@ export interface Investigation {
  * Observed population, with missing evidence kept outside both binding classes.
  */
 export interface Coverage {
+  imports?: ImportBreakdown | null;
   expected: Expected;
   observed: Observed;
   unknown: Unknown;
@@ -61,6 +65,14 @@ export interface Coverage {
   nonbinding: Nonbinding;
   shortfall_binding: ShortfallBinding;
   no_shortfall_binding: NoShortfallBinding;
+}
+/**
+ * Confirmed import quarters compared against required downward products.
+ */
+export interface ImportBreakdown {
+  shortfall: Shortfall;
+  no_shortfall: NoShortfall;
+  unconfirmed: Unconfirmed;
 }
 /**
  * One inferred binding quarter and its independently timed reserve observations.

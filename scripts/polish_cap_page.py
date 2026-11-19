@@ -17,7 +17,7 @@ from urllib.request import urlopen
 from pydantic import BaseModel, AwareDatetime, FiniteFloat, field_validator
 
 from coppersushi.pipelines.cnec.attribution import POSITION_TOLERANCE_MW
-from coppersushi.pipelines.cnec.investigation import BindingInterval, Coverage, Investigation, SourceArtifact, StudyManifest
+from coppersushi.pipelines.cnec.investigation import BindingInterval, Coverage, ImportBreakdown, Investigation, SourceArtifact, StudyManifest
 from coppersushi.pipelines.cnec.models import DayManifest, DayMetadata, MarketInterval
 from coppersushi.pipelines.market_day import MarketDay, MARKET_TZ
 
@@ -26,6 +26,7 @@ BASE='https://coppersushi.121gigawatts.org/data/cnec/v3'
 class Observation(BaseModel):
     """Validated baseline row; extra neighbouring-price research columns are unused."""
     interval: AwareDatetime
+    import_limit: FiniteFloat
     export_limit: FiniteFloat
     polish_position: FiniteFloat
     polish_alt: FiniteFloat | None
@@ -71,15 +72,47 @@ def eligible(day: date, required: float, purchased: float, required_at: datetime
         raise ValueError(f'Invalid reserve evidence for {day}')
 
 
-def build(baseline: Path, extension: Path, directory: Path) -> Investigation:
-    start,end=date(2026,8,14),date(2026,11,17)
+def downward_products(records, fields, day):
+    """Keep the latest eligible publication per UTC hour, independently per endpoint."""
+    from coppersushi.pipelines.cnec.reserves import ReserveRecord
+    cutoff = datetime.combine(day - timedelta(days=1), time(10, 30), MARKET_TZ)
+    versions = {}
+    for row in records:
+        if row['business_date'] != str(day):
+            raise ValueError('Wrong PSE delivery day')
+        record = ReserveRecord(end=datetime.fromisoformat(row['dtime_utc']).replace(tzinfo=UTC),
+                               published=datetime.fromisoformat(row['publication_ts_utc']).replace(tzinfo=UTC),
+                               products=tuple(row[f] for f in fields))
+        if record.published < cutoff:
+            versions.setdefault(record.end, {}).setdefault(record.published, set()).add(record.products)
+    result = {}
+    for end, by_publication in versions.items():
+        latest = by_publication[max(by_publication)]
+        if len(latest) != 1:
+            raise ValueError(f'Ambiguous downward reserve observation at {end}')
+        result[end] = next(iter(latest))
+    return result
+
+
+def build(baseline: Path, extension: Path, directory: Path, end: date = date(2026, 11, 17)) -> Investigation:
+    start = date(2026, 8, 14)
+    frozen_end = date(2026, 11, 17)
+    if end < frozen_end:
+        raise ValueError('Study must include the original November 17 window')
     old=[Observation.model_validate(r) for r in csv.DictReader(baseline.open())]
     expected_old={t.to_pydatetime() for d in range(92) for t in MarketDay.on(start+timedelta(days=d)).market_time_units()}
     if len(old)!=len(expected_old) or {r.interval for r in old}!=expected_old:
         raise ValueError('Baseline must contain exactly the 8,836 distinct investigated MTUs')
     baseline_by_time={r.interval:r for r in old}
     binding_by_day:dict[date,list[tuple[int,Observation]]]={}
+    import_times = []
+    unknown_imports = 0
     for r in old:
+        if abs(r.polish_position + r.import_limit) <= POSITION_TOLERANCE_MW:
+            if r.polish_alt is None:
+                unknown_imports += 1
+            elif r.PL - r.polish_alt > 0.01:
+                import_times.append(r.interval)
         day=r.interval.astimezone(MARKET_TZ).date()
         eligible(day,r.required_mw,r.procured_mw,r.required_published,r.procured_published)
         inferred=r.polish_alt is not None and abs(r.polish_position-r.export_limit)<=POSITION_TOLERANCE_MW and r.polish_alt-r.PL>0.01
@@ -98,7 +131,7 @@ def build(baseline: Path, extension: Path, directory: Path) -> Investigation:
     def one_day(day:date):
         # Preserve the exact extension generations used by the investigated prototype.
         src=extension/str(day)
-        if day>=date(2026,11,13):
+        if date(2026,11,13)<=day<=frozen_end:
             manifest=DayManifest.model_validate_json((src/'manifest.json').read_text())
         else:
             manifest=DayManifest.model_validate(cached_json(maps/str(day)/'manifest.json',f'{BASE}/{day}/manifest.json'))
@@ -107,13 +140,14 @@ def build(baseline: Path, extension: Path, directory: Path) -> Investigation:
         folder.mkdir(parents=True,exist_ok=True)
         def part(name):
             target=folder/f'{name}.json'
-            if day>=date(2026,11,13) and not target.exists():
+            if date(2026,11,13)<=day<=frozen_end and not target.exists():
                 target.write_bytes((src/f'{name}.json').read_bytes())
             return cached_json(target,f'{BASE}/{day}/{manifest.generation}/{name}.json')
         meta=DayMetadata.model_validate(part('metadata'))
         times=MarketDay.on(day).market_time_units()
         if meta.day!=day or len(meta.labels)!=len(times):raise ValueError(f'Invalid calendar: {day}')
         wanted=list(range(len(times))) if day>=date(2026,11,13) else [i for i,_ in binding_by_day.get(day,[])]
+        import_extension = []
         selected=[]; compared=0; extension_count=0
         for i in wanted:
             x=MarketInterval.model_validate(part(i))
@@ -136,21 +170,26 @@ def build(baseline: Path, extension: Path, directory: Path) -> Investigation:
                 if caps and (abs(caps[0].shadow_price-(old.polish_alt-old.PL))>1e-6 or caps[0].capacity!=old.export_limit or x.prices['PL']!=old.PL):
                     raise ValueError(f'Baseline/map market mismatch {day}/{i}')
                 compared+=day==date(2026,11,13)
-            else:extension_count+=1
+            else:
+                extension_count += 1
+                if any(cap.direction == 'import' and cap.shadow_price > 0.01 for cap in x.caps):
+                    import_extension.append(t)
             if caps:
                 selected.append(BindingInterval(utc=t,date=day,index=i,shadow=caps[0].shadow_price,
                                                  required=r,procured=p,cap=caps[0].capacity,price=x.prices['PL']))
         (maps/str(day)/'manifest.json').write_text(manifest.model_dump_json())
-        return day,manifest.generation,selected,compared,extension_count
-    days=[start+timedelta(days=i) for i in range(96)]
+        return day,manifest.generation,selected,compared,extension_count,import_extension
+    days=[start+timedelta(days=i) for i in range((end-start).days+1)]
     extension_count=0
     with ThreadPoolExecutor(max_workers=8) as pool:
         futures={pool.submit(one_day,d):d for d in days}
         for future in as_completed(futures):
-            day,generation,selected,compared,count=future.result()
+            day,generation,selected,compared,count,imports=future.result()
+            import_times.extend(imports)
             generations[str(day)]=generation;rows.extend(selected);overlap+=compared;extension_count+=count
-            print(f'{len(generations)}/96 {day}: {len(selected)} binding map rows reconciled',flush=True)
-    if overlap!=96 or extension_count!=384:raise ValueError('Incomplete extension or overlap')
+            print(f'{len(generations)}/{len(days)} {day}: {len(selected)} binding map rows reconciled',flush=True)
+    expected=sum(len(MarketDay.on(day).market_time_units()) for day in days)
+    if overlap!=96 or extension_count!=expected-len(old):raise ValueError('Incomplete extension or overlap')
     for day in days:
         folder=maps/str(day)/generations[str(day)]
         for file in sorted(folder.glob('*.json')):
@@ -164,9 +203,36 @@ def build(baseline: Path, extension: Path, directory: Path) -> Investigation:
                                           url=f'{BASE}/{day}/{generations[str(day)]}/{file.name}'))
     rows.sort(key=lambda r:r.utc)
     shortfall=sum(r.required.mw>r.procured.mw for r in rows)
-    coverage=Coverage(expected=9220,observed=len(old)+extension_count,unknown=0,binding=len(rows),nonbinding=9220-len(rows),
+    down_short = 0
+    cache = directory / 'pse-reserve-inputs'
+    cache.mkdir(exist_ok=True)
+    import_days = sorted({t.astimezone(MARKET_TZ).date() for t in import_times})
+    from scripts.polish_export_caps import pse
+    for day in import_days:
+        totals = []
+        for endpoint, fields in [('wmb', ('fcrd', 'afrrd', 'frrd', 'rrd')),
+                                 ('mbp-tp', ('fcr_d', 'afrr_d', 'mfrrd_d', 'rr_d'))]:
+            records = pse(endpoint, str(day), cache)
+            path = cache / f'{day}-{endpoint}.json'
+            receipt = json.loads(path.with_suffix('.json.retrieval.json').read_text())
+            if hashlib.sha256(path.read_bytes()).hexdigest() != receipt['sha256']:
+                raise ValueError('Downward reserve source digest mismatch')
+            sources.append(SourceArtifact(label=f'{day} downward {endpoint}', sha256=receipt['sha256'],
+                                          retrieved_at=receipt['completed_at'], url=receipt['urls'][0]))
+            totals.append(downward_products(records, fields, day))
+        for t in import_times:
+            if t.astimezone(MARKET_TZ).date() != day:
+                continue
+            hour_end = t.replace(minute=0) + timedelta(hours=1)
+            req, bought = (source[hour_end] for source in totals)
+            if any(v is None for v in req) or any(v is None for v in bought[:3]) or req[3] != 0:
+                raise ValueError(f'Incomplete downward three-product comparison at {t}')
+            down_short += sum(req[:3]) > sum(bought[:3])
+    imports = ImportBreakdown(shortfall=down_short, no_shortfall=len(import_times)-down_short, unconfirmed=unknown_imports)
+    coverage=Coverage(imports=imports,expected=expected,observed=len(old)+extension_count,unknown=0,binding=len(rows),nonbinding=expected-len(rows),
                       shortfall_binding=shortfall,no_shortfall_binding=len(rows)-shortfall)
-    if (len(rows),shortfall)!=(2359,197):raise ValueError('Study counts differ from the investigated window')
+    frozen_rows=[row for row in rows if row.date<=frozen_end]
+    if (len(frozen_rows),sum(row.required.mw>row.procured.mw for row in frozen_rows))!=(2359,197):raise ValueError('Study counts differ from the investigated window')
     return Investigation(start=start,end=end,coverage=coverage,rows=rows,generations=dict(sorted(generations.items())),sources=sources,overlap_verified=overlap)
 
 
@@ -206,6 +272,7 @@ def main():
     commands=parser.add_subparsers(dest='command',required=True)
     builder=commands.add_parser('build')
     builder.add_argument('--baseline',type=Path,required=True)
+    builder.add_argument('--end',type=date.fromisoformat,default=date(2026,11,17))
     builder.add_argument('--extension',type=Path,required=True)
     builder.add_argument('--directory',type=Path,required=True)
     publisher=commands.add_parser('publish')
@@ -215,7 +282,7 @@ def main():
     if args.command=='publish':
         publish(args.directory,args.bucket)
     else:
-        study=build(args.baseline,args.extension,args.directory)
+        study=build(args.baseline,args.extension,args.directory,args.end)
         generation=write_study(study,args.directory)
         print(f'COMPLETE {generation}: {study.coverage.model_dump()}',flush=True)
 

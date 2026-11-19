@@ -616,3 +616,11 @@ Quota history records meaningful usage or state changes and hourly observations 
 
 The [app](copper-sushi-app.md#export-cap-investigation) records the agreed static-page
 composition, separate embeds, shared map/table selection and fixed graphic denominator.
+
+## [2026-11-19] query | Polish export shadow price
+
+Reconstructed the [20 November cap effect](polish-export-cap-investigation.md#november-20) from three Core border spreads and checked reserve procurement.
+
+## [2026-11-19] ingest | Downward procurement during binding imports
+
+[Directional PSE evidence](polish-balancing-capacity-procurement.md#downward) establishes the shortfall split for confirmed import-cap quarters.

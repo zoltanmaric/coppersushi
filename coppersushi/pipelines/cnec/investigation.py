@@ -30,9 +30,18 @@ class BindingInterval(BaseModel):
         return self
 
 
+class ImportBreakdown(BaseModel):
+    """Confirmed import quarters compared against required downward products."""
+    model_config = ConfigDict(extra='forbid')
+    shortfall: int = Field(ge=0)
+    no_shortfall: int = Field(ge=0)
+    unconfirmed: int = Field(ge=0)
+
+
 class Coverage(BaseModel):
     """Observed population, with missing evidence kept outside both binding classes."""
     model_config = ConfigDict(extra='forbid')
+    imports: ImportBreakdown | None = None
     expected: int = Field(gt=0)
     observed: int = Field(ge=0)
     unknown: int = Field(ge=0)
@@ -71,6 +80,8 @@ class Investigation(BaseModel):
         expected=sum(len(MarketDay.on(d).market_time_units()) for d in days)
         if c.expected!=expected or c.observed!=expected or c.unknown or c.binding+c.nonbinding!=expected:
             raise ValueError('Study coverage is incomplete; do not publish a complete-population graphic')
+        if c.imports and sum(c.imports.model_dump().values()) > c.nonbinding:
+            raise ValueError('Import counts exceed quarters without a binding export cap')
         if set(self.generations)!={str(d) for d in days}:
             raise ValueError('Map coverage does not cover every study day')
         if any(len(g)!=24 or any(c not in '0123456789abcdef' for c in g) for g in self.generations.values()):

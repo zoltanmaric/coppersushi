@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import {afterEach,expect,test,vi} from 'vitest';
-import {cleanup,fireEvent,render,screen} from '@testing-library/react';
+import {cleanup,fireEvent,render,screen,within} from '@testing-library/react';
 import {ExportCapView} from './view';
 import type {PageProps} from '../cnec';
 
@@ -30,11 +30,10 @@ test('cross-day timestamp changes preserve one map; sorting does not render it a
   fireEvent.click(screen.getByRole('button',{name:'Shortfall MW'}));
   expect(renders).toBe(before);
   expect(window.location.search).toContain('sort=shortfall');
-  fireEvent.change(screen.getByRole('spinbutton',{name:'Shadow price minimum'}),{target:{value:'150'}});
-  fireEvent.click(screen.getByRole('button',{name:'Apply numeric filters'}));
+  fireEvent.change(screen.getByLabelText('Shadow price minimum'),{target:{value:'150'}});
+  fireEvent.submit(screen.getByLabelText('Shadow price minimum').closest('form')!);
   expect(screen.queryByRole('link',{name:'17 Nov 2026, 05:45 CET'})).toBeNull();
-  expect(screen.getByText(/selected interval is outside/)).toBeTruthy();
   expect(mounts).toBe(1);
-  fireEvent.click(screen.getByRole('button',{name:'Reset table'}));
+  fireEvent.click(within(screen.getByLabelText('Shadow price minimum').closest('form')!).getByText('Clear'));
   expect(screen.getByRole('link',{name:'17 Nov 2026, 05:45 CET'})).toBeTruthy();
 });

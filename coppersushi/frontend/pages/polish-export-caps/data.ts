@@ -17,6 +17,8 @@ export function parseStudy(value:unknown):Investigation {
   const c=value.coverage,seen=new Set<string>();
   if(c.unknown || c.expected!==c.observed || c.binding+c.nonbinding!==c.observed || c.binding!==value.rows.length || c.shortfall_binding+c.no_shortfall_binding!==c.binding)
     throw new Error('Study population is incomplete or inconsistent');
+  if(c.imports && c.imports.shortfall+c.imports.no_shortfall+c.imports.unconfirmed>c.nonbinding)
+    throw new Error('Import counts exceed the available quarters');
   for(const row of value.rows){
     const instant=new Date(row.utc),key=instant.toISOString();
     if(seen.has(key)||dayFormat.format(instant)!==row.date||row.date<value.start||row.date>value.end||!value.generations[row.date])

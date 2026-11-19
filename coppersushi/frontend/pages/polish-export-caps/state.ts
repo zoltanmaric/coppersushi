@@ -7,7 +7,7 @@ export const columns = [
   {key:'utc',label:'Date & time',unit:''}, {key:'shadow',label:'Shadow price',unit:'€/MWh'},
   {key:'required',label:'Required reserve',unit:'MW'}, {key:'procured',label:'Procured reserve',unit:'MW'},
   {key:'shortfall',label:'Shortfall',unit:'MW'}, {key:'cap',label:'Export cap',unit:'MW'},
-  {key:'price',label:'Polish day-ahead price',unit:'€/MWh'},
+  {key:'price',label:'PL DA price',unit:'€/MWh'},
 ] as const;
 export type SortKey = typeof columns[number]['key'];
 export type NumericKey = Exclude<SortKey,'utc'>;
