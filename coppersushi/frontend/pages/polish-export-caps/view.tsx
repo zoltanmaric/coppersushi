@@ -38,7 +38,7 @@ function Investigation({study,state,...config}:Props & {state:ViewState}){
   const camera=useMemo(()=>state.camera,[state.camera?.lat,state.camera?.lon,state.camera?.zoom]);
   const rows=useMemo(()=>sortRows(filterRows(study.rows,state),state.sort,state.order),[study,state.from,state.to,state.filters,state.sort,state.order]);
   const active=study.rows.find(row=>row.date===day&&row.index===interval);
-  const embed=document.body.dataset.embed === 'true';
+  const embed=location.pathname.startsWith('/embed/');
   return <article className={`export-cap-page${embed?' intervals-embed':''}`}>
     {!embed&&<><Breakdown study={study}/><Sources study={study}/></>}
     <div className="study-explorer">
@@ -47,7 +47,7 @@ function Investigation({study,state,...config}:Props & {state:ViewState}){
     </section>
     <section className="study-table-section" aria-label="Binding intervals">
       <p className="export-cap-note" role="status">{rows.length < study.rows.length && `${number.format(rows.length)} of `}{number.format(study.rows.length)} binding intervals{active && !rows.includes(active) && '. The selected interval on the map is outside these filters.'}</p>
-        <div className="export-cap-table" tabIndex={0} aria-label="Binding intervals; scroll horizontally for all columns"><table>
+        <div className="export-cap-table" tabIndex={0} aria-label="Binding intervals; scroll for more rows and columns"><table>
           <thead><tr>{columns.map(c=><th key={c.key} scope="col" aria-sort={state.sort===c.key?(state.order==='asc'?'ascending':'descending'):'none'}>
             <div className="study-column-heading"><button type="button" onClick={()=>change({...state,sort:c.key,order:state.sort===c.key&&state.order==='desc'?'asc':'desc'})}>{c.label}<span>{c.unit}{state.sort===c.key?(state.order==='desc'?' ↓':' ↑'):''}</span></button>
             {c.key==='utc'
