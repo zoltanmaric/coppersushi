@@ -2,6 +2,7 @@
 from datetime import date
 from typing import Literal, Annotated
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic.json_schema import SkipJsonSchema
 from coppersushi.pipelines.data_model.market import CoreZone
 
 Coordinates = Annotated[list[float], Field(min_length=2, max_length=2)]
@@ -71,7 +72,7 @@ class DayMetadata(Contract):
 
 class DayBundle(DayMetadata):
     """Producer-side complete day; browser delivery uses separate interval objects."""
-    awaiting_polish_price: bool = Field(default=False, exclude=True)
+    awaiting_polish_price: SkipJsonSchema[bool] = Field(default=False, exclude=True)
     intervals: list[MarketInterval]
 
 
