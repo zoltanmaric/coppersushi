@@ -2,7 +2,7 @@
     "name": "121gigawatts",
     "description": "Custom Ghost theme for 121gigawatts.org, based on Casper",
     "demo": "https://121gigawatts.org",
-    "version": "3.0.14",
+    "version": "3.0.15",
     "engines": {
         "ghost": ">=6.0.0"
     },

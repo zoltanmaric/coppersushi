@@ -47,3 +47,6 @@ hosting/private/
 crash.log
 
 .venv/
+
+/assets/pdfjs/
+/assets/.pdfjs-*/

@@ -73,6 +73,26 @@ For sizes that time out, generate animated variants offline and install them at
 ownership and permissions. Keep originals, avoid enlargement, and verify animation
 timing. Check that the rendered URLs return WebP directly without a slow redirect.
 
+## PDF embeds
+
+The theme ZIP includes Mozilla's PDF.js viewer at `/assets/pdfjs/web/viewer.html`.
+Packaging downloads the pinned upstream release and checks its SHA-256.
+The build needs `curl` and `unzip`.
+
+Upload the PDF as a Ghost file and use its same-origin path for the viewer's
+`file` parameter. Use a Ghost HTML card with a titled iframe. URL-encode the
+file path and search text, and write `&amp;` between parameters in the HTML.
+
+```html
+<iframe
+  src="/assets/pdfjs/web/viewer.html?file=%2Fcontent%2Ffiles%2Fexample.pdf#page=54&amp;phrase=true&amp;search=example%20phrase"
+  title="Source PDF, highlighted passage on page 54"
+  width="100%"
+  height="720"
+  loading="lazy">
+</iframe>
+```
+
 ## Hosting
 
 Follow the [hosting runbook](hosting/README.md) for private inputs, server setup,
