@@ -7,7 +7,17 @@ import {Breakdown} from './breakdown';
 import {Sources} from './sources';
 import './style.css';
 
-const root=createRoot(document.getElementById('app-root')!);
+const container = document.getElementById('app-root')!;
+if (document.body.dataset.embed === 'true' && window.parent !== window) {
+  const reportHeight = () => window.parent.postMessage(
+    {type: 'polish-study-height', height: Math.ceil(container.getBoundingClientRect().height)}, '*'
+  );
+  new ResizeObserver(reportHeight).observe(container);
+  window.addEventListener('message', event => {
+    if (event.source === window.parent && event.data === 'request-polish-study-height') reportHeight();
+  });
+}
+const root=createRoot(container);
 root.render(<div role="status">Loading investigation…</div>);
 async function start(){
   if(window.location.pathname.replace(/\/$/,'').endsWith('/breakdown')){

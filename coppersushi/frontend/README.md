@@ -15,6 +15,7 @@ flowchart TB
   powerflow --> shared["Shared map UI"]
   cnec --> shared
   study["Fixed study JSON"] --> investigation["Polish export-cap page"]
+  investigation -->|Content height| article["Embedding article"]
   investigation -->|Pinned day generation and selection| cnec
   powerflow -->|Page views and performance| analytics["Cloudflare Web Analytics"]
   cnec -->|Page views and performance| analytics
@@ -67,3 +68,8 @@ sort order, interval selection and camera are stored in the URL. Filtering never
 changes the graphic population or removes the map selection. The study pins its
 validated CNEC generations so later daily corrections cannot silently change its
 evidence. See the [publication runbook](../infra/lambda/README.md#fixed-export-cap-study).
+
+For an article that follows the height of either Polish study embed, include
+`<script src="https://coppersushi.121gigawatts.org/assets/polish-study-embed.js"></script>`
+immediately after its iframe. Set an initial iframe height for loading. The embed
+reports content height as the disclosure opens or closes and the layout wraps.

@@ -38,7 +38,7 @@ function Investigation({study,state,...config}:Props & {state:ViewState}){
   const camera=useMemo(()=>state.camera,[state.camera?.lat,state.camera?.lon,state.camera?.zoom]);
   const rows=useMemo(()=>sortRows(filterRows(study.rows,state),state.sort,state.order),[study,state.from,state.to,state.filters,state.sort,state.order]);
   const active=study.rows.find(row=>row.date===day&&row.index===interval);
-  const embed=location.pathname.startsWith('/embed/');
+  const embed=document.body.dataset.embed === 'true';
   return <article className={`export-cap-page${embed?' intervals-embed':''}`}>
     {!embed&&<><Breakdown study={study}/><Sources study={study}/></>}
     <div className="study-explorer">
