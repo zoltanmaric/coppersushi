@@ -168,3 +168,36 @@ def test_http_boundary_rejects_missing_price_or_timezone(monkeypatch, field, val
     with pytest.raises(ValidationError) as failure:
         electricity_maps._get("AT", MarketDay.on("2024-08-29"), "secret")
     assert failure.value.errors()[0]["loc"] == ("data", 0, field)
+
+
+@pytest.mark.parametrize("failure", [None, "conflict", "disconnected"])
+def test_fallback_uses_signed_spreads_and_requires_consistent_anchors(monkeypatch, failure):
+    from coppersushi.pipelines.cnec.spread_prices import SOURCE
+    payload = quarter_hourly_day()
+
+    def get(zone, day, token):
+        if zone == "AT":
+            return payload
+        raise market.IncompletePrices("No data for zone")
+
+    def spreads(endpoint, start, end):
+        assert endpoint == "priceSpread"
+        rows = [dict(dateTimeUtc=row.datetime, border_HU_AT=2, border_HU_RO=-3)
+                for row in payload.data]
+        if failure == "conflict":
+            rows[-1]["border_AT_RO"] = 1
+        if failure == "disconnected":
+            rows[-1]["border_HU_RO"] = None
+        return rows
+
+    monkeypatch.setattr(electricity_maps, "_get", get)
+    monkeypatch.setattr(electricity_maps.jao, "_get", spreads)
+    zones = ("AT", "HU", "RO")
+    if failure:
+        with pytest.raises(market.IncompletePrices):
+            electricity_maps.fetch_day("2026-09-10", zones, token="secret")
+        return
+    prices = electricity_maps.fetch_day("2026-09-10", zones, token="secret")
+    assert set(prices[prices.zone.ne("AT")].source) == {SOURCE}
+    assert prices[prices.zone.eq("AT")].source.tolist() == [r.source for r in payload.data]
+    assert prices[prices.zone.eq("RO")].price.tolist() == pytest.approx([r.value - 5 for r in payload.data])
