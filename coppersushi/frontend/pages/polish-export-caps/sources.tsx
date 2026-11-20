@@ -2,7 +2,7 @@ import React from 'react';
 import type {Investigation} from './data';
 
 const jaoDay = '?FromUtc=2026-11-12T23:00:00.000Z&ToUtc=2026-11-13T23:00:00.000Z&Take=100000';
-const pseDay = '?%24filter=business_date%20eq%20%272026-11-13%27&%24first=1000';
+const pseDay = '?dateFrom=2026-11-13&dateTo=2026-11-13';
 const dayMonth = new Intl.DateTimeFormat('en-GB', {day: 'numeric', month: 'long', timeZone: 'UTC'});
 
 export function Sources({study}: {study: Investigation}) {
@@ -22,8 +22,8 @@ export function Sources({study}: {study: Investigation}) {
     <table>
       <thead><tr>
         <th scope="col">Reserve</th>
-        <th scope="col"><a href={'https://api.raporty.pse.pl/api/wmb' + pseDay}>Required (<code>wmb</code>)</a></th>
-        <th scope="col"><a href={'https://api.raporty.pse.pl/api/mbp-tp' + pseDay}>Bought (<code>mbp-tp</code>)</a></th>
+        <th scope="col"><a href={'https://raporty.pse.pl/report/wmb' + pseDay}>Required (<code>wmb</code>)</a></th>
+        <th scope="col"><a href={'https://raporty.pse.pl/report/mbp-tp' + pseDay}>Bought (<code>mbp-tp</code>)</a></th>
       </tr></thead>
       <tbody>
         <tr><th scope="row">Upward</th><td><code>fcrg + afrrg + frrg + rrg</code></td><td><code>fcr_g + afrr_g + mfrrd_g + rr_g</code></td></tr>
