@@ -75,11 +75,12 @@ def build(day: Day, geometries: dict[int, DataFrame[MappedCnecElements]]) -> Day
                 geometry=key, ptdfs=dict(zip(ptdfs.zone, ptdfs.ptdf)))))
         context = None if day.context is None else day.context[day.context.interval.eq(timestamp)]
         alpha = finite(context.alpha.iloc[0]) if context is not None and len(context) == 1 else None
+        derived_zones: list[str] = (view.prices.loc[view.prices.source.eq(DERIVED_PRICE_SOURCE), "zone"].tolist()
+                         if "source" in view.prices else [])
         intervals.append(MarketInterval(index=index, label=timestamp.tz_convert(MARKET_TZ).strftime('%a %d %b %Y · %H:%M %Z'),
             prices=dict(zip(view.prices.zone, view.prices.price)), constraints=rows, alpha=alpha,
             caps=[CountryCap.model_validate({k: getattr(r, k) for k in CountryCap.model_fields}) for r in view.caps.itertuples()],
-            notes=[*view.notes, *(derived_price_note(r.zone) for r in view.prices.itertuples()
-                                  if getattr(r, "source", None) == DERIVED_PRICE_SOURCE)]))
+            notes=[*view.notes, *(derived_price_note(zone) for zone in derived_zones)]))
     return DayBundle(day=day.market_day.date, labels=[t.tz_convert(MARKET_TZ).strftime('%a %d %b %Y · %H:%M %Z') for t in times], zones=zones, elements=elements, intervals=intervals,
                      price_range=list(cnec_market.daily_price_range(day.prices)))
 

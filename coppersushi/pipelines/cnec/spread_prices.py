@@ -46,7 +46,7 @@ def recover(prices: DataFrame[DayAheadPrices], times: pd.DatetimeIndex, zones: t
     observed_at = pd.Timestamp.now(tz="UTC")
     for time in times:
         direct = prices[prices.interval.eq(time)]
-        known = {r.zone: Decimal(str(r.price)) for r in direct.itertuples()}
+        known = {zone: Decimal(str(price)) for zone, price in zip(direct.zone, direct.price)}
         missing = set(zones).difference(known)
         if not missing:
             continue
