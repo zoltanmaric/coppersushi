@@ -19,7 +19,7 @@ from coppersushi.pipelines.market_day import MarketDay
 
 POLISH_ALTERNATIVE_PUBLICATION_START = date(2026, 5, 6)
 
-def load_day(day: MarketDay, refresh: bool = False) -> DataFrame[AttributionContext]:
+def load_day(day: MarketDay, refresh: bool = False, *, require_valid_rows: bool = False) -> DataFrame[AttributionContext]:
     """Cache complete inputs; empty feeds leave gaps, while loading and validation errors raise."""
     day_key = day.date.isoformat()
     path = jao.day_dir(day_key) / "attribution.csv"
@@ -49,10 +49,14 @@ def load_day(day: MarketDay, refresh: bool = False) -> DataFrame[AttributionCont
         positions = pool.submit(fetch, 'netPos', NetPosition)
         polish = (pool.submit(fetch, 'DA_PL_AC', PolishAlternative)
                   if day.date >= POLISH_ALTERNATIVE_PUBLICATION_START else None)
+        polish_rows = polish.result() if polish is not None else []
         frame = cnec_attribution.context(
             day, alpha.result(), allocation.result(), positions.result(),
-            polish.result() if polish is not None else [],
+            polish_rows,
         )
+    if require_valid_rows and polish_rows and frame.polish_alt.isna().any():
+        from coppersushi.pipelines.cnec.readiness import PublicationNotReady
+        raise PublicationNotReady(f"Incomplete or inconsistent DA_PL_AC rows for {day.date}")
     if frame.notna().all().all():
         path.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(dir=path.parent, suffix=".csv", delete=False) as file:

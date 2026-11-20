@@ -611,3 +611,7 @@ Quota history records meaningful usage or state changes and hourly observations 
 ## [2026-11-18] query | Homepage image competition
 
 [Controlled comparisons](copper-sushi-app.md#hero-loading) separate thumbnail source sizing from request scheduling. Hero-first loading improves the tested hero paint time; resizing alone has little effect. Source inspection confirms the VR thumbnail is limited by its original resolution.
+
+## [2026-11-20] query | Critical Elements publication failure
+
+The [publication incident](jao-availability.md#evidence) exposed an empty Polish alternative-price feed, a reduced JAO page-size limit and incomplete zonal prices.

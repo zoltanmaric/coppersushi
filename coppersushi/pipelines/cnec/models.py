@@ -71,6 +71,7 @@ class DayMetadata(Contract):
 
 class DayBundle(DayMetadata):
     """Producer-side complete day; browser delivery uses separate interval objects."""
+    awaiting_polish_price: bool = Field(default=False, exclude=True)
     intervals: list[MarketInterval]
 
 

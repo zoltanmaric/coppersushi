@@ -105,7 +105,7 @@ def test_the_live_request_includes_the_required_page_size(monkeypatch):
         assert query == {
             "FromUtc": ["2024-08-28T22:00:00.000Z"],
             "ToUtc": ["2024-08-29T22:00:00.000Z"],
-            "Take": ["100000000"],
+            "Take": ["100000"],
         }
         return BytesIO((FIXTURES / "active-fb-day.json").read_bytes())
 
