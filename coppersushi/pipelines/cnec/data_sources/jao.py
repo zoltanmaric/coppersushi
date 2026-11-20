@@ -156,7 +156,7 @@ def _get(
 ) -> list[dict]:
     """The rows of one page over `[start, end)`, refusing a truncated response."""
     # JAO requires a page size; its maximum keeps our bounded window in one response.
-    window = {"FromUtc": _stamp(start), "ToUtc": _stamp(end), "Take": 100_000_000}
+    window = {"FromUtc": _stamp(start), "ToUtc": _stamp(end), "Take": 100_000}
     url = f"{base_url}/{endpoint}?{urllib.parse.urlencode(window)}"
     logger.info("jao: GET %s %s..%s", endpoint, window["FromUtc"], window["ToUtc"])
     for attempt in range(_pacer.retry_attempts + 1):

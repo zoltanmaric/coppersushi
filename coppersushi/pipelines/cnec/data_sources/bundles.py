@@ -28,13 +28,13 @@ from coppersushi.pipelines.cnec.readiness import PublicationReceipt
 from coppersushi.pipelines.cnec.readiness import require_received
 
 
-def prepare(day: MarketDay, refresh: bool = False, *, allow_partial_attribution: bool = False) -> DayBundle:
+def prepare(day: MarketDay, refresh: bool = False, *, allow_partial_attribution: bool = False, require_valid_rows: bool = False) -> DayBundle:
     """Construct domain data without importing or invoking the web application's renderer."""
     key = day.date.isoformat()
     receipts = jao._get('monitoring', day.start_time_utc, day.end_time_utc,
                         base_url='https://publicationtool.jao.eu/core/api/system')
     require_received(day, [PublicationReceipt.model_validate(row) for row in receipts])
-    context = cnec_attribution.load_day(day, refresh=refresh)
+    context = cnec_attribution.load_day(day, refresh=refresh, require_valid_rows=require_valid_rows)
     if not context.drop(columns=["polish_alt"] if allow_partial_attribution else []).notna().all().all():
         raise PublicationNotReady(f'Attribution feeds are incomplete for {day.date}')
     active = jao.load_active_day(key, refresh=refresh)
@@ -47,6 +47,8 @@ def prepare(day: MarketDay, refresh: bool = False, *, allow_partial_attribution:
     from coppersushi.pipelines.cnec.data_sources import pse
     for interval, evidence in zip(bundle.intervals, pse.load(day), strict=True):
         interval.polish_upward_reserves = evidence
+    bundle.awaiting_polish_price = (day.date >= cnec_attribution.POLISH_ALTERNATIVE_PUBLICATION_START
+                                  and bool(context.polish_alt.isna().any()))
     return bundle
 
 
@@ -73,26 +75,35 @@ def resolve_day_geometry(
     return {i: geometry.get(i, mapped) for i in range(len(times))}
 
 
-def is_published(day: MarketDay, bucket: str) -> bool:
+def publication_state(day: MarketDay, bucket: str) -> tuple[str, str | None]:
     """Completed publications stay static; explicit refresh can publish a correction."""
     from botocore.exceptions import ClientError
     try:
-        cache._client().head_object(Bucket=bucket, Key=f'data/cnec/v3/{day.date}/manifest.json')
+        head = cache._client().head_object(Bucket=bucket, Key=f'data/cnec/v3/{day.date}/manifest.json')
     except ClientError as error:
         if error.response['Error']['Code'] in {'NoSuchKey', '404', 'NotFound'}:
-            return False
+            return "missing", None
         raise
-    return True
+    return head["Metadata"].get("attribution", "complete"), head["ETag"]
 
 
-def publish(bundle: DayBundle, bucket: str, *, allow_partial_attribution: bool = False) -> str:
+def is_published(day: MarketDay, bucket: str) -> bool:
+    return publication_state(day, bucket)[0] != "missing"
+
+
+def publish(bundle: DayBundle, bucket: str, *, allow_partial_attribution: bool = False,
+            manifest_options: dict | None = None) -> str:
     """Write every immutable object before replacing the small day manifest."""
     generation, files = cnec_bundle.publication_files(bundle, allow_partial_attribution=allow_partial_attribution)
     client = cache._client()
+    manifest_options = dict(manifest_options or {})
+    if bundle.awaiting_polish_price:
+        manifest_options["Metadata"] = {"attribution": "partial"}
     for key, content in files:
         lifetime = 'public,max-age=60' if key.endswith('/manifest.json') else 'public,max-age=31536000,immutable'
         client.put_object(Bucket=bucket,Key=key,Body=gzip.compress(content.encode(),mtime=0),
-                          ContentType='application/json',ContentEncoding='gzip',CacheControl=lifetime)
+                          ContentType='application/json',ContentEncoding='gzip',CacheControl=lifetime,
+                          **(manifest_options if key.endswith('/manifest.json') else {}))
     return generation
 
 
