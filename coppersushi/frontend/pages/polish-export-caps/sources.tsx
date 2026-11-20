@@ -33,6 +33,6 @@ export function Sources({study}: {study: Investigation}) {
 
     <p>For example, the export limit bound in all four quarter-hours from 16:00 to 17:00 CET on 13 November. PSE required <strong>2,376 MW</strong> of upward reserve and bought <strong>2,376 MW</strong>. PSE required 400 MW of automatic restoration reserve (<code>afrrg</code>) and bought 542 MW (<code>afrr_g</code>). All four quarter-hours therefore count as having no <em>total</em> shortfall. The downward calculation has one fewer term because PSE required zero downward replacement reserve throughout the study.</p>
 
-    <p><strong>Which figures did I use?</strong> I took the latest requirement and purchase figures PSE published before 10:30 local time on the day before delivery, its usual target for submitting the limit. PSE may have set the limit earlier. PSE can buy more reserve through supplementary procurement from that afternoon until delivery, so I leave those later purchases out of the morning comparison. How much reserve it could actually call on, and why it set the limit, are separate questions.</p>
+    <p><strong>Which figures did I use?</strong> I took the latest requirement and purchase figures PSE published before 10:30 local time on the day before delivery, its usual target for submitting the limit. PSE may have set the limit earlier. PSE can buy more reserve from that afternoon until delivery, so I leave those later purchases out of the morning comparison. How much reserve it could actually call on, and why it set the limit, are separate questions.</p>
   </details>;
 }

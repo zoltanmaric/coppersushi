@@ -28,3 +28,5 @@ th:first-child .study-column-heading{justify-content:flex-start}
 
 .study-sources table { border-collapse: collapse; }
 .study-sources th, .study-sources td { padding: 6px 8px; border-bottom: 1px solid #444; text-align: left; vertical-align: top; }
+
+.intervals-embed .study-sources { margin-inline-start: 0; }
