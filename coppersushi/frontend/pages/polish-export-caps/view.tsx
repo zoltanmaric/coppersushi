@@ -67,7 +67,7 @@ function Investigation({study,state,...config}:Props & {state:ViewState}){
               }}>{intervalLabel(row.utc)}</a>:number.format(valueOf(row,c.key))}
             </td>)}</tr>;
           })}</tbody></table></div>
-      <p className="export-cap-note" role="status">{number.format(rows.length)} of {number.format(study.rows.length)} binding intervals</p>
+      <p className="export-cap-note" role="status">{number.format(rows.length)} of {number.format(study.rows.length)} binding intervals{active && !rows.includes(active) && '. The selected interval on the map is outside these filters.'}</p>
       <p className="export-cap-note">Required and procured figures are aggregate upward capacity, in MW. Shortfall is required − procured. Procurement sufficiency does not establish operational reserve availability or whether the cap was justified.</p>
     </section>
     </div>

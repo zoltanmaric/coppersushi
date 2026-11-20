@@ -30,8 +30,13 @@ test('cross-day timestamp changes preserve one map; sorting does not render it a
   fireEvent.click(screen.getByRole('button',{name:'Shortfall MW'}));
   expect(renders).toBe(before);
   expect(window.location.search).toContain('sort=shortfall');
+  const minimum = screen.getByLabelText<HTMLInputElement>('Shadow price minimum');
+  fireEvent.change(minimum,{target:{value:'500'}});
+  fireEvent.click(within(minimum.form!).getByText('Clear'));
+  expect(minimum.value).toBe('');
   fireEvent.change(screen.getByLabelText('Shadow price minimum'),{target:{value:'150'}});
   fireEvent.submit(screen.getByLabelText('Shadow price minimum').closest('form')!);
+  expect(screen.getByText(/selected interval on the map is outside these filters/)).toBeTruthy();
   expect(screen.queryByRole('link',{name:'17 Nov 2026, 05:45 CET'})).toBeNull();
   expect(mounts).toBe(1);
   fireEvent.click(within(screen.getByLabelText('Shadow price minimum').closest('form')!).getByText('Clear'));

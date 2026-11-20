@@ -48,7 +48,8 @@ export function NumericFilter({label, column, range, onChange}: {
         </div>
         {error && <p role="alert">Minimum must be at most maximum.</p>}
         <div className="study-calendar-actions">
-          <button type="button" onClick={() => {
+          <button type="button" onClick={event => {
+            event.currentTarget.form?.reset();
             setError(false);
             dialog.current?.hidePopover?.();
             onChange();
