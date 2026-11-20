@@ -46,6 +46,7 @@ function Investigation({study,state,...config}:Props & {state:ViewState}){
       <div className="export-cap-map"><NativeMap {...config} id="polish-cap-map" selection={selection} onAction={onAction} camera={camera} onCamera={onCamera} generation={study.generations[day]}/></div>
     </section>
     <section className="study-table-section" aria-label="Binding intervals">
+      <p className="export-cap-note" role="status">{rows.length < study.rows.length && `${number.format(rows.length)} of `}{number.format(study.rows.length)} binding intervals{active && !rows.includes(active) && '. The selected interval on the map is outside these filters.'}</p>
         <div className="export-cap-table" tabIndex={0} aria-label="Binding intervals; scroll horizontally for all columns"><table>
           <thead><tr>{columns.map(c=><th key={c.key} scope="col" aria-sort={state.sort===c.key?(state.order==='asc'?'ascending':'descending'):'none'}>
             <div className="study-column-heading"><button type="button" onClick={()=>change({...state,sort:c.key,order:state.sort===c.key&&state.order==='desc'?'asc':'desc'})}>{c.label}<span>{c.unit}{state.sort===c.key?(state.order==='desc'?' ↓':' ↑'):''}</span></button>
@@ -67,7 +68,6 @@ function Investigation({study,state,...config}:Props & {state:ViewState}){
               }}>{intervalLabel(row.utc)}</a>:number.format(valueOf(row,c.key))}
             </td>)}</tr>;
           })}</tbody></table></div>
-      <p className="export-cap-note" role="status">{number.format(rows.length)} of {number.format(study.rows.length)} binding intervals{active && !rows.includes(active) && '. The selected interval on the map is outside these filters.'}</p>
       <p className="export-cap-note">Required and procured figures are aggregate upward capacity, in MW. Shortfall is required − procured. Procurement sufficiency does not establish operational reserve availability or whether the cap was justified.</p>
     </section>
     </div>

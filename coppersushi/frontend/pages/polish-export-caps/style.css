@@ -4,7 +4,7 @@ body:has(.export-cap-page){height:auto;min-height:100dvh}.export-cap-page{max-wi
 /* Size the map from its width so an auto-sizing host can measure the whole embed. */
 .study-explorer { display: grid; gap: 16px; margin-top: 32px; }
 .study-explorer .export-cap-map { height: clamp(380px, 57vw, 720px); flex: none; }
-.study-table-section .export-cap-table { max-height: 230px; }
+.study-table-section .export-cap-table { max-height: 248px; }
 body[data-embed="true"]:has(.export-cap-page) { display: block; min-height: 0; }
 .study-map-section{min-width:0;min-height:0;display:flex;flex-direction:column}.study-map-section .export-cap-selected{margin:6px 0 10px}
 .export-cap-page .study-table-section{min-width:0;margin-top:0;min-height:0;display:flex;flex-direction:column}.study-table-section .export-cap-table{min-height:0;flex:none;scrollbar-gutter:stable}.study-table-section .export-cap-table thead{position:sticky;top:0;z-index:1;background:#1b1b1b}.study-table-section .export-cap-table th,.study-table-section .export-cap-table td{padding:8px 6px}.study-table-section .export-cap-note{font-size:12px;margin:8px 0 0}.study-table-section h2{font-size:21px}
@@ -33,3 +33,5 @@ th:first-child .study-column-heading{justify-content:flex-start}
 .study-sources th, .study-sources td { padding: 6px 8px; border-bottom: 1px solid #444; text-align: left; vertical-align: top; }
 
 .intervals-embed .study-sources { margin-inline-start: 0; }
+
+.study-table-section .export-cap-note[role="status"] { margin: 0 0 8px; }
