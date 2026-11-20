@@ -611,3 +611,16 @@ Quota history records meaningful usage or state changes and hourly observations 
 ## [2026-11-18] query | Homepage image competition
 
 [Controlled comparisons](copper-sushi-app.md#hero-loading) separate thumbnail source sizing from request scheduling. Hero-first loading improves the tested hero paint time; resizing alone has little effect. Source inspection confirms the VR thumbnail is limited by its original resolution.
+
+## [2026-11-17] decision | Export-cap page boundary
+
+The [app](copper-sushi-app.md#export-cap-investigation) records the agreed static-page
+composition, separate embeds, shared map/table selection and fixed graphic denominator.
+
+## [2026-11-19] query | Polish export shadow price
+
+Reconstructed the [20 November cap effect](polish-export-cap-investigation.md#november-20) from three Core border spreads and checked reserve procurement.
+
+## [2026-11-19] ingest | Downward procurement during binding imports
+
+[Directional PSE evidence](polish-balancing-capacity-procurement.md#downward) establishes the shortfall split for confirmed import-cap quarters.

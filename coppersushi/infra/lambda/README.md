@@ -1,6 +1,6 @@
 # Static application hosting and publication
 
-CloudFront serves both app shells, shared assets and prepared CNEC/OPF files from
+CloudFront serves app shells, shared assets and prepared CNEC/OPF files from
 the private S3 bucket at [coppersushi.121gigawatts.org](https://coppersushi.121gigawatts.org).
 The native CNEC publisher Lambda and its Step Functions schedule prepare market data.
 Python prepares sanctioned OPF hours offline; no public app server is required.
@@ -31,7 +31,7 @@ Use one merged checkout for preparation, publication and rollback notes:
 4. Publish immutable hours first:
    `pixi run --locked -e build python -m coppersushi.pipelines.powerflow.data_sources.dataset coppersushi/networks/opf-2024-08-29.nc coppersushi/data/browser/data/opf/v2/opf-2024 --bucket <bucket>`.
    This uploads all content-versioned hours before the timestamp manifest.
-5. Publish both view shells and shared assets:
+5. Publish view shells and shared assets:
    `pixi run --locked python -m coppersushi.frontend.packaging.publish --bucket <bucket>`.
 6. Invalidate `/`, `/cnec*`, `/embed/cnec*`, `/opf-2024*`, `/embed/opf-2024*`,
    `/assets/*`, `/data/cnec/v1/ui/*` and `/data/opf/v2/opf-2024/manifest.json`.
@@ -170,3 +170,28 @@ The reserve-enriched Critical Elements publication uses `data/cnec/v3`.
 Populate required historical days through the existing publisher/backfill path before
 switching the frontend to v3. Preserve v2 objects for older clients. Refresh a v3 day
 explicitly to retry missing PSE evidence; completed publications are otherwise skipped.
+
+## Fixed export-cap study
+
+The third page and two embeds use the existing static origin. Prepare the complete
+fixed-window artifact from the investigated CSV and prepared November extension:
+
+```sh
+pixi run --locked python -m scripts.polish_cap_page build --baseline <baseline.csv> --extension <prepared-extension-directory> --directory coppersushi/data/browser
+pixi run --locked python -m scripts.polish_cap_page publish --directory coppersushi/data/browser --bucket <bucket>
+```
+
+The build reconciles all binding rows against immutable CNEC generations, verifies
+the overlap and complete population, and writes under
+`data/cnec/studies/polish-export-caps/`. The local preview serves this study from disk.
+Publication validates the content hash and checks that pinned map metadata exists
+in S3 before uploading the study, then its manifest. Preserve all pinned generations.
+Raw research files remain local; review redistribution rights before publication.
+
+Archive the study manifest alongside the UI before replacing either. Publish the
+study before the frontend shells. The initial route addition needs a reviewed full
+Terraform plan from the existing state; later content updates do not. Invalidate
+`/polish-export-caps*`, `/embed/polish-export-caps/*`, the study manifest and the
+frontend paths listed above. Wait for completion, then verify all three public
+routes, the fixed counts, filters, independent row scrolling, cross-day selection
+and camera reload. Rollback restores the archived study manifest and UI together.

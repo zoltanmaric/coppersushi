@@ -106,6 +106,17 @@ Observed limitations to address in a future map renderer:
 
 A single map with independently managed price, constraint and attribution layers could allow progressive updates without refreshing unrelated symbols. Evaluate a direct Mapbox or MapLibre integration, or another renderer, against click targets, camera persistence, fade behavior, loading/error states and large-grid performance before choosing. The [v1 map-engine measurements](codebase-v1.md) found Plotly's MapLibre path slow for the larger OPF network; they do not establish the performance of a direct integration.
 
+## Export-cap investigation
+
+The Polish export-cap investigation uses a directly linked third static React page,
+with the existing two navigation links unchanged. Its graphic and native map/table
+are separate embed units. The graphic describes the fixed investigated population;
+table filters do not change that denominator. Table timestamps and map controls
+share selection, with the camera retained across interval changes. This composition
+reuses the existing CNEC renderer and hosting, without a reports framework.
+Implementation scope and remaining validation live in the
+[page spec](../specs/polish-export-cap-page.html). All matching table rows scroll independently beneath sticky headers and filters; pagination is unnecessary. The map and table share a viewport-sized area. The table shows signed required-minus-procured MW; negative values indicate procurement above the requirement. The graphic counts only positive differences as shortfalls. Map queries pin the study’s reconciled immutable generations to prevent later publications from changing its evidence.
+
 ## The CNEC page
 
 Floating date/day arrows, interval arrows and the slider remain inside the map. On desktop the slider sits beside the date/time panel; on portrait screens it sits below. The unchanged daily legend sits top-left and the reference selector top-right. A pure calculation uses fixed Core bounds and viewport dimensions to choose the camera before Graph mounts. It reserves a modest margin for controls; later interval changes retain the camera.

@@ -4,7 +4,7 @@
 
 Owns the React map pages and their browser presentation. `pages/powerflow/` constructs
 network layers and tooltips from numeric snapshots; `pages/cnec/` owns market selection,
-contributions and reference-country behavior. Both use the same map interface. Data loading and contracts
+contributions and reference-country behavior. Both use the same map interface. `pages/polish-export-caps/` composes the native CNEC map with a fixed-study graphic and table. Data loading and contracts
 live with each page. There is no intermediate source directory.
 
 ```mermaid
@@ -14,6 +14,8 @@ flowchart TB
   data --> cnec["Critical Elements ⚡️"]
   powerflow --> shared["Shared map UI"]
   cnec --> shared
+  study["Fixed study JSON"] --> investigation["Polish export-cap page"]
+  investigation -->|Pinned day generation and selection| cnec
   powerflow -->|Page views and performance| analytics["Cloudflare Web Analytics"]
   cnec -->|Page views and performance| analytics
   click powerflow "https://github.com/zoltanmaric/coppersushi/tree/main/coppersushi/frontend/pages/powerflow/README.md"
@@ -55,3 +57,13 @@ Polish export-cap tooltips read required and purchased upward reserve capacity f
 the prepared interval object, including independent publication timestamps formatted
 in Europe/Brussels. The browser never fetches PSE on hover. Missing evidence stays
 explicit; upward capacity is not shown as an explanation of import constraints.
+
+The investigation is directly linked at `/polish-export-caps`; the two-product
+navigation stays unchanged. `/embed/polish-export-caps/breakdown` renders only the
+fixed-population graphic and sources; `/embed/polish-export-caps/intervals` renders
+the map and table. All matching rows scroll independently under sticky column
+headers and filters, with the map visible above. Date bounds, numeric filters,
+sort order, interval selection and camera are stored in the URL. Filtering never
+changes the graphic population or removes the map selection. The study pins its
+validated CNEC generations so later daily corrections cannot silently change its
+evidence. See the [publication runbook](../infra/lambda/README.md#fixed-export-cap-study).

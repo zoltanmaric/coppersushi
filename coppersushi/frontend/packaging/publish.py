@@ -11,7 +11,7 @@ from coppersushi.pipelines.data_sources import credentials
 
 def publish(bucket: str) -> None:
     """Upload assets first, then the shell; deployment invalidates their edge paths."""
-    required = ['opf-app.js', 'opf-app.css', 'navigation.css', 'cnec-app.js', 'cnec-app.css', 'plotly-mapbox-3.7.0.min.js',
+    required = ['polish-cap-app.js', 'polish-cap-app.css', 'opf-app.js', 'opf-app.css', 'navigation.css', 'cnec-app.js', 'cnec-app.css', 'plotly-mapbox-3.7.0.min.js',
                 'cnec-markers.json', 'cnec-markers.png', 'cnec-markers@2x.json', 'cnec-markers@2x.png']
     dist = REPO / 'coppersushi/frontend/dist'
     assets = dist / 'assets'
@@ -19,9 +19,11 @@ def publish(bucket: str) -> None:
     if missing:
         raise ValueError(f'Build frontend assets before publication: {missing}')
     token = credentials.token('MAPBOX_TOKEN', REPO / '.secrets/.mapbox_token')
-    shells: list[tuple[str, bool, Literal['cnec', 'opf']]] = [
+    shells: list[tuple[str, bool, Literal['cnec', 'opf', 'polish-cap', 'polish-cap-breakdown']]] = [
         ('index.html', False, 'cnec'), ('embed.html', True, 'cnec'),
         ('opf.html', False, 'opf'), ('opf-embed.html', True, 'opf'),
+        ('polish-cap.html', False, 'polish-cap'), ('polish-cap-intervals.html', True, 'polish-cap'),
+        ('polish-cap-breakdown.html', True, 'polish-cap-breakdown'),
     ]
     for filename, embed, view in shells:
         (dist / filename).write_text(render_shell(token, embed=embed, view=view))

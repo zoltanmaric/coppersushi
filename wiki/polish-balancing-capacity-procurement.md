@@ -19,6 +19,10 @@ Use the public [PSE API](https://api.raporty.pse.pl/api/openapi), with endpoint 
 
 For each endpoint separately, retain `dtime_utc` and `publication_ts_utc`. Required total is `fcrg + afrrg + frrg + rrg`; purchased total is `fcr_g + afrr_g + mfrrd_g + rr_g`. The PSE portal describes `frrg` as additional frequency restoration above automatic frequency restoration, avoiding double counting. Retain the product components to make the totals auditable. Additional restoration requirement and procured direct manual restoration are not identical product labels; matching aggregate totals does not establish product-level sufficiency.
 
+### Downward
+
+The [requirements](https://api.raporty.pse.pl/api/wmb?%24filter=business_date%20eq%20%272026-08-14%27) and [basic purchases](https://api.raporty.pse.pl/api/mbp-tp?%24filter=business_date%20eq%20%272026-08-14%27) also separate downward capacity. For 14 August–19 November 2026 all 2,353 delivery hours had 197 MW containment, 400 MW automatic restoration, 90 MW additional restoration and zero replacement requirement. Downward replacement purchases were null throughout. The import comparison sums the three required product families: `fcrd + afrrd + frrd` against `fcr_d + afrr_d + mfrrd_d`. It makes no assumption about unreported replacement purchases. Of 542 confirmed import-cap quarters, 119 fell below 687 MW and 423 met it.
+
 ### Time
 
 The observed records are hourly and `dtime_utc` marks the delivery hour's **end**. Subtract one hour in UTC, then join to the four quarter-hour starts. Repeat capacity levels; do not divide or sum them across quarters. This preserves both repeated autumn hours. Validate the hourly source period rather than assuming every future feed retains this granularity.
