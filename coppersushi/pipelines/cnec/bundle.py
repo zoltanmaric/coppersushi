@@ -11,6 +11,7 @@ from pandera.typing import DataFrame
 from coppersushi.pipelines.cnec import interval as cnec_market
 from coppersushi.pipelines.grid import country_outline
 from coppersushi.pipelines.cnec import prices as market
+from coppersushi.pipelines.cnec.spread_prices import SOURCE as DERIVED_PRICE_SOURCE
 from coppersushi.pipelines.cnec.models import DayBundle
 from coppersushi.pipelines.cnec.models import ZoneGeometry
 from coppersushi.pipelines.cnec.models import ElementGeometry
@@ -30,6 +31,10 @@ class Day:
     ptdfs: DataFrame[ConstraintPtdfs]
     prices: DataFrame[ZonalPrices]
     context: DataFrame[AttributionContext] | None = None
+
+
+def derived_price_note(zone: str) -> str:
+    return f"{zone} price derived from JAO border price spreads."
 
 
 def finite(value: float) -> float | None:
@@ -70,10 +75,12 @@ def build(day: Day, geometries: dict[int, DataFrame[MappedCnecElements]]) -> Day
                 geometry=key, ptdfs=dict(zip(ptdfs.zone, ptdfs.ptdf)))))
         context = None if day.context is None else day.context[day.context.interval.eq(timestamp)]
         alpha = finite(context.alpha.iloc[0]) if context is not None and len(context) == 1 else None
+        derived_zones: list[str] = (view.prices.loc[view.prices.source.eq(DERIVED_PRICE_SOURCE), "zone"].tolist()
+                         if "source" in view.prices else [])
         intervals.append(MarketInterval(index=index, label=timestamp.tz_convert(MARKET_TZ).strftime('%a %d %b %Y · %H:%M %Z'),
             prices=dict(zip(view.prices.zone, view.prices.price)), constraints=rows, alpha=alpha,
             caps=[CountryCap.model_validate({k: getattr(r, k) for k in CountryCap.model_fields}) for r in view.caps.itertuples()],
-            notes=list(view.notes)))
+            notes=[*view.notes, *(derived_price_note(zone) for zone in derived_zones)]))
     return DayBundle(day=day.market_day.date, labels=[t.tz_convert(MARKET_TZ).strftime('%a %d %b %Y · %H:%M %Z') for t in times], zones=zones, elements=elements, intervals=intervals,
                      price_range=list(cnec_market.daily_price_range(day.prices)))
 
@@ -83,6 +90,7 @@ def validate_publication(bundle: DayBundle, *, allow_partial_attribution: bool =
     if [i.index for i in bundle.intervals] != list(range(len(bundle.labels))):
         raise ValueError('Only complete days may be published')
     allowed_notes = {"Poland cap attribution unavailable for this interval."} if allow_partial_attribution else set()
+    allowed_notes.update(derived_price_note(zone) for zone in market.CORE_ZONES)
     if any(i.alpha is None or not 0 <= i.alpha <= 1 or set(i.notes) - allowed_notes for i in bundle.intervals):
         raise ValueError('Attribution publication is incomplete; retain the previous generation')
 

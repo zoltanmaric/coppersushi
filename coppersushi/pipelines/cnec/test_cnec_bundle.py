@@ -26,6 +26,8 @@ def test_bundle_preserves_published_coefficients_and_explicit_interval_identity(
     constraints = table('physical', ActiveConstraints)
     ptdfs = table('ptdfs', ConstraintPtdfs)
     prices = table('prices', ZonalPrices)
+    from coppersushi.pipelines.cnec.spread_prices import SOURCE
+    prices.loc[prices.zone.eq('HU'), 'source'] = SOURCE
     context = table('context', AttributionContext)
     timestamp = pd.Timestamp(next(iter(json.loads((ROOT / 'selection.json').read_text()))))
     day = MarketDay.on(timestamp.tz_convert(MARKET_TZ).date())
@@ -37,6 +39,7 @@ def test_bundle_preserves_published_coefficients_and_explicit_interval_identity(
     decoded = DayBundle.model_validate_json(bundle.model_dump_json())
     assert len(decoded.labels) == len(indices)
     assert [i.index for i in decoded.intervals] == [index]
+    assert "HU price derived from JAO border price spreads." in decoded.intervals[0].notes
     for row in decoded.intervals[0].constraints:
         expected = ptdfs[ptdfs.interval.eq(timestamp) & ptdfs.source_id.eq(row.source_id)]
         assert row.ptdfs == dict(zip(expected.zone, expected.ptdf))

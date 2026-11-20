@@ -26,6 +26,8 @@ from pandera.typing import DataFrame
 
 from coppersushi import REPO
 from coppersushi.pipelines.cnec import prices as market
+from coppersushi.pipelines.cnec import spread_prices
+from coppersushi.pipelines.cnec.data_sources import jao
 from coppersushi.pipelines.data_sources import cache
 from coppersushi.pipelines.data_sources import credentials
 from coppersushi.pipelines.data_model.market import DayAheadPrices
@@ -97,15 +99,28 @@ def fetch_day(
     market_day = MarketDay.on(day)
     credential = token or api_token()
 
-    def fetch_zone(zone: str) -> ElectricityMapsPriceResponse:
-        payload = _get(zone, market_day, credential)
+    def fetch_zone(zone: str) -> ElectricityMapsPriceResponse | None:
+        try:
+            payload = _get(zone, market_day, credential)
+        except market.IncompletePrices:
+            return None
         check_answered_as_asked(zone, market_day, payload)
+        if any(row.zone != zone for row in payload.data):
+            raise ValueError(f"Unexpected zone in {zone} price rows")
         return payload
 
     with ThreadPoolExecutor(max_workers=12) as pool:
         payloads = list(pool.map(fetch_zone, zones))
-    prices = market.day_ahead_prices(payloads)
-    market.check_complete(prices, market_day, zones)
+    prices = market.day_ahead_prices([payload for payload in payloads if payload is not None])
+    try:
+        market.check_complete(prices, market_day, zones)
+    except market.IncompletePrices:
+        if prices.empty:
+            raise
+        rows = jao._get("priceSpread", market_day.start_time_utc, market_day.end_time_utc)
+        prices = spread_prices.recover(prices, market_day.market_time_units(), zones,
+                                      spread_prices.parse_spreads(rows, zones))
+        market.check_complete(prices, market_day, zones)
     return prices
 
 
