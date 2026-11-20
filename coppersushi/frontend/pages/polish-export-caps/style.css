@@ -25,3 +25,6 @@ th:first-child .study-column-heading{justify-content:flex-start}
 .study-filter-fields input[data-column="shadow"]{width:calc(3ch + 12px)}
 .study-filter-fields input::-webkit-inner-spin-button,.study-filter-fields input::-webkit-outer-spin-button{appearance:none;margin:0}
 .study-calendar .study-calendar-actions button{padding:5px 8px;background:#282828;border:1px solid #666;border-radius:4px}
+
+.study-sources table { border-collapse: collapse; }
+.study-sources th, .study-sources td { padding: 6px 8px; border-bottom: 1px solid #444; text-align: left; vertical-align: top; }

@@ -1,14 +1,38 @@
 import React from 'react';
-import {formatDay} from '../../controls/date-time-controls';
 import type {Investigation} from './data';
-export function Sources({study}:{study:Investigation}){
-  return <details className="study-sources"><summary>Sources, coverage and definitions</summary>
-    <p>All {study.coverage.expected.toLocaleString('en-GB')} expected quarter-hours are accounted for; {study.coverage.unknown} have unresolved export classification or upward reserve comparisons. Each UTC quarter is counted once, including both occurrences of the October clock change. Dates and publication times use Europe/Brussels (CET/CEST).</p>
-    <p><a href="https://publicationtool.jao.eu/core/">JAO</a> supplies export caps, scheduled net positions and Polish alternative prices. Binding is inferred: scheduled exports within 0.11 MW of the limit and a positive alternative-price effect above €0.01/MWh. A position strictly below the cap can establish nonbinding even when the alternative price is unavailable. Shadow price is the validated alternative-price difference, not an independent binding flag.</p>
-    <p><a href="https://raporty.pse.pl/">PSE</a> requirements (<code>wmb</code>: fcrg + afrrg + frrg + rrg) and basic purchases (<code>mbp-tp</code>: fcr_g + afrr_g + mfrrd_g + rr_g) are aggregate upward MW. Additional restoration excludes automatic restoration. Totals do not establish product-level sufficiency. Each source uses its latest eligible publication strictly before 10:30 on D−1. This is the normal submission target, not proof of availability at PSE’s actual earlier cap-setting time. Supplementary purchases and later operational plans are excluded.</p>
-    {study.coverage.imports && <p>The overview confirms a binding import when scheduled imports reach the limit within 0.11 MW and the Polish day-ahead price exceeds the alternative price by more than €0.01/MWh. Downward shortfall compares required containment, automatic restoration and additional restoration with basic purchases across those three products. Downward replacement reserve had zero requirement and no published purchase volume.</p>}
-    <p>PSE’s hourly UTC end stamps are shifted back one hour; the level repeats over each quarter without division. Shortfall = required − procured. Missing, late, incomplete or ambiguous evidence is never zero. Each selected interval’s map tooltip retains both publication times and component amounts.</p>
-    <p>The August 14–November 13 baseline is extended through {formatDay(study.end)} using immutable prepared market snapshots. All {study.overlap_verified} overlapping November 13 quarters agree on classification, reserve totals and publication times. Every binding table row is reconciled against its pinned map generation. Original baseline retrieval times are not fully documented; source publication times are distinct from retrieval times.</p>
-    <p><a href="https://github.com/zoltanmaric/coppersushi/blob/main/wiki/polish-export-cap-investigation.md">Investigation and interpretation limits</a> · <a href="https://github.com/zoltanmaric/coppersushi/blob/main/wiki/polish-balancing-capacity-procurement.md">Reserve source contract</a></p>
+
+const jaoDay = '?FromUtc=2026-11-12T23:00:00.000Z&ToUtc=2026-11-13T23:00:00.000Z&Take=100000';
+const pseDay = '?%24filter=business_date%20eq%20%272026-11-13%27&%24first=1000';
+const dayMonth = new Intl.DateTimeFormat('en-GB', {day: 'numeric', month: 'long', timeZone: 'UTC'});
+
+export function Sources({study}: {study: Investigation}) {
+  const end = new Date(study.end);
+  return <details className="study-sources">
+    <summary>How I counted</summary>
+    <p>I looked at all {study.coverage.expected.toLocaleString('en-GB')} quarter-hours from {dayMonth.format(new Date(study.start))} through {dayMonth.format(end)} {end.getUTCFullYear()}. The source links below open the records for one day, 13 November, so you can see the values that go into the chart.</p>
+
+    <p><strong>When did a limit bind?</strong> For exports, I subtract the Polish day-ahead price, from Electricity Maps, from JAO’s Polish alternative price (<code>border_PL_ALT</code>). That difference is the export limit’s inferred <em>shadow price</em>. I count the limit as binding when the difference exceeds €0.01/MWh and scheduled net exports (<code>hub_PL</code>) reach the export limit (<code>limitUp_PL</code>), allowing 0.11 MW for rounding. For imports, the price difference runs the other way, and I check scheduled net imports against the import limit (<code>limitDown_PL</code>).{' '}
+      <a href={'https://publicationtool.jao.eu/core/api/data/allocationConstraint' + jaoDay}>JAO limits</a> ·{' '}
+      <a href={'https://publicationtool.jao.eu/core/api/data/netPos' + jaoDay}>Scheduled net positions</a> ·{' '}
+      <a href={'https://publicationtool.jao.eu/crossCCR/api/data/DA_PL_AC' + jaoDay}>Polish alternative prices</a>
+    </p>
+
+    <p><strong>Was there a reserve shortfall?</strong> When the export limit bound, I compared how much upward reserve PSE said it needed with how much it bought in its basic auction. For imports, I made the same comparison for downward reserve. A shortfall means the total bought was below the total required. These are the field names in PSE’s two reports, all in MW.</p>
+
+    <table>
+      <thead><tr>
+        <th scope="col">Reserve</th>
+        <th scope="col"><a href={'https://api.raporty.pse.pl/api/wmb' + pseDay}>Required (<code>wmb</code>)</a></th>
+        <th scope="col"><a href={'https://api.raporty.pse.pl/api/mbp-tp' + pseDay}>Bought (<code>mbp-tp</code>)</a></th>
+      </tr></thead>
+      <tbody>
+        <tr><th scope="row">Upward</th><td><code>fcrg + afrrg + frrg + rrg</code></td><td><code>fcr_g + afrr_g + mfrrd_g + rr_g</code></td></tr>
+        <tr><th scope="row">Downward</th><td><code>fcrd + afrrd + frrd</code></td><td><code>fcr_d + afrr_d + mfrrd_d</code></td></tr>
+      </tbody>
+    </table>
+
+    <p>For example, from midnight to 01:00 on 13 November, PSE required <strong>1,802 MW</strong> of upward reserve and bought <strong>1,802 MW</strong>. The mix differed: PSE required 400 MW of automatic restoration reserve (<code>afrrg</code>) and bought 525 MW (<code>afrr_g</code>). All four quarter-hours therefore count as having no <em>total</em> shortfall. The downward calculation has one fewer term because PSE required zero downward replacement reserve throughout the study.</p>
+
+    <p><strong>Which figures did I use?</strong> I took the latest requirement and purchase figures PSE published before 10:30 local time on the day before delivery, its usual target for submitting the limit. PSE may have set the limit earlier. The comparison tells us what PSE had reported buying by that cutoff. How much reserve it could actually call on, and why it set the limit, are separate questions.</p>
   </details>;
 }
