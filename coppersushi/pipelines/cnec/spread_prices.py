@@ -24,7 +24,7 @@ def parse_spreads(rows: list[dict], zones: tuple[str, ...]) -> dict[pd.Timestamp
     """Read only Core borders. A null spread supplies no price relationship."""
     intervals = {}
     for row in rows:
-        time = pd.Timestamp(_timestamp.validate_python(row["dateTimeUtc"])).tz_convert("UTC")
+        time = pd.to_datetime(_timestamp.validate_python(row["dateTimeUtc"]), utc=True)
         if time in intervals:
             raise ValueError(f"Duplicate JAO price spread interval {time}")
         borders = []
