@@ -24,6 +24,7 @@
 
 - **design-first** — Design-first for non-trivial work.
   - Interrogate before implementing (`grill` skill) on every non-trivial ask, clear or not: first whether it is the right question at all, then what exactly is asked; depth scales with ambiguity.
+  - Before proposing a new interface or dependency, describe the smallest change that would meet the user’s goal and the concrete limitation the user would notice if we stopped there.
   - For large or multi-session tasks, use a spec (`spec` skill) — create one when obviously needed, suggest it in the gray zone.
   - When a spec or design has grown load-bearing, suggest a goldfish review (`goldfish` skill); the user pulls the trigger.
 

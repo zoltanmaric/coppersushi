@@ -72,11 +72,14 @@ flowchart TB
     pse --> investigation["Offline Polish export-cap analysis"]
     market --> investigation
     investigation --> research[("Local CSV and HTML explainer")]
+    research --> study["Offline fixed-study builder"]
+    prepared -->|Reconciled immutable generations| study
+    study -->|Versioned study JSON in S3| edge
     catalog["Grid catalog"] -->|Located elements and outlines| publication
     publication -->|Immutable generation and manifest| prepared[("Prepared market files")]
     prepared -->|Private S3 objects| edge["CloudFront"]
     build["Static site build"] -->|Shell and assets in S3| edge
-    edge -->|Homepage, map embeds and market data| browser["CNEC browser: React and Plotly"]
+    edge -->|Maps, export-cap study and market data| browser["CNEC browser: React and Plotly"]
     opf["OPF preparation"] -->|Numeric metadata, intervals and manifest| opffiles[("Static OPF files")]
     opffiles --> edge
     edge -->|Shell and selected hour| opfbrowser["OPF browser: React and Plotly"]

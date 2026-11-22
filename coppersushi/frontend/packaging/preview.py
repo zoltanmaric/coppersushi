@@ -57,6 +57,19 @@ def local_data(filename: str) -> Response:
     return send_from_directory(REPO / 'coppersushi/data/browser/data/cnec/v3',filename)
 
 
+@routes.get('/polish-export-caps', strict_slashes=False)
+@routes.get('/embed/polish-export-caps/intervals', strict_slashes=False)
+@routes.get('/embed/polish-export-caps/breakdown', strict_slashes=False)
+def polish_cap_index() -> str:
+    return render_shell(credentials.token('MAPBOX_TOKEN', Path('.secrets/.mapbox_token')),
+                        embed=request.path.startswith('/embed/'), view='polish-cap-breakdown' if request.path.rstrip('/').endswith('/breakdown') else 'polish-cap')
+
+
+@routes.get('/data/cnec/studies/polish-export-caps/<path:filename>')
+def polish_cap_data(filename: str) -> Response:
+    return send_from_directory(REPO / 'coppersushi/data/browser/data/cnec/studies/polish-export-caps', filename)
+
+
 opf_routes = Blueprint('opf_static', __name__)
 
 

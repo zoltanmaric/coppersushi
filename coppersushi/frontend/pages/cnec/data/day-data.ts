@@ -29,9 +29,9 @@ export function publicationOptions(day: string) {
 }
 
 /** Selection and prefetch subscribe to the same interval query keys. */
-export function useDayData(day: string, interval: number) {
-  const publication = useQuery(publicationOptions(day));
-  const generation = publication.data?.generation ?? '';
+export function useDayData(day: string, interval: number, pinnedGeneration?: string) {
+  const publication = useQuery({...publicationOptions(day),enabled:!pinnedGeneration});
+  const generation = pinnedGeneration ?? publication.data?.generation ?? '';
   const metadata = useQuery({queryKey:['metadata',day,generation],enabled:!!generation,
     queryFn:({signal})=>fetchDayPart('metadata',day,generation,0,signal)});
   const labels = metadata.data?.labels ?? [];

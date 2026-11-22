@@ -9,6 +9,9 @@ SOURCE = Path('coppersushi/infra/lambda/hostname.tf').read_text().split('code   
 
 
 @pytest.mark.parametrize('path,filename', [
+    ('/polish-export-caps', 'polish-cap.html'),
+    ('/embed/polish-export-caps/breakdown', 'polish-cap-breakdown.html'),
+    ('/embed/polish-export-caps/intervals/', 'polish-cap-intervals.html'),
     ('/', 'index.html'), ('/cnec/2026-11-10', 'index.html'),
     ('/embed/cnec/2026-11-10', 'embed.html'), ('/opf-2024', 'opf.html'),
     ('/embed/opf-2024/', 'opf-embed.html'), ('/assets/opf-app.js', 'assets/opf-app.js'),
