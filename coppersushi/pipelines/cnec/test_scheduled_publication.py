@@ -20,3 +20,31 @@ def test_scheduled_instant_pins_next_market_day(instant: str, delivery: date) ->
 def test_schedule_requires_an_aware_instant() -> None:
     with pytest.raises(ValidationError):
         PublicationJob.model_validate({'started_at': '2026-11-06T13:00:00'})
+
+
+def test_partial_publication_waits_then_replaces_the_same_manifest(monkeypatch):
+    from types import SimpleNamespace
+    from coppersushi.pipelines.cnec.data_sources import scheduled
+    from coppersushi.pipelines.cnec.readiness import PublicationNotReady
+
+    job = PublicationJob.model_validate({'started_at': '2026-11-19T14:50:00Z'})
+    state = ('missing', None)
+    source_ready = False
+    writes = []
+    monkeypatch.setattr(scheduled.bundles, 'publication_state', lambda *args: state)
+
+    def prepare(day, *, refresh, allow_partial_attribution, require_valid_rows):
+        assert refresh and require_valid_rows
+        if not source_ready and not allow_partial_attribution:
+            raise PublicationNotReady('still waiting')
+        return SimpleNamespace(awaiting_polish_price=not source_ready)
+
+    monkeypatch.setattr(scheduled.bundles, 'prepare', prepare)
+    monkeypatch.setattr(scheduled.bundles, 'publish', lambda *args, **kw: writes.append(kw['manifest_options']))
+    assert scheduled.attempt(job, 'test').awaiting_attribution
+    state = ('partial', 'previous-etag')
+    assert scheduled.attempt(job, 'test').awaiting_attribution
+    source_ready = True
+    result = scheduled.attempt(job, 'test')
+    assert result.ready and not result.awaiting_attribution
+    assert writes == [{'IfNoneMatch': '*'}, {'IfMatch': 'previous-etag'}]

@@ -63,15 +63,22 @@ resource "aws_sfn_state_machine" "publication" {
   role_arn = aws_iam_role.publication_workflow.arn
   type     = "STANDARD"
   definition = jsonencode({
-    StartAt = "Prepare", TimeoutSeconds = 18000,
+    StartAt = "InitialWindow", TimeoutSeconds = 31536000,
     States = {
+      InitialWindow = { Type = "Pass", QueryLanguage = "JSONata", Assign = { deadline = "{% $fromMillis($millis() + 18000000) %}" }, Next = "Prepare" }
       Prepare = {
         Type       = "Task", Resource = "arn:aws:states:::lambda:invoke",
         Parameters = { FunctionName = aws_lambda_function.producer[0].arn, Payload = { "started_at.$" = "$.started_at" } },
         ResultPath = "$.result", Next = "Published",
         Retry      = [{ ErrorEquals = ["States.TaskFailed"], IntervalSeconds = 10, BackoffRate = 2, MaxAttempts = 3 }]
       },
-      Published          = { Type = "Choice", Choices = [{ Variable = "$.result.Payload.ready", BooleanEquals = true, Next = "Done" }], Default = "WaitForPublication" },
+      Published = { Type = "Choice", Choices = [
+        { And = [{ Variable = "$.result.Payload.awaiting_attribution", IsPresent = true }, { Variable = "$.result.Payload.awaiting_attribution", BooleanEquals = true }], Next = "WaitForAttribution" },
+        { Variable = "$.result.Payload.ready", BooleanEquals = true, Next = "Done" }
+      ], Default = "CheckWindow" },
+      CheckWindow        = { Type = "Choice", QueryLanguage = "JSONata", Choices = [{ Condition = "{% $now() >= $deadline %}", Next = "Expired" }], Default = "WaitForPublication" }
+      Expired            = { Type = "Fail", Error = "PublicationWindowExpired" }
+      WaitForAttribution = { Type = "Wait", Seconds = 21600, Next = "Prepare" }
       WaitForPublication = { Type = "Wait", Seconds = 120, Next = "Prepare" },
       Done               = { Type = "Succeed" }
     }

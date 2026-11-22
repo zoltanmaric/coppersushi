@@ -624,3 +624,7 @@ Reconstructed the [20 November cap effect](polish-export-cap-investigation.md#no
 ## [2026-11-19] ingest | Downward procurement during binding imports
 
 [Directional PSE evidence](polish-balancing-capacity-procurement.md#downward) establishes the shortfall split for confirmed import-cap quarters.
+
+## [2026-11-20] query | Critical Elements publication failure
+
+The [publication incident](jao-availability.md#evidence) exposed an empty Polish alternative-price feed, a reduced JAO page-size limit and incomplete zonal prices.

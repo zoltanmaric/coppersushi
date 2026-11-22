@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import logging
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -64,8 +65,13 @@ def _get(zone: str, day: MarketDay, token: str) -> ElectricityMapsPriceResponse:
     logger.info("electricity maps: GET published prices for %s on %s", zone, day.date)
     url = f"{BASE_URL}?{urllib.parse.urlencode(query(zone, day))}"
     request = urllib.request.Request(url, headers={"auth-token": token})
-    with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
-        return ElectricityMapsPriceResponse.model_validate_json(response.read())
+    try:
+        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+            return ElectricityMapsPriceResponse.model_validate_json(response.read())
+    except urllib.error.HTTPError as error:
+        if error.code == 404 and b"No data for zone" in error.read(512):
+            raise market.IncompletePrices(f"{zone} prices unavailable for {day.date}") from error
+        raise
 
 
 def check_answered_as_asked(zone: str, day: MarketDay, payload: ElectricityMapsPriceResponse) -> None:

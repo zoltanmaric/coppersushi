@@ -19,5 +19,6 @@ class PublicationResult(BaseModel):
     """Readiness drives the workflow's wait loop; unexpected failures still raise."""
     ready: bool
     day: str
+    awaiting_attribution: bool = False
 
 

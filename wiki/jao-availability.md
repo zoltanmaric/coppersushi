@@ -2,6 +2,13 @@
 
 ## Evidence
 
+On **2026-11-20** shortly after midnight CET, the Critical Elements default
+view could not load the new market day. A direct probe of JAO's
+[Polish alternative allocation feed](https://publicationtool.jao.eu/crossCCR/api/data/DA_PL_AC)
+returned zero rows for that day. Alpha, allocation constraints and net positions
+each returned 96 rows. The preceding publication workflow timed out on incomplete
+attribution. The page shell and the preceding day's manifest still returned 200.
+
 On **2026-11-03**, the Grid Constraints view failed while fetching JAO Core
 `activeFbConstraints`, before the electricity-price fetch. The public endpoint and
 Publication Tool root returned HTTP 503 from independent clients. The body was a
