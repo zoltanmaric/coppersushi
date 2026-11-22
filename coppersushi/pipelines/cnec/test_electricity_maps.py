@@ -168,3 +168,62 @@ def test_http_boundary_rejects_missing_price_or_timezone(monkeypatch, field, val
     with pytest.raises(ValidationError) as failure:
         electricity_maps._get("AT", MarketDay.on("2024-08-29"), "secret")
     assert failure.value.errors()[0]["loc"] == ("data", 0, field)
+
+
+@pytest.mark.parametrize("failure", [None, "conflict", "disconnected"])
+def test_fallback_uses_signed_spreads_and_requires_consistent_anchors(monkeypatch, failure):
+    from coppersushi.pipelines.cnec.spread_prices import SOURCE
+    payload = quarter_hourly_day()
+
+    def get(zone, day, token):
+        if zone == "AT":
+            return payload
+        raise market.IncompletePrices("No data for zone")
+
+    def spreads(endpoint, start, end):
+        assert endpoint == "priceSpread"
+        rows = [dict(dateTimeUtc=row.datetime, border_HU_AT=2, border_HU_RO=-3)
+                for row in payload.data]
+        if failure == "conflict":
+            rows[-1]["border_AT_RO"] = 1
+        if failure == "disconnected":
+            rows[-1]["border_HU_RO"] = None
+        return rows
+
+    monkeypatch.setattr(electricity_maps, "_get", get)
+    monkeypatch.setattr(electricity_maps.jao, "_get", spreads)
+    zones = ("AT", "HU", "RO")
+    if failure:
+        with pytest.raises(market.IncompletePrices):
+            electricity_maps.fetch_day("2026-09-10", zones, token="secret")
+        return
+    prices = electricity_maps.fetch_day("2026-09-10", zones, token="secret")
+    assert set(prices[prices.zone.ne("AT")].source) == {SOURCE}
+    assert prices[prices.zone.eq("AT")].source.tolist() == [r.source for r in payload.data]
+    assert prices[prices.zone.eq("RO")].price.tolist() == pytest.approx([r.value - 5 for r in payload.data])
+
+
+@pytest.mark.parametrize("second_spread", [3, 4], ids=["agree", "conflict"])
+def test_two_neighbors_for_one_missing_quarter_hour(monkeypatch, second_spread):
+    from coppersushi.pipelines.cnec.spread_prices import SOURCE
+
+    day = quarter_hourly_day()
+    missing = day.data[1].datetime
+    prices = {"AT": 10, "HU": 12, "RO": 15}
+
+    def get(zone, market_day, token):
+        rows = [row.model_copy(update={"zone": zone, "value": prices[zone]})
+                for row in day.data if zone != "HU" or row.datetime != missing]
+        return day.model_copy(update={"zone": zone, "data": rows})
+
+    monkeypatch.setattr(electricity_maps, "_get", get)
+    monkeypatch.setattr(electricity_maps.jao, "_get", lambda *args: [
+        dict(dateTimeUtc=missing, border_AT_HU=2, border_HU_RO=second_spread)])
+    if second_spread != 3:
+        with pytest.raises(market.IncompletePrices, match="Conflicting"):
+            electricity_maps.fetch_day("2026-09-10", tuple(prices), token="secret")
+        return
+    result = electricity_maps.fetch_day("2026-09-10", tuple(prices), token="secret")
+    assert result.price.tolist() == [prices[z] for z in result.zone]
+    derived = result[result.source.eq(SOURCE)]
+    assert list(zip(derived.interval, derived.zone)) == [(missing, "HU")]

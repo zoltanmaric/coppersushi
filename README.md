@@ -166,7 +166,7 @@ Once the server starts, the web app will be available at http://localhost:8050
 
 ### Market Data
 
-The CNEC view uses JAO constraints and Electricity Maps day-ahead prices. Put an
+The CNEC view uses JAO constraints and Electricity Maps day-ahead prices. When prices are missing, the publisher derives them from known zonal prices and JAO border spreads and labels the affected zones on the map. Put an
 Electricity Maps key in `.secrets/.electricity_maps_api_key`, or export
 `ELECTRICITY_MAPS_API_KEY`. Prepare a complete day before browsing:
 
