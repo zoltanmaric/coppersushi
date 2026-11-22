@@ -16,3 +16,7 @@ flowchart TB
 `map-graph.tsx` owns the displayed snapshot and the latest pending request through the pure `render-state.ts` reducer. `plot.tsx` calls public `Plotly.react` directly; only settlement of that promise completes a render. Native camera events cannot advance the queue. A paint separates renders; intermediate requests are discarded. Failed or unfinished figures do not accept selection. Plotly’s responsive configuration owns resize handling. `map-frame.tsx` measures the mounted container for initial bounds fitting; later updates preserve the user’s camera. Renderer errors are reported to the page and displayed through the shared `MapControls` status area.
 
 `map-gestures.ts` owns hover dismissal and a single gesture origin. Canvas gestures retain their click target until the final click; a separate tooltip gesture dismisses it. Native projection and public hover APIs refresh touch hits. Country-label hits are captured at pointer-down and consumed before Plotly selection. The reference dropdown remains the keyboard-accessible alternative. Decoration is mounted inside the native map container below the tooltip SVG.
+
+`camera.ts` bridges optional parent-owned camera state to native Mapbox move-end
+events. URL restoration jumps only when the camera differs; echoed movement does
+not jump again. Market interval selection remains independent of camera state.

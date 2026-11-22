@@ -16,6 +16,9 @@ export interface MapboxMap {
   project(point: LngLat): {x: number; y: number};
   unproject(point: [number, number]): {lng: number; lat: number};
   isMoving(): boolean;
+  getCenter(): {lat: number; lng: number};
+  getZoom(): number;
+  jumpTo(options: {center: [number, number]; zoom: number}): void;
   getPitch(): number;
   getBearing(): number;
   getBounds(): {getWest(): number; getEast(): number};

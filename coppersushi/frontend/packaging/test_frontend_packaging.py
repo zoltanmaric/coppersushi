@@ -21,9 +21,9 @@ def test_publication_uses_built_assets_and_emits_configured_shells(tmp_path, mon
     publish.publish('bucket')
     keys = [call.kwargs['Key'] for call in client.put_object.call_args_list]
     assert not any(key.endswith('unbuilt.txt') for key in keys)
-    assert keys[-4:] == [f'data/cnec/v1/ui/{name}' for name in ['index.html', 'embed.html', 'opf.html', 'opf-embed.html']]
-    assert all('/assets/' in key for key in keys[:-4])
-    for name in ['index.html', 'embed.html', 'opf.html', 'opf-embed.html']:
+    assert keys[-7:] == [f'data/cnec/v1/ui/{name}' for name in ['index.html', 'embed.html', 'opf.html', 'opf-embed.html', 'polish-cap.html', 'polish-cap-intervals.html', 'polish-cap-breakdown.html']]
+    assert all('/assets/' in key for key in keys[:-7])
+    for name in ['index.html', 'embed.html', 'opf.html', 'opf-embed.html', 'polish-cap.html', 'polish-cap-intervals.html', 'polish-cap-breakdown.html']:
         assert 'test-public-token' in (tmp_path / 'coppersushi/frontend/dist' / name).read_text()
 
 

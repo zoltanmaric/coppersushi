@@ -22,9 +22,22 @@ flowchart LR
     PSE["PSE requirements and basic purchases"] --> Publisher["Daily publisher"]
     Market["JAO and prices"] --> Publisher
     Publisher --> Objects["Immutable v3 interval objects"]
+    Objects -->|Pinned generations| Study["Offline fixed-study builder"]
+    Baseline["Investigated observations"] --> Study
+    Study --> Artifact["Immutable study JSON and manifest"]
+    Artifact --> Page["Export-cap investigation page"]
     Objects --> Tooltip["Critical Elements ⚡️ Polish export tooltip"]
 ```
 
 Reserve versions are selected independently before 10:30 Brussels on D−1.
 Unavailable reserve evidence does not block market publication. Use the existing
 explicit refresh command to enrich a previously published day; scheduled runs skip it.
+
+`investigation.py` validates the fixed study contract, including complete calendar
+coverage, distinct binding intervals, reserve components and publication cutoffs.
+`python -m scripts.polish_cap_page build` reconciles the investigated baseline and
+prepared extension against immutable map intervals before writing a study. It
+fails on missing evidence or changed counts. Its `publish` command uploads the
+immutable artifact before the manifest; it does not run on the daily schedule.
+Inputs and generated price-bearing data stay out of Git. Build and publication
+commands live in the [runbook](../../infra/lambda/README.md#fixed-export-cap-study).

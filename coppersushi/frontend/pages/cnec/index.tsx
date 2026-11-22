@@ -7,6 +7,7 @@ import {BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate, 
 import {useDayData, IntervalPrefetch} from './data/day-data';
 import {dayFigure, zoneFeatures, selectionIds} from './day-figure';
 import {IntervalControls} from '../../controls/interval-controls';
+import type {MapCamera} from '../../map/camera';
 import {MapGraph} from '../../map/map-graph';
 import {CORE_ZONES} from './market/reference';
 import {DateControls} from './date-time-controls';
@@ -56,7 +57,7 @@ function RoutedCnecPage({default_day, ...props}: HostProps) {
 }
 
 /** React page; the host owns routing and supplies the delivery-day navigation action. */
-type PageProps = Omit<Props, 'day'> & {selection: Selection; onAction: (action: Action) => void};
+export type PageProps = Omit<Props, 'day'> & {selection: Selection; onAction: (action: Action) => void; generation?: string; camera?: MapCamera; onCamera?: (camera: MapCamera)=>void};
 export function CnecPage(props: PageProps) {
   const [client] = useState(() => new QueryClient({defaultOptions: {queries: {
     retry: false, staleTime: 300_000, refetchOnWindowFocus: false, refetchOnReconnect: false, refetchOnMount: false,
@@ -75,7 +76,7 @@ function shell(token: string, basemap: Props['basemap'], camera: ReturnType<type
   }};
 }
 
-function View({id, min_day, token, basemap, selection, onAction: dispatch}: PageProps) {
+function View({id, min_day, token, basemap, selection, onAction: dispatch, camera, onCamera, generation: pinnedGeneration}: PageProps) {
   const {day, interval, selected, reference} = selection;
 
   const [compactTooltips, setCompactTooltips] = useState(() => window.matchMedia?.('(pointer: coarse)').matches ?? false);
@@ -87,10 +88,13 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
     return () => media.removeEventListener('change', update);
   }, []);
   const viewport = useMapViewport();
-  const initialCamera = useMemo(()=>initialCoreCamera(viewport.size?.width ?? 160,viewport.size?.height ?? 160),[viewport.size]);
+  const entryCamera = useRef(camera);
+  const initialCamera = useMemo(()=>entryCamera.current
+    ? {center:{lat:entryCamera.current.lat,lon:entryCamera.current.lon},zoom:entryCamera.current.zoom,bearing:0,pitch:0}
+    : initialCoreCamera(viewport.size?.width ?? 160,viewport.size?.height ?? 160),[viewport.size]);
   const [renderedFigure,setRenderedFigure] = useState<PlotlyFigure|null>(null);
   const [mapError,setMapError] = useState<Error|null>(null);
-  const {publication,metadata,current: intervalQuery,data,labels,generation} = useDayData(day,interval);
+  const {publication,metadata,current: intervalQuery,data,labels,generation} = useDayData(day,interval,pinnedGeneration);
   const previousControlLabels = useRef(labels);
   useEffect(()=>{if (labels.length) previousControlLabels.current = labels;},[labels]);
   const controlLabels = labels.length ? labels : previousControlLabels.current;
@@ -120,7 +124,7 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
   return <MapFrame ref={viewport.ref} id={id} loadState={loadState}>
     <IntervalPrefetch day={day} generation={generation} count={labels.length} enabled={!!data && !!metadata.data}/>
     <div className="map-canvas">
-      {viewport.size && <MapGraph onRendered={completed=>{setRenderedFigure(completed);setMapError(null);}} onError={setMapError} compactTooltips={compactTooltips} id={`${id}-map`} figure={graphFigure} onClick={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
+      {viewport.size && <MapGraph camera={camera} onCamera={onCamera} onRendered={completed=>{setRenderedFigure(completed);setMapError(null);}} onError={setMapError} compactTooltips={compactTooltips} id={`${id}-map`} figure={graphFigure} onClick={mapClick} overlay={overlayModel(graphFigure)} hidden={!mapCurrent}
         countries={countries} onReference={reference=>dispatch({type:'reference',reference})}
         config={plotConfig}/>}
     </div>
@@ -131,7 +135,7 @@ function View({id, min_day, token, basemap, selection, onAction: dispatch}: Page
         {metadata.data && !validInterval && <div role="alert">This interval is outside the selected day.{' '}
           <button onClick={() => {dispatch({type:'interval',interval:0});}}>Go to first interval</button>
         </div>}
-        {publication.isSuccess && !publication.data && <div role="status">Data is unavailable for this day. <button onClick={() => void publication.refetch()}>Check again</button></div>}
+        {!pinnedGeneration && publication.isSuccess && !publication.data && <div role="status">Data is unavailable for this day. <button onClick={() => void publication.refetch()}>Check again</button></div>}
         {notes.map(note => <div role="status" key={note}>{note}</div>)}
         {([['Publication',publication],['Metadata',metadata],['Interval',intervalQuery]] as const).map(([name,query])=>query.error && <div role="alert" key={name}>{name}: {query.error.message}{data && !mapCurrent && ` Showing ${data.label.split(' · ')[1]}.`} <button onClick={()=>void query.refetch()}>Retry</button></div>)}
 

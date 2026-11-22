@@ -37,3 +37,21 @@ def test_unsupported_cnec_dates_redirect_to_undated_view(monkeypatch):
     assert response.status_code == 302
     assert response.headers['Location'] == '/cnec'
     assert client.get('/cnec/2025-11-05').status_code == 200
+
+
+@pytest.mark.parametrize('path,embed,plotly',[
+    ('/polish-export-caps',False,True),
+    ('/embed/polish-export-caps/intervals',True,True),
+    ('/embed/polish-export-caps/breakdown',True,False),
+])
+def test_investigation_shells_share_the_existing_navigation(monkeypatch,path,embed,plotly):
+    monkeypatch.setenv('MAPBOX_TOKEN','test-public-token')
+    response=app.server.test_client().get(path)
+    assert response.status_code==200
+    html=response.text
+    assert f'data-embed="{str(embed).lower()}"' in html
+    assert '/assets/polish-cap-app.js' in html
+    assert ('plotly-mapbox-3.7.0.min.js' in html)==plotly
+    navigation=html.split('<nav class="app-navigation">')[1].split('</nav>')[0]
+    assert 'href="/cnec"' in navigation and 'href="/opf-2024"' in navigation
+    assert 'href="/polish-export-caps"' not in navigation

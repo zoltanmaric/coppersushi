@@ -12,7 +12,8 @@ existing package and is outside this product refactor.
 flowchart LR
   preparation["Power Flow preparation"] --> files["Versioned data in private S3"]
   daily["Critical Elements daily producer"] --> files
-  files --> edge["CloudFront"] --> frontend["React map pages"]
+  study["Offline export-cap study builder"] --> files
+  files --> edge["CloudFront"] --> frontend["React maps and investigation"]
   frontend -->|Page views and performance| analytics["Cloudflare Web Analytics"]
   infra["Infrastructure"] --> daily
   infra --> edge
