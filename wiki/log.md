@@ -640,3 +640,7 @@ The [design principles](forecasting-system-design.md) connect operational eviden
 ## [2026-11-23] decision | Forecasting system design
 
 [Agent-driven forecasting design](forecasting-system-design.md) starts from the consumer decision across markets and fundamentals. The DE–LU replay is its worked example.
+
+## [2026-11-23] decision | Forecast issue and scoring
+
+The [forecast design walkthrough](forecasting-system-design.md) tests whether a consumer can retrieve an edition before its outcome exists.

@@ -48,7 +48,7 @@ ECMWF’s May 2026 AIFS upgrade changed the model and the data used to initializ
 
 ### Pipeline-triggers
 
-Google’s MLOps levels distinguish rerunning a training pipeline from testing and releasing changes to the pipeline code. Kpler reports daily retraining and two morning updates driven by new auction data. From those two accounts we derive three distinct events for our design: releasing code, fitting and approving a model, and issuing a prediction when inputs arrive. This gives the operator separate identities for the code release, fitted model and published edition. [Google Cloud, levels 1 and 2](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning) · [Kpler forecast methodology, Morning D+1 Updates](https://help.kpler.com/en/articles/8925114-short-term-power-forecasts-methodology)
+Google’s MLOps levels distinguish rerunning a training pipeline from testing and releasing changes to the pipeline code. Kpler reports daily retraining and two morning updates driven by new auction data. For our design, record which code release produced a fitted model, what evidence authorized that model for use, and which approved model produced each edition. A new fit can await approval while incoming data triggers another edition from the previously approved model. [Google Cloud, levels 1 and 2](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning) · [Kpler forecast methodology, Morning D+1 Updates](https://help.kpler.com/en/articles/8925114-short-term-power-forecasts-methodology)
 
 ### Publication-retries
 
