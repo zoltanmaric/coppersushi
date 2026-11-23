@@ -31,4 +31,4 @@ Use the parent execution’s MLflow ID. The command installs the versioned [shar
 pixi run --locked python -m forecasts.review --run MLFLOW_RUN_ID --conclusion "$CONCLUSION_JSON"
 ```
 
-The conclusion provides `result`, `limitations`, `decision` and optional `evidence_artifacts` or `evidence_status`. The command saves it under `research/conclusion.json` by default and updates the run’s Notes.
+The conclusion provides `result`, `limitations`, `decision` and optional `evidence_artifacts` or `evidence_status`. The command saves it under `research/conclusion.json` by default and updates the run’s Notes. Use the [viewer](../web/README.md) to explore a saved run.

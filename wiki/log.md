@@ -686,3 +686,7 @@ Selected the [price-history and calendar baseline](price-forecasting/research/pr
 ## [2026-10-20] migration | Wiki research planning and MLflow execution evidence
 
 Migrated the baseline rationale, October 20 review and six candidate proposals to the [research index](price-forecasting/research/index.md). The index recommends diagnostics first without selecting or executing it. Eight written-only MLflow records are recoverably archived; actual executions retain their IDs/statuses, readable names, and retrospective baseline/review evidence. Accepted prediction, model and manifest artifacts are unchanged.
+
+## [2026-10-20] decision | Forecast architecture ownership
+
+The forecast frontend “How it works” owns the architecture explanation, with readable stages and connections in `forecasts/web/pipeline.json`. The wiki retains scientific contracts and decisions; README owns commands and links. [Product overview](price-forecasting.md#architecture).

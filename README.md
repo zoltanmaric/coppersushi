@@ -10,7 +10,7 @@ The power-flow app visualises optimisation solutions from
 Product ownership: [Copper Sushi](coppersushi/README.md) contains the tools at
 coppersushi.121gigawatts.org, including their frontend, pipelines and infrastructure.
 [1.21 Gigawatts](121gigawatts/README.md) contains the blog at 121gigawatts.org.
-[Forecasting](forecasts/README.md) retains its existing independent layout.
+[Forecasting](forecasts/README.md) owns the DE–LU day-ahead model, daily issue command and historical evaluation.
 [Monitoring](monitoring/README.md) owns cross-product browser checks and outage emails.
 
 The web app is deployed
