@@ -1,6 +1,6 @@
 # Day-ahead price forecasts
 
-Forecast the DE–LU auction price for each quarter of tomorrow’s Berlin delivery day. Each issue contains five price quantiles from the fitted model and five from the seasonal reference. The information deadline is 11:00 Berlin on the preceding day. [Scientific contract](../wiki/price-forecasting/germany-luxembourg.md)
+Forecast the DE–LU auction price for each quarter of tomorrow’s Berlin delivery day. Each issue contains five price quantiles from the fitted model and five from the seasonal reference. The information deadline is 11:00 Berlin on the preceding day. [Scientific contract](../wiki/price-forecasting/germany-luxembourg.md) · [Recorded result](../wiki/price-forecasting/evaluation.md#result)
 
 ## Follow one forecast
 
@@ -8,8 +8,9 @@ Forecast the DE–LU auction price for each quarter of tomorrow’s Berlin deliv
 |---|---|
 | Which price versions were eligible at the deadline? | [Inputs](inputs/README.md) |
 | Which features enter the monthly fit and the daily prediction? | [Model](model/README.md) |
+| Where do realised prices enter, and how are the two methods scored? | [Evaluation](evaluation/README.md) |
 
-The product root holds the public commands and three shared contracts: [run settings](config.py), [Berlin delivery times](market.py), and [source fingerprints](provenance.py). The [registered settings](run-config.json) identify the fixed baseline.
+The product root holds the public commands and three shared contracts: [run settings](config.py), [Berlin delivery times](market.py), and [source fingerprints](provenance.py). The [registered settings](run-config.json) and [result receipt](reports/evaluation.json) identify the comparison.
 
 ## On-demand day-ahead forecast
 
@@ -21,6 +22,14 @@ pixi run --locked python -m forecasts.daily --delivery-date 2026-11-25 --snapsho
 ```
 
 [Monthly fitting](monthly_fit.py) publishes the bundle. [Daily issuance](daily.py) checks its identity, selects prices received by issue time, and writes the local edition by the deadline. A missing required input stops issuance. Add `--replay` for historical reconstruction under the recorded price availability assumptions.
+
+## Local model evaluation
+
+```sh
+pixi run --locked python -m forecasts.evaluation --snapshot "$BASELINE_SNAPSHOT" --output "$NEW_EVALUATION_DIRECTORY"
+```
+
+Use the immutable snapshot named in [run-config.json](run-config.json) for the registered evaluation. Read the [evaluation workflow](evaluation/README.md) to follow the registered nine monthly folds.
 
 ## Development
 

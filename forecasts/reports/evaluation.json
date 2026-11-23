@@ -1,0 +1,79 @@
+{
+  "run_id": "df111a196c10416aa61d2a15",
+  "model_method": "prices",
+  "mlflow_run_id": "4d647013a5414b35ad4fdc8db0175a33",
+  "metaflow_run_id": "ForecastEvaluation/1795459129025503",
+  "code_revision": "e829a3f8ea3afcd967a182cd859af0132b97fa45",
+  "proposal": {
+    "git_revision": "e829a3f8ea3afcd967a182cd859af0132b97fa45",
+    "sha256": "e3d29401c0db73e56d3cdd6b71c0a07726661cd4581d5b603ef12ba6b71c3fc9",
+    "wiki_path": "wiki/price-forecasting/research/prices-only-baseline.md"
+  },
+  "snapshot_id": "8bf5b5de2dc94d9d5db62fe9178dee50ac7e08005c2c6790e351e95081910a6d",
+  "evidence_status": "accepted_baseline",
+  "interpretation": "Retrospective development evidence. CatBoost lost to the seasonal reference on registered WIS. Live delivery unverified.",
+  "report_sha256": "bff3299a3b0b1f00ecca67ea544e2b4672dce322cc2ff781ab75f1734e904789",
+  "scored_quarters": 26204,
+  "fallback_rows": {},
+  "metrics": {
+    "prices": {
+      "rows": 26204,
+      "days": 273,
+      "wis": 21.06167409243769,
+      "median_mae": 28.82860651962234,
+      "median_rmse": 44.61980148576269,
+      "coverage_50": 0.233475805220577,
+      "coverage_95": 0.6010914364219203,
+      "width_50": 20.018458292386438,
+      "width_95": 71.0860584633687,
+      "daily_coverage_50": 0.23344514784732173,
+      "daily_coverage_95": 0.6010262382544991
+    },
+    "reference": {
+      "rows": 26204,
+      "days": 273,
+      "wis": 19.426162005800645,
+      "median_mae": 30.20082563730728,
+      "median_rmse": 47.04615385879767,
+      "coverage_50": 0.4606548618531522,
+      "coverage_95": 0.9221111280720501,
+      "width_50": 33.26708823080446,
+      "width_95": 156.62770722027165,
+      "daily_coverage_50": 0.460631005467962,
+      "daily_coverage_95": 0.9220798826777088
+    }
+  },
+  "comparison": {
+    "prices": {
+      "wis_difference": 1.6355120866370492,
+      "ci_95": [
+        0.25293193127310626,
+        3.25980719655282
+      ]
+    }
+  },
+  "reproduction_attempt": "f6fc4678708d4d56b74efca6",
+  "daily_parity": {
+    "2026-01-01": {
+      "quarters": 96,
+      "max_absolute_differences": {
+        "prices": 0.0,
+        "reference": 0.0
+      }
+    },
+    "2026-03-29": {
+      "quarters": 92,
+      "max_absolute_differences": {
+        "prices": 0.0,
+        "reference": 0.0
+      }
+    },
+    "2026-09-30": {
+      "quarters": 96,
+      "max_absolute_differences": {
+        "prices": 0.0,
+        "reference": 0.0
+      }
+    }
+  }
+}
