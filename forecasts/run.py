@@ -85,6 +85,8 @@ def prepare(config_path: Path, exploratory: bool = False, *,
     dirty = bool(_git("status", "--porcelain", "--untracked-files=normal"))
     if dirty and not exploratory:
         raise ValueError("Accepted runs require committed code; use --exploratory for development")
+    if not exploratory and proposal is None:
+        raise ValueError("Accepted runs require a committed research proposal; pass --proposal")
     definitions = {
         name: ((ROOT / name).read_bytes() if exploratory else
                subprocess.check_output(["git", "-C", str(ROOT), "show", f"{code}:{name}"]))

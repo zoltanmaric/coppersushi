@@ -58,7 +58,6 @@ class BacktestPredictions:
     rows: DataFrame[Predictions]
     folds: list[Report]
     failures: list[Report]
-    fallback_rows: dict[str, int]
     crossing_rows: dict[str, int]
 
 

@@ -1,6 +1,6 @@
 # Forecast research
 
-The [price-history baseline](prices-only-baseline.md) is selected. The earlier candidates remain deferred. [Retrospective baseline review](baseline-review.md) owns the observations and execution links. The [research-record contract](../forecast-infrastructure.md#research-history) separates wiki planning from MLflow execution evidence.
+The [price-history baseline](prices-only-baseline.md) has a [recorded result](../evaluation.md#result). The earlier candidates remain deferred. [Retrospective baseline review](baseline-review.md) owns the observations and execution links. The [research-record contract](../forecast-infrastructure.md#research-history) separates wiki planning from MLflow execution evidence.
 
 ## Candidates
 

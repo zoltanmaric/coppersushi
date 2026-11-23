@@ -32,7 +32,6 @@ def forecast_months(reader: InputReader, features: DataFrame[Features], config: 
               for key, daily in evaluation.partition_by("delivery_date", as_dict=True, maintain_order=True).items()}
     predictions: list[pl.DataFrame] = []
     folds: list[Report] = []
-    fallback: Counter[str] = Counter()
     crossings: Counter[str] = Counter()
     fold = config.evaluation_start
     end = config.end_exclusive
@@ -50,10 +49,9 @@ def forecast_months(reader: InputReader, features: DataFrame[Features], config: 
             forecast = predict_day(rows, fitted.models, fitted.reference, config)
             predictions.append(_prediction_table(rows, forecast, fold, config))
             crossings.update(forecast.crossings)
-            fallback[forecast.selected_model] += len(rows)
             day += timedelta(days=1)
         fold = stop
-    return BacktestPredictions(Predictions.validate(pl.concat(predictions)), folds, [], dict(fallback), dict(crossings))
+    return BacktestPredictions(Predictions.validate(pl.concat(predictions)), folds, [], dict(crossings))
 
 
 def _prediction_table(rows: DataFrame[Features], forecast: DayForecast, fold: date,

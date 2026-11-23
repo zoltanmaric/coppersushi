@@ -19,6 +19,8 @@ Current project design:
 | Evaluation | Chronological, all dates retained; overall and monthly results |
 | Initial data budget | Free sources |
 
+The baseline serves a researcher comparing an 11:00 forecast against the seasonal reference. The target is the DE–LU day-ahead auction clearing price in €/MWh for each delivery quarter. The frozen price snapshot supplies scoring truth. A trading service needs a decision owner and a last useful delivery time. Measuring service requires recording when each expected edition first becomes retrievable, including missed issues. [Forecast design principles](../forecasting-system-design.md#principles).
+
 The median is the central price estimate. The other four outputs give 50% and 95% central prediction ranges. They describe uncertainty for each quarter-hour, not complete scenarios for a whole day's price path. CatBoost's [MultiQuantile objective](https://catboost.ai/docs/en/concepts/loss-functions-regression#MultiQuantile) supports this in one fitted model.
 
 ## Inputs

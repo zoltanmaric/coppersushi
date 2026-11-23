@@ -1,47 +1,23 @@
-"""Fetch price history and optional research archives for a specified Berlin date range."""
+"""Fetch SMARD price history for a specified Berlin date range."""
 from datetime import date, datetime, timedelta, timezone
 import json
 from pathlib import Path
 from urllib.request import Request, urlopen
 from zipfile import ZIP_DEFLATED, ZipFile
 
-from forecasts.fms import access_token
 from forecasts.dataset import BERLIN, PAYLOADS, digest, quarters
 from forecasts.input_types import PriceSeries, Report
 
 SMARD = "https://www.smard.de/app/chart_data/4169/DE/"
-FMS = "https://fms.tp.entsoe.eu/downloadFileContent"
-DEMAND_EXTRACT = "DayAheadTotalLoadForecast_6.1.B_r3"
 RECEIPT = "retrieval.json"
 
 
 def fetch_sources(root: Path, start: date, end: date) -> None:
-    """Fetch dated source archives, aborting when any required source fails."""
+    """Fetch the dated SMARD archive, aborting if a required request fails."""
     if start >= end:
         raise ValueError("Source collection requires a nonempty Berlin date range")
     (root / "inputs").mkdir(parents=True)
     _fetch_prices(root / PAYLOADS["prices"], start, end)
-
-
-def fetch_demand(path: Path, start: date, end: date, credentials: Path) -> None:
-    """Sign in and save the official monthly extracts and their actual receipt times."""
-    token = access_token(credentials)
-    start_utc = next(quarters(start, end))
-    end_utc = next(quarters(end, end + timedelta(days=1))) - timedelta(minutes=15)
-    month = start_utc.date().replace(day=1)
-    with ZipFile(path, "x", compression=ZIP_DEFLATED) as archive:
-        receipts = {}
-        while month <= end_utc.date():
-            name = f"{month:%Y_%m}_{DEMAND_EXTRACT}.csv"
-            body = {"folder": f"/TP_export/{DEMAND_EXTRACT}/", "filename": name,
-                    "topLevelFolder": "TP_export", "downloadAsZip": False}
-            request = Request(FMS, data=json.dumps(body).encode(),
-                              headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
-            raw, receipt = _fetch(request)
-            archive.writestr(name, raw)
-            receipts[name] = {**receipt, "request": body}
-            month = (month.replace(day=28) + timedelta(days=4)).replace(day=1)
-        _write_receipt(archive, receipts)
 
 
 def require_coverage(start: date, end: date, prices: PriceSeries) -> None:
@@ -54,16 +30,12 @@ def require_coverage(start: date, end: date, prices: PriceSeries) -> None:
 
 
 def source_receipts(root: Path) -> tuple[dict[str, Report], dict[str, Report]]:
-    """Return the original bytes' identities and acquisition records."""
-    archives, receipts = {}, {}
-    for source in ("prices",):
-        relative = PAYLOADS[source]
-        path = root / relative
-        with ZipFile(path) as archive:
-            receipt = json.loads(archive.read(RECEIPT))
-        archives[source] = {"path": relative, "bytes": path.stat().st_size, "sha256": digest(path)}
-        receipts[source] = receipt
-    return archives, receipts
+    """Return the original price archive's identity and acquisition record."""
+    relative = PAYLOADS["prices"]
+    path = root / relative
+    with ZipFile(path) as archive:
+        receipt = json.loads(archive.read(RECEIPT))
+    return {"prices": {"path": relative, "bytes": path.stat().st_size, "sha256": digest(path)}}, {"prices": receipt}
 
 
 def _fetch_prices(path: Path, start: date, end: date) -> None:

@@ -56,11 +56,11 @@ def score_forecasts(backtest: BacktestPredictions, truth: dict[datetime, float |
             predictions["delivery_date"].to_list(), config.bootstrap),
         "delivery_rows": len(predictions), "scored_rows": len(predictions),
         "missing_truth": 0, "forecast_coverage": 1.,
-        "fallback_rows": backtest.fallback_rows, "prediction_failures": backtest.failures,
+        "fallback_rows": {}, "prediction_failures": backtest.failures,
         "raw_crossing_rows": backtest.crossing_rows,
         "raw_crossing_fraction": {name: count / len(predictions) for name, count in backtest.crossing_rows.items()},
         "folds": backtest.folds, "timing_limits": {"prices": TIMING["prices"]},
-        "limitations": ["Retrospective single-year evaluation; August–September were inspected in earlier diagnostics.",
+        "limitations": ["Retrospective single-year evaluation; January–September 2026 was inspected in the earlier baseline.",
                         "Historical price availability is assumed.",
                         "Intervals are marginal per quarter; no trading-profitability or daily-readiness claim."]}
     return EvaluationResult(predictions, report)

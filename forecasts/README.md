@@ -155,7 +155,7 @@ The test requires the snapshot ID recorded in its fixture. Ordinary dataset gene
 Run accepted execution from the normal development environment:
 
 ```sh
-pixi run --locked python -m forecasts.run run --snapshot data/forecasts/loaded-snapshot
+pixi run --locked python -m forecasts.run run --snapshot data/forecasts/loaded-snapshot --proposal wiki/price-forecasting/research/prices-only-baseline.md
 ```
 
 The command requires committed code. It freezes the repository, `pyproject.toml`, `pixi.lock` and configuration, then restores a fresh Pixi `runtime` environment before running Metaflow. The manifest records the actual Python and installed packages, definition hashes, Pixi version, code and snapshot identity. Development-only packages are excluded. Runtime installation can use cached packages; it requires package-network access when the cache is incomplete.

@@ -28,7 +28,7 @@ from forecasts.dataset import (
     digest, load_demand, load_prices, load_weather, stamp,
     verify_payloads,
 )
-from forecasts.fresh_sources import fetch_demand, fetch_sources, require_coverage, source_receipts
+from forecasts.fresh_sources import fetch_sources, require_coverage, source_receipts
 from forecasts.schemas import SCHEMAS, VERSION, describe, validate
 from forecasts.storage import get_verified, put_verified, verify_bucket
 from forecasts.tables import DiagnosticFeatures, Features
@@ -216,6 +216,9 @@ class InputReader:
         if start >= end:
             raise ValueError("Feature start must precede end")
         daily: dict[str, defaultdict[date, list[Row]]] = {name: defaultdict(list) for name in ("weather", "demand")}
+        missing = sorted(daily.keys() - self._tables.keys())
+        if missing:
+            raise ValueError(f"Archived-source diagnostic requires a full historical snapshot; missing {', '.join(missing)} tables")
         for name, by_day in daily.items():
             for row in self._tables[name].to_pylist():
                 by_day[row["valid_utc"].astimezone(BERLIN).date()].append(row)
@@ -303,15 +306,11 @@ def main() -> None:
         p.add_argument("--directory", type=Path, default=ROOT / "data/forecasts/snapshot")
         if command == "collect":
             p.add_argument("--publish", action="store_true", help="Publish the validated collection to S3 in this run")
-    p = sub.add_parser("refresh", help="Download all required sources and stage a new historical snapshot")
+    p = sub.add_parser("refresh", help="Download SMARD prices and stage a price snapshot")
     p.add_argument("--start", type=date.fromisoformat, required=True)
     p.add_argument("--end-exclusive", type=date.fromisoformat, required=True)
     p.add_argument("--data-root", type=Path, required=True, help="New directory for the raw responses")
     p.add_argument("--directory", type=Path, required=True, help="New directory for the typed snapshot")
-    p = sub.add_parser("fetch-demand", help="Save official demand and receipt time for a delivery day")
-    p.add_argument("--day", type=date.fromisoformat, required=True)
-    p.add_argument("--entsoe-credentials", type=Path, required=True)
-    p.add_argument("--archive", type=Path, required=True)
     p = sub.add_parser("load")
     p.add_argument("snapshot_id")
     p.add_argument("--directory", type=Path, default=ROOT / "data/forecasts/loaded-snapshot")
@@ -325,8 +324,6 @@ def main() -> None:
             publish(args.profile, args.region, args.bucket, args.directory, args.data_root)
     elif args.command == "publish":
         publish(args.profile, args.region, args.bucket, args.directory, args.data_root)
-    elif args.command == "fetch-demand":
-        fetch_demand(args.archive, args.day, args.day + timedelta(days=1), args.entsoe_credentials)
     elif args.command == "refresh":
         if args.data_root.exists() or args.directory.exists() or args.data_root.resolve() == args.directory.resolve():
             parser.error("refresh requires new, distinct paths for the raw archives and typed snapshot")

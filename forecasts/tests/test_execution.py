@@ -48,9 +48,13 @@ class ExecutionTests(unittest.TestCase):
             patcher.start()
             self.addCleanup(patcher.stop)
 
+    def test_accepted_run_requires_a_proposal(self) -> None:
+        with self.assertRaisesRegex(ValueError, "research proposal"):
+            run.prepare(self.repo / 'forecasts/run-config.json')
+
     def test_preparation_freezes_definitions_without_using_launcher_packages(self) -> None:
         with patch.object(run, '_environment', side_effect=AssertionError('launcher is not the runtime')):
-            directory, _ = run.prepare(self.repo / 'forecasts/run-config.json')
+            directory, _ = run.prepare(self.repo / 'forecasts/run-config.json', proposal=self.proposal)
         manifest = json.loads((directory / 'manifest.json').read_text())
         self.assertNotIn('environment', manifest)
         for name, field in [('pixi.lock', 'lock_sha256'), ('pyproject.toml', 'project_sha256')]:
@@ -60,7 +64,7 @@ class ExecutionTests(unittest.TestCase):
             self.assertIn('pyproject.toml', archive.getnames())
         (self.repo / 'pixi.lock').write_text('uncommitted change')
         with self.assertRaisesRegex(ValueError, 'committed code'):
-            run.prepare(self.repo / 'forecasts/run-config.json')
+            run.prepare(self.repo / 'forecasts/run-config.json', proposal=self.proposal)
 
     def test_prepared_execution_ignores_later_source_and_lock_edits(self) -> None:
         directory, _ = run.prepare(self.repo / 'forecasts/run-config.json', proposal=self.proposal)
@@ -88,7 +92,7 @@ class ExecutionTests(unittest.TestCase):
         self.assertEqual((self.repo / 'forecasts/marker.txt').read_text(), 'edited checkout')
 
     def test_changed_frozen_definitions_are_rejected_before_install(self) -> None:
-        directory, _ = run.prepare(self.repo / 'forecasts/run-config.json')
+        directory, _ = run.prepare(self.repo / 'forecasts/run-config.json', proposal=self.proposal)
         manifest = json.loads((directory / 'manifest.json').read_text())
         code = self.root / 'extracted'
         with tarfile.open(directory / 'code.tar') as archive:
@@ -98,7 +102,7 @@ class ExecutionTests(unittest.TestCase):
             run._restore_runtime(code, manifest, {})
 
     def test_reproduction_retries_preserve_failed_and_successful_attempts(self) -> None:
-        source, _ = run.prepare(self.repo / 'forecasts/run-config.json')
+        source, _ = run.prepare(self.repo / 'forecasts/run-config.json', proposal=self.proposal)
         manifest = json.loads((source / 'manifest.json').read_text())
         manifest.update(environment=self.environment, artifacts={'code.tar': run.digest(source / 'code.tar')})
         (source / 'manifest.json').write_text(json.dumps(manifest))

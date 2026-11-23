@@ -21,4 +21,4 @@ Scientific contracts and decisions remain in the design pages linked above. The 
 
 ## Research
 
-The [research index](price-forecasting/research/index.md) owns proposals, relationships, status and the recommended next choice. The [baseline review](price-forecasting/research/baseline-review.md) records the retrospective evidence and links to actual MLflow executions. No follow-up candidate is selected or executed. [Research-record contract](price-forecasting/forecast-infrastructure.md#research-history).
+The [research index](price-forecasting/research/index.md) owns proposals, relationships, status and the recommended next choice. The [baseline review](price-forecasting/research/baseline-review.md) records the retrospective evidence and links to actual MLflow executions. The [baseline result](price-forecasting/evaluation.md#result) records the selected comparison. [Research-record contract](price-forecasting/forecast-infrastructure.md#research-history).

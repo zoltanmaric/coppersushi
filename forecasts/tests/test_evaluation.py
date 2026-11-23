@@ -148,6 +148,7 @@ class EvaluationTests(unittest.TestCase):
             self.assertEqual(report, replay)
             self.assertEqual(set(report["metrics"]), {"prices", "reference"})
             self.assertEqual(set(report["comparison"]), {"prices"})
+            self.assertEqual(report["fallback_rows"], {})
             self.assertEqual({path.name for path in (original / "models").rglob("*.cbm")}, {"prices.cbm"})
             before = pq.read_table(original / 'predictions.parquet').to_pydict()
             self.assertEqual(before, pq.read_table(restored / 'predictions.parquet').to_pydict())
@@ -158,7 +159,7 @@ class EvaluationTests(unittest.TestCase):
             scored = pl.read_parquet(original / 'predictions.parquet')
             ScoredPredictions.validate(scored)
             rows = Predictions.validate(scored.drop("target", "target_missing"))
-            backtest = BacktestPredictions(rows, [], [], {}, {})
+            backtest = BacktestPredictions(rows, [], [], {})
             incomplete_truth = dict(r.truth)
             incomplete_truth.pop(rows["delivery_utc"][-1])
             with self.assertRaisesRegex(ValueError, "Realised SMARD prices.*1 missing quarter"):

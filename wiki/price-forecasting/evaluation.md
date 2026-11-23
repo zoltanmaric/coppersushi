@@ -81,8 +81,10 @@ Historical input timing remains subject to the [availability limits](data-source
 
 As of 2026-10-09, the [run configuration](../../forecasts/run-config.json) freezes dates, CatBoost settings, minimum reference history, resampling and numerical tolerance. [Implementation/setup](../../forecasts/README.md#local-model-evaluation) describes the fixed price features and explicit feature inventories saved before fitting. Changes after inspecting scores belong to a separate experiment.
 
-Monthly expanding evaluation covers January–September 2026. This is retrospective evaluation: August–September 2026 were already inspected in the point-model diagnostic. Do not call them an untouched final holdout. Prospective forecasts after freezing provide fresh evidence; the single historical year does not establish multi-year robustness.
+Monthly expanding evaluation covers January–September 2026. This is retrospective evaluation: All January–September dates were inspected in the earlier three-model comparison. Do not call them an untouched final holdout. Prospective forecasts after freezing provide fresh evidence; the single historical year does not establish multi-year robustness.
 
 ## Result
 
-See the [selected baseline](research/prices-only-baseline.md) for the execution and result. The [retrospective review](research/baseline-review.md) covers the superseded three-feature-set experiment and its fallback policy.
+The [frozen proposal](research/prices-only-baseline.md) kept the original dates and 11:00 Berlin information deadline. Across 273 days, the model improved median absolute error but lost on the registered interval score. Its central 95% band covered 60.1% of quarters, versus 92.2% for the reference. Retain the seasonal reference for subsequent comparisons. This result establishes reproducibility on previously inspected dates. [Run identities, scores and verification](../../forecasts/reports/evaluation.json).
+
+The [retrospective review](research/baseline-review.md) covers the superseded three-feature-set experiment.

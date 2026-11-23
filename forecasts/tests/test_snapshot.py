@@ -87,6 +87,12 @@ def write_snapshot(directory: Path) -> Report:
 
 
 class SnapshotTests(unittest.TestCase):
+    def test_archived_source_diagnostic_requires_weather_and_demand_tables(self) -> None:
+        prices = pa.Table.from_pylist(history()["prices"], schema=SCHEMAS["prices"])
+        reader = InputReader({"prices": prices})
+        with self.assertRaisesRegex(ValueError, "full historical snapshot; missing demand, weather tables"):
+            reader.replay(date(2026, 3, 29), date(2026, 3, 30))
+
     def test_post_cutoff_history_does_not_change_selected_versions_or_features(self) -> None:
         records = history()
         original = {n: records[n] for n in SCHEMAS}
