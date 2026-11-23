@@ -636,3 +636,19 @@ Checked the [upstream price source and Slovak settlement-price reconstruction](e
 ## [2026-11-19] query | Cloudflare analytics and diagnostic billing
 
 Recorded [which Cloudflare charges apply to the app and how to interpret its traffic reports](copper-sushi-app.md#analytics).
+
+## [2026-11-23] ingest | Operating a day-ahead forecast
+
+[Operational forecasting cases](price-forecasting/operational-forecasting.md) distinguish the primary model’s score from what the service delivered by the decision deadline.
+
+## [2026-11-23] ingest | Forecast design review
+
+The [design principles](forecasting-system-design.md) connect operational evidence to checks a reviewer can perform on a specific stack revision.
+
+## [2026-11-23] decision | Forecasting system design
+
+[Agent-driven forecasting design](forecasting-system-design.md) starts from the consumer decision across markets and fundamentals. The DE–LU replay is its worked example.
+
+## [2026-11-23] decision | Forecast issue and scoring
+
+The [forecast design walkthrough](forecasting-system-design.md) tests whether a consumer can retrieve an edition before its outcome exists.

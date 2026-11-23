@@ -8,6 +8,18 @@ Challenge 8 covers Germany–Luxembourg quarter-hour day-ahead prices in EUR/MWh
 
 Eiser's pre-11:00 model uses historical prices, ENTSO-E load forecasts and DWD ICON-D2 weather. Lasso Estimated AutoRegressive point models feed Simple Quantile Regression Averaging. Code and collected weather histories are public. After 11:00 the participant switches to an EXAA-only model using early auction prices: do not use the default leaderboard or latest submission. [Model repository](https://github.com/GitMoritzraab/Operational-Forecasting-Pipeline-for-Day-Ahead-Electricity-Prices), [leaderboard](https://energy-arena.org/leaderboard).
 
+## Paired-week
+
+For the German delivery dates 2–8 October 2026, both participants supplied all 672 quarter-hours at both cutoffs. On 23 November we joined five quantiles to Bundesnetzagentur | SMARD.de observations by UTC delivery timestamp and recomputed [WIS](evaluation.md#wis) and coverage. Use each participant’s `quantile_points`, join `ground_truth` on matching timestamps, and average the per-quarter scores with equal weight. Coverage is the fraction of joined observations inside the indicated pair of quantiles, including the endpoints. No rows were filled. Official Arena scores use ENTSO-E truth. [Platform scoring and chart data](https://energy-arena.org/faq)
+
+| Participant and cutoff (German time) | WIS (EUR/MWh, lower is better) | Central 50% coverage | Central 95% coverage |
+|---|---:|---:|---:|
+| Eiser, 11:00 | 11.44 | 57.74% | 98.81% |
+| Eiser, noon | 7.16 | 49.55% | 96.43% |
+| NaiveBenchmark, either cutoff | 16.91 | 37.35% | 76.49% |
+
+The noon edition scores better on the same delivery quarters and can use the intervening early auction. This comparison measures the published forecasts at two decision times. It cannot isolate the algorithm. Weekly coverage also hides individual days: on 5 October the 11:00 central 50% band covered only 15 of 96 quarters. [11:00 API data](https://api.energy-arena.org/api/v1/leaderboard/timeseries?challenge_id=8&area=DE_LU&participant_ids=107,1&window_start=2026-10-01T22:00:00Z&window_end=2026-10-07T22:00:00Z&forecast_window_start=2026-10-01T22:00:00Z&forecast_window_end=2026-10-07T22:00:00Z&forecast_days=7&information_cutoff_offset_minutes_before_deadline=60) · [Noon API data](https://api.energy-arena.org/api/v1/leaderboard/timeseries?challenge_id=8&area=DE_LU&participant_ids=107,1&window_start=2026-10-01T22:00:00Z&window_end=2026-10-07T22:00:00Z&forecast_window_start=2026-10-01T22:00:00Z&forecast_window_end=2026-10-07T22:00:00Z&forecast_days=7&information_cutoff_offset_minutes_before_deadline=0) · [SMARD attribution](https://www.smard.de/en/downloadcenter/download-market-data)
+
 ## History
 
 Observed on 2026-10-09:
