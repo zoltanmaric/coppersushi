@@ -32,8 +32,8 @@ import pandera.pandas as pa
 from botocore.exceptions import BotoCoreError, ClientError
 from pandera.typing import DataFrame
 
-from coppersushi.pipelines.cnec import elements as cnecs
-from coppersushi.pipelines.cnec.prices import CORE_ZONES
+from coppersushi.pipelines.jao import elements as cnecs
+from coppersushi.pipelines.data_model.market import CORE_ZONES
 from coppersushi.pipelines.data_sources import cache
 from coppersushi.pipelines.data_model.jao import (
     ActiveConstraints,

@@ -9,7 +9,7 @@ of reproduction and permit only "internal information purposes", so neither the 
 the tables built from it may be redistributed. `fetch` is the only way to obtain them, and it
 writes into a gitignored `data/` — anyone reproducing this work runs it.
 
-`coppersushi/pipelines/data_sources/jao.py` is untouched by this. That module reads the publication
+`coppersushi/pipelines/jao/data_sources/publication.py` is untouched by this. That module reads the publication
 tool — what the grid *did* in a given hour; this one reads what the equipment *is*. Two
 sources, two modules, one join key (`EIC_Code`).
 

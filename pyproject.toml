@@ -26,6 +26,7 @@ dependencies = [
 [project.optional-dependencies]
 build = ["pypsa==1.2.4"]
 dev = [
+    "import-linter==2.17",
     "pytest==9.1.1",
     "pytest-xdist==3.8.0",
     "mypy==2.4.0",
@@ -77,15 +78,16 @@ monitor-infra-test = "terraform -chdir=monitoring/infra init -backend=false && t
 monitor-build = "docker build --platform linux/amd64 --provenance=false -t website-monitor:dev monitoring"
 setup = { cmd = "python -c \"import sys; print('Python interpreter:', sys.executable)\"", depends-on = ["theme-install", "hosting-setup", "frontend-build"] }
 setup-app = { depends-on = ["setup", "setup-data"] }
-setup-data = "git lfs pull && python -m coppersushi.pipelines.data_sources.runtime_data prepare"
-check-data = "python -m coppersushi.pipelines.data_sources.runtime_data check"
+setup-data = "git lfs pull && python -m coppersushi.pipelines.preparation.data_sources.runtime_data prepare"
+check-data = "python -m coppersushi.pipelines.preparation.data_sources.runtime_data check"
 dev = { cmd = "python -m coppersushi.frontend.packaging.preview", depends-on = ["frontend-build"] }
 build-zone-shapes = "python -m coppersushi.pipelines.grid.data_sources.zone_shapes"
 test-app = "python -m pytest -q -n 4 --dist loadfile --durations=20"
 test-forecast = "python -m unittest discover -s forecasts/tests -v"
 typecheck = "python -m mypy --config-file mypy.ini"
 test-python = { depends-on = ["test-app", "test-forecast"] }
-test-quality = { depends-on = ["typecheck", "frontend-test"] }
+component-imports = "lint-imports --no-cache"
+test-quality = { depends-on = ["typecheck", "component-imports", "frontend-test"] }
 test-core = { depends-on = ["test-python", "test-quality"] }
 test = { depends-on = ["test-core", "theme-test", "hosting-test"] }
 solve = "python -m coppersushi.pipelines.powerflow.data_sources.pypsa_eur solve"
@@ -103,3 +105,11 @@ frontend-install = { cmd = "npm ci", cwd = "coppersushi/frontend" }
 frontend-build = { cmd = "npm run build", cwd = "coppersushi/frontend", depends-on = ["frontend-install"] }
 frontend-test = "python -m coppersushi.frontend.packaging.contracts --check && npm run --prefix coppersushi/frontend types -- --check && npm run --prefix coppersushi/frontend typecheck && npm test --prefix coppersushi/frontend"
 frontend-contracts = "python -m coppersushi.frontend.packaging.contracts && npm run --prefix coppersushi/frontend types"
+
+[tool.importlinter]
+root_package = "coppersushi"
+
+[[tool.importlinter.contracts]]
+name = "Copper Sushi components have acyclic sibling imports"
+type = "acyclic_siblings"
+ancestors = ["coppersushi"]

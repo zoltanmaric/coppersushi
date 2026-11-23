@@ -6,7 +6,7 @@ from coppersushi.pipelines.cnec.readiness import PublicationNotReady
 from coppersushi.pipelines.cnec.readiness import REQUIRED_PUBLICATIONS
 from coppersushi.pipelines.cnec.readiness import require_received
 from coppersushi.pipelines.market_day import MarketDay
-from coppersushi.pipelines.cnec import elements as cnecs
+from coppersushi.pipelines.jao import elements as cnecs
 
 
 def receipts(day: MarketDay) -> list[PublicationReceipt]:

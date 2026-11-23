@@ -17,7 +17,7 @@ from coppersushi.pipelines.data_model.cnec_price_map import MappedCnecElements
 from coppersushi.pipelines.data_model.jao import ElementEnds
 from coppersushi.pipelines.data_model.jao import Elements
 from coppersushi.pipelines.data_model.osm_locator import LocatedSubstations
-from coppersushi.pipelines.cnec.data_sources import jao
+from coppersushi.pipelines.jao.data_sources import publication as jao
 
 FIXTURES = REPO / 'coppersushi/pipelines/cnec/testdata/cnec-geometry'
 

@@ -17,9 +17,9 @@ import urllib.request
 import pandas as pd
 
 from coppersushi import PRODUCT
-from coppersushi.pipelines.cnec import elements as cnecs
+from coppersushi.pipelines.jao import elements as cnecs
 from coppersushi.pipelines.data_sources import cache
-from coppersushi.pipelines.cnec.data_sources import jao
+from coppersushi.pipelines.jao.data_sources import publication as jao
 from coppersushi.pipelines.grid.data_sources.catalog_sweep import stamp
 from coppersushi.pipelines.grid.data_sources.catalog_sweep import substation_centroid
 

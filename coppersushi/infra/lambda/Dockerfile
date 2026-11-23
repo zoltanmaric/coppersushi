@@ -12,7 +12,7 @@ FROM publisher-source AS publisher-check
 RUN .pixi/envs/publisher/bin/python -c "import sys; import awslambdaric; from coppersushi.pipelines.cnec.handler import handler; assert not {'flask','dash','plotly'} & sys.modules.keys()"
 
 FROM publisher-source AS publisher-environment
-RUN .pixi/envs/publisher/bin/python -c "from coppersushi.pipelines.data_sources.runtime_data import check_sources; from coppersushi.pipelines.grid.data_sources.zone_shapes import load; check_sources(); load()"
+RUN .pixi/envs/publisher/bin/python -c "from coppersushi.pipelines.preparation.data_sources.runtime_data import check_sources; from coppersushi.pipelines.grid.data_sources.zone_shapes import load; check_sources(); load()"
 RUN rm -rf coppersushi/networks assets coppersushi/frontend .pixi/envs/default
 RUN .pixi/envs/publisher/bin/python -m compileall -q coppersushi
 

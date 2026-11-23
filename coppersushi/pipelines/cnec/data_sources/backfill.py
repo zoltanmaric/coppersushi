@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from coppersushi.pipelines.data_sources import cache
 from coppersushi.pipelines.cnec.data_sources import cnec_attribution
 from coppersushi.pipelines.cnec.data_sources import electricity_maps
-from coppersushi.pipelines.cnec.data_sources import jao
+from coppersushi.pipelines.jao.data_sources import publication as jao
 from coppersushi.pipelines.market_day import MARKET_TZ
 from coppersushi.pipelines.market_day import MarketDay
 from coppersushi.pipelines.cnec import bundle

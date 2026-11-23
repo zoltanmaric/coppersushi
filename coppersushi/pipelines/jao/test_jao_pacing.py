@@ -9,11 +9,11 @@ import pandas as pd
 import pytest
 
 from coppersushi import REPO
-from coppersushi.pipelines.cnec.data_sources import jao
+from coppersushi.pipelines.jao.data_sources import publication as jao
 
 START = pd.Timestamp('2026-01-01', tz='UTC')
 END = pd.Timestamp('2026-01-02', tz='UTC')
-PAYLOAD = REPO / 'coppersushi/pipelines/cnec/testdata/synthetic-jao/active-fb-day.json'
+PAYLOAD = REPO / 'coppersushi/pipelines/jao/testdata/synthetic-jao/active-fb-day.json'
 
 
 @pytest.mark.parametrize('rate', [40, 90, 180])

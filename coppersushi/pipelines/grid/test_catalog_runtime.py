@@ -3,7 +3,7 @@ import shutil
 import pandas as pd
 from coppersushi import REPO
 from coppersushi.pipelines.grid.data_sources import element_catalog
-from coppersushi.pipelines.cnec.data_sources import jao
+from coppersushi.pipelines.jao.data_sources import publication as jao
 from coppersushi.pipelines.grid.data_sources import osm_locator
 
 FIXTURE = REPO/'coppersushi/pipelines/grid/testdata/element-catalog'

@@ -97,7 +97,7 @@ workflow target and enabled daily schedule. Preserve its previous digest for rol
 Set API key values separately with `python coppersushi/infra/lambda/configure-keys.py --profile <profile>`.
 Keys come from the environment or ignored files; never put values in Terraform inputs,
 command arguments or Git. The native publisher runs on `awslambdaric` and needs no Flask,
-Dash or Web Adapter. Candidate networks use the numeric export command with `--serve`; the local browser renders their prepared values.
+Dash or Web Adapter. For local map inspection, follow [Preview a candidate network](../../pipelines/powerflow/README.md#preview-a-candidate-network).
 
 ## GHCR authentication
 

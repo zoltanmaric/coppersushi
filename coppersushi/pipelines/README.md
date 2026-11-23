@@ -13,6 +13,10 @@ configuration and credentials access live in `data_sources/`. A shared helper ne
 actual callers in multiple features. No request-serving application is required for
 published map data.
 
+Grid and Critical Elements share [JAO publications and constraint normalization](jao/).
+[Runtime preparation](preparation/data_sources/runtime_data.py) assembles inputs across all three pipelines.
+Run `pixi run --locked component-imports` to check for circular dependencies between sibling components at every package level.
+
 Tests sit beside source; fixtures live in the owning component’s `testdata/`. Run the root Pixi test
 and typecheck tasks. Update this overview and the owning feature README when changing
 responsibility or a publication boundary.
