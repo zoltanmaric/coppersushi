@@ -7,3 +7,7 @@ Use the immutable snapshot and exact CatBoost settings in [the run configuration
 Compare the five sorted price quantiles with the seasonal reference on identical delivery quarters. Report pooled and monthly WIS, median error, coverage and interval widths. Keep the result regardless of which method wins. Preserve the frozen plan, snapshot, code, models and scores with the execution.
 
 Defer weather and demand comparisons. To revisit demand, first establish which revisions were available by issue time and preselect matched dates. Moving the issue cutoff or changing the evaluation window defines a new experiment. The invalidated autumn replay supplies no demand-quality evidence.
+
+## Execution and decision
+
+[Run and replay receipt](../../../forecasts/reports/evaluation.json) · [Scores and decision](../evaluation.md#result). The [frozen proposal](https://github.com/zoltanmaric/coppersushi/blob/e829a3f8ea3afcd967a182cd859af0132b97fa45/wiki/price-forecasting/research/prices-only-baseline.md) predates this outcome. The [executed configuration](https://github.com/zoltanmaric/coppersushi/blob/e829a3f8ea3afcd967a182cd859af0132b97fa45/forecasts/run-config.json) selects the price-history model. Its fit uses same-clock price lags and daily summaries alongside the Berlin calendar. See the [fixed feature inventory](https://github.com/zoltanmaric/coppersushi/blob/e829a3f8ea3afcd967a182cd859af0132b97fa45/forecasts/features.py).
