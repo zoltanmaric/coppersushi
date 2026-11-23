@@ -20,6 +20,7 @@ description: Guides pull request creation, review, stacking, and local cleanup w
 - When a test fires, **offer the chop** into a stack (mechanics below); the user decides. Layers split by "must be understood together", never by file type: a rule or doc whose evidence is the feature's code rides with the feature.
 - Every PR body carries the template’s "Architecture delta" and "Unusually complex changes requiring reviewer attention" sections. Use the template’s guiding questions to challenge both the implementation and the requirement: seek a simpler approach, assess whether the requirement justifies the complexity, and consider relaxing or dropping it. Simplify or explain retained complexity and its tradeoff; propose requirement changes explicitly rather than silently dropping agreed behavior. Reviewers challenge the same choices. Write "None" when nothing needs special attention.
 - At creation, ready-time and review, check README diagrams against the cumulative implementation; use `system-design-diagram` for updates and the Architecture delta section.
+- When ready to push, delegate checks covered by GitHub CI to CI instead of waiting for local runs. Run checks locally when CI does not cover them; report pending or unavailable checks honestly.
 - Once a PR is ready for review, watch its review threads and checks while other work continues; stop watching when it becomes draft, merges or closes.
 - As soon as you learn a PR merged or closed, remove its local branch and unused worktree. Preserve uncommitted or local-only work and branches still needed by open PRs; report any cleanup blocked by those conditions. Use the worktree manager's archive operation for managed worktrees.
 - When a goldfish reviews a PR touching `.agents/` or any `AGENTS.md`, the critic reads `.agents/skills/AGENTS.md` and the vendor guidelines it links before the diff.
@@ -33,7 +34,8 @@ Start with the resulting tree at the reviewed tip (the cumulative tip for a stac
 Then assess interfaces, data flow, domain models, duplicated rules and dependencies. Compare the proposed design with the simplest credible alternative. For library or framework integrations, verify relevant supported APIs in the pinned version before endorsing custom machinery; state the native option or support gap and any behavior tradeoff. Do not favor a small diff when it shoehorns behavior into an awkward architecture; recommend restructuring when it removes the cause or makes responsibilities clearer. Challenge overengineering and excessive defensive programming for this use case:
 
 - What is more complicated or conservative than the actual requirement needs?
-- Which guards, fallbacks or abstractions exist only for unlikely failures? What supports that likelihood estimate?
+- Trace one missing required input or failed step through to the reported result. Could a default, skipped row or substitute model turn failure into success? For each fallback, check the evidence, agreed scope and visible output required by the root rule.
+- Which guards or abstractions exist only for unlikely failures? What supports that likelihood estimate?
 - If the failure occurs, how bad is it, and how hard is recovery? Does handling it justify the added complexity, or would a clear failure suffice?
 
 Weigh likelihood, impact and recovery cost together; a claimed “under 1%” probability alone neither justifies nor rules out protection. Ground the verdict in concrete code and consequences.
