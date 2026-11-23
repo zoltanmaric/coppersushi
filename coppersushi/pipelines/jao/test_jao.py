@@ -6,10 +6,10 @@ import pandas as pd
 import pytest
 
 from coppersushi import REPO
-from coppersushi.pipelines.cnec import elements as cnecs
-from coppersushi.pipelines.cnec.data_sources import jao
+from coppersushi.pipelines.jao import elements as cnecs
+from coppersushi.pipelines.jao.data_sources import publication as jao
 
-FIXTURES = REPO / 'coppersushi/pipelines/cnec/testdata/synthetic-jao'
+FIXTURES = REPO / 'coppersushi/pipelines/jao/testdata/synthetic-jao'
 
 
 def rows(name: str) -> list[dict]:

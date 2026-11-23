@@ -27,7 +27,7 @@ from pandera.typing import DataFrame
 from coppersushi import REPO
 from coppersushi.pipelines.cnec import prices as market
 from coppersushi.pipelines.cnec import spread_prices
-from coppersushi.pipelines.cnec.data_sources import jao
+from coppersushi.pipelines.jao.data_sources import publication as jao
 from coppersushi.pipelines.data_sources import cache
 from coppersushi.pipelines.data_sources import credentials
 from coppersushi.pipelines.data_model.market import DayAheadPrices

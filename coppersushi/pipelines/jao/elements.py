@@ -45,7 +45,7 @@ from coppersushi.pipelines.data_model.jao import (
     ExternalConstraintsWithPrices,
     ShadowPrices,
 )
-from coppersushi.pipelines.cnec.prices import CORE_ZONES
+from coppersushi.pipelines.data_model.market import CORE_ZONES
 
 NON_PHYSICAL = ("External Constraint", "Equality Constraint")
 POINT_TYPES = ("Transformer", "PST")  # elements at one substation, so `substation_from == substation_to`

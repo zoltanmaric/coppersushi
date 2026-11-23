@@ -141,7 +141,7 @@ def resolve(interval: pd.Timestamp, required: DataFrame[ActiveConstraints], dire
     """
     import pandas as pd
     from coppersushi.pipelines.grid import cnec_geometry
-    from coppersushi.pipelines.cnec.data_sources import jao
+    from coppersushi.pipelines.jao.data_sources import publication as jao
     from coppersushi.pipelines.grid.data_sources import osm_locator
 
     mapped, pending = resolution_inputs(directory)
@@ -167,7 +167,7 @@ def resolve_loaded(interval: pd.Timestamp, required: DataFrame[ActiveConstraints
                    mapped: DataFrame[MappedCnecElements], pending: set[tuple]) -> DataFrame[MappedCnecElements]:
     """Resolve against the same validated catalog snapshot throughout a batch."""
     from coppersushi.pipelines.grid import cnec_geometry
-    from coppersushi.pipelines.cnec.data_sources import jao
+    from coppersushi.pipelines.jao.data_sources import publication as jao
     from coppersushi.pipelines.grid.data_sources import osm_locator
     identity = ['eic', 'tso', 'name']
     authoritative = mapped.loc[[tuple(row) not in pending for row in mapped[identity].itertuples(index=False, name=None)]]

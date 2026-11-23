@@ -50,7 +50,7 @@ On 2026-11-03, an unpaced four-worker Polish-feed sweep received 100 successful 
 As inspected on **2026-11-03**, the app already supports private S3 persistence:
 [`cache.py`](../coppersushi/data_sources/cache.py) stores compressed bundles under
 `cache/v1/` when `COPPERSUSHI_CACHE_BUCKET` is configured. The Lambda configuration
-sets that variable. [`jao.load_active_day`](../coppersushi/data_sources/jao.py)
+sets that variable. [`jao.load_active_day`](../coppersushi/pipelines/jao/data_sources/publication.py)
 tries local files, then S3 on missing files, validates the tables, fetches if needed,
 and publishes the validated result. Viewed-hour line-location bundles also use S3.
 These are derived tables, not a versioned archive of raw HTTP responses.

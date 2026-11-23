@@ -208,7 +208,7 @@ pixi run --locked python -m coppersushi.pipelines.powerflow.data_sources.pypsa_e
 checks the sibling out at the pinned commit, runs the workflow (a first run downloads about
 20 GB and takes an hour on a fast connection; later runs take minutes) and writes the solved
 network to the gitignored `coppersushi/networks/candidates/opf-<day>-<pin>.nc`, previewable by exporting it with
-`python -m coppersushi.pipelines.powerflow.data_sources.dataset <network-file> coppersushi/data/candidate-preview --serve`. Iterate as often as you like; when a solve is the one to keep,
+`python -m coppersushi.frontend.packaging.opf_dataset <network-file> coppersushi/data/candidate-preview`. Iterate as often as you like; when a solve is the one to keep,
 ```bash
 pixi run --locked python -m coppersushi.pipelines.powerflow.data_sources.pypsa_eur promote coppersushi/networks/candidates/opf-<day>-<pin>.nc
 ```

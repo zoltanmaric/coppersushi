@@ -12,7 +12,7 @@ from coppersushi.pipelines.data_model.cnec_attribution import CountryCaps
 from coppersushi.pipelines.data_model.market import ZonalPrices
 
 from coppersushi.pipelines.cnec import attribution as cnec_attribution
-from coppersushi.pipelines.cnec.prices import CORE_ZONES
+from coppersushi.pipelines.data_model.market import CORE_ZONES
 
 
 class Snapshot(NamedTuple):

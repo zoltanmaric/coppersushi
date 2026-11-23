@@ -4,7 +4,7 @@ from urllib.error import HTTPError, URLError
 
 
 from coppersushi.pipelines.cnec.prices import IncompletePrices
-from coppersushi.pipelines.cnec.data_sources import jao
+from coppersushi.pipelines.jao.data_sources import publication as jao
 from coppersushi.pipelines.cnec.data_sources import bundles
 from coppersushi.pipelines.cnec.readiness import PublicationNotReady
 from coppersushi.pipelines.cnec.job import PublicationJob

@@ -31,7 +31,7 @@ def test_sweep_is_repeatable_and_keeps_conflicting_source_names(tmp_path):
 def test_backfill_includes_nonpresolved_physical_elements():
     import json
     from coppersushi.pipelines.grid.data_sources.catalog_backfill import endpoints
-    path = REPO/'coppersushi/pipelines/cnec/testdata/synthetic-jao'/'final-computation-hour.json'
+    path = REPO/'coppersushi/pipelines/jao/testdata/synthetic-jao'/'final-computation-hour.json'
     frame = endpoints(json.loads(path.read_text())['data'])
     line = frame[frame.eic.eq('94T-220-0-N203AR')].iloc[0]
     assert line.substation_from == 'Silverbeck 2'
@@ -43,7 +43,7 @@ def test_backfill_advances_past_retained_hours_but_retries_transient_failures(tm
     import json
     import pandas as pd
     from coppersushi.pipelines.grid.data_sources import catalog_backfill
-    from coppersushi.pipelines.cnec.data_sources import jao
+    from coppersushi.pipelines.jao.data_sources import publication as jao
     annual=tmp_path/'cache/research/country-caps/annual-json'
     annual.mkdir(parents=True)
     with gzip.open(annual/'activeFbConstraints-synthetic.gz','wb') as stream:
@@ -279,7 +279,7 @@ def test_sweep_rebuilds_damaged_generated_catalog(tmp_path, damage):
         elif damage == 'bad_header':
             shutil.copyfile(FIXTURE/'invalid.sql', path)
         else:
-            shutil.copyfile(REPO/'coppersushi/pipelines/data_sources/testdata/runtime-data/truncated.csv', path)
+            shutil.copyfile(REPO/'coppersushi/pipelines/preparation/testdata/runtime-data/truncated.csv', path)
     sweep(root/'cache', root/'backfill', output, root/'config')
     with load(output) as db:
         assert db.execute('SELECT count(*) FROM elements').fetchone()[0] > 0

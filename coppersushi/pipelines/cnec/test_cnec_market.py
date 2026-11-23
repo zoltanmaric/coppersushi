@@ -4,11 +4,11 @@ import pandas as pd
 
 from coppersushi import REPO
 from coppersushi.pipelines.cnec import interval as cnec_market
-from coppersushi.pipelines.cnec import elements as cnecs
+from coppersushi.pipelines.jao import elements as cnecs
 from coppersushi.pipelines.cnec import prices as market
 from coppersushi.pipelines.data_model.market import ElectricityMapsPriceResponse
 
-FIXTURE = REPO / 'coppersushi/pipelines/cnec/testdata/synthetic-jao' / "active-fb-day.json"
+FIXTURE = REPO / 'coppersushi/pipelines/jao/testdata/synthetic-jao' / "active-fb-day.json"
 
 
 def active_rows() -> list[dict]:

@@ -14,7 +14,7 @@ from coppersushi.pipelines.data_model.cnec_attribution import (
 
 from coppersushi.pipelines.cnec import attribution as cnec_attribution
 from coppersushi.pipelines.data_sources import cache
-from coppersushi.pipelines.cnec.data_sources import jao
+from coppersushi.pipelines.jao.data_sources import publication as jao
 from coppersushi.pipelines.market_day import MarketDay
 
 POLISH_ALTERNATIVE_PUBLICATION_START = date(2026, 5, 6)

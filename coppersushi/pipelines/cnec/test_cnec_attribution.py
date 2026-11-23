@@ -10,7 +10,7 @@ import pytest
 from coppersushi import REPO
 from coppersushi.pipelines.cnec import attribution
 from coppersushi.pipelines.cnec import interval as cnec_market
-from coppersushi.pipelines.cnec import elements as cnecs
+from coppersushi.pipelines.jao import elements as cnecs
 from coppersushi.pipelines.market_day import MarketDay
 from coppersushi.pipelines.data_model.cnec_attribution import AlphaFactor
 from coppersushi.pipelines.data_model.cnec_attribution import AllocationConstraint

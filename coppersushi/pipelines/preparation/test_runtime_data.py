@@ -7,15 +7,15 @@ import pytest
 
 from coppersushi import REPO
 from coppersushi.pipelines.market_day import MarketDay
-from coppersushi.pipelines.data_sources import runtime_data
+from coppersushi.pipelines.preparation.data_sources import runtime_data
 from coppersushi.pipelines.grid.data_sources import element_catalog
-from coppersushi.pipelines.cnec.data_sources import jao
+from coppersushi.pipelines.jao.data_sources import publication as jao
 from coppersushi.pipelines.grid.data_sources import osm_locator
 from coppersushi.pipelines.grid.data_sources import zone_shapes
 
 GRID = REPO / 'coppersushi/pipelines/grid/testdata'
 CNEC = REPO / 'coppersushi/pipelines/cnec/testdata'
-FIXTURES = REPO / 'coppersushi/pipelines/data_sources/testdata'
+FIXTURES = REPO / 'coppersushi/pipelines/preparation/testdata'
 
 
 def test_missing_catalog_has_actionable_setup_command(tmp_path, monkeypatch):
@@ -63,7 +63,7 @@ def test_preparation_compiles_fresh_checkout_and_reuses_downloads(tmp_path, monk
         return buses.open('rb')
     monkeypatch.setattr(runtime_data.urllib.request, 'urlopen', download)
 
-    from coppersushi.pipelines.cnec.test_jao import written
+    from coppersushi.pipelines.jao.test_jao import written
     def fetch_domain(day):
         calls.append('domain')
         written(jao.day_dir(day))

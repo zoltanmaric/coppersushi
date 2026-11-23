@@ -13,7 +13,7 @@ from pandera.typing import DataFrame
 from shapely.ops import unary_union
 
 from coppersushi.pipelines.data_model.network_views import BiddingZoneShapes
-from coppersushi.pipelines.cnec.prices import CORE_ZONES
+from coppersushi.pipelines.data_model.market import CORE_ZONES
 
 ONSHORE = "country"
 # A bidding zone is not always one country: Core's DE is Germany–Luxembourg. Parts are the

@@ -14,7 +14,7 @@ from coppersushi.pipelines.market_day import MarketDay
 from coppersushi.pipelines.grid.data_sources import catalog_backfill
 from coppersushi.pipelines.grid.data_sources import catalog_sweep
 from coppersushi.pipelines.grid.data_sources import element_catalog
-from coppersushi.pipelines.cnec.data_sources import jao
+from coppersushi.pipelines.jao.data_sources import publication as jao
 from coppersushi.pipelines.powerflow.data_sources import networks
 from coppersushi.pipelines.grid.data_sources import osm_locator
 from coppersushi.pipelines.grid.data_sources import zone_shapes

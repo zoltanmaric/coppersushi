@@ -2,9 +2,9 @@
 
 [Product pipelines](../README.md) · [Frontend](../../frontend/README.md) · [Grid](../grid/README.md)
 
-Owns market-day calculations, constraint normalization, price attribution and complete
-daily publication. `elements.py`, `interval.py`, `prices.py` and `attribution.py`
-transform typed inputs; `data_sources/` fetches JAO, prices and optional PSE reserve evidence, builds bundles and
+Owns market-day calculations, price attribution and complete
+daily publication. `interval.py`, `prices.py` and `attribution.py`
+transform typed inputs; `data_sources/` uses the shared JAO source, fetches prices and optional PSE reserve evidence, builds bundles and
 runs scheduled publication. `models.py` defines the browser publication contract.
 
 Grid preparation supplies static geography; each daily run fetches and validates

@@ -18,7 +18,8 @@ from pydantic import BaseModel, ConfigDict, FiniteFloat, AwareDatetime
 
 from coppersushi.pipelines.cnec import attribution as cnec_attribution
 from coppersushi.pipelines.data_model.cnec_attribution import AllocationConstraint, NetPosition, PolishAlternative, JaoRecord
-from coppersushi.pipelines.cnec.data_sources import electricity_maps, jao
+from coppersushi.pipelines.cnec.data_sources import electricity_maps
+from coppersushi.pipelines.jao.data_sources import publication as jao
 from coppersushi.pipelines.market_day import MarketDay
 
 NEIGHBOURS = ("DE", "CZ", "SK")
