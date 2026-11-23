@@ -635,4 +635,8 @@ The [publication incident](jao-availability.md#evidence) exposed an empty Polish
 
 ## [2026-11-23] ingest | Forecast design review
 
-The [review principles](price-forecasting/design-review.md) connect operational evidence to checks a reviewer can perform on a specific stack revision.
+The [design principles](forecasting-system-design.md) connect operational evidence to checks a reviewer can perform on a specific stack revision.
+
+## [2026-11-23] decision | Forecasting system design
+
+[Agent-driven forecasting design](forecasting-system-design.md) starts from the consumer decision across markets and fundamentals. The DE–LU replay is its worked example.
