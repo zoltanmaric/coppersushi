@@ -20,7 +20,9 @@ The system used the weather fallback on all 54 days. November 20 and 21 each lac
 
 Repeat the input audit, fit from corrected eligible training inputs and rerun the full replay. Stop on unexpected gaps or model failures. Record evidence and obtain a specific decision for any upstream exception before scoring.
 
-### Scope of the rerun
+### Deferred full-input rerun
+
+The [selected baseline](prices-only-baseline.md) has a different scope. The steps below apply if the full-input experiment resumes.
 
 - **Step 1, collection.** Verify the required price, weather and German country demand versions across training, warmup and evaluation. Record exact missing dates, fields, cutoffs and retrieval evidence. A failed HTTP request is insufficient evidence for an upstream exception.
 - **Step 2, earlier baseline.** Reproducing stored predictions establishes computational parity. The strict full-input baseline needs new fits: each of its nine training windows included missing demand, and 28 evaluation days selected weather. Historical results retain their original missing-input policy.

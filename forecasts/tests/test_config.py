@@ -41,6 +41,7 @@ class ConfigTests(unittest.TestCase):
             (("snapshot_id",), "not-a-digest"),
             (("schema_version",), True),
             (("refit",), "daily"),
+            (("model_method",), "demand"),
             (("quantiles",), [.1, .5, .9]),
             (("features",), {"prices": ["target"]}),
             (("unexpected",), 1),

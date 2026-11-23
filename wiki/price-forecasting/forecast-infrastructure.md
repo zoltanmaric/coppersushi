@@ -26,7 +26,7 @@ Metaflow's local metadata and artifacts stay on disk. Configure MLflow explicitl
 
 ## Inputs
 
-Access is mostly batch reads: months of history for training and recent history plus future weather/demand for prediction. Start with three named Parquet datasets: `prices`, `weather`, and `demand`. The [source contracts](data-sources.md) own units, locations, resolution and availability rules.
+Training reads months of historical prices. Issuance reads recent eligible prices. The fixed historical snapshot also preserves weather and demand for independent investigations. A fresh baseline snapshot contains only the prices table and its collection receipt.
 
 Use a small, explicit S3 layout:
 
@@ -66,7 +66,7 @@ After the local evaluation works, the preferred deployment is Metaflow workflows
 
 Metaflow documents Fargate support through its Batch integration. Before adopting this deployment, run a small end-to-end check with pinned dependencies and container image: input loading, task resources, retries, outputs and deadline scheduling. Check CPU/memory combinations and temporary disk needs against Fargate limits; Fargate does not provide GPUs. Evaluate the existing Metaflow Terraform modules before writing infrastructure from scratch, and provision only the services this stage needs.
 
-Decide shared metadata, MLflow hosting and artifact retention then. Verify the live demand retrieval route and deadline handling before claiming daily readiness. This later stage is separate from acceptance of the first local research result.
+Decide shared metadata, MLflow hosting and artifact retention then. Verify live price retrieval and deadline handling before claiming daily readiness. This later stage is separate from acceptance of the first local research result.
 
 ## Basis
 

@@ -22,26 +22,13 @@ replacement for a historical environment.
 
 Collect or load immutable input snapshots. [Input and storage contracts](../wiki/price-forecasting/forecast-infrastructure.md#inputs). Price table contracts: [prices.py](prices.py).
 
-Enroll once in a terminal using the root checkout's ignored secrets directory.
-The prompt verifies your login and saves the email and password in an owner-only local file.
-Each refresh requests a new File Library token and keeps it in memory.
+Refresh SMARD prices for the required Berlin delivery quarters. For a live issue, request the recent history through the issue day. The collection saves raw replies and their retrieval times. A missing quarter stops publication.
 
 ```sh
-pixi run --locked python -m forecasts.fms /absolute/path/to/.secrets/entsoe-fms.json
 pixi run --locked python -m forecasts.snapshot refresh \
   --start 2026-10-10 --end-exclusive 2026-10-12 \
-  --entsoe-credentials /absolute/path/to/.secrets/entsoe-fms.json \
   --data-root data/forecasts/new-raw --directory data/forecasts/new-snapshot
 ```
-
-The command saves SMARD quarter-hour prices, Open-Meteo ICON-EU fixed-lead weather,
-and ENTSO-E monthly German country demand with their receipt times. Dates are Berlin
-delivery dates. It requires price and demand values at every quarter and weather at
-every hour in the requested interval. The demand receipt and original update time
-are separate. Historical features still screen archived revisions at 11:00 Berlin.
-A failed source or incomplete interval leaves no typed snapshot. Use a new pair of
-paths to retry or publish the completed snapshot with the `publish` command and the
-same `--data-root` and `--directory` values.
 
 To collect the recorded year, place the three exact archives at their [baseline input inventory](data/baseline-inputs.json), under `data/forecasts/`. The [source contracts](../wiki/price-forecasting/data-sources.md) describe their sources. `--data-root` can reuse another checkout's downloads. Recollection from mutable feeds may produce different bytes; the recorded experiment requires matching archives or access to the private S3 snapshot.
 
@@ -92,7 +79,7 @@ Uploads and provider installation may exceed a minute; follow the repository's j
 pixi run --locked python -m forecasts.evaluation --snapshot data/forecasts/loaded-snapshot --output data/forecasts/evaluations/baseline
 ```
 
-Choose a new output directory. The command checks the snapshot identity. Training and evaluation require complete eligible prices, weather and demand. Fitting requires all training labels, and scoring requires every registered realised price. The command saves features and completed stage outputs. A missing source value or failed fit or prediction stops the run before a score is published. This command does not preserve an execution environment or register a tracking run.
+Choose a new output directory. The command checks the snapshot identity. Training and evaluation require complete eligible price history. Fitting requires all training labels, and scoring requires every registered realised price. The command saves features and completed stage outputs. A missing source value or failed fit or prediction stops the run before a score is published. This command does not preserve an execution environment or register a tracking run.
 
 The [research index](../wiki/price-forecasting/research/index.md) holds proposals and selection decisions. Actual MLflow executions retain evidence and conclusions. The baseline’s retrospective rationale explicitly records the absence of a pre-execution proposal; the interrupted execution is retained. New experiments must follow the [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) before execution; the workflow does not automate that procedure.
 
@@ -114,9 +101,9 @@ pixi run --locked python -m forecasts.monthly_fit --fit-day 2026-11-01 --snapsho
 pixi run --locked python -m forecasts.daily --delivery-date 2026-11-24 --snapshot "$ISSUE_SNAPSHOT" --run "$MONTHLY_FIT" --output forecast-2026-11-24.json
 ```
 
-Run the second command on the preceding Berlin day by 11:00. Live mode requires that input versions were retrieved by the actual issue time. Add `--replay` to reconstruct a historical delivery date under the recorded source timing assumptions. Both modes require a matching fit with complete-training provenance and complete eligible price, weather and demand inputs. A failed model or a missing required input stops issuance before writing the forecast. Both modes save the creation time, input cutoff, model and snapshot identities, and system and reference quantiles. Use a new output file for each attempt.
+Run the second command on the preceding Berlin day by 11:00. Live mode requires that input versions were retrieved by the actual issue time. Add `--replay` to reconstruct a historical delivery date under the recorded source timing assumptions. Both modes require a matching fit with complete-training provenance and complete eligible price history. A failed model or a missing required input stops issuance before writing the forecast. Both modes save the creation time, input cutoff, model and snapshot identities, and price-model and reference quantiles. Use a new output file for each attempt.
 
-Historical replay can run before the delivery day's actual prices are available. Scoring is separate and requires all registered actuals. The diagnostic dataset and viewer can still show input gaps and previously saved fallback forecasts. Spring clock-change quarters that did not exist can leave a same-clock price lag empty. For other proposed upstream exclusions, record evidence, the affected source and dates, and obtain explicit approval before changing the evaluation plan.
+Historical replay can run before the delivery day's actual prices are available. Scoring is separate and requires all registered actuals. Archived diagnostics retain the original source gaps. Spring clock-change quarters that did not exist can leave a same-clock price lag empty. For other proposed upstream exclusions, record evidence, the affected source and dates, and obtain explicit approval before changing the evaluation plan.
 
 ## MLflow review
 
@@ -191,7 +178,7 @@ pixi run --locked python -m forecasts.explain --run data/forecasts/runs/RUN_ID -
 
 Open the output's `index.html` in a browser. Keep the adjacent `data.js`, styles and scripts together. Use a new output directory for each export; existing exports are not overwritten. Generated files remain under ignored `data/forecasts/` and are not published by this command.
 
-The exporter checks consumed artifact hashes and reconciles overall/monthly scores against the predictions. It retains missing outcomes, source fallbacks and Berlin clock-change quarters. The pipeline explains the system independently of the selected day, with saved-run provenance available as supporting detail.
+The exporter checks consumed artifact hashes and reconciles overall/monthly scores against the predictions. It shows model and reference forecasts on Berlin clock-change quarters. The pipeline explains the system independently of the selected day, with saved-run provenance available as supporting detail.
 
 The narrative's reviewed wiki hashes live in `forecasts/web/sources.json`. A changed source blocks export until the explanation is reviewed and its hash updated; referenced wiki bytes must be committed so source links identify the actual revision. The export records presentation hashes as well as run/code/snapshot identity. It validates consumed artifacts, not model files or source archives it does not load.
 

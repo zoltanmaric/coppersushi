@@ -2,6 +2,8 @@
 
 Data contract for the [price forecast](germany-luxembourg.md). Checks below were completed on 2026-10-01–08. Small scripts and results are in [forecast evidence](../../forecasts/evidence/README.md); downloaded inputs are local under ignored `data/forecasts/`.
 
+The [registered baseline](research/prices-only-baseline.md) uses the price contract. Weather and demand evidence supports deferred experiments.
+
 ### Point-in-time
 
 Point-in-time correctness means selecting only the information available at the forecast's issue cutoff. Keep these times distinct, in UTC:
@@ -77,7 +79,11 @@ The same check for October 9, 2026 found just one 50Hertz version for 00:00–00
 
 The [daily timing record](../../forecasts/evidence/demand-timing-20261123.csv) covers 406 Berlin delivery days from October 15, 2025 through November 24, 2026. It gives the first retained country update after the deadline, its delay in seconds, and the time the last required quarter was ready. Retained revisions establish an upper bound on the original publication time. The four-area route uses the visible version history where inspected and retained area updates elsewhere. The timestamp for a checked late component only bounds the full curve from below. Each cutoff column identifies which complete curve could be used under these timing assumptions. Of 351 training days, 301 pass at 11:00, 307 at 11:15, 308 at 11:30 and 310 at both 11:45 and noon, counting eligible four-area reconstructions. These are demand coverage figures. The research issue deadline remains 11:00.
 
+At 11:00, the first 28 training days (October 15 through November 11, 2025) all lack a verified complete demand curve. This leaves 50 of 78 candidate days for the January fit before other input checks. Of the 273 January–September evaluation days, 251 pass the demand screen. March accounts for nine of the 22 excluded dates, including March 24–29, and September accounts for five. Paired scores on eligible days therefore describe a different mix of dates from the full evaluation window.
+
 Preserve unavailable demand as missing in the input evidence. The historical baseline used a missing-value indicator; its scores describe that policy. In daily operation, save the forecast actually retrieved before the cutoff; later revisions must not overwrite that input snapshot.
+
+On November 23, 2026 the [Telescope public catalog](https://telescope.energy/api/v2/public/products/total-load-de) listed German 15-minute load in MW with published history beginning October 15, 2026. Its [as-of endpoint](https://telescope.energy/docs/en/consume-forecasts/historical-data) selects releases by decision time. That archive begins after the baseline training window. [Montel EQ](https://app.energyquantified.com/api/docs/) supports forecast instances filtered by issue time. Historical German load coverage and actual release times for the required dates remain unverified. [SMARD](https://www.smard.de/page/en/wiki-article/5884/206318/forecast-data) gets its aggregated load forecasts from the four German system operators through ENTSO-E and describes later updates. The [SMARD chart file covering October 9, 2026](https://www.smard.de/app/chart_data/411/DE/411_DE_quarterhour_1791151200000.json) returned pairs of delivery time and value. Its file-level creation time was October 10 at 08:01 UTC. The file cannot establish what SMARD held at the October 8 cutoff; access to an earlier snapshot remains unverified.
 
 ### Availability
 

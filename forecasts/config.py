@@ -9,7 +9,7 @@ from typing import Any, ClassVar, Literal, Mapping
 
 QUANTILES = (.025, .25, .5, .75, .975)
 QUANTILE_LOSS = "MultiQuantile:alpha=0.025,0.25,0.5,0.75,0.975"
-MODEL_METHOD = "prices"
+MODEL_METHOD: Literal["prices"] = "prices"
 
 
 @dataclass(frozen=True)

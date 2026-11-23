@@ -6,7 +6,7 @@ The [forecast design](germany-luxembourg.md) fixes five price quantiles and weig
 
 A price quantile at probability `q` is a price below which the outcome is predicted to fall with probability `q`. Output `q=[0.025, 0.25, 0.50, 0.75, 0.975]` per delivery quarter. The median is `q50`; `[q25,q75]` is the central 50% interval and `[q2.5,q97.5]` the central 95% interval.
 
-Train each feature set with one CatBoost model using `MultiQuantile:alpha=0.025,0.25,0.5,0.75,0.975`. All outputs use the same input row. Sort each predicted vector into nondecreasing order before evaluation and publication; retain raw outputs and report the fraction that crossed before sorting. This is a fixed implementation rule, not a post-test correction. These five numbers do not specify arbitrary tail probabilities or the joint evolution of a day's prices. [CatBoost objective](https://catboost.ai/docs/en/concepts/loss-functions-regression#MultiQuantile).
+Train the prices/calendar feature set with one CatBoost model using `MultiQuantile:alpha=0.025,0.25,0.5,0.75,0.975`. All outputs use the same input row. Sort each predicted vector into nondecreasing order before evaluation and publication; retain raw outputs and report the fraction that crossed before sorting. This is a fixed implementation rule, not a post-test correction. These five numbers do not specify arbitrary tail probabilities or the joint evolution of a day's prices. [CatBoost objective](https://catboost.ai/docs/en/concepts/loss-functions-regression#MultiQuantile).
 
 ### WIS
 
@@ -20,7 +20,7 @@ weighted_interval_score =
 
 Lower is better, in €/MWh. Average per-quarter scores over the common target rows. The fixed five-quantile objective is aligned with this score: the score equals twice the mean pinball loss across those quantiles. Verify implementation against hand-calculated cases and an established scoring implementation before the first model comparison. [Energy-Arena definitions](https://energy-arena.org/faq).
 
-Report median-price mean absolute error, root mean squared error of that same median, 50%/95% coverage and mean interval width. The squared-error diagnostic does not make the median a conditional-mean forecast. Break out results by month and demand availability, with counts and forecast coverage. These subgroup comparisons are descriptive, not proof of demand's causal contribution.
+Report median-price mean absolute error, root mean squared error of that same median, 50%/95% coverage and mean interval width. The squared-error diagnostic does not make the median a conditional-mean forecast. Break out results by month, with counts and forecast coverage.
 
 [Energy-Arena](https://energy-arena.org/challenges) ranks quantile forecasts by weighted interval score, point forecasts by root mean squared error and ensembles by continuous ranked probability score. Match dates, target resolution and information cutoff before comparing scores. Entry is undecided; no submission is part of the initial build.
 
@@ -41,7 +41,7 @@ Freeze these rules before fitting. The first baseline used the older fallback po
 | Choice | Rule |
 |---|---|
 | Past-price clock matching | Match the same German local quarter on the earlier date. Average both prices if that quarter occurred twice; mark it missing if it did not occur. Keep both delivery quarters on the autumn clock-change day. |
-| Price, weather and demand coverage | Require eligible values for every physical price-history quarter, weather field and demand quarter used by the registered model. Demand versions must satisfy the issue cutoff. Never fill a weather or demand gap with observations or later revisions. |
+| Price coverage | Require every physical price-history quarter used by the baseline. |
 | Calendar | Quarter of day, day of week, month and a Germany-wide public-holiday flag, identical across model comparisons. |
 | Unexpected source failure | Stop fitting, prediction or scoring at the affected stage. A timeout, missing revision or incomplete source response does not establish structural unavailability. |
 
@@ -49,7 +49,7 @@ The spring clock change makes some same-clock lag quarters structurally nonexist
 
 ### Controls
 
-Fit three fixed feature sets with the same CatBoost settings, seed, training dates and calendar features: prices/calendar; prices/calendar/weather; prices/calendar/weather/demand. Compare them on identical dates to measure what weather and demand each add. Report all three models and the reference separately on the same dates. The full prices/calendar/weather/demand model supplies the system forecast. This is a fixed comparison, not a parameter search.
+Fit the [registered prices/calendar model](research/prices-only-baseline.md) and compare it with the reference on the same quarters. Both methods must produce forecasts.
 
 ## Reference
 
@@ -85,10 +85,4 @@ Monthly expanding evaluation covers January–September 2026. This is retrospect
 
 ## Result
 
-The [first fixed baseline report](../../forecasts/reports/evaluation.json) records accepted run `3db10bdf199fdbaa012525ce`, nine monthly folds and 26,204 common target rows. The fallback system improves WIS against the distributional reference on this replay; its paired seven-day-block interval excludes no improvement. Weather accounts for the headline gain over prices/calendar; adding demand does not improve the headline weather-only score.
-
-Both nominal uncertainty bands substantially under-cover. This is a measured calibration limitation, not a reason to retune the fixed baseline after viewing its scores. Historical availability remains assumed/conditional and the year is retrospective development evidence. Further experiments need the [continuation decision](germany-luxembourg.md#continuation) and the manual [forecast-experiment procedure](../../.agents/skills/forecast-experiment/SKILL.md); neither calibrated daily use nor trading value is established.
-
-MLflow execution `a3149d4e7c624c46a4320fa95d2132db` retains the baseline rationale and conclusion as artifacts. Its rationale is explicitly retrospective: no proposal was saved before the baseline executions. The conclusion recommends further investigation only if the continuation decision approves it. The unchanged October 20 rerun matches the earlier predictions and scores; its tracked workflow took 445.963 seconds.
-
-Local Metaflow and MLflow retain predictions, selected features/audit flags, models, reference calibration and full monthly/demand reports. One-command reproduction restored the saved committed code and frozen environment, loaded the snapshot from S3 and matched predictions/scores at the declared tolerance. [Setup and preservation requirements](../../forecasts/README.md#local-model-evaluation).
+See the [selected baseline](research/prices-only-baseline.md) for the execution and result. The [retrospective review](research/baseline-review.md) covers the superseded three-feature-set experiment and its fallback policy.

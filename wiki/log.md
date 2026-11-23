@@ -676,3 +676,5 @@ Migrated the baseline rationale, October 20 review and six candidate proposals t
 ## [2026-11-23] query | Historical German demand revisions
 
 The [demand source audit](price-forecasting/data-sources.md) recovered the four inputs to the country forecast for seven of 57 previously excluded training dates. All 672 reconstructed quarters passed the historical cutoff.
+
+Selected the [price-history and calendar baseline](price-forecasting/research/prices-only-baseline.md) on 2026-11-23. The demand audit remains research evidence. The autumn replay remains invalid.

@@ -11,19 +11,19 @@ Current project design:
 | Market | Germany–Luxembourg |
 | Delivery resolution | Every quarter-hour of the next German local day |
 | Information deadline | 11:00 Europe/Berlin on the preceding day |
-| Model | One fixed CatBoost configuration, compared across three [feature sets](evaluation.md#controls) |
+| Model | One fixed CatBoost configuration, compared with the [seasonal price reference](evaluation.md#reference) |
 | Output | Five [price quantiles](evaluation.md#quantiles): 2.5%, 25%, 50%, 75%, 97.5% |
 | Main score | [Weighted interval score](evaluation.md#wis) |
-| Inputs | Past prices, calendar, weather and usable demand forecasts |
-| Complete inputs | Require eligible prices, weather and demand for fitting and issuance. Training and scoring require complete labels at their respective cutoffs. [Evaluation rules](evaluation.md#defaults). |
-| Evaluation | Chronological, all dates retained; overall, monthly and demand-availability results |
+| Inputs | Past prices and German calendar |
+| Complete inputs | Require complete eligible price history for fitting and issuance. Training and scoring require complete labels at their respective cutoffs. [Evaluation rules](evaluation.md#defaults). |
+| Evaluation | Chronological, all dates retained; overall and monthly results |
 | Initial data budget | Free sources |
 
 The median is the central price estimate. The other four outputs give 50% and 95% central prediction ranges. They describe uncertainty for each quarter-hour, not complete scenarios for a whole day's price path. CatBoost's [MultiQuantile objective](https://catboost.ai/docs/en/concepts/loss-functions-regression#MultiQuantile) supports this in one fitted model.
 
 ## Inputs
 
-[Data contracts and evidence](data-sources.md) define the price source, fixed-lead weather, coordinates and demand timing screen. The starting weather set is the twelve tested locations; no larger geographical search is required before the first build. This is an implementation default supported by the diagnostic, not a claim that twelve is optimal.
+The [price contract](data-sources.md) governs this baseline. Weather and demand are [deferred research candidates](research/incremental-input-value.md).
 
 Earlier auction prices, generator-threshold models, outages, fuel/carbon feeds, neighbours and network constraints are outside the first build. Electricity Maps' price forecast is not a feature or target anchor. Its live data access does not establish historical forecast runs before the chosen deadline; [access findings](../electricity-maps-api.md#forecast-history).
 
