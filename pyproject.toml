@@ -21,13 +21,15 @@ dependencies = [
     "pyproj>=3.7,<4",
     "shapely>=2,<3",
     "pyarrow==25.0.1",
+    "catboost==1.2.10",
+    "scoringrules==0.11.0",
+    "metaflow==2.19.39",
+    "mlflow==3.17.0",
 ]
 
 [project.optional-dependencies]
-forecast = ["catboost==1.2.10"]
 build = ["pypsa==1.2.4"]
 dev = [
-    "scoringrules==0.11.0",
     "import-linter==2.17",
     "pytest==9.1.1",
     "pytest-xdist==3.8.0",
@@ -68,9 +70,9 @@ coppersushi = { path = ".", editable = true }
 awslambdaric = "==3.1.1"
 
 [tool.pixi.environments]
-default = { features = ["build", "dev", "forecast"], solve-group = "default" }
+default = { features = ["build", "dev"], solve-group = "default" }
 publisher = { features = ["publisher"], platforms = ["linux-64"], solve-group = "default" }
-runtime = { features = ["forecast"], solve-group = "default" }
+runtime = { features = [], solve-group = "default" }
 build = { features = ["build"], solve-group = "default" }
 
 [tool.pixi.tasks]

@@ -1,11 +1,15 @@
 ---
 name: forecast-experiment
-description: Records hypotheses, evidence and decisions when proposing, selecting, running or evaluating forecast experiments, including backtests and feature or model comparisons. Excludes routine tests and unchanged forecast operation.
+description: Records hypotheses, evidence and decisions when proposing, selecting, running, evaluating or reviewing forecast experiment records, including backtests and feature or model comparisons. Excludes routine tests and unchanged forecast operation.
 ---
 
 # Forecast experiments
 
 Read the [evaluation contract](../../../wiki/price-forecasting/evaluation.md) and [point-in-time contract](../../../wiki/price-forecasting/data-sources.md#point-in-time) before designing a comparison.
+
+## Record scope
+
+Keep durable experiment records for what lands on `main` and for scientific learning, including rejected models and informative failures. Use disposable MLflow stores for setup checks, smoke tests and PR debugging; keep ordinary verification evidence in the PR. During review, remove implementation churn from proposed research records and check that each retained record serves one of those purposes.
 
 ## Propose
 
@@ -35,7 +39,7 @@ Give runs descriptive human-readable names; retain stable IDs for links and stor
 
 ## After execution
 
-Attach a conclusion to the execution run with results, evidence links, limitations and the next decision: keep, reject or investigate further. Compare against the baseline on matching evaluation rows. For a surprising result, identify a competing explanation and check one observation that distinguishes them before attributing the gain or loss. Record losses and failures as well as gains. If reviewing an existing run without a prior proposal, mark the rationale as retrospective; do not invent a pre-run hypothesis.
+Attach a conclusion to the execution run with results, evidence links, limitations and the next decision: keep, reject or investigate further. Surface its result, limitation and decision at the human review entry point, linked to the complete conclusion. Compare against the baseline on matching evaluation rows. For a surprising result, identify a competing explanation and check one observation that distinguishes them before attributing the gain or loss. Record losses and failures as well as gains. If reviewing an existing run without a prior proposal, mark the rationale as retrospective; do not invent a pre-run hypothesis.
 
 Update the wiki proposal with a short outcome and links to its executions and conclusions; refresh the research index. Revisit deferred proposals in light of the results; link new proposals to their motivating evidence.
 

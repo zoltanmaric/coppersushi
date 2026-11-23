@@ -20,7 +20,7 @@ Continuous delivery (CD) and continuous training (CT) are goals for subsequent w
 
 ## First-stage
 
-Store inputs in Amazon S3. Run collection, training and evaluation locally through Metaflow. Use local MLflow Tracking to compare experiments and retain models and reports. S3 is the only required cloud service in this stage; no cloud scheduler or shared tracking server is required.
+Store inputs in Amazon S3. Collect inputs locally. Metaflow orchestrates tracked evaluation. Use local MLflow Tracking to compare experiments and retain models and reports. S3 is the only required cloud service in this stage; no cloud scheduler or shared tracking server is required.
 
 | Technology | Responsibility |
 |---|---|
@@ -32,7 +32,7 @@ Metaflow's local metadata and artifacts stay on disk. Configure MLflow explicitl
 
 ## Inputs
 
-The historical archive contains prices, weather and demand. A daily price refresh writes a prices-only snapshot. The [source contracts](data-sources.md) own units, locations, resolution and availability rules.
+Training reads months of historical prices. Issuance reads recent eligible prices. The fixed historical snapshot also preserves weather and demand for independent investigations. A fresh baseline snapshot contains only the prices table and its collection receipt.
 
 Use a small, explicit S3 layout:
 
@@ -56,13 +56,13 @@ The three dataset names, checked schemas and snapshot manifests provide the init
 
 ## Iteration
 
-Keep source collection, input loading, feature construction and model evaluation as ordinary Python functions with thin Metaflow steps. Small fixtures permit local checks without provider access. Accepted reproducible runs use a committed code revision and a frozen dependency environment. Record that revision, environment, configuration, seed and snapshot identifier. Exploratory runs with uncommitted code are marked as such and do not satisfy the reproduction guarantee; patch capture and replay are outside the first iteration. MLflow links to the Metaflow run; Metaflow records the MLflow run identifier. Reuse the platform's artifact and retry mechanisms.
+Keep source collection, input loading, feature construction and model evaluation as ordinary Python functions with thin Metaflow steps. Small fixtures permit local checks without provider access. Accepted reproducible runs archive the committed repository and its Pixi definitions, then install the locked `runtime` environment from that archive. The Pixi forecast feature supplies the locked runtime and development environments. The Copper Sushi publisher has its own dependencies. Record that revision, environment, configuration, seed and snapshot identifier. Exploratory runs with uncommitted code are marked as such and do not satisfy the reproduction guarantee; patch capture and replay are outside the first iteration. MLflow links to the Metaflow run; Metaflow records the MLflow run identifier. Reuse the platform's artifact and retry mechanisms.
 
 ### Research-history
 
 The research-record contract separates planning from execution. Proposal pages live under `wiki/price-forecasting/research/`; its `index.md` maps their status, relationships and recommended next choice. Proposals retain selection decisions and short outcomes linked to execution evidence.
 
-MLflow runs represent computational executions, including failed and interrupted attempts. Each run retains the exact motivating proposal and selection decision as artifacts, identified by wiki path and Git revision, alongside its results and conclusion. One proposal can motivate multiple runs; later wiki edits do not change a run's frozen copy. Written reviews and unexecuted proposals are wiki records, not standalone MLflow runs. Saved run manifests identify exact inputs, code and configuration.
+MLflow retains accepted executions and scientifically informative failures. Setup checks and PR debugging use disposable stores. Each run retains the exact motivating proposal and selection decision as artifacts, identified by wiki path and Git revision, alongside its results and conclusion. One proposal can motivate multiple runs; later wiki edits do not change a run's frozen copy. Written reviews and unexecuted proposals are wiki records, not standalone MLflow runs. Saved run manifests identify exact inputs, code and configuration. Each comparison link identifies its parent execution. A later review can invalidate or supersede that execution while its recorded scores stay fixed. [Run review](../../forecasts/execution/README.md).
 
 The [forecast-experiment skill](../../.agents/skills/forecast-experiment/SKILL.md) owns the agent procedure. Agents maintain the records manually; workflow automation is planned. No separate research database or service is required.
 
@@ -72,7 +72,7 @@ After the local evaluation works, the preferred deployment is Metaflow workflows
 
 Metaflow documents Fargate support through its Batch integration. Before adopting this deployment, run a small end-to-end check with pinned dependencies and container image: input loading, task resources, retries, outputs and deadline scheduling. Check CPU/memory combinations and temporary disk needs against Fargate limits; Fargate does not provide GPUs. Evaluate the existing Metaflow Terraform modules before writing infrastructure from scratch, and provision only the services this stage needs.
 
-Decide shared metadata, MLflow hosting and artifact retention then. Verify the live demand retrieval route and deadline handling before claiming daily readiness. This later stage is separate from acceptance of the first local research result.
+Decide shared metadata, MLflow hosting and artifact retention then. Verify live price retrieval and deadline handling before claiming daily readiness. This later stage is separate from acceptance of the first local research result.
 
 ## Basis
 
