@@ -1,0 +1,11 @@
+It's eleven in the morning. A power trader has to decide what tomorrow's six o'clock electricity is worth. Tomorrow afternoon, she asks your team a simple question. What number did your service give me when I made that decision?
+
+Kpler describes two morning updates to its European day ahead price forecast, around ten thirty six and eleven sixteen, Central European Time. Both revise the forecast for the same delivery periods. Let's invent two prices for one quarter hour. The first edition says eighty euros per megawatt hour. The second says sixty five. At eleven, which number belongs in the trader's backtest?
+
+Eighty, assuming the first edition had actually been published by eleven. Tomorrow, if you request the latest forecast for that quarter hour, you might get sixty five. Pairing that number with the trader's eleven o'clock decision silently gives her information from the future.
+
+Take a wind forecast for tomorrow at six. Its provider issues a revision at ten fifty today. Your collector receives it at eleven oh three. Was it available for your eleven o'clock run? No. Delivery time tells you what the data describes. Issue time tells you when the provider produced it. Receipt time tells you when your system could use it.
+
+Here's what the cutoff changes in practice. On Energy Arena, we compared one participant's forecasts for the same six hundred and seventy-two German quarter hours. The weighted interval score rewards narrow price ranges and penalizes misses. Lower is better. At eleven, the score was eleven point four four euros per megawatt hour. At noon, it was seven point one six. By then, the participant had switched models and could use an early auction price. The trader at eleven had neither advantage.
+
+Try the replay yourself. Google calls a manually run machine learning process level zero. You can test the cutoff rule by hand at that stage. Run the command on screen for eleven o'clock. Then change the time to eleven twenty. What should change? At eleven you get eighty. At eleven twenty you get sixty-five. Tomorrow's delivery quarter stays the same. Only the edition you could see has changed.
