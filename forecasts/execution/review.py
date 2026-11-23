@@ -2,10 +2,14 @@
 import argparse
 import json
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Literal, NotRequired, TypedDict
 from urllib.parse import quote
 
+from mlflow.entities import RunTag
+
 from forecasts.execution.tracking import tracking_client
+from forecasts.inputs.input_types import Report
 
 EvidenceStatus = Literal['accepted_baseline', 'invalid', 'superseded']
 EVIDENCE_LABELS: dict[EvidenceStatus, str] = {
@@ -47,9 +51,38 @@ def publish(run_id: str, conclusion: Conclusion, artifact_path: str) -> None:
     if run.data.tags.get('timing_semantics') == 'logging_only':
         sections.append('Duration measures result logging, not model training.')
     client.log_dict(run_id, dict(conclusion), artifact_path)
-    client.set_tag(run_id, 'mlflow.note.content', '\n\n'.join(sections))
+    tags = [RunTag('mlflow.note.content', '\n\n'.join(sections)), RunTag('forecast.conclusion_path', artifact_path)]
     if status is not None:
-        client.set_tag(run_id, 'evidence_status', status)
+        tags.append(RunTag('evidence_status', status))
+    client.log_batch(run_id, tags=tags)
+
+
+def read_review(mlflow_run_id: str, forecast_run_id: str) -> Report:
+    """Freeze the current review for this exact forecast execution in an offline export."""
+    client = tracking_client()
+    run = client.get_run(mlflow_run_id)
+    tags = run.data.tags
+    if tags.get('forecast_run') != forecast_run_id:
+        raise ValueError('MLflow execution differs from the saved forecast run')
+    status = tags.get('evidence_status')
+    if status is not None and status not in EVIDENCE_LABELS:
+        raise ValueError(f'Unknown tracked evidence status: {status}')
+    path = tags.get('forecast.conclusion_path')
+    if path is None:
+        # Runs reviewed before the path tag used the standard conclusion artifact.
+        standard = 'research/conclusion.json'
+        if any(item.path == standard for item in client.list_artifacts(mlflow_run_id, 'research')):
+            path = standard
+    review: Report = {'mlflow_run_id': mlflow_run_id, 'evidence_status': status}
+    if path is not None:
+        with TemporaryDirectory() as tmp:
+            artifact = Path(client.download_artifacts(mlflow_run_id, path, tmp))
+            conclusion = json.loads(artifact.read_text())
+        if conclusion.get('evidence_status', status) != status:
+            raise ValueError('Tracked evidence status differs from the conclusion artifact')
+        review.update(artifact_path=path, result=conclusion['result'],
+                      limitations=conclusion['limitations'], decision=conclusion['decision'])
+    return review
 
 
 def main() -> None:
