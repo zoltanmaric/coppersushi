@@ -10,8 +10,9 @@ Forecast the DE–LU auction price for each quarter of tomorrow’s Berlin deliv
 | Which features enter the monthly fit and the daily prediction? | [Model](model/README.md) |
 | Where do realised prices enter, and how are the two methods scored? | [Evaluation](evaluation/README.md) |
 | Which inputs, code and models produced this run? How can I reproduce it? | [Execution](execution/README.md) |
+| How do I inspect one day and its uncertainty bands in a tracked evaluation? | [Viewer](web/README.md) |
 
-The product root holds the public commands and three shared contracts: [run settings](config.py), [Berlin delivery times](market.py), and [source fingerprints](provenance.py). The [registered settings](run-config.json) and [result receipt](reports/evaluation.json) identify the comparison reproduced by the runner.
+The product root holds the public commands and three shared contracts: [run settings](config.py), [Berlin delivery times](market.py), and [source fingerprints](provenance.py). The [registered settings](run-config.json) and [result receipt](reports/evaluation.json) identify the comparison reproduced by the runner and shown by the viewer.
 
 ## On-demand day-ahead forecast
 
@@ -31,6 +32,10 @@ pixi run --locked python -m forecasts.evaluation --snapshot "$BASELINE_SNAPSHOT"
 ```
 
 Use the immutable snapshot named in [run-config.json](run-config.json) for the registered evaluation. Read the [evaluation workflow](evaluation/README.md) to follow the registered nine monthly folds. Use [tracked execution](execution/README.md) to retain a reproducible run.
+
+## Forecast observatory
+
+[Open a saved run in the viewer](web/README.md). Its **How it works** view explains the computation. [Source evidence](evidence/README.md) and [research decisions](../wiki/price-forecasting/research/index.md) document the basis for comparisons.
 
 ## Development
 

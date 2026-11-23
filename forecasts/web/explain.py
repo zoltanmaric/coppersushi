@@ -1,0 +1,196 @@
+"""Export a checked historical run as an offline, read-only explanation website."""
+import argparse
+from collections import defaultdict
+from datetime import date, datetime
+import json
+from pathlib import Path
+import shutil
+import subprocess
+
+import numpy as np
+import pyarrow.parquet as pq
+
+from forecasts.config import MODEL_METHOD, QUANTILES
+from forecasts.evaluation.scoring import metrics
+from forecasts.inputs.input_types import Report, Row
+from forecasts.provenance import ROOT, digest
+from forecasts.market import BERLIN, cutoff, require_quarters
+
+Scores = dict[str, dict[str, float | int]]
+
+WEB = Path(__file__).resolve().parent
+PRESENTATION = ('app.js', 'index.html', 'pipeline.json', 'sources.json', 'style.css')
+METHODS = (MODEL_METHOD, 'reference')
+HISTORICAL_METHODS = ('system', 'reference', 'prices', 'weather', 'demand')
+
+
+def scores(rows: list[Row], methods: tuple[str, ...]) -> Scores:
+    common = [r for r in rows if r['target'] is not None]
+    days = [r['delivery_date'] for r in common]
+    return {name: metrics([r['target'] for r in common],
+                          [[r[f'{name}_q{q}'] for q in QUANTILES] for r in common],
+                          days) for name in methods}
+
+
+def reconcile(actual: Scores, expected: Scores) -> None:
+    if actual.keys() != expected.keys():
+        raise ValueError('Report methods differ from the forecast contract')
+    for name in actual:
+        if actual[name].keys() != expected[name].keys():
+            raise ValueError(f'Metric fields differ for {name}')
+        for key, value in actual[name].items():
+            if not np.isclose(value, expected[name][key], atol=1e-6, rtol=1e-9):
+                raise ValueError(f'Metric mismatch: {name}.{key}')
+
+
+def build_payload(run: Path) -> Report:
+    manifest = json.loads((run / 'manifest.json').read_text())
+    for name in ('predictions.parquet', 'report.json', 'config.json'):
+        if digest(run / name) != manifest['artifacts'][name]:
+            raise ValueError(f'Artifact checksum mismatch: {name}')
+    config = json.loads((run / 'config.json').read_text())
+    if config != manifest['config']:
+        raise ValueError('Configuration differs from manifest')
+    if config['quantiles'] != list(QUANTILES):
+        raise ValueError('Unsupported quantile contract')
+    report = json.loads((run / 'report.json').read_text())
+    model_method = config.get('model_method')
+    if model_method not in (None, MODEL_METHOD) or report.get('model_method') != model_method:
+        raise ValueError('Report model method differs from the configuration')
+    methods = METHODS if model_method else HISTORICAL_METHODS
+    rows = _prediction_rows(run / 'predictions.parquet', historical=model_method is None)
+    if not rows:
+        raise ValueError('No predictions to explain')
+    rows.sort(key=lambda r: r['delivery_utc'])
+    timestamps = [r['delivery_utc'] for r in rows]
+    if len(set(timestamps)) != len(rows):
+        raise ValueError('Duplicate delivery timestamps')
+    if model_method:
+        require_quarters(timestamps, date.fromisoformat(config['evaluation_start']),
+                         date.fromisoformat(config['end_exclusive']), 'Export delivery grid')
+        if any(row['target'] is None for row in rows):
+            raise ValueError('Prices/calendar baseline export requires all realised prices')
+        if any(row['selected_model'] != model_method or row['fallback_reason'] for row in rows):
+            raise ValueError('Prices/calendar baseline export requires the fitted model for every quarter')
+    for row in rows:
+        local = row['delivery_utc'].astimezone(BERLIN)
+        if local.date() != row['delivery_date']:
+            raise ValueError('Delivery date disagrees with Europe/Berlin timestamp')
+        if row['target'] is not None and not np.isfinite(row['target']):
+            raise ValueError('Non-finite target')
+        for name in methods:
+            q = [row[f'{name}_q{p}'] for p in QUANTILES]
+            if not np.isfinite(q).all() or any(a > b for a, b in zip(q, q[1:])):
+                raise ValueError('Expected finite ordered quantiles, including unscored rows')
+    if (len(rows) != report['delivery_rows']
+            or sum(r['target'] is None for r in rows) != report['missing_truth']
+            or sum(r['target'] is not None for r in rows) != report['scored_rows']):
+        raise ValueError('Report population differs from predictions')
+    reconcile(scores(rows, methods), report['metrics'])
+    grouped: dict[date, list[Row]] = defaultdict(list)
+    months: dict[str, list[Row]] = defaultdict(list)
+    for row in rows:
+        grouped[row['delivery_date']].append(row)
+        months[row['delivery_date'].strftime('%Y-%m')].append(row)
+    for month, selected in months.items():
+        reconcile(scores(selected, methods), report['breakdowns']['month'][month]['metrics'])
+    folds = {f['first_delivery_day']: f for f in report['folds']}
+    days = []
+    for day, selected in sorted(grouped.items()):
+        fold_ids = {r['fold'].isoformat() for r in selected}
+        if len(fold_ids) != 1 or not fold_ids <= folds.keys():
+            raise ValueError('Day does not resolve to one recorded fold')
+        issue = cutoff(day).astimezone(BERLIN)
+        points = []
+        for row in selected:
+            local = row['delivery_utc'].astimezone(BERLIN)
+            point = {'utc': row['delivery_utc'].isoformat(), 'clock': local.strftime('%H:%M %Z'),
+                     'actual': row['target'], 'q': {n: [row[f'{n}_q{q}'] for q in QUANTILES] for n in methods},
+                     'missing': [k.removesuffix('_missing') for k, v in row.items() if k.endswith('_missing') and v]}
+            if model_method is None:
+                demand_update = row['demand_selected_update_utc']
+                point.update(selected=row['selected_model'], reason=row['fallback_reason'],
+                             demand_update=demand_update.isoformat() if demand_update is not None else None)
+            points.append(point)
+        days.append({'date': day.isoformat(), 'issue': issue.isoformat(), 'fold': selected[0]['fold'].isoformat(),
+                     'metrics': scores(selected, methods), 'missing_truth': sum(r['target'] is None for r in selected),
+                     'points': points})
+    run_identity = {k: manifest[k] for k in
+                    ('run_id', 'code_revision', 'exploratory', 'mlflow_run_id', 'metaflow_run_id')}
+    return {'schema_version': 1, 'model_method': model_method,
+            'evidence_status': _evidence_status(manifest, report),
+            'run': run_identity,
+            'snapshot': config['snapshot_id'], 'manifest_sha256': digest(run / 'manifest.json'),
+            'config': {k: config[k] for k in ('train_start', 'evaluation_start', 'end_exclusive', 'catboost')},
+            'features': {n: len(v) for n, v in config['features'].items()},
+            'sources': _sources(),
+            'presentation_sha256': {name: digest(WEB / name) for name in PRESENTATION},
+            'report': {k: report[k] for k in
+                ('metrics', 'comparison', 'delivery_rows', 'scored_rows', 'missing_truth', 'breakdowns',
+                 'timing_limits', 'limitations', 'raw_crossing_fraction')},
+            'pipeline': json.loads((WEB / 'pipeline.json').read_text()),
+            'folds': folds, 'days': days}
+
+
+def export(run: Path, output: Path) -> Path:
+    if output.exists():
+        raise ValueError('Choose a new output directory; exports are never overwritten')
+    payload = build_payload(run)
+    output.mkdir(parents=True)
+    for name in PRESENTATION:
+        shutil.copyfile(WEB / name, output / name)
+    (output / 'data.js').write_text('window.FORECAST = ' + json.dumps(payload, allow_nan=False, separators=(',', ':')) + ';\n')
+    return output / 'index.html'
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--run', type=Path, required=True)
+    parser.add_argument('--output', type=Path, required=True)
+    args = parser.parse_args()
+    print(export(args.run, args.output).resolve())
+
+
+def _sources() -> dict[str, dict[str, str]]:
+    revision = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
+    sources = {}
+    for key, source in json.loads((WEB / 'sources.json').read_text()).items():
+        name = source['path']
+        if digest(ROOT / name) != source['sha256']:
+            raise ValueError(f'Explainer source changed; review narrative and update sources.json: {name}')
+        # A revision link must identify the bytes used.
+        committed = subprocess.check_output(['git', '-C', str(ROOT), 'show', f'{revision}:{name}'])
+        if (ROOT / name).read_bytes() != committed:
+            raise ValueError(f'Commit wiki source before export: {name}')
+        sources[key] = {'path': name, 'sha256': source['sha256'], 'revision': revision,
+                        'url': f'https://github.com/zoltanmaric/coppersushi/blob/{revision}/{name}'}
+    return sources
+
+
+def _prediction_rows(path: Path, *, historical: bool) -> list[Row]:
+    rows: list[Row] = pq.read_table(path).to_pylist()
+    if historical and rows and isinstance(rows[0]['delivery_utc'], str):
+        for row in rows:
+            row['delivery_utc'] = datetime.fromisoformat(row['delivery_utc'])
+            row['delivery_date'] = date.fromisoformat(row['delivery_date'])
+            row['fold'] = date.fromisoformat(row['fold'])
+            if row['demand_selected_update_utc'] is not None:
+                row['demand_selected_update_utc'] = datetime.fromisoformat(row['demand_selected_update_utc'])
+    if any(row['delivery_utc'].utcoffset() is None for row in rows):
+        raise ValueError('Expected timezone-aware delivery timestamps')
+    return rows
+
+
+def _evidence_status(manifest: Report, report: Report) -> str:
+    if report.get('model_method') == MODEL_METHOD and not manifest['exploratory']:
+        receipt = json.loads((ROOT / 'forecasts/reports/evaluation.json').read_text())
+        if (receipt.get('run_id') == manifest['run_id']
+                and receipt.get('report_sha256') == manifest['artifacts']['report.json']
+                and receipt.get('evidence_status') == 'accepted_baseline'):
+            return 'accepted_baseline'
+    status = report.get('evidence_status', manifest.get('evidence_status'))
+    return status if status in ('invalid', 'superseded') else 'unknown'
+
+
+if __name__ == '__main__':
+    main()
