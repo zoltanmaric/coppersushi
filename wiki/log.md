@@ -632,3 +632,7 @@ The [publication incident](jao-availability.md#evidence) exposed an empty Polish
 ## [2026-11-20] query | Missing Core prices
 
 Checked the [upstream price source and Slovak settlement-price reconstruction](electricity-maps-api.md#price-spreads) for the four zones affected by the publication gap.
+
+## [2026-11-19] query | Cloudflare analytics and diagnostic billing
+
+Recorded [which Cloudflare charges apply to the app and how to interpret its traffic reports](copper-sushi-app.md#analytics).
