@@ -134,7 +134,8 @@ def load_weather(path: Path, locations: Sequence[tuple[str, float, float]]) -> t
     return frames, {"request_url": snapshot["url"], "retrieved_at_utc": snapshot["retrieved_at_utc"], "locations": metadata}
 
 
-def load_demand(path: Path, start: date, end: date) -> DemandSeries:
+def load_demand(path: Path, start: date, end: date, *,
+                require_country_metadata: bool = False) -> DemandSeries:
     """Load archived country-demand versions for local dates in [start, end)."""
     versions: DemandSeries = defaultdict(list)
     with zipfile.ZipFile(path) as archive:
@@ -145,6 +146,8 @@ def load_demand(path: Path, start: date, end: date) -> DemandSeries:
                 for row in csv.DictReader(io.TextIOWrapper(raw, encoding="utf-8-sig"), delimiter="\t"):
                     if row["AreaCode"] != COUNTRY:
                         continue
+                    if require_country_metadata and (row.get("AreaTypeCode"), row.get("AreaMapCode")) != ("CTY", "DE"):
+                        raise ValueError("Expected Germany country metadata in the File Library extract")
                     timestamp = stamp(row["DateTime(UTC)"])
                     if not start <= timestamp.astimezone(BERLIN).date() < end:
                         continue

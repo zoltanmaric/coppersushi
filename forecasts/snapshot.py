@@ -27,6 +27,7 @@ from forecasts.dataset import (
     digest, load_demand, load_prices, load_weather, stamp,
     verify_payloads,
 )
+from forecasts.fresh_sources import fetch_demand, fetch_sources, require_coverage, source_receipts
 from forecasts.schemas import SCHEMAS, VERSION, describe, validate
 from forecasts.storage import get_verified, put_verified, verify_bucket
 from forecasts.tables import Features
@@ -44,13 +45,18 @@ def identity(value: object) -> str:
     return hashlib.sha256(canonical(value)).hexdigest()
 
 
-def collect(data_root: Path, output: Path) -> Report:
+def collect(data_root: Path, output: Path, *,
+            period: tuple[date, date] | None = None) -> Report:
     """Validate archived sources and save typed snapshot tables and a manifest."""
-    inputs = verify_payloads(data_root)
-    output.mkdir(parents=True, exist_ok=True)
+    start, end = period if period is not None else (START, END)
+    inputs, receipts = source_receipts(data_root) if period is not None else (verify_payloads(data_root), {})
     prices = load_prices(data_root / PAYLOADS["prices"])
     weather, weather_metadata = load_weather(data_root / PAYLOADS["weather"], WEATHER_LOCATIONS)
-    demand = load_demand(data_root / PAYLOADS["demand"], START, END)
+    demand = load_demand(data_root / PAYLOADS["demand"], start, end,
+                         require_country_metadata=period is not None)
+    if period is not None:
+        require_coverage(start, end, prices, weather, demand)
+    output.mkdir(parents=True, exist_ok=period is None)
     raw, common = {}, {}
     for source, entry in inputs.items():
         prefix = f"raw/{source}/{entry['sha256']}"
@@ -64,6 +70,8 @@ def collect(data_root: Path, output: Path) -> Report:
             metadata["request_url_pattern"] = "https://www.smard.de/app/chart_data/4169/DE/4169_DE_quarterhour_<week>.json"
         else:
             metadata["source_extract"] = "ENTSO-E File Library DayAheadTotalLoadForecast_6.1.B_r3; Germany country"
+        if source in receipts:
+            metadata.update(receipts[source])
         path = output / f"{source}-retrieval.json"
         path.write_bytes(canonical(metadata))
         raw[source]["metadata_sha256"] = digest(path)
@@ -103,6 +111,8 @@ def collect(data_root: Path, output: Path) -> Report:
     manifest = {"schema_version": VERSION, "files": files, "raw": raw, "timing_limits": TIMING,
                 "code_revision": commit, "exploratory_code": dirty,
                 "environment": {"python": platform.python_version(), "pyarrow": pa.__version__, "project_sha256": digest(ROOT / "pyproject.toml"), "pixi_lock_sha256": digest(ROOT / "pixi.lock")}}
+    if period is not None:
+        manifest["required_period_berlin"] = {"start": start.isoformat(), "end_exclusive": end.isoformat()}
     snapshot_id = identity(manifest)
     for name, entry in files.items():
         entry["key"] = f"snapshots/{snapshot_id}/{name}.parquet"
@@ -281,11 +291,21 @@ def main() -> None:
         p.add_argument("--directory", type=Path, default=ROOT / "data/forecasts/snapshot")
         if command == "collect":
             p.add_argument("--publish", action="store_true", help="Publish the validated collection to S3 in this run")
+    p = sub.add_parser("refresh", help="Download all required sources and stage a new historical snapshot")
+    p.add_argument("--start", type=date.fromisoformat, required=True)
+    p.add_argument("--end-exclusive", type=date.fromisoformat, required=True)
+    p.add_argument("--entsoe-credentials", type=Path, required=True)
+    p.add_argument("--data-root", type=Path, required=True, help="New directory for the raw responses")
+    p.add_argument("--directory", type=Path, required=True, help="New directory for the typed snapshot")
+    p = sub.add_parser("fetch-demand", help="Save official demand and receipt time for a delivery day")
+    p.add_argument("--day", type=date.fromisoformat, required=True)
+    p.add_argument("--entsoe-credentials", type=Path, required=True)
+    p.add_argument("--archive", type=Path, required=True)
     p = sub.add_parser("load")
     p.add_argument("snapshot_id")
     p.add_argument("--directory", type=Path, default=ROOT / "data/forecasts/loaded-snapshot")
     args = parser.parse_args()
-    if (args.command != "collect" or args.publish) and (not args.profile or not args.bucket):
+    if (args.command in {"load", "publish"} or getattr(args, "publish", False)) and (not args.profile or not args.bucket):
         parser.error("publish/load require an explicit user-local --profile and private --bucket")
     if args.command == "collect":
         manifest = collect(args.data_root, args.directory)
@@ -294,6 +314,14 @@ def main() -> None:
             publish(args.profile, args.region, args.bucket, args.directory, args.data_root)
     elif args.command == "publish":
         publish(args.profile, args.region, args.bucket, args.directory, args.data_root)
+    elif args.command == "fetch-demand":
+        fetch_demand(args.archive, args.day, args.day + timedelta(days=1), args.entsoe_credentials)
+    elif args.command == "refresh":
+        if args.data_root.exists() or args.directory.exists() or args.data_root.resolve() == args.directory.resolve():
+            parser.error("refresh requires new, distinct paths for the raw archives and typed snapshot")
+        fetch_sources(args.data_root, args.start, args.end_exclusive, args.entsoe_credentials)
+        manifest = collect(args.data_root, args.directory, period=(args.start, args.end_exclusive))
+        print(manifest["snapshot_id"], flush=True)
     else:
         load(args.profile, args.region, args.bucket, args.snapshot_id, args.directory)
 

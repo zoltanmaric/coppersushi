@@ -22,6 +22,27 @@ replacement for a historical environment.
 
 Collect or load immutable input snapshots. [Input and storage contracts](../wiki/price-forecasting/forecast-infrastructure.md#inputs). Price table contracts: [prices.py](prices.py).
 
+Enroll once in a terminal using the root checkout's ignored secrets directory.
+The prompt verifies your login and saves the email and password in an owner-only local file.
+Each refresh requests a new File Library token and keeps it in memory.
+
+```sh
+pixi run --locked python -m forecasts.fms /absolute/path/to/.secrets/entsoe-fms.json
+pixi run --locked python -m forecasts.snapshot refresh \
+  --start 2026-10-10 --end-exclusive 2026-10-12 \
+  --entsoe-credentials /absolute/path/to/.secrets/entsoe-fms.json \
+  --data-root data/forecasts/new-raw --directory data/forecasts/new-snapshot
+```
+
+The command saves SMARD quarter-hour prices, Open-Meteo ICON-EU fixed-lead weather,
+and ENTSO-E monthly German country demand with their receipt times. Dates are Berlin
+delivery dates. It requires price and demand values at every quarter and weather at
+every hour in the requested interval. The demand receipt and original update time
+are separate. Historical features still screen archived revisions at 11:00 Berlin.
+A failed source or incomplete interval leaves no typed snapshot. Use a new pair of
+paths to retry or publish the completed snapshot with the `publish` command and the
+same `--data-root` and `--directory` values.
+
 To collect the recorded year, place the three exact archives at their [baseline input inventory](data/baseline-inputs.json), under `data/forecasts/`. The [source contracts](../wiki/price-forecasting/data-sources.md) describe their sources. `--data-root` can reuse another checkout's downloads. Recollection from mutable feeds may produce different bytes; the recorded experiment requires matching archives or access to the private S3 snapshot.
 
 ```sh
