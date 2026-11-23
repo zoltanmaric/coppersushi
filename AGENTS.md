@@ -10,7 +10,7 @@
 
 - **commit-cadence** — Commit deliberately, not per turn. Don't commit after every instruction — the user often adjusts what they just asked for, and those adjustments belong in the same commit as the original change, not in a follow-up. Let work accumulate across a few turns, then group it into atomic, cohesive commits when a piece of work has settled.
 
-- **pull-requests-via-skill** — Any work on pull requests — opening, readying, chopping into layers, restacking — goes through the `pull-request` skill before the first `gh` or `git push`. Its stack mechanics are `gh stack`; a hand-made chain of `gh pr create --base` is not a stack.
+- **pull-requests-via-skill** — Use the `pull-request` skill when preparing or reviewing a PR, branch or stack, including read-only local reviews. In delegated review briefs, point the reviewer to its “Review findings” section. Its stack mechanics are `gh stack`; a hand-made chain of `gh pr create --base` is not a stack.
 
 - **early-stack-prs** — Push and open each PR in a stack as soon as it has a coherent commit. Keep an unfinished layer draft; mark it ready only when that layer is complete and verified.
 

@@ -38,7 +38,7 @@ Then assess interfaces, data flow, domain models, duplicated rules and dependenc
 
 Weigh likelihood, impact and recovery cost together; a claimed “under 1%” probability alone neither justifies nor rules out protection. Ground the verdict in concrete code and consequences.
 
-State the architectural verdict and remaining compromises explicitly, even when there are no correctness findings. Ground concerns in specific code, explain their practical effect and name a better direction; do not invent objections to fill a checklist. Check whether this is the right unit of review: propose a split for independently understandable changes, and keep changes together when separation would hide their reasoning.
+Give the user the architectural verdict and remaining compromises alongside the merge verdict, including when summarizing a delegated review. Answer each requested design question or identify what was left unassessed. For folder layout, name the paths you would keep, move, combine or remove and explain why. Ground concerns in specific code, explain their practical effect and name a better direction; do not invent objections to fill a checklist. Check whether this is the right unit of review: propose a split for independently understandable changes, and keep changes together when separation would hide their reasoning.
 
 Check whether raw external representations escape their boundary, or internal callers unnecessarily serialize and reconstruct domain objects.
 
