@@ -122,19 +122,19 @@ class SnapshotTests(unittest.TestCase):
                     self.assertEqual(selected[name], tables[name] if offset == 0 else [])
             self.assertGreater(tables["weather"][0]["valid_utc"], deadline)
 
-    def test_historical_witness_only_revisions_require_timely_receipt_across_sources(self) -> None:
+    def test_historical_witnessed_revisions_require_timely_receipt_across_sources(self) -> None:
         source = history()
         day = date(2026, 3, 29)
         deadline = cutoff(day)
-        for receipt in (deadline, deadline + timedelta(minutes=2), None):
-            tables = {name: [dict(source[name][0], timing_evidence="witnessed", source_update_utc=None,
-                                  retrieved_at_utc=receipt)] for name in SCHEMAS}
-            selected = select_records(tables, day)
-            for name in SCHEMAS:
-                with self.subTest(source=name, receipt=receipt):
-                    # ENTSO-E demand additionally requires a known revision update.
-                    expected = tables[name] if receipt == deadline and name != "demand" else []
-                    self.assertEqual(selected[name], expected)
+        for update in (None, deadline - timedelta(minutes=5)):
+            for receipt in (deadline, deadline + timedelta(minutes=2), None):
+                tables = {name: [dict(source[name][0], timing_evidence="witnessed", source_update_utc=update,
+                                      retrieved_at_utc=receipt)] for name in SCHEMAS}
+                selected = select_records(tables, day)
+                for name in SCHEMAS:
+                    with self.subTest(source=name, receipt=receipt, update=update):
+                        eligible = receipt == deadline and (name != "demand" or update is not None)
+                        self.assertEqual(selected[name], tables[name] if eligible else [])
 
     def test_historical_assumption_can_establish_availability_before_late_receipt(self) -> None:
         source = history()

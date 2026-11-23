@@ -8,7 +8,7 @@ def available_at(deadline: datetime, *, live: bool) -> pl.Expr:
     """Require timely updates and receipts at the inclusive, timezone-aware cutoff.
 
     Historical replay accepts an explicitly assumed or documented publication time.
-    If witnessing alone establishes availability, the receipt must precede or equal
+    For witnessed revisions, the receipt must precede or equal
     the cutoff. Live issuance requires this receipt for every source.
     """
     if deadline.utcoffset() is None:
@@ -16,7 +16,7 @@ def available_at(deadline: datetime, *, live: bool) -> pl.Expr:
     update = pl.col("source_update_utc")
     evidence = pl.col("timing_evidence")
     timely_receipt = pl.col("retrieved_at_utc") <= deadline
-    receipt_required = pl.lit(live) | ((evidence == "witnessed") & update.is_null())
+    receipt_required = pl.lit(live) | (evidence == "witnessed")
     return (evidence.is_in(["witnessed", "documented", "assumed"])
             & (update.is_null() | (update <= deadline))
             & (~receipt_required | timely_receipt.fill_null(False)))

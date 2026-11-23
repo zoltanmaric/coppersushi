@@ -16,7 +16,7 @@ Retain source versions and record whether eligibility is witnessed, supported by
 
 For live forecasts, the input must have been retrieved by the actual issue time, which must be no later than the deadline. Historical replay may use the documented source screens and timing assumptions, but must disclose them. If no version qualifies under that declared policy, keep the input missing. A future valid time is allowed; future knowledge is not: tomorrow's weather forecast can be used, tomorrow's realised weather cannot.
 
-When a collector receipt is the only evidence of publication, the receipt must be at or before the cutoff even in replay. A first receipt at 11:02 cannot establish availability at 11:00. Documented publication or an explicitly disclosed historical timing assumption can support replay. Live issuance always requires timely retrieval. [Selection contract and tests](../../forecasts/inputs/tests/test_snapshot.py).
+For a revision marked witnessed, replay requires a receipt at or before the cutoff even if the source reports an earlier update. A first receipt at 11:02 cannot establish availability at 11:00. Documented publication or an explicitly disclosed historical timing assumption can support replay. Live issuance always requires timely retrieval. [Selection contract and tests](../../forecasts/inputs/tests/test_snapshot.py).
 
 ### Prices
 
