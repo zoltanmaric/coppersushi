@@ -632,3 +632,7 @@ The [publication incident](jao-availability.md#evidence) exposed an empty Polish
 ## [2026-11-23] ingest | Operating a day-ahead forecast
 
 [Operational forecasting cases](price-forecasting/operational-forecasting.md) distinguish the primary model’s score from what the service delivered by the decision deadline.
+
+## [2026-11-23] ingest | Forecast design review
+
+The [review principles](price-forecasting/design-review.md) connect operational evidence to checks a reviewer can perform on a specific stack revision.

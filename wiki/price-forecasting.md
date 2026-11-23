@@ -2,7 +2,7 @@
 
 An independent forecasting product under `forecasts/`, with no dependency on the power-flow application. The first market is Germany–Luxembourg day-ahead electricity prices. As of 2026-10-09, typed S3 inputs and feature replay exist; training and experiment tracking remain planned.
 
-Start with the [operational forecasting cases](price-forecasting/operational-forecasting.md) for a worked comparison at the 11:00 cutoff.
+Use the [forecast design review](price-forecasting/design-review.md) to assess a stack revision. The [operational cases](price-forecasting/operational-forecasting.md) show the evidence behind the review, starting with Energy-Arena’s 11:00 price forecast.
 
 ## Design
 

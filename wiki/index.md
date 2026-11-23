@@ -23,6 +23,7 @@
 - [price-forecasting/germany-luxembourg.md](price-forecasting/germany-luxembourg.md) — independent Germany–Luxembourg quarter-hour forecast: agreed CatBoost quantiles, public fundamentals and implementation handover
 - [price-forecasting/data-sources.md](price-forecasting/data-sources.md) — verified price, weather and demand contracts, twelve locations, timing gaps and diagnostic evidence
 - [price-forecasting/evaluation.md](price-forecasting/evaluation.md) — five quantiles, weighted interval score, chronological all-date replay and comparison controls
+- [price-forecasting/design-review.md](price-forecasting/design-review.md) — review a forecasting stack against its decision deadline, delivered service and release evidence
 - [price-forecasting/operational-forecasting.md](price-forecasting/operational-forecasting.md) — Energy-Arena first, then price revisions, weather arrival, ensemble calibration and release decisions
 - [price-forecasting/energy-arena-benchmarks.md](price-forecasting/energy-arena-benchmarks.md) — matched 11:00 and noon scores, interval coverage and verified participant histories
 
