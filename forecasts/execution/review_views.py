@@ -28,6 +28,8 @@ def install(run_id: str, base_url: str) -> None:
     links = {}
     for key, view in config['views'].items():
         view_id = f'forecast-{key}'
+        if key == 'run-review':
+            view_id += f'-{execution.info.run_id}'
         tag = f'mlflow.sharedViewState.{view_id}'
         old = json.loads(experiment.tags.get(tag, '{}'))
         now = int(time.time() * 1000)
