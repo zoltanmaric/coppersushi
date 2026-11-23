@@ -19,4 +19,4 @@ Start with training-versus-future diagnostics: it uses saved models, avoids retr
 
 This recommendation is not a selection. User choice is pending. Before any execution, record the choice and deferrals on the selected proposal, freeze its plan in Git, and attach that exact proposal version to each execution in MLflow. Keep the original wiki proposal.
 
-[October–November frozen replay](autumn-replay.md) was selected on November 23 to check the existing forecast on later dates.
+[October–November frozen replay](autumn-replay.md) was completed on November 23. Its result and limitations are recorded with the frozen plan.
