@@ -27,6 +27,7 @@ dependencies = [
 forecast = ["catboost==1.2.10"]
 build = ["pypsa==1.2.4"]
 dev = [
+    "scoringrules==0.11.0",
     "import-linter==2.17",
     "pytest==9.1.1",
     "pytest-xdist==3.8.0",

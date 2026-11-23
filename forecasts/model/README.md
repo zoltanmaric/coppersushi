@@ -1,6 +1,6 @@
 # Price model
 
-[Forecasts](../README.md) · [Inputs](../inputs/README.md)
+[Forecasts](../README.md) · [Inputs](../inputs/README.md) · [Evaluation](../evaluation/README.md)
 
 [build_features() and build_day_features()](features.py) use the same transforms for historical fitting and daily issuance. They turn eligible SMARD history into same-clock price lags, daily price summaries, fixed Berlin calendar fields, and flags for missing inputs. [Price lags](price_features.py) average repeat quarters when the clocks change in autumn. A spring lag quarter that did not occur stays empty.
 

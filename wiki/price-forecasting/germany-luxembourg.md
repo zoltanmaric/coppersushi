@@ -25,7 +25,7 @@ The median is the central price estimate. The other four outputs give 50% and 95
 
 ## Inputs
 
-The [price contract](data-sources.md) governs this baseline. Weather and demand are deferred research candidates.
+The [price contract](data-sources.md) governs this baseline. Weather and demand are [deferred research candidates](research/incremental-input-value.md).
 
 Earlier auction prices, generator-threshold models, outages, fuel/carbon feeds, neighbours and network constraints are outside the first build. Electricity Maps' price forecast is not a feature or target anchor. Its live data access does not establish historical forecast runs before the chosen deadline; [access findings](../electricity-maps-api.md#forecast-history).
 

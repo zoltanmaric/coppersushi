@@ -10,4 +10,4 @@ pixi run --locked python -m forecasts.dataset --snapshot data/forecasts/loaded-s
 
 Omit `--snapshot` to use verified raw archives. Set `FORECAST_BASELINE_SNAPSHOT` to the recorded snapshot directory to include the [historical coverage regression](tests/test_baseline.py) in the forecast test suite.
 
-The [verified snapshot receipt](verified-snapshot.json) records the retained archive's coverage counts and the successful S3 publish and download checks.
+The [verified snapshot receipt](verified-snapshot.json) records the retained archive's coverage counts and the successful S3 publish and download checks. [Historical evaluation](../evaluation/README.md) documents the price-model comparison.

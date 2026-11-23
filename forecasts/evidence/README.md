@@ -1,6 +1,6 @@
 # Forecast diagnostic evidence
 
-Recorded findings from the completed 2026-10-07–08 investigations. [Data findings](../../wiki/price-forecasting/data-sources.md) explain their scope.
+Includes the October 2026 source investigations and the [November demand-timing audit](demand-timing-20261123.csv). [Data findings](../../wiki/price-forecasting/data-sources.md) explain their scope.
 
 This folder contains historical experiment designs and JSON/CSV results. For maintained inputs and baseline checks, see the [forecast setup](../README.md).
 
