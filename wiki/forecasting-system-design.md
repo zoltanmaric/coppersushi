@@ -1,6 +1,21 @@
 # Agent-driven design of forecasting systems
 
-Start with one decision a forecast consumer makes. Ask what they can still do at the issue deadline and what a late or unreliable forecast would cost them. Use the answer to design one forecast edition from input receipt to delivery and eventual scoring. The agent’s first output is a proposed design the product owner can correct before implementation.
+## Principles
+
+Start the design by naming the consumer, the action they can still take, and the last useful issue time. Apply these principles to one forecast edition before choosing infrastructure.
+
+| Design principle | What it changes |
+|---|---|
+| **1. Benchmark at the decision deadline.** | Replay the latest edition actually available when the consumer acted. A noon forecast cannot establish 11:00 skill, even on identical delivery quarters. [Energy-Arena paired example](price-forecasting/energy-arena-benchmarks.md#paired-week) |
+| **2. Measure the service the customer received.** | Count every expected issue, including late, fallback and missing editions. Keep model-only scores alongside delivered-service scores and delivery coverage. [Participant fallback case](price-forecasting/operational-forecasting.md) |
+| **3. Control what changes when attributing a gain.** | Compare complete old and new services for customer impact. Compare both models on identical inputs, dates and truth to isolate a model change. [ECMWF release scorecards](https://confluence.ecmwf.int/spaces/FCST/pages/620418870/Implementation+of+AIFS+Single+v2) |
+| **4. Carry uncertainty to the quantity the consumer uses.** | For a fleet or a multi-hour position, aggregate within each scenario before taking quantiles. Check interval width and misses on both sides by horizon and operating condition. [GenCast and Aurora cases](price-forecasting/operational-forecasting.md) |
+| **5. Budget the whole path to delivery.** | Measure upstream waiting, computation and publication separately. Use the time left to decide whether a fresh run, partial output or fallback can still help. [MetDesk deployment](https://developer.nvidia.com/blog/empowering-energy-trading-with-metdesk-and-nvidia-earth-2/) |
+| **6. Define exactly what settles the forecast.** | Specify the product, interval, unit and truth version. A revised day-ahead forecast, an intraday auction forecast and a live trade index answer different questions. [Kpler product definitions](https://help.kpler.com/en/articles/18248401-6-november-2026-live-id-continuous-new-d-1-model-id-auction-price-forecasts-and-load-forecasts) |
+| **7. Preserve editions across the chain.** | Record which upstream editions produced each published forecast. An as-of query must still recover what the consumer could retrieve after a later revision arrives. [Kpler vintage queries](https://help.kpler.com/en/articles/16919536-8-september-2026-power-api-additions) |
+| **8. Use the same feature rules in training and serving.** | Build a historical example from the inputs eligible at that issue time using the live transforms. Test units, interval alignment and missing inputs at the boundary. [Google Cloud pipeline automation](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning) |
+| **9. Give training, release and issuing separate triggers.** | Fresh labels can trigger a fit. A validated candidate can replace the approved model. Fresh market or weather data can trigger another edition with the same model. Record which event happened. [Google Cloud lifecycle](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning) · [Kpler morning updates](https://help.kpler.com/en/articles/8925114-short-term-power-forecasts-methodology) |
+| **10. Define release and recovery evidence before automating.** | Decide which data, quality and serving checks block promotion. Retain the compatible model, features and code needed to restore service. Add automation when release frequency or a delivery obligation justifies it. [Google Cloud maturity levels](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning) · [Project deployment stages](price-forecasting/forecast-infrastructure.md) |
 
 ## Define the forecast contract
 

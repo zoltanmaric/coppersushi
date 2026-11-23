@@ -2,7 +2,6 @@
 
 ## Concepts
 
-- [forecasting-system-design.md](forecasting-system-design.md) — agent-driven design for prices, generation, demand and weather, from the consumer decision to a scored edition
 - [polish-allocation-constraints.md](polish-allocation-constraints.md) — Polish cap sources, bounds, map selection and reserve context
 - [polish-balancing-capacity-procurement.md](polish-balancing-capacity-procurement.md) — required and basic purchased MW, source fields, publication versions and time alignment
 - [polish-export-cap-investigation.md](polish-export-cap-investigation.md) — interval-level investigation of Polish export caps, reserve evidence and the protectionism hypothesis
@@ -19,6 +18,8 @@
 - [timezone-handling.md](timezone-handling.md) — the `explicit-timezones` convention, its rationale, and the PyPSA naive-UTC boundary
 
 ## Price forecasting
+
+**Start here:** [Forecasting system design principles](forecasting-system-design.md#principles) for prices, weather, generation and demand.
 
 - [price-forecasting.md](price-forecasting.md) — independent forecast product, architecture graph and links to design and implementation
 - [price-forecasting/forecast-infrastructure.md](price-forecasting/forecast-infrastructure.md) — S3 snapshots, local execution, wiki research planning and MLflow evidence

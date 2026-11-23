@@ -1,8 +1,8 @@
 # Price forecasting
 
-An independent forecasting product under `forecasts/`, with no dependency on the power-flow application. The first market is Germany–Luxembourg day-ahead electricity prices. As of 2026-10-09, typed S3 inputs and feature replay exist; training and experiment tracking remain planned.
+Start with the [forecasting system design principles](forecasting-system-design.md#principles). The [operational cases](price-forecasting/operational-forecasting.md) work through the evidence for the 11:00 DE–LU forecast.
 
-Use [Agent-driven design of forecasting systems](forecasting-system-design.md) to design the pipeline. The [operational cases](price-forecasting/operational-forecasting.md) apply those principles to the 11:00 DE–LU forecast.
+An independent forecasting product under `forecasts/`, with no dependency on the power-flow application. The first market is Germany–Luxembourg day-ahead electricity prices. As of 2026-10-09, typed S3 inputs and feature replay exist; training and experiment tracking remain planned.
 
 ## Design
 
