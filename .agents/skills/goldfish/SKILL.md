@@ -12,6 +12,8 @@ A goldfish is a fresh subagent given only the artifact plus what any fresh conte
 legitimately reach: the repo, the wiki, linked sources. Session context is out of
 bounds — don't paste in your intent or the answer you hope for.
 
+Carry each explicit review question into the brief at the scope the user named. Before reporting readiness, check that the verdict answers each question at that scope or names what remains unassessed.
+
 Facets — a menu, not a mandate; pick by stakes. Run the deleter before critic and
 readiness: optimizing a thing that shouldn't exist is the classic mistake.
 
