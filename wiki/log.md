@@ -653,6 +653,6 @@ The [design principles](forecasting-system-design.md) connect operational eviden
 
 The [forecast design walkthrough](forecasting-system-design.md) tests whether a consumer can retrieve an edition before its outcome exists.
 
-## [2026-11-23] ingest | Value of faster intraday inputs
+## [2026-11-23] ingest | Attributing forecast gains
 
-The [intraday study and proposed test](price-forecasting/operational-forecasting.md#intraday-study) distinguishes faster input delivery from issuing a forecast later.
+The [matched day-ahead editions](price-forecasting/energy-arena-benchmarks.md#paired-week) show why comparing scores at two cutoffs cannot isolate the value of fresher inputs.
