@@ -628,3 +628,7 @@ Reconstructed the [20 November cap effect](polish-export-cap-investigation.md#no
 ## [2026-11-20] query | Critical Elements publication failure
 
 The [publication incident](jao-availability.md#evidence) exposed an empty Polish alternative-price feed, a reduced JAO page-size limit and incomplete zonal prices.
+
+## [2026-11-23] ingest | Operating a day-ahead forecast
+
+[Operational forecasting cases](price-forecasting/operational-forecasting.md) distinguish the primary model’s score from what the service delivered by the decision deadline.
