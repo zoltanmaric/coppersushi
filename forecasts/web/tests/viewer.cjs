@@ -28,6 +28,16 @@ const change = (id, value) => {
 const data = window.FORECAST;
 const model = data.model_method ?? "system";
 assert($("error").hidden, $("error").textContent);
+if (data.report.comparison[model]?.ci_95) {
+  assert($("verdict-text").textContent.includes(`${data.config.bootstrap.block_days}-day blocks`));
+}
+if (data.review?.decision) {
+  assert(!$("review-summary").hidden);
+  assert($("review-details").textContent.includes(data.review.decision));
+}
+if (data.model_method && ["superseded", "invalid"].includes(data.evidence_status)) {
+  assert($("status").textContent.toLowerCase().includes(data.evidence_status));
+}
 assert.equal($("method").value, model);
 assert.equal($("historical-notice").hidden, Boolean(data.model_method));
 if (data.model_method) {

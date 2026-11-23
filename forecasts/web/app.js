@@ -62,10 +62,21 @@
       $("historical-notice").hidden = false;
       $("historical-notice").textContent =
         `${evidenceStatus}. These forecasts use the earlier workflow with weather, demand and fallback options. The model and pipeline views describe the prices/calendar baseline.`;
+    } else if (D.evidence_status === "superseded" || D.evidence_status === "invalid") {
+      $("status").textContent = evidenceStatus.toUpperCase();
     } else if (D.run.exploratory) {
       $("status").textContent = "EXPLORATORY RUN";
     } else if (D.evidence_status === "accepted_baseline") {
       $("status").textContent = "ACCEPTED BASELINE";
+    }
+    const review = D.review;
+    if (review?.result) {
+      const summary = $("review-summary");
+      summary.hidden = false;
+      const details = $("review-details");
+      definition(details, "Result", review.result);
+      definition(details, "Limitations", Array.isArray(review.limitations) ? review.limitations.join(" ") : review.limitations);
+      definition(details, "Decision", review.decision);
     }
     let index = 0,
       quarterIndex = 0,
@@ -191,7 +202,7 @@
         : `${m.wis < r.wis ? "Lower" : "Higher"} WIS than the reference.`;
       const c = D.report.comparison[model];
       const uncertainty = period === "all" && c?.ci_95
-        ? `The full-period WIS difference is ${fmt(c.wis_difference)} €/MWh. The paired seven-day-block 95% interval is ${fmt(c.ci_95[0])} to ${fmt(c.ci_95[1])}.`
+        ? `The full-period WIS difference is ${fmt(c.wis_difference)} €/MWh. Using ${D.config.bootstrap.block_days}-day blocks, the paired 95% interval is ${fmt(c.ci_95[0])} to ${fmt(c.ci_95[1])}.`
         : period === "all" ? "" : "This monthly comparison is descriptive.";
       $("verdict-text").textContent =
         `The nominal 95% band contained ${pct(m.coverage_95)} of observed prices in this period. ${uncertainty}`;

@@ -12,6 +12,7 @@ import pyarrow.parquet as pq
 
 from forecasts.config import MODEL_METHOD, QUANTILES
 from forecasts.evaluation.scoring import metrics
+from forecasts.execution.review import read_review
 from forecasts.inputs.input_types import Report, Row
 from forecasts.provenance import ROOT, digest
 from forecasts.market import BERLIN, cutoff, require_quarters
@@ -117,11 +118,12 @@ def build_payload(run: Path) -> Report:
                      'points': points})
     run_identity = {k: manifest[k] for k in
                     ('run_id', 'code_revision', 'exploratory', 'mlflow_run_id', 'metaflow_run_id')}
+    review = read_review(manifest['mlflow_run_id'], manifest['run_id'])
     return {'schema_version': 1, 'model_method': model_method,
-            'evidence_status': _evidence_status(manifest, report),
+            'evidence_status': _evidence_status(manifest, report, review), 'review': review,
             'run': run_identity,
             'snapshot': config['snapshot_id'], 'manifest_sha256': digest(run / 'manifest.json'),
-            'config': {k: config[k] for k in ('train_start', 'evaluation_start', 'end_exclusive', 'catboost')},
+            'config': {k: config[k] for k in ('train_start', 'evaluation_start', 'end_exclusive', 'catboost', 'bootstrap')},
             'features': {n: len(v) for n, v in config['features'].items()},
             'sources': _sources(),
             'presentation_sha256': {name: digest(WEB / name) for name in PRESENTATION},
@@ -181,7 +183,9 @@ def _prediction_rows(path: Path, *, historical: bool) -> list[Row]:
     return rows
 
 
-def _evidence_status(manifest: Report, report: Report) -> str:
+def _evidence_status(manifest: Report, report: Report, review: Report) -> str:
+    if review['evidence_status'] in ('invalid', 'superseded'):
+        return str(review['evidence_status'])
     if report.get('model_method') == MODEL_METHOD and not manifest['exploratory']:
         receipt = json.loads((ROOT / 'forecasts/reports/evaluation.json').read_text())
         if (receipt.get('run_id') == manifest['run_id']

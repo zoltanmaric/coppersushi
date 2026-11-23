@@ -1,6 +1,7 @@
 """The presentation must preserve evidence, including awkward clock and truth cases."""
 from datetime import date, datetime, timedelta
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -10,6 +11,8 @@ from zoneinfo import ZoneInfo
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from forecasts.execution.review import publish
+from forecasts.execution.tracking import tracking_client
 from forecasts.web import explain
 from forecasts.inputs.input_types import Report, Row
 from forecasts.market import quarters
@@ -39,7 +42,7 @@ class ExplainTest(unittest.TestCase):
                 current += timedelta(minutes=15)
         pq.write_table(pa.Table.from_pylist(self.rows), self.run_dir / 'predictions.parquet')
         config = {'quantiles': list(QUANTILES), 'snapshot_id': 'test', 'train_start': '2025-10-15',
-                  'evaluation_start': '2026-03-01', 'end_exclusive': '2026-11-01', 'catboost': {}, 'features': {'prices': ['lag']}}
+                  'evaluation_start': '2026-03-01', 'end_exclusive': '2026-11-01', 'catboost': {}, 'bootstrap': {'block_days': 3, 'samples': 30, 'seed': 1}, 'features': {'prices': ['lag']}}
         (self.run_dir / 'config.json').write_text(json.dumps(config))
         report: Report = {'metrics': scores(self.rows, HISTORICAL_METHODS), 'comparison': {}, 'delivery_rows': 192, 'scored_rows': 92,
                   'missing_truth': 100, 'breakdowns': {'month': {}}, 'folds': [], 'timing_limits': {},
@@ -52,6 +55,9 @@ class ExplainTest(unittest.TestCase):
         self.manifest: Report = {'config': config, 'run_id': 'test', 'code_revision': 'test', 'exploratory': True,
                                  'mlflow_run_id': 'test', 'metaflow_run_id': 'test'}
         self.sign()
+        self.review_reader = patch.object(explain, 'read_review', return_value={'evidence_status': None})
+        self.review_reader.start()
+        self.addCleanup(self.review_reader.stop)
         self.check_sources = explain._sources
         sources = patch.object(explain, '_sources', return_value={})
         sources.start()
@@ -65,6 +71,7 @@ class ExplainTest(unittest.TestCase):
     def test_dst_missing_truth_and_negative_prices_survive(self) -> None:
         payload = build_payload(self.run_dir)
         self.assertIsNone(payload['model_method'])
+        self.assertEqual(payload['config']['bootstrap']['block_days'], 3)
         spring, autumn = payload['days']
         self.assertEqual([len(spring['points']), len(autumn['points'])], [92, 100])
         self.assertEqual(spring['points'][0]['actual'], -5)
@@ -128,11 +135,48 @@ class ExplainTest(unittest.TestCase):
                     'report_sha256': self.manifest['artifacts']['report.json']}
         with patch.object(explain, 'ROOT', root):
             receipt.write_text(json.dumps(reviewed | {'report_sha256': 'changed'}))
-            self.assertEqual(explain._evidence_status(self.manifest, report), 'unknown')
+            self.assertEqual(explain._evidence_status(self.manifest, report, {'evidence_status': None}), 'unknown')
             receipt.write_text(json.dumps(reviewed | {'run_id': 'earlier-run'}))
-            self.assertEqual(explain._evidence_status(self.manifest, report), 'unknown')
+            self.assertEqual(explain._evidence_status(self.manifest, report, {'evidence_status': None}), 'unknown')
             receipt.write_text(json.dumps(reviewed))
-            self.assertEqual(explain._evidence_status(self.manifest, report), 'accepted_baseline')
+            self.assertEqual(explain._evidence_status(self.manifest, report, {'evidence_status': None}), 'accepted_baseline')
+
+    def test_reexport_reads_latest_run_bound_review(self) -> None:
+        self.review_reader.stop()
+        end = date(2026, 3, 30)
+        config = self.manifest['config'] | {'model_method': 'prices', 'evaluation_start': '2026-03-29',
+                                            'end_exclusive': end.isoformat()}
+        (self.run_dir / 'config.json').write_text(json.dumps(config))
+        rows = [r | {'selected_model': 'prices', 'fallback_reason': ''} for r in self.rows[:92]]
+        pq.write_table(pa.Table.from_pylist(rows), self.run_dir / 'predictions.parquet')
+        report = json.loads((self.run_dir / 'report.json').read_text())
+        metrics = scores(rows, METHODS)
+        report.update(model_method='prices', delivery_rows=92, scored_rows=92, missing_truth=0,
+                      metrics=metrics, breakdowns={'month': {'2026-03': {'metrics': metrics}}})
+        (self.run_dir / 'report.json').write_text(json.dumps(report))
+        root = Path(self.tmp.name)
+        receipt = root / 'forecasts/reports/evaluation.json'
+        receipt.parent.mkdir(parents=True)
+        with patch.dict(os.environ, FORECAST_DATA_ROOT=str(root)), patch.object(explain, 'ROOT', root):
+            client = tracking_client()
+            experiment = client.create_experiment('review', artifact_location=(root / 'artifacts').as_uri())
+            tracked = client.create_run(experiment, tags={'forecast_run': self.manifest['run_id']})
+            self.manifest.update(config=config, mlflow_run_id=tracked.info.run_id, exploratory=False)
+            self.sign()
+            receipt.write_text(json.dumps({'run_id': self.manifest['run_id'], 'evidence_status': 'accepted_baseline',
+                                           'report_sha256': self.manifest['artifacts']['report.json']}))
+            self.assertEqual(build_payload(self.run_dir)['evidence_status'], 'accepted_baseline')
+            publish(tracked.info.run_id, {'evidence_status': 'invalid', 'result': 'Incomplete inputs',
+                                          'limitations': 'Missing history', 'decision': 'Rerun'},
+                    'research/updated-review.json')
+            new_export = export(self.run_dir, root / 'updated')
+            payload = json.loads((new_export.parent / 'data.js').read_text().removeprefix('window.FORECAST = ').removesuffix(';\n'))
+            self.assertEqual(payload['evidence_status'], 'invalid')
+            self.assertEqual(payload['review']['decision'], 'Rerun')
+            self.assertEqual(payload['review']['artifact_path'], 'research/updated-review.json')
+            client.set_tag(tracked.info.run_id, 'forecast_run', 'different')
+            with self.assertRaisesRegex(ValueError, 'differs from the saved forecast'):
+                build_payload(self.run_dir)
 
     def test_changed_wiki_requires_narrative_review(self) -> None:
         actual_digest = explain.digest

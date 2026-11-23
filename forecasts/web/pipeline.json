@@ -52,7 +52,7 @@
   "score": {
     "title": "Score every method on matching outcomes",
     "input": "The prices/calendar model and the reference, paired with the same complete realised price grid.",
-    "operation": "Measure errors in the middle price estimate, band width, and how often actual prices fall inside the bands. Weighted interval score balances narrow bands against penalties for missed prices. Summarise by day, month and full period. Use seven-day groups to estimate uncertainty in the full-period score difference.",
+    "operation": "Measure errors in the middle price estimate, band width, and how often actual prices fall inside the bands. Weighted interval score balances narrow bands against penalties for missed prices. Summarise by day, month and full period. Use the recorded block length in days to estimate uncertainty in the full-period score difference.",
     "output": "Comparable results with sample counts and limitations. A lower score does not by itself establish reliable bands, live readiness or trading value."
   },
   "reference": {
