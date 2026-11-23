@@ -28,10 +28,10 @@ def fit_reference(reader: InputReader, rows: DataFrame[Features], y: FloatArray,
     past, errors, excluded = {}, [], 0
     for (day, lag1, lag7, quarter), actual in zip(
             rows.select("delivery_date", "price_lag_1", "price_lag_7", "quarter_of_day").iter_rows(), y):
-        if day not in past:
+        if lag1 is None and lag7 is None and day not in past:
             earlier = {t: v for t, v in select_labels(reader, day).items() if t.astimezone(BERLIN).date() >= history_start}
             past[day] = _quarter_medians(earlier, config.reference_min_per_quarter)
-        estimate = _simple_estimate(lag1, lag7, quarter, past[day])
+        estimate = _simple_estimate(lag1, lag7, quarter, past.get(day, {}))
         if estimate is None:
             excluded += 1
         else:
