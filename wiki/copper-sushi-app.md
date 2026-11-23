@@ -12,9 +12,15 @@ Its [hosting runbook](../121gigawatts/hosting/README.md#configure) covers servic
 App traffic measurement does not require changing the CloudFront hosting boundary.
 Cloudflare supports a manual Web Analytics beacon on DNS-only hosts and reuse of an
 apex site's public identifier across its subdomains ([FAQ, 2026-07-14](https://developers.cloudflare.com/web-analytics/faq/)).
-The app uses that approach; [frontend documentation](../coppersushi/frontend/README.md)
+The app uses a dedicated manual-installation property; [frontend documentation](../coppersushi/frontend/README.md)
 owns the loader and reporting behavior. Article and iframe page views are separate
 measurements, not unique readers. Cloudflare does not support custom interaction events.
+
+Controlled Chrome captures on 2026-11-18 reproduced HTTP 404 when the app sent
+the blog automatic-property token to the manual collector. A dedicated manual
+registration returned HTTP 204 after propagation; the deployed app was then
+verified without overrides, and its host/path appeared in the dashboard. Headless
+test visits require removing the report’s bot exclusion to inspect them.
 
 ### Article-cache
 

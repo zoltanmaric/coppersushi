@@ -48,8 +48,8 @@ this is lifecycle readiness, not a pixel-level assertion.
 The shared HTML shell loads `assets/analytics.js` for both apps and their embeds.
 It loads Cloudflare's cookie-free Web Analytics beacon only on
 `coppersushi.121gigawatts.org`; local and preview hosts send no analytics.
-The public site identifier shares the blog's analytics property; filter by Host
-and Path to separate app, article and embed traffic. An article and its embedded
+The public site identifier belongs to a dedicated manual-installation property.
+Select the app property in Cloudflare and filter by Path to separate app routes. An article and its embedded
 app report separate page views. CloudFront remains the app CDN; no Cloudflare
 proxy is required. The beacon measures page views and performance, not map actions.
 
