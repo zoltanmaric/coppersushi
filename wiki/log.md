@@ -628,3 +628,7 @@ Reconstructed the [20 November cap effect](polish-export-cap-investigation.md#no
 ## [2026-11-20] query | Critical Elements publication failure
 
 The [publication incident](jao-availability.md#evidence) exposed an empty Polish alternative-price feed, a reduced JAO page-size limit and incomplete zonal prices.
+
+## [2026-11-20] query | Missing Core prices
+
+Checked the [upstream price source and Slovak settlement-price reconstruction](electricity-maps-api.md#price-spreads) for the four zones affected by the publication gap.
