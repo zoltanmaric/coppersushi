@@ -31,25 +31,25 @@ Apply the [point-in-time contract](data-sources.md#point-in-time) to features, t
 - Fix the data snapshot, transformations, locations, training dates, monthly refit schedule, settings, seed and references before fitting. Freeze them in a saved run manifest. No test-guided feature or parameter search.
 - Train only on earlier dates and labels available by each fold's first forecast issue time. Recompute each day's price lags from information available by that day's 11:00 deadline, even while reusing a monthly fitted model. Any learned preprocessing uses training data only.
 - Keep UTC timestamps internally; derive German calendar features explicitly. Include the actual 92/96/100 quarter-hours on clock-change days and apply the [agreed defaults](#defaults).
-- Retain every evaluation day and use identical target rows for model and reference. Missing demand uses the agreed missing value and indicator. Never fill future features with realised observations or later revisions.
-- Save every prediction failure and report total delivery coverage. A fallback is part of the forecasting system and is scored as such. Missing target truth cannot be fabricated: disclose it for all models together.
+- Retain every registered delivery quarter. Training requires every eligible training label. Scoring requires every realised price and compares every method on the same complete delivery grid. A prediction can be reconstructed before realised prices are available.
+- Stop on missing source data, failed fits, or failed predictions. Preserve the source, affected dates and error in the failed attempt. Diagnose missing inputs or upstream behaviour before retrying. Existing diagnostic exports can still show gaps and historic fallbacks.
 
 ### Defaults
 
-Agreed 2026-10-09; save these rules in the run manifest before fitting.
+Freeze these rules before fitting. The first baseline used the older fallback policy documented in its saved results.
 
 | Choice | Rule |
 |---|---|
 | Past-price clock matching | Match the same German local quarter on the earlier date. Average both prices if that quarter occurred twice; mark it missing if it did not occur. Keep both delivery quarters on the autumn clock-change day. |
-| Weather gaps | Leave individual values missing for CatBoost and retain missing-value flags in the dataset. Do not fill with observed weather or later revisions. |
+| Price, weather and demand coverage | Require eligible values for every physical price-history quarter, weather field and demand quarter used by the registered model. Demand versions must satisfy the issue cutoff. Never fill a weather or demand gap with observations or later revisions. |
 | Calendar | Quarter of day, day of week, month and a Germany-wide public-holiday flag, identical across model comparisons. |
-| Source failure | When an entire source is unavailable for the delivery day, use the first applicable option: full model → model without demand → prices/calendar model → simple reference. Weather failure skips both weather-dependent models. Choose from input availability and execution success, never predicted prices or test scores. Record the selected fallback and reason. |
+| Unexpected source failure | Stop fitting, prediction or scoring at the affected stage. A timeout, missing revision or incomplete source response does not establish structural unavailability. |
 
-Partial gaps remain missing inputs. The simple reference can use retained training history when current input retrieval fails. Every fallback produces the same five quantiles and is included in the system score.
+The spring clock change makes some same-clock lag quarters structurally nonexistent. They stay missing by definition even when the original physical delivery grid is complete. Any other upstream exclusion requires a separately recorded source and affected dates, evidence that recovery is impossible, and explicit approval before changing the registered comparison. No automatic exclusions apply.
 
 ### Controls
 
-Fit three fixed feature sets with the same CatBoost settings, seed, training dates and calendar features: prices/calendar; prices/calendar/weather; prices/calendar/weather/demand. Compare them on identical dates to measure what weather and demand each add. Report each model separately as well as the system with its fallback rules. This is a fixed comparison, not a parameter search.
+Fit three fixed feature sets with the same CatBoost settings, seed, training dates and calendar features: prices/calendar; prices/calendar/weather; prices/calendar/weather/demand. Compare them on identical dates to measure what weather and demand each add. Report all three models and the reference separately on the same dates. The full prices/calendar/weather/demand model supplies the system forecast. This is a fixed comparison, not a parameter search.
 
 ## Reference
 

@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from numpy.typing import ArrayLike
 
 from forecasts.config import BootstrapSettings, RunConfig
+from forecasts.coverage import require_quarters, require_realised_prices, require_recorded_inputs
 from forecasts.contracts import BacktestPredictions, EvaluationResult, FloatArray, Report
 from forecasts.tables import Predictions, ScoredPredictions
 from pandera.typing.polars import DataFrame
@@ -23,14 +24,21 @@ def score_forecasts(backtest: BacktestPredictions, truth: dict[datetime, float |
                     config: RunConfig) -> EvaluationResult:
     """Join realised prices only after prediction, then score common target rows.
 
-    Keep rows without truth in the output and disclose their count. Report
-    aggregate/monthly/demand scores and paired seven-day-block comparisons.
-    Raise ValueError when no scoring truth exists.
+    Require the complete registered grid, full-system forecasts and realised
+    prices before calculating any score.
     """
+    require_quarters(backtest.rows["delivery_utc"], config.evaluation_start, config.end_exclusive,
+                     "Evaluation forecast delivery grid")
+    if backtest.failures:
+        raise ValueError(f"Static scoring rejects prediction failures: {backtest.failures[0]}")
+    fallback = backtest.rows.filter((pl.col("selected_model") != "demand") | (pl.col("fallback_reason") != ""))
+    if not fallback.is_empty():
+        row = fallback.select("delivery_date", "selected_model", "fallback_reason").row(0, named=True)
+        raise ValueError(f"Static scoring rejects a fallback on {row['delivery_date']}: "
+                         f"{row['selected_model']} {row['fallback_reason']}")
+    require_recorded_inputs(backtest.rows)
+    require_realised_prices(truth, config.evaluation_start, config.end_exclusive)
     predictions = _join_truth(backtest.rows, truth)
-    scored = cast(DataFrame[ScoredPredictions], predictions.filter(pl.col("target").is_not_null()))
-    if scored.is_empty():
-        raise ValueError("No evaluation truth")
     names = [*config.features, "reference", "system"]
     breakdowns: dict[str, Report] = {}
     for group_name, group in (("month", pl.col("delivery_date").dt.strftime("%Y-%m")),
@@ -39,18 +47,17 @@ def score_forecasts(backtest: BacktestPredictions, truth: dict[datetime, float |
         breakdowns[group_name] = {}
         for (key,), subset in grouped.partition_by("_group", as_dict=True, maintain_order=True).items():
             rows = cast(DataFrame[ScoredPredictions], subset.drop("_group"))
-            available = cast(DataFrame[ScoredPredictions], rows.filter(pl.col("target").is_not_null()))
             breakdowns[group_name][key] = {
-                "delivery_rows": len(rows), "missing_truth": rows["target"].null_count(),
-                "forecast_coverage": 1., "metrics": _method_scores(available, names, config)}
+                "delivery_rows": len(rows), "missing_truth": 0,
+                "forecast_coverage": 1., "metrics": _method_scores(rows, names, config)}
     report = {
-        "metrics": _method_scores(scored, names, config), "breakdowns": breakdowns,
+        "metrics": _method_scores(predictions, names, config), "breakdowns": breakdowns,
         "comparison": paired_blocks(
-            scored["target"].to_numpy(),
-            {name: scored.select([f"{name}_q{q}" for q in config.quantiles]).to_numpy() for name in names},
-            scored["delivery_date"].to_list(), config.bootstrap),
-        "delivery_rows": len(predictions), "scored_rows": len(scored),
-        "missing_truth": len(predictions) - len(scored), "forecast_coverage": 1.,
+            predictions["target"].to_numpy(),
+            {name: predictions.select([f"{name}_q{q}" for q in config.quantiles]).to_numpy() for name in names},
+            predictions["delivery_date"].to_list(), config.bootstrap),
+        "delivery_rows": len(predictions), "scored_rows": len(predictions),
+        "missing_truth": 0, "forecast_coverage": 1.,
         "fallback_rows": backtest.fallback_rows, "prediction_failures": backtest.failures,
         "raw_crossing_rows": backtest.crossing_rows,
         "raw_crossing_fraction": {name: count / len(predictions) for name, count in backtest.crossing_rows.items()},

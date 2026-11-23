@@ -17,8 +17,9 @@ import subprocess
 import time
 
 import pyarrow as pa
+from forecasts.coverage import require_quarters, require_static_features
 from forecasts.input_config import FIELDS, WEATHER_FIELDS, WEATHER_LOCATIONS, WEATHER_TABLE_FIELDS
-from forecasts.prices import PriceHistory, PriceVersions, build_price_features, latest_versions, read_prices, select_history
+from forecasts.prices import LAGS, PriceHistory, PriceVersions, build_price_features, latest_versions, read_prices, select_history
 import pyarrow.parquet as pq
 
 from forecasts.dataset import (
@@ -170,32 +171,52 @@ class InputReader:
         # Retrospective truth is joined only by replay(), never by features().
         self.truth = dict(latest_versions(self.prices).select("valid_utc", "price_eur_mwh").iter_rows())
 
-    def features(self, day: date, live: bool = False, issue_time: datetime | None = None) -> DataFrame[Features]:
+    def features(self, day: date, live: bool = False, issue_time: datetime | None = None, *,
+                 require_complete: bool = False) -> DataFrame[Features]:
         """Build one delivery day’s features from inputs eligible at its issue.
 
         Live selection requires a timezone-aware issue_time no later than the
         deadline. Return a native quarter-hour table without realised outcomes.
         """
-        return Features.validate(self._day_features(day, live, issue_time))
+        rows = Features.validate(self._day_features(day, live, issue_time, require_complete))
+        if require_complete:
+            require_static_features(rows, day, day + timedelta(days=1))
+        return rows
 
-    def historical_features(self, start: date, end: date) -> DataFrame[Features]:
+    def historical_features(self, start: date, end: date, *,
+                            complete_from: date | None = None) -> DataFrame[Features]:
         """Build and validate [start, end) using each day's issue cutoff."""
         if start >= end:
             raise ValueError("Feature start must precede end")
         days = (start + timedelta(days=offset) for offset in range((end - start).days))
-        return Features.validate(pl.concat([self._day_features(day, False, None) for day in days]))
+        rows = Features.validate(pl.concat([
+            self._day_features(day, False, None, complete_from is not None and day >= complete_from) for day in days
+        ]))
+        if complete_from is not None:
+            checked = cast(DataFrame[Features], rows.filter(pl.col("delivery_date") >= complete_from))
+            require_static_features(checked, max(start, complete_from), end)
+        return rows
 
     def replay(self, start: date, end: date) -> list[Row]:
         """Build features in [start, end), then join retrospective scoring truth."""
         return diagnostic_rows(self.historical_features(start, end), self.truth, WEATHER_TABLE_FIELDS)
 
-    def _day_features(self, day: date, live: bool, issue_time: datetime | None) -> pl.DataFrame:
+    def _day_features(self, day: date, live: bool, issue_time: datetime | None,
+                      require_complete: bool) -> pl.DataFrame:
         deadline = _issue_deadline(day, live, issue_time)
         # Fourteen local days cover every agreed lag and daily summary.
         candidates = cast(DataFrame[PriceVersions], self.prices.filter(
             pl.col("valid_utc").dt.convert_time_zone("Europe/Berlin").dt.date() >= day - timedelta(days=14)))
         selected = select_history(candidates, day, deadline, live)
         history = PriceHistory.validate(selected.select("valid_utc", "price_eur_mwh"))
+        if require_complete:
+            observed = {timestamp for timestamp, value in history.iter_rows() if value is not None}
+            for lag in LAGS:
+                lag_day = day - timedelta(days=lag)
+                stop = lag_day + timedelta(days=1)
+                require_quarters((timestamp for timestamp in quarters(lag_day, stop) if timestamp in observed),
+                                 lag_day, stop,
+                                 f"Eligible SMARD prices at {deadline.isoformat()} for delivery {day} (D-{lag})")
         price_features = build_price_features(history, list(quarters(day, day + timedelta(days=1))))
         covariates = _select_covariates({name: self.daily[name][day] for name in ("weather", "demand")},
                                        day, deadline, live)

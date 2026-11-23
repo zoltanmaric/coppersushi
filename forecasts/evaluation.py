@@ -20,7 +20,8 @@ def evaluate(reader: InputReader, config: RunConfig, output: Path,
     Save feature rows, models, predictions and the report in output. For accepted
     reproduction, restore_models selects preserved fits instead of retraining.
     """
-    features = build_features(reader, config.history_start, config.end_exclusive)
+    features = build_features(reader, config.history_start, config.end_exclusive,
+                              complete_from=config.train_start)
     save_features(features, output)
     predictions = forecast_months(reader, features, config, output, restore_models)
     result = score_forecasts(predictions, reader.truth, config)

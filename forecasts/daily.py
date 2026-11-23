@@ -12,7 +12,8 @@ from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, StringConstraint
 
 from forecasts.config import QUANTILES, RunConfig
 from forecasts.contracts import Reference
-from forecasts.dataset import BERLIN, cutoff, digest
+from forecasts.coverage import STATIC_INPUT_POLICY
+from forecasts.dataset import BERLIN, cutoff, digest, quarters
 from forecasts.prediction import predict_day
 from forecasts.snapshot import InputReader, read_local
 from forecasts.training import load_models
@@ -39,6 +40,8 @@ def issue_day(day: date, snapshot: Path, run: Path, output: Path, *, replay: boo
         raise ValueError("Live issue must be on the day before delivery, by the forecast deadline")
     manifest = _RunManifest.model_validate_json((run / "manifest.json").read_bytes())
     fold = day.replace(day=1)
+    if manifest.input_policy != STATIC_INPUT_POLICY:
+        raise ValueError(f"Fit {manifest.run_id} lacks proof of complete historical training; refit {fold}")
     monthly_bundle = manifest.kind == "monthly_fit" or manifest.fit_day is not None
     if monthly_bundle and manifest.fit_day != fold:
         raise ValueError("Bundle fit day must match the first day of the requested delivery month")
@@ -60,10 +63,15 @@ def issue_day(day: date, snapshot: Path, run: Path, output: Path, *, replay: boo
     config = RunConfig.from_dict(json.loads(config_file.read_text()))
     if not monthly_bundle and not config.evaluation_start <= day < config.end_exclusive:
         raise ValueError("Delivery day is outside the saved monthly fit window")
+    if monthly_bundle:
+        expected = sum(1 for _ in quarters(config.train_start, fold))
+        if (manifest.fit_cutoff_utc != cutoff(fold) or not expected
+                or manifest.training_rows != expected or manifest.expected_training_rows != expected):
+            raise ValueError(f"Invalid training coverage in fit {manifest.run_id} for {fold}; expected {expected} quarters")
     reference = _SavedReference.model_validate_json(reference_file.read_bytes()).to_reference(config)
-    models, _ = load_models(model_dir, config, verify_model=verify)
+    models = load_models(model_dir, config, verify_model=verify)
     snapshot_manifest, tables = read_local(snapshot)
-    rows = InputReader(tables).features(day, live=not replay, issue_time=started)
+    rows = InputReader(tables).features(day, live=not replay, issue_time=started, require_complete=True)
     forecast = predict_day(rows, models, reference, config)
     created = datetime.now(timezone.utc)
     if not replay and created > deadline:
@@ -100,6 +108,10 @@ class _RunManifest(BaseModel):
     artifacts: dict[str, Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]]
     kind: str | None = None
     fit_day: date | None = None
+    input_policy: str | None = None
+    fit_cutoff_utc: datetime | None = None
+    training_rows: int | None = None
+    expected_training_rows: int | None = None
 
 
 class _SavedReference(BaseModel):

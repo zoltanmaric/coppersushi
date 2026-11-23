@@ -14,7 +14,7 @@ Point-in-time correctness means selecting only the information available at the 
 
 Retain source versions and record whether eligibility is witnessed, supported by documented timing, assumed, or unknown. Do not manufacture a publication timestamp from delivery time or a later download. Preserve the exact eligible version rather than replacing it with the archive's latest value. Apply each source's selection rule below; a newer model run is not a substitute for the specified fixed weather lead.
 
-For live forecasts, the input must have been retrieved by the actual issue time, which must be no later than the deadline. Historical replay may use the documented source screens and timing assumptions, but must disclose them. If no version qualifies under that declared policy, keep the input missing. A future valid time is allowed; future knowledge is not: tomorrow's weather forecast can be used, tomorrow's realised weather cannot.
+For live forecasts, the input must have been retrieved by the actual issue time, which must be no later than the deadline. Historical replay may use the documented source screens and timing assumptions, but must disclose them. If no version qualifies, report the affected source, dates and quarters. A strict fit or forecast stops there. A future valid time is allowed; future knowledge is not: tomorrow's weather forecast can be used, tomorrow's realised weather cannot.
 
 ### Prices
 
@@ -69,9 +69,9 @@ For each delivery date, compute the preceding date's **11:00 Europe/Berlin**, th
 
 Full-year result: 35,040 country values, no duplicate/missing target rows; 28,224 (80.55%) pass the screen. All 71 affected days fail for the entire day: October 1–November 11, then 29 later dates. From November 12, 294/323 days pass (91.03%). The four control-area series cannot repair any country gap under the same screen. [Audit](https://github.com/zoltanmaric/coppersushi/blob/155627ea6a8cc2bf542a48fea7aad59253f59de6/forecasts/evidence/demand-recovery-evidence-20261008/audit.py), [summary](../../forecasts/evidence/demand-recovery-evidence-20261008/summary.json), [daily counts](../../forecasts/evidence/demand-recovery-evidence-20261008/daily-coverage.csv).
 
-Bounded attempts through documented requests, legacy exports, an Amprion CSV and signed-in value history did not recover usable earlier versions for the checked problematic samples. This is not proof that no earlier version exists. Do not repeat broad archive/provider research before fitting the agreed missing-demand model.
+Bounded attempts through documented requests, legacy exports, an Amprion CSV and signed-in value history did not recover usable earlier versions for the checked problematic samples. This is not proof that no earlier version exists. New full-input fits require eligible country demand for their training history. Compare any proposed recovery against the source, geography, units and issue cutoff.
 
-Retain the price rows and represent unusable demand as missing plus its availability indicator. In daily operation, save the forecast actually retrieved before the cutoff; later revisions must not overwrite that input snapshot.
+Preserve unavailable demand as missing in the input evidence. The historical baseline used a missing-value indicator; its scores describe that policy. In daily operation, save the forecast actually retrieved before the cutoff; later revisions must not overwrite that input snapshot.
 
 ### Availability
 

@@ -95,7 +95,7 @@
           <p>Three trained models use the same CatBoost approach, which learns relationships from past examples. They differ in their inputs. The reference is a simple comparison method; automatic selection chooses a method rather than fitting another model.</p>
           <dl>
             <dt>Automatic selection (with fallbacks)</dt>
-            <dd>Uses the price-history + weather + demand model when inputs and execution permit. Otherwise falls back to weather, price history, then the reference. The method actually used on this day is shown below the chart.</dd>
+            <dd>Strict runs require the price-history + weather + demand model. The historical baseline could fall back to weather, price history, then the reference. The method actually used on this day is shown below the chart.</dd>
             <dt>Price-history model</dt>
             <dd>Uses previous prices at the same time of day, recent daily price summaries, and calendar information such as weekday and holidays.</dd>
             <dt>Price-history + weather model</dt>

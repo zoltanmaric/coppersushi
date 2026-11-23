@@ -1,7 +1,7 @@
-"""Scores, operational fallbacks and the complete selection/fit boundary."""
-from forecasts.contracts import FloatArray, Reference
+"""Scores and the complete selection, fit and prediction boundaries."""
+from forecasts.contracts import BacktestPredictions, FloatArray, Reference
 from forecasts.input_types import Row
-from forecasts.tables import Features, ScoredPredictions
+from forecasts.tables import Features, Predictions, ScoredPredictions
 from pandera.errors import SchemaError
 import polars as pl
 from datetime import date, timedelta
@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import pyarrow as pa
@@ -19,12 +20,13 @@ import pyarrow.parquet as pq
 import scoringrules
 
 from forecasts.dataset import BERLIN, COUNTRY, cutoff, quarters, stamp
+from forecasts.input_config import FIELDS
 from forecasts.evaluation import evaluate
 from forecasts.features import FEATURES, build_features, feature_matrix
 from forecasts.prediction import predict_day
 from forecasts.training import fit_month, select_training_data
 from forecasts.schemas import SCHEMAS, validate
-from forecasts.scoring import metrics, paired_blocks, wis
+from forecasts.scoring import metrics, paired_blocks, score_forecasts, wis
 from forecasts.snapshot import InputReader, LOCATIONS, select_records
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -51,6 +53,25 @@ def history(start: date = date(2026, 3, 1), end: date = date(2026, 3, 29)) -> di
                                    value=12., unit='°C', model='icon_eu', lead_hours=48, data_kind='forecast'))
     records['demand'].append(dict(common, area_code=COUNTRY, demand_mw=50000.))
     return records
+
+
+def complete_covariates(records: dict[str, list[Row]], start: date, end: date) -> None:
+    """Supply complete synthetic covariates, preserving the release test rows."""
+    weather = {(row["valid_utc"], row["location"], row["variable"]) for row in records["weather"]}
+    demand = {row["valid_utc"] for row in records["demand"]}
+    for timestamp in quarters(start, end):
+        day = timestamp.astimezone(BERLIN).date()
+        update = cutoff(day) - timedelta(hours=1)
+        base = dict(valid_utc=timestamp, source_update_utc=update, retrieved_at_utc=update,
+                    timing_evidence="witnessed", version_id="synthetic-coverage", raw_key="invented")
+        if timestamp not in demand:
+            records["demand"].append(dict(base, area_code=COUNTRY, demand_mw=50000.))
+        if timestamp.minute == 0:
+            for location in sorted(LOCATIONS):
+                for variable, unit in FIELDS.items():
+                    if (timestamp, location, variable) not in weather:
+                        records["weather"].append(dict(base, source_valid_utc=timestamp, location=location,
+                            variable=variable, unit=unit, value=12., model="icon_eu", lead_hours=48, data_kind="forecast"))
 
 
 def reader(records: dict[str, list[Row]]) -> InputReader:
@@ -106,6 +127,7 @@ class EvaluationTests(unittest.TestCase):
     def test_late_candidates_do_not_change_selection_fitting_calibration_or_predictions(self) -> None:
         c, before = config(), history()
         fit_day = date(2026, 3, 29)
+        complete_covariates(before, c.train_start, fit_day + timedelta(days=1))
         after = {n: list(v) for n, v in before.items()}
         late = cutoff(fit_day) + timedelta(hours=1)
         after['prices'].append(dict(before['prices'][1500], source_update_utc=late, version_id='late-revision', price_eur_mwh=99999.))
@@ -120,12 +142,12 @@ class EvaluationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             for i, records in enumerate([before, after]):
                 r = reader(records)
-                features = build_features(r, date(2026, 3, 1), fit_day)
+                features = build_features(r, c.history_start, fit_day, complete_from=c.train_start)
                 training = select_training_data(r, features, fit_day, date(2026, 3, 15))
                 fitted = fit_month(r, features, fit_day, c, Path(temporary) / str(i))
                 self.assertFalse(fitted.failures)
                 outcomes.append((feature_matrix(training.rows, FEATURES['demand']), training.targets, fitted.reference,
-                                 predict_day(r.features(fit_day), fitted.models, fitted.reference, c)))
+                                 predict_day(r.features(fit_day, require_complete=True), fitted.models, fitted.reference, c)))
         np.testing.assert_allclose(outcomes[0][0], outcomes[1][0], equal_nan=True)
         np.testing.assert_array_equal(outcomes[0][1], outcomes[1][1])
         self.assertEqual(outcomes[0][2], outcomes[1][2])
@@ -138,7 +160,9 @@ class EvaluationTests(unittest.TestCase):
         c = replace(c, history_start=date(2026, 1, 1), train_start=date(2026, 1, 15),
                     evaluation_start=date(2026, 3, 1), end_exclusive=date(2026, 4, 1),
                     bootstrap=replace(c.bootstrap, samples=10))
-        r = reader(history(date(2026, 1, 1), date(2026, 4, 1)))
+        records = history(c.history_start, c.end_exclusive)
+        complete_covariates(records, c.train_start, c.end_exclusive)
+        r = reader(records)
         with tempfile.TemporaryDirectory() as temporary:
             original, restored = Path(temporary) / 'original', Path(temporary) / 'restored'
             report = evaluate(r, c, original)
@@ -152,6 +176,21 @@ class EvaluationTests(unittest.TestCase):
             self.assertEqual(report['missing_truth'], 0)
             scored = pl.read_parquet(original / 'predictions.parquet')
             ScoredPredictions.validate(scored)
+            rows = Predictions.validate(scored.drop("target", "target_missing"))
+            backtest = BacktestPredictions(rows, [], [], {}, {})
+            incomplete_truth = dict(r.truth)
+            incomplete_truth.pop(rows["delivery_utc"][-1])
+            with self.assertRaisesRegex(ValueError, "Realised SMARD prices.*1 missing quarter"):
+                score_forecasts(backtest, incomplete_truth, c)
+            fallback = Predictions.validate(rows.with_columns(pl.lit("weather").alias("selected_model")))
+            with self.assertRaisesRegex(ValueError, "rejects a fallback on 2026-03-01"):
+                score_forecasts(replace(backtest, rows=fallback), r.truth, c)
+            missing_input = Predictions.validate(rows.with_columns(
+                pl.when(pl.int_range(0, pl.len()) == 0).then(1).otherwise(pl.col("price_lag_1_missing"))
+                .alias("price_lag_1_missing")
+            ))
+            with self.assertRaisesRegex(ValueError, "missing input price_lag_1 on 2026-03-01"):
+                score_forecasts(replace(backtest, rows=missing_input), r.truth, c)
             with self.assertRaises(SchemaError):
                 ScoredPredictions.validate(scored.with_columns(pl.lit(1).cast(pl.Int64).alias('target_missing')))
             with self.assertRaises(SchemaError):
@@ -159,35 +198,58 @@ class EvaluationTests(unittest.TestCase):
             with self.assertRaises(SchemaError):
                 ScoredPredictions.validate(scored.with_columns((pl.col('system_q0.975') + 1).alias('system_q0.025')))
 
-    def test_missing_sources_and_prediction_failure_choose_explicit_fallback(self) -> None:
+    def test_prediction_requires_complete_sources_and_every_model(self) -> None:
         c = config()
-        r = reader(history())
-        rows = r.features(date(2026, 3, 29))
+        day = date(2026, 3, 29)
+        records = history()
+        complete_covariates(records, day, day + timedelta(days=2))
+        rows = reader(records).features(day, require_complete=True)
         class Model:
             def predict(self, x: FloatArray) -> FloatArray:
                 return np.tile([2., -2., 0., -1., 1.], (len(x), 1))
         reference: Reference = dict(medians={q: -5. for q in range(96)}, offsets=[-2, -1, 0, 1, 2],
                                     calibration_rows=96, excluded_rows=0)
-        models = {n: Model() for n in FEATURES}
+        models = {name: Model() for name in FEATURES}
         forecast = predict_day(rows, models, reference, c)
-        self.assertEqual(forecast.selected_model, 'demand')
-        self.assertTrue((np.diff(forecast.ordered['demand'], axis=1) >= 0).all())
-        self.assertEqual(forecast.crossings['demand'], 92)
-        rows = Features.validate(rows.with_columns(pl.lit(1).cast(pl.Int64).alias('demand_source_unavailable')))
-        self.assertEqual(predict_day(rows, models, reference, c).selected_model, 'weather')
-        rows = Features.validate(rows.with_columns(pl.lit(1).cast(pl.Int64).alias('weather_source_unavailable')))
-        self.assertEqual(predict_day(rows, models, reference, c).selected_model, 'prices')
-        rows = Features.validate(rows.with_columns(
-            pl.lit(0).cast(pl.Int64).alias('weather_source_unavailable'),
-            pl.lit(0).cast(pl.Int64).alias('demand_source_unavailable'),
-            pl.lit(1).cast(pl.Int64).alias('price_lags_unavailable')))
-        self.assertEqual(predict_day(rows, models, reference, c).selected_model, 'reference')
-        rows = Features.validate(rows.with_columns(pl.lit(0).cast(pl.Int64).alias('price_lags_unavailable')))
-        result = predict_day(rows, {}, reference, c)
-        self.assertEqual(result.selected_model, 'reference')
-        self.assertIn('prediction_failure', result.fallback_reason)
-        self.assertTrue(np.isfinite(result.ordered['system']).all())
-        self.assertTrue((result.ordered['system'] < 0).any())
+        self.assertEqual(forecast.selected_model, "demand")
+        self.assertEqual(forecast.crossings["demand"], 92)
+        np.testing.assert_array_equal(forecast.ordered["system"], forecast.ordered["demand"])
+        partial = Features.validate(rows.with_columns(
+            pl.when(pl.int_range(0, pl.len()) == 1).then(None).otherwise(pl.col("demand_mw")).alias("demand_mw")
+        ))
+        with self.assertRaisesRegex(ValueError, "demand archive.*2026-03-29"):
+            predict_day(partial, models, reference, c)
+        models.pop("weather")
+        with self.assertRaisesRegex(ValueError, "weather prediction failed for 2026-03-29"):
+            predict_day(rows, models, reference, c)
+
+    def test_physical_price_gaps_fail_but_nonexistent_spring_lags_are_valid(self) -> None:
+        day = date(2026, 3, 30)
+        records = history(end=day)
+        complete_covariates(records, day, day + timedelta(days=1))
+        rows = reader(records).features(day, require_complete=True)
+        self.assertEqual(rows["price_lag_1"].null_count(), 4)
+        missing = stamp("2026-03-29T01:00:00Z")
+        records["prices"] = [row for row in records["prices"] if row["valid_utc"] != missing]
+        with self.assertRaisesRegex(ValueError, "Eligible SMARD prices.*2026-03-30.*1 missing quarter"):
+            reader(records).features(day, require_complete=True)
+
+    def test_training_failure_never_writes_a_fitted_model(self) -> None:
+        c = config()
+        day = date(2026, 3, 29)
+        records = history()
+        complete_covariates(records, c.train_start, day)
+        r = reader(records)
+        features = build_features(r, c.history_start, day, complete_from=c.train_start)
+        with tempfile.TemporaryDirectory() as temporary, patch("forecasts.training.CatBoostRegressor.fit",
+                                                               side_effect=ValueError("failed training")):
+            out = Path(temporary) / "models"
+            with self.assertRaisesRegex(ValueError, "prices CatBoost fit failed for 2026-03-29"):
+                fit_month(r, features, day, c, out)
+            self.assertFalse(out.exists())
+        with self.assertRaisesRegex(ValueError, "Eligible SMARD training labels.*1 missing quarter"):
+            records["prices"].pop()
+            select_training_data(reader(records), features, day, c.train_start)
 
 
 if __name__ == '__main__':

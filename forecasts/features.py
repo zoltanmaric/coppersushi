@@ -19,14 +19,15 @@ FEATURES = {"prices": BASE, "weather": BASE + WEATHER,
 
 
 
-def build_features(reader: InputReader, start: date, end: date) -> DataFrame[Features]:
+def build_features(reader: InputReader, start: date, end: date, *,
+                   complete_from: date | None = None) -> DataFrame[Features]:
     """Build quarter-hour rows in [start, end), with no realised target values.
 
     Each day uses only inputs eligible by 11:00 Berlin on the preceding day.
     The input reader selects source versions and builds typed price features;
     dataset.assemble_features adds calendar, weather, demand and missing flags.
     """
-    return reader.historical_features(start, end)
+    return reader.historical_features(start, end, complete_from=complete_from)
 
 
 def feature_matrix(rows: DataFrame[Features], fields: Sequence[str]) -> FloatArray:

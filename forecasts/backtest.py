@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from forecasts.config import RunConfig
+from forecasts.coverage import require_static_features
 from forecasts.contracts import BacktestPredictions, DayForecast, Report
 from pandera.typing.polars import DataFrame
 import polars as pl
@@ -23,11 +24,14 @@ def forecast_months(reader: InputReader, features: DataFrame[Features], config: 
     adds eligible past labels. Save models by the first delivery date of their
     window; return fixed predictions and diagnostics for later scoring.
     """
+    evaluation = cast(DataFrame[Features], features.filter(
+        (pl.col("delivery_date") >= config.evaluation_start) & (pl.col("delivery_date") < config.end_exclusive)
+    ))
+    require_static_features(evaluation, config.evaluation_start, config.end_exclusive)
     by_day = {key[0]: cast(DataFrame[Features], daily)
-              for key, daily in features.partition_by("delivery_date", as_dict=True, maintain_order=True).items()}
+              for key, daily in evaluation.partition_by("delivery_date", as_dict=True, maintain_order=True).items()}
     predictions: list[pl.DataFrame] = []
     folds: list[Report] = []
-    failures: list[Report] = []
     fallback: Counter[str] = Counter()
     crossings: Counter[str] = Counter()
     fold = config.evaluation_start
@@ -45,13 +49,11 @@ def forecast_months(reader: InputReader, features: DataFrame[Features], config: 
             rows = by_day[day]
             forecast = predict_day(rows, fitted.models, fitted.reference, config)
             predictions.append(_prediction_table(rows, forecast, fold, config))
-            if forecast.failures:
-                failures.append({"day": day.isoformat(), "models": forecast.failures})
             crossings.update(forecast.crossings)
             fallback[forecast.selected_model] += len(rows)
             day += timedelta(days=1)
         fold = stop
-    return BacktestPredictions(Predictions.validate(pl.concat(predictions)), folds, failures, dict(fallback), dict(crossings))
+    return BacktestPredictions(Predictions.validate(pl.concat(predictions)), folds, [], dict(fallback), dict(crossings))
 
 
 def _prediction_table(rows: DataFrame[Features], forecast: DayForecast, fold: date,

@@ -1,5 +1,5 @@
 """Saved daily forecast artifacts are checked before loading the input snapshot."""
-from datetime import date
+from datetime import date, datetime, timedelta
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -7,7 +7,8 @@ import unittest
 from unittest.mock import patch
 
 from forecasts.daily import issue_day
-from forecasts.dataset import digest
+from forecasts.coverage import STATIC_INPUT_POLICY
+from forecasts.dataset import cutoff, digest, quarters
 
 
 class SavedArtifactTests(unittest.TestCase):
@@ -23,14 +24,19 @@ class SavedArtifactTests(unittest.TestCase):
         self.reference = {"medians": self.medians, "offsets": [-4, -1, 0, 1, 4],
                           "calibration_rows": 1344, "excluded_rows": 0}
         self.write("reference.json", self.reference)
-        self.write("failures.json", {"prices": "fit failed", "weather": "fit failed", "demand": "fit failed"})
+        self.write("failures.json", {})
+        for name in ("prices", "weather", "demand"):
+            (self.month / f"{name}.cbm").write_bytes(name.encode())
+        model = patch("forecasts.training.CatBoostRegressor.load_model")
+        model.start()
+        self.addCleanup(model.stop)
 
     def write(self, name: str, data: object) -> None:
         (self.month / name).write_text(json.dumps(data))
 
     def manifest(self, **overrides: object) -> None:
         fields: dict[str, object] = {
-            "run_id": "old-run", "environment": {"legacy": True},
+            "run_id": "verified-run", "input_policy": STATIC_INPUT_POLICY, "environment": {"legacy": True},
             "artifacts": {p.relative_to(self.saved_run).as_posix(): digest(p)
                           for p in self.saved_run.rglob("*") if p.is_file() and p.name != "manifest.json"},
         }
@@ -41,7 +47,7 @@ class SavedArtifactTests(unittest.TestCase):
         issue_day(day, self.saved_run / "snapshot", self.saved_run,
                   self.saved_run / "output.json", replay=True)
 
-    def test_valid_artifacts_accept_legacy_manifest_metadata(self) -> None:
+    def test_valid_artifacts_accept_unneeded_manifest_metadata(self) -> None:
         self.manifest()
         with patch("forecasts.daily.read_local", side_effect=RuntimeError("Reached snapshot")):
             with self.assertRaisesRegex(RuntimeError, "Reached snapshot"):
@@ -78,7 +84,7 @@ class SavedArtifactTests(unittest.TestCase):
             self.issue()
 
     def test_requires_a_hash_for_each_model_without_a_saved_failure(self) -> None:
-        self.write("failures.json", {"weather": "fit failed", "demand": "fit failed"})
+        (self.month / "prices.cbm").unlink()
         self.manifest()
         with self.assertRaisesRegex(ValueError, "does not list artifact: models/2026-01-01/prices.cbm"):
             self.issue()
@@ -94,7 +100,10 @@ class SavedArtifactTests(unittest.TestCase):
 
     def test_standalone_november_fit_uses_bundle_month_outside_original_evaluation(self) -> None:
         self.month.rename(self.month.with_name("2026-11-01"))
-        self.manifest(kind="monthly_fit", fit_day="2026-11-01")
+        fold = date(2026, 11, 1)
+        count = sum(1 for _ in quarters(date(2025, 10, 15), fold))
+        self.manifest(kind="monthly_fit", fit_day=fold.isoformat(), fit_cutoff_utc=cutoff(fold).isoformat(),
+                      training_rows=count, expected_training_rows=count)
         with patch("forecasts.daily.read_local", side_effect=RuntimeError("Reached snapshot")):
             with self.assertRaisesRegex(RuntimeError, "Reached snapshot"):
                 self.issue(date(2026, 11, 24))
@@ -103,3 +112,36 @@ class SavedArtifactTests(unittest.TestCase):
                 self.manifest(kind="monthly_fit", fit_day=fit_day)
                 with self.assertRaisesRegex(ValueError, "Bundle fit day must match"):
                     self.issue(date(2026, 11, 24))
+
+    def test_saved_coverage_is_required_and_recomputed(self) -> None:
+        self.manifest(input_policy=None)
+        with self.assertRaisesRegex(ValueError, "lacks proof of complete historical training"):
+            self.issue()
+        count = sum(1 for _ in quarters(date(2025, 10, 15), date(2026, 1, 1)))
+        self.manifest(kind="monthly_fit", fit_day="2026-01-01", fit_cutoff_utc=cutoff(date(2026, 1, 1)).isoformat(),
+                      training_rows=count - 1, expected_training_rows=count)
+        with self.assertRaisesRegex(ValueError, "Invalid training coverage"):
+            self.issue()
+
+    def test_recorded_fit_failure_cannot_issue(self) -> None:
+        self.write("failures.json", {"demand": "training failed"})
+        self.manifest()
+        with self.assertRaisesRegex(ValueError, "Failed model fits recorded.*demand: training failed"):
+            self.issue()
+
+    def test_live_and_replay_require_complete_inputs_before_writing(self) -> None:
+        day = date(2026, 1, 1)
+        self.manifest()
+        with patch("forecasts.daily.datetime", wraps=datetime) as clock, patch(
+            "forecasts.daily.read_local", return_value=({"snapshot_id": "unused"}, {}),
+        ), patch("forecasts.daily.InputReader") as reader:
+            clock.now.return_value = cutoff(day) - timedelta(minutes=1)
+            reader.return_value.features.side_effect = ValueError("Missing eligible demand")
+            for replay in (False, True):
+                with self.subTest(replay=replay), self.assertRaisesRegex(ValueError, "Missing eligible demand"):
+                    issue_day(day, self.saved_run / "snapshot", self.saved_run,
+                              self.saved_run / "output.json", replay=replay)
+                reader.return_value.features.assert_called_with(
+                    day, live=not replay, issue_time=clock.now.return_value, require_complete=True,
+                )
+                self.assertFalse((self.saved_run / "output.json").exists())

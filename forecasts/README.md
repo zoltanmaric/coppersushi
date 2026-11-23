@@ -71,7 +71,7 @@ Uploads and provider installation may exceed a minute; follow the repository's j
 pixi run --locked python -m forecasts.evaluation --snapshot data/forecasts/loaded-snapshot --output data/forecasts/evaluations/baseline
 ```
 
-Choose a new output directory. The command checks the snapshot identity and writes features, models, predictions and a report. This command does not preserve an execution environment or register a tracking run.
+Choose a new output directory. The command checks the snapshot identity. Training and evaluation require complete eligible prices, weather and demand. Fitting requires all training labels, and scoring requires every registered realised price. The command saves features and completed stage outputs. A missing source value or failed fit or prediction stops the run before a score is published. This command does not preserve an execution environment or register a tracking run.
 
 The [research index](../wiki/price-forecasting/research/index.md) holds proposals and selection decisions. Actual MLflow executions retain evidence and conclusions. The baseline’s retrospective rationale explicitly records the absence of a pre-execution proposal; the interrupted execution is retained. New experiments must follow the [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) before execution; the workflow does not automate that procedure.
 
@@ -93,7 +93,9 @@ pixi run --locked python -m forecasts.monthly_fit --fit-day 2026-11-01 --snapsho
 pixi run --locked python -m forecasts.daily --delivery-date 2026-11-24 --snapshot "$ISSUE_SNAPSHOT" --run "$MONTHLY_FIT" --output forecast-2026-11-24.json
 ```
 
-Run the second command on the preceding Berlin day by 11:00. Add `--replay` to reconstruct a historical delivery date under the source timing assumptions. Both modes save the actual creation time, input cutoff, model and input identities, fallback reason, system and reference quantiles. Choose a new output file for each attempt. An archived evaluation run with the matching month's models also works as `--run`.
+Run the second command on the preceding Berlin day by 11:00. Live mode requires that input versions were retrieved by the actual issue time. Add `--replay` to reconstruct a historical delivery date under the recorded source timing assumptions. Both modes require a matching fit with complete-training provenance and complete eligible price, weather and demand inputs. A failed model or a missing required input stops issuance before writing the forecast. Both modes save the creation time, input cutoff, model and snapshot identities, and system and reference quantiles. Use a new output file for each attempt.
+
+Historical replay can run before the delivery day's actual prices are available. Scoring is separate and requires all registered actuals. The diagnostic dataset and viewer can still show input gaps and previously saved fallback forecasts. Spring clock-change quarters that did not exist can leave a same-clock price lag empty. For other proposed upstream exclusions, record evidence, the affected source and dates, and obtain explicit approval before changing the evaluation plan.
 
 ## MLflow review
 

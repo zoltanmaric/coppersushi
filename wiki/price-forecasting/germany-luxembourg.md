@@ -4,7 +4,7 @@ An independent, public-fundamentals forecast under `forecasts/`. The first versi
 
 ## Contract
 
-Agreed project design, 2026-10-09:
+Current project design:
 
 | Choice | Decision |
 |---|---|
@@ -15,7 +15,7 @@ Agreed project design, 2026-10-09:
 | Output | Five [price quantiles](evaluation.md#quantiles): 2.5%, 25%, 50%, 75%, 97.5% |
 | Main score | [Weighted interval score](evaluation.md#wis) |
 | Inputs | Past prices, calendar, weather and usable demand forecasts |
-| Missing demand | Missing numerical value plus an availability indicator; whole-source failure follows the agreed [fallback rules](evaluation.md#defaults) |
+| Complete inputs | Require eligible prices, weather and demand for fitting and issuance. Training and scoring require complete labels at their respective cutoffs. [Evaluation rules](evaluation.md#defaults). |
 | Evaluation | Chronological, all dates retained; overall, monthly and demand-availability results |
 | Initial data budget | Free sources |
 
@@ -35,7 +35,7 @@ The preliminary point-model experiment found that broader geography mattered mor
 
 Read the [implementation spec](../../specs/day-ahead-price-forecast.html), then the [evaluation contract](evaluation.md). The [infrastructure design](forecast-infrastructure.md) starts with S3 inputs and local Metaflow/MLflow runs. Build the reproducible historical dataset first. Resolve and record the remaining mechanical defaults before fitting; do not reopen settled scope without contradictory evidence.
 
-As of 2026-10-09, typed inputs and the local five-quantile calculation exist; execution tracking exists; the daily forecast runner remains planned. Competition entry, publishing forecasts and deployment are separate work.
+Typed inputs, local evaluation, execution tracking and a daily forecast command are available. Competition entry, public forecast publishing and cloud deployment are separate work.
 
 ### Continuation
 

@@ -56,15 +56,15 @@
     "output": "Five percentiles: 2.5%, 25%, 50%, 75% and 97.5%. The middle estimate is the median; the outer pairs form the 50% and 95% uncertainty bands. These describe each quarter-hour separately, not how prices move together across the day."
   },
   "fallback": {
-    "title": "Choose a usable system forecast",
+    "title": "Identify the method that produced the saved forecast",
     "input": "Each method’s forecast, whether its data sources are available, and whether prediction succeeded.",
-    "operation": "Prefer the model using prices, weather and demand. If a whole source is unavailable or prediction fails, try prices and weather, then prices alone, then the simple comparison forecast. Individual missing values stay marked as missing. Never choose using the actual price or a method’s score.",
+    "operation": "Strict runs require eligible prices, weather and demand and a successful prediction. Earlier baseline runs selected a simpler method when a source or model failed. The saved reason identifies those substitutions.",
     "output": "The system’s chosen forecast, with the reason recorded whenever it uses a simpler method."
   },
   "truth": {
     "title": "Join realised prices after prediction",
     "input": "Realised SMARD auction prices for evaluated delivery quarters.",
-    "operation": "Match each prediction to the actual price for the same delivery time, using UTC so the two repeated clock times in autumn remain distinct. If an actual price is missing, leave that quarter-hour out of every method’s score and report the count.",
+    "operation": "Match each prediction to the actual price for the same delivery time, using UTC so the two repeated clock times in autumn remain distinct. Strict scoring stops on missing actual prices. Earlier baseline reports excluded the same missing outcomes from every method.",
     "output": "Matched forecast/outcome rows for evaluation, without feeding outcomes back into historical prediction."
   },
   "score": {
@@ -77,7 +77,7 @@
     "title": "Set up the simple comparison forecast",
     "input": "Earlier same-clock prices and training-period forecast errors, available before the monthly fit cutoff.",
     "operation": "Average yesterday’s and last week’s price for the same local quarter-hour. Use one if the other is absent; if both are missing, use the middle value from earlier prices at that time of day. Set the uncertainty bands using only errors from the training period. Keep those band adjustments fixed during the month.",
-    "output": "A separate simple reference forecast with five quantiles per quarter. It is compared with all three trained models and is the final system fallback."
+    "output": "A separate simple reference forecast with five quantiles per quarter. It is compared with all three trained models and was the final fallback in the historical baseline."
   },
   "models": {
     "title": "Reuse the models throughout the month",

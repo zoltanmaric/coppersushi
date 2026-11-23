@@ -1,7 +1,7 @@
 """Fit and publish the model bundle for one delivery month."""
 import argparse
 from dataclasses import replace
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from importlib.metadata import version
 import json
 from pathlib import Path
@@ -10,9 +10,9 @@ import subprocess
 from tempfile import TemporaryDirectory
 
 from forecasts.config import RunConfig, SnapshotId
-from forecasts.dataset import ROOT, cutoff, digest, quarters
+from forecasts.dataset import ROOT, cutoff, digest
+from forecasts.coverage import STATIC_INPUT_POLICY
 from forecasts.features import build_features
-from forecasts.labels import select_labels
 from forecasts.snapshot import InputReader, canonical, identity, read_local
 from forecasts.training import fit_month
 
@@ -39,7 +39,6 @@ def fit_bundle(fit_day: date, snapshot: Path, config: RunConfig, output: Path) -
     snapshot_manifest, tables = read_local(snapshot)
     config = replace(config, snapshot_id=SnapshotId(snapshot_manifest["snapshot_id"]))
     reader = InputReader(tables)
-    expected_rows = _check_training_coverage(reader, config.train_start, fit_day)
     manifest = {
         "kind": "monthly_fit",
         "fit_day": fit_day.isoformat(),
@@ -56,7 +55,7 @@ def fit_bundle(fit_day: date, snapshot: Path, config: RunConfig, output: Path) -
         "config": config.to_dict(),
     }
     print(f"Building training features for {fit_day}", flush=True)
-    features = build_features(reader, config.train_start, fit_day)
+    features = build_features(reader, config.train_start, fit_day, complete_from=config.train_start)
     output.parent.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(prefix=".forecast-fit-", dir=output.parent) as temporary:
         staging = Path(temporary) / "bundle"
@@ -66,7 +65,8 @@ def fit_bundle(fit_day: date, snapshot: Path, config: RunConfig, output: Path) -
         (staging / "config.json").write_bytes(canonical(config.to_dict()))
         (staging / "snapshot-manifest.json").write_bytes(canonical(snapshot_manifest))
         artifacts = {str(path.relative_to(staging)): digest(path) for path in staging.rglob("*") if path.is_file()}
-        manifest.update(training_rows=fitted.training_rows, expected_training_rows=expected_rows,
+        manifest.update(input_policy=STATIC_INPUT_POLICY, training_rows=fitted.training_rows,
+                        expected_training_rows=features.height,
                         created_at=datetime.now(timezone.utc).isoformat(), artifacts=artifacts)
         run_id = identity(manifest)[:24]
         (staging / "manifest.json").write_bytes(canonical(dict(manifest, run_id=run_id)))
@@ -83,14 +83,6 @@ def _fit_day(value: str) -> date:
 
 def _git(*args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
-
-
-def _check_training_coverage(reader: InputReader, start: date, fit_day: date) -> int:
-    labels = select_labels(reader, fit_day)
-    previous_day = fit_day - timedelta(days=1)
-    if not any(labels.get(timestamp) is not None for timestamp in quarters(previous_day, fit_day)):
-        raise ValueError(f"Training snapshot lacks eligible price labels for {previous_day} at the fit cutoff")
-    return sum(1 for _ in quarters(start, fit_day))
 
 
 def _publish(staging: Path, output: Path) -> None:

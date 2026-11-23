@@ -37,7 +37,8 @@ class ForecastEvaluation(FlowSpec):
         """Build each day's point-in-time feature rows and save their audit fields."""
         self.feature_rows = build_features(InputReader(self.tables),
                                            self.settings.history_start,
-                                           self.settings.end_exclusive)
+                                           self.settings.end_exclusive,
+                                           complete_from=self.settings.train_start)
         save_features(self.feature_rows, Path(self.output))
         self.next(self.backtest)
 

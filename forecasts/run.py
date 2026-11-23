@@ -20,6 +20,7 @@ import uuid
 from typing import Any, TYPE_CHECKING
 
 from forecasts.config import RunConfig
+from forecasts.coverage import STATIC_INPUT_POLICY
 from forecasts.contracts import Report
 
 if TYPE_CHECKING:
@@ -37,7 +38,7 @@ APPROACHES = {
     "weather": ("CatBoost · prices + calendar + weather", "Adds forecast weather to earlier prices and calendar information."),
     "demand": ("CatBoost · prices + calendar + weather + demand", "Adds forecast demand to the price, calendar and weather inputs."),
     "reference": ("Benchmark · historical prices + past-error intervals", "Averages yesterday and last week's same-clock prices, with missing-history fallbacks and training-only error intervals."),
-    "system": ("System · input-based fallback selection", "Selects demand, then weather, then prices/calendar, then benchmark according to source availability and prediction success."),
+    "system": ("System · complete inputs", "Uses the price, calendar, weather and demand model on the complete registered delivery grid."),
 }
 
 
@@ -275,7 +276,7 @@ def finish(directory: Path, mlflow_run: str, metaflow_run: str) -> dict[str, Any
     """Hash saved artifacts and record the completed provenance manifest."""
     path = directory / "manifest.json"
     manifest = json.loads(path.read_text())
-    manifest.update(mlflow_run_id=mlflow_run, metaflow_run_id=metaflow_run,
+    manifest.update(mlflow_run_id=mlflow_run, metaflow_run_id=metaflow_run, input_policy=STATIC_INPUT_POLICY,
                     artifacts={str(p.relative_to(directory)): digest(p) for p in sorted(directory.rglob('*')) if p.is_file() and p != path})
     path.write_bytes(canonical(manifest))
     # The final provenance record also belongs in tracking, after identifiers are known.
