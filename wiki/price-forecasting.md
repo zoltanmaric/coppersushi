@@ -7,7 +7,7 @@ An independent forecasting product under `forecasts/`, with no dependency on the
 ## Design
 
 - [Forecast contract](price-forecasting/germany-luxembourg.md): market, deadline, inputs and outputs.
-- [Storage and execution](price-forecasting/forecast-infrastructure.md): reproducibility promise, selection principle, local first iteration and later AWS deployment.
+- [Storage and execution](price-forecasting/forecast-infrastructure.md), including [foundation scope and when to revisit CD and CT](price-forecasting/forecast-infrastructure.md#automation-scope).
 - [Data sources](price-forecasting/data-sources.md): verified contracts and availability limits.
 - [Evaluation](price-forecasting/evaluation.md): chronological comparisons and scoring.
 - [Implementation spec](../specs/day-ahead-price-forecast.html): remaining work and acceptance checks.

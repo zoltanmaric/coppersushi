@@ -12,6 +12,12 @@ Every forecast uses only information available by its issue deadline. Historical
 
 Choose storage from the reads and writes the system needs. Add complexity only for a demonstrated requirement.
 
+## Automation-scope
+
+The [foundation stack](https://github.com/zoltanmaric/coppersushi/pull/320) has a local, on-demand acceptance boundary: continuous integration checks the code, and an operator can fit a model, issue a daily edition, evaluate it and reproduce the evidence. Separate fit and issue commands let a single fitted model serve many editions. [Cumulative stack and commands](https://github.com/zoltanmaric/coppersushi/blob/b99bc7e6bb735b587f11b23cac17b5ebddb111f5/forecasts/README.md)
+
+Continuous delivery (CD) and continuous training (CT) are goals for subsequent work. Revisit CD when a pipeline change needs a repeatable release to an identified operating environment. Revisit CT when fresh settled observations justify recurring fits and the team can say what evidence qualifies a candidate for use. Scheduling daily predictions is a separate decision. Set acceptance criteria for each capability in the spec for the stage that introduces it. [Google Cloud’s automation levels](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning#mlops_level_1_ml_pipeline_automation)
+
 ## First-stage
 
 Store inputs in Amazon S3. Run collection, training and evaluation locally through Metaflow. Use local MLflow Tracking to compare experiments and retain models and reports. S3 is the only required cloud service in this stage; no cloud scheduler or shared tracking server is required.
