@@ -1,6 +1,6 @@
 """Values shared by input collection, selection and feature construction."""
 from datetime import datetime
-from typing import Any, TypedDict
+from typing import Any, NotRequired, TypedDict
 
 # Serialized provider records have heterogeneous columns, validated at loading.
 Row = dict[str, Any]
@@ -15,6 +15,7 @@ class DemandVersion(TypedDict):
     updated: datetime | None
     value: float | None
     source: str
+    eligible_at_issue: NotRequired[bool]  # Snapshot evidence adds a receipt policy to the raw update cutoff.
 
 
 DemandSeries = dict[datetime, list[DemandVersion]]

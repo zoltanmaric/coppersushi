@@ -1,5 +1,5 @@
 """Price contracts and revision ambiguity at the table boundary."""
-from datetime import date
+from datetime import date, datetime
 from itertools import permutations
 import unittest
 
@@ -9,14 +9,15 @@ from pandera.errors import SchemaError
 
 from forecasts.inputs.sources import stamp
 from forecasts.market import cutoff
-from forecasts.inputs.prices import PriceVersions, read_prices, select_history, snapshot_schema
+from forecasts.inputs.prices import PriceVersions, read_prices, select_history
+from forecasts.inputs.schemas import SCHEMAS
 from forecasts.inputs.tests.test_snapshot import history
 from forecasts.inputs.selection import _latest_rows
 
 
 class PriceTableTests(unittest.TestCase):
     def test_values_nullability_timezone_and_keys(self) -> None:
-        base = read_prices(arrow.Table.from_pylist(history()["prices"], schema=snapshot_schema()))
+        base = read_prices(arrow.Table.from_pylist(history()["prices"], schema=SCHEMAS["prices"]))
         for value in [-100.0, None]:
             PriceVersions.validate(base.with_columns(pl.lit(value, dtype=pl.Float64).alias("price_eur_mwh")))
         for value in [float("nan"), float("inf"), float("-inf")]:
@@ -33,10 +34,10 @@ class PriceTableTests(unittest.TestCase):
         rows = [dict(base, version_id="old", price_eur_mwh=-20.0),
                 dict(base, version_id="exact", source_update_utc=cutoff(day), price_eur_mwh=10.0),
                 dict(base, version_id="late", source_update_utc=stamp("2026-03-28T10:00:01Z"), price_eur_mwh=999.0)]
-        frame = read_prices(arrow.Table.from_pylist(rows, schema=snapshot_schema()))
+        frame = read_prices(arrow.Table.from_pylist(rows, schema=SCHEMAS["prices"]))
         self.assertEqual(select_history(frame, day, cutoff(day))["version_id"].to_list(), ["exact"])
         conflict = dict(rows[1], version_id="conflict", price_eur_mwh=None)
-        frame = read_prices(arrow.Table.from_pylist(rows+[conflict], schema=snapshot_schema()))
+        frame = read_prices(arrow.Table.from_pylist(rows+[conflict], schema=SCHEMAS["prices"]))
         with self.assertRaisesRegex(ValueError, "Conflicting"):
             select_history(frame, day, cutoff(day))
 
@@ -58,7 +59,7 @@ class PriceTableTests(unittest.TestCase):
                               for i, (updated, value) in ordered]
                     weather = [dict(r, location="test", variable="temperature_2m", value=r["price_eur_mwh"])
                                for r in prices]
-                    table = read_prices(arrow.Table.from_pylist(prices, schema=snapshot_schema()))
+                    table = read_prices(arrow.Table.from_pylist(prices, schema=SCHEMAS["prices"]))
                     if conflict:
                         with self.assertRaisesRegex(ValueError, "Conflicting"):
                             select_history(table, day, cutoff(day))

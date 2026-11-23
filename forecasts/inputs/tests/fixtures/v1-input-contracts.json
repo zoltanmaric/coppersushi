@@ -1,0 +1,49 @@
+{
+  "prices": {
+    "version": 1,
+    "row_key": ["valid_utc", "version_id"],
+    "columns": [
+      {"name": "valid_utc", "type": "timestamp[us, tz=UTC]", "nullable": false, "unit": null},
+      {"name": "source_update_utc", "type": "timestamp[us, tz=UTC]", "nullable": true, "unit": null},
+      {"name": "retrieved_at_utc", "type": "timestamp[us, tz=UTC]", "nullable": true, "unit": null},
+      {"name": "timing_evidence", "type": "string", "nullable": false, "unit": null},
+      {"name": "version_id", "type": "string", "nullable": false, "unit": null},
+      {"name": "raw_key", "type": "string", "nullable": false, "unit": null},
+      {"name": "price_eur_mwh", "type": "double", "nullable": true, "unit": "EUR/MWh"}
+    ]
+  },
+  "weather": {
+    "version": 1,
+    "row_key": ["valid_utc", "location", "variable", "version_id"],
+    "columns": [
+      {"name": "valid_utc", "type": "timestamp[us, tz=UTC]", "nullable": false, "unit": null},
+      {"name": "source_update_utc", "type": "timestamp[us, tz=UTC]", "nullable": true, "unit": null},
+      {"name": "retrieved_at_utc", "type": "timestamp[us, tz=UTC]", "nullable": true, "unit": null},
+      {"name": "timing_evidence", "type": "string", "nullable": false, "unit": null},
+      {"name": "version_id", "type": "string", "nullable": false, "unit": null},
+      {"name": "raw_key", "type": "string", "nullable": false, "unit": null},
+      {"name": "source_valid_utc", "type": "timestamp[us, tz=UTC]", "nullable": false, "unit": null},
+      {"name": "location", "type": "string", "nullable": false, "unit": null},
+      {"name": "variable", "type": "string", "nullable": false, "unit": null},
+      {"name": "value", "type": "double", "nullable": true, "unit": null},
+      {"name": "unit", "type": "string", "nullable": false, "unit": null},
+      {"name": "model", "type": "string", "nullable": false, "unit": null},
+      {"name": "lead_hours", "type": "int16", "nullable": false, "unit": null},
+      {"name": "data_kind", "type": "string", "nullable": false, "unit": null}
+    ]
+  },
+  "demand": {
+    "version": 1,
+    "row_key": ["valid_utc", "area_code", "version_id"],
+    "columns": [
+      {"name": "valid_utc", "type": "timestamp[us, tz=UTC]", "nullable": false, "unit": null},
+      {"name": "source_update_utc", "type": "timestamp[us, tz=UTC]", "nullable": true, "unit": null},
+      {"name": "retrieved_at_utc", "type": "timestamp[us, tz=UTC]", "nullable": true, "unit": null},
+      {"name": "timing_evidence", "type": "string", "nullable": false, "unit": null},
+      {"name": "version_id", "type": "string", "nullable": false, "unit": null},
+      {"name": "raw_key", "type": "string", "nullable": false, "unit": null},
+      {"name": "area_code", "type": "string", "nullable": false, "unit": null},
+      {"name": "demand_mw", "type": "double", "nullable": true, "unit": "MW"}
+    ]
+  }
+}

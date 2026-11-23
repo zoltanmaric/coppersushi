@@ -1,70 +1,119 @@
-"""Versioned input schemas; UTC times remain distinct from availability evidence."""
-from forecasts.inputs.input_types import Report
-import math
-import pyarrow as pa
-from forecasts.inputs.input_config import FIELDS
-from forecasts.inputs.prices import PriceVersions, read_prices, snapshot_schema
+"""Normalized source revisions and their versioned Parquet storage contracts."""
+from typing import Annotated
+
+import pandera.polars as pa
 from pandera.errors import SchemaError
+import polars as pl
+import pyarrow as arrow
+
+from forecasts.inputs.input_config import FIELDS
+from forecasts.inputs.input_types import Report
 
 VERSION = 1
-UTC_TIME = pa.timestamp("us", tz="UTC")
+UTC = Annotated[pl.Datetime, "us", "UTC"]
 
 
-def field(name: str, kind: pa.DataType, nullable: bool = False, unit: str | None = None) -> pa.Field:
-    """Create an Arrow field with optional unit metadata."""
-    return pa.field(name, kind, nullable=nullable, metadata={"unit": unit} if unit else None)
+class VersionedInput(pa.DataFrameModel):
+    """A retained version, its delivery time, availability evidence and raw origin."""
+
+    valid_utc: UTC
+    source_update_utc: UTC = pa.Field(nullable=True)
+    retrieved_at_utc: UTC = pa.Field(nullable=True)
+    timing_evidence: str = pa.Field(isin=["witnessed", "documented", "assumed", "unknown"])
+    version_id: str
+    raw_key: str
+
+    class Config:
+        strict = True
 
 
-COMMON = [
-    field("valid_utc", UTC_TIME),
-    field("source_update_utc", UTC_TIME, True),
-    field("retrieved_at_utc", UTC_TIME, True),
-    field("timing_evidence", pa.string()),
-    field("version_id", pa.string()),
-    field("raw_key", pa.string()),
-]
-SCHEMAS = {
-    "prices": snapshot_schema(),
-    "weather": pa.schema(COMMON + [
-        field("source_valid_utc", UTC_TIME), field("location", pa.string()),
-        field("variable", pa.string()), field("value", pa.float64(), True),
-        field("unit", pa.string()), field("model", pa.string()),
-        field("lead_hours", pa.int16()), field("data_kind", pa.string()),
-    ]),
-    "demand": pa.schema(COMMON + [field("area_code", pa.string()), field("demand_mw", pa.float64(), True, "MW")]),
-}
-KEYS = {"prices": PriceVersions.Config.unique, "weather": ["valid_utc", "location", "variable", "version_id"], "demand": ["valid_utc", "area_code", "version_id"]}
+class PriceVersions(VersionedInput):
+    """A price revision for one delivery quarter, measured in EUR/MWh."""
+
+    price_eur_mwh: float = pa.Field(nullable=True, metadata={"unit": "EUR/MWh"})
+
+    class Config:
+        unique = ["valid_utc", "version_id"]
+
+    @pa.check("price_eur_mwh")
+    def finite_prices(cls, data: pa.PolarsData) -> pl.LazyFrame:
+        """Allow missing and negative prices, but reject NaN and infinity."""
+        return data.lazyframe.select(pl.col("price_eur_mwh").is_finite())
+
+
+class WeatherVersions(VersionedInput):
+    """A weather forecast revision for a location, variable and valid time."""
+
+    source_valid_utc: UTC
+    location: str
+    variable: str
+    value: float = pa.Field(nullable=True)
+    unit: str
+    model: str
+    lead_hours: pl.Int16
+    data_kind: str
+
+    class Config:
+        unique = ["valid_utc", "location", "variable", "version_id"]
+
+    @pa.check("value")
+    def finite_values(cls, data: pa.PolarsData) -> pl.LazyFrame:
+        """Allow missing observations but reject non-finite weather values."""
+        return data.lazyframe.select(pl.col("value").is_finite())
+
+    @pa.dataframe_check
+    @classmethod
+    def weather_units(cls, data: pa.PolarsData) -> pl.LazyFrame:
+        """Require the provider's expected unit for each registered variable."""
+        expected = pl.col("variable").replace_strict(FIELDS, default=pl.col("unit"))
+        return data.lazyframe.select(pl.col("unit") == expected)
+
+
+class DemandVersions(VersionedInput):
+    """A load forecast revision for one area and delivery quarter."""
+
+    area_code: str
+    demand_mw: float = pa.Field(nullable=True, metadata={"unit": "MW"})
+
+    class Config:
+        unique = ["valid_utc", "area_code", "version_id"]
+
+    @pa.check("demand_mw")
+    def finite_values(cls, data: pa.PolarsData) -> pl.LazyFrame:
+        """Allow missing observations but reject non-finite load values."""
+        return data.lazyframe.select(pl.col("demand_mw").is_finite())
 
 
 def describe(name: str) -> Report:
-    """Return the serialized column and key contract for an input table."""
-    return {"version": VERSION, "row_key": KEYS[name], "columns": [
+    """Describe the Pandera row key and the exact stored fields in the manifest."""
+    return {"version": VERSION, "row_key": _MODELS[name].to_schema().unique, "columns": [
         {"name": f.name, "type": str(f.type), "nullable": f.nullable,
-         "unit": f.metadata[b"unit"].decode() if f.metadata and b"unit" in f.metadata else None} for f in SCHEMAS[name]
+         "unit": f.metadata[b"unit"].decode() if f.metadata and b"unit" in f.metadata else None}
+        for f in SCHEMAS[name]
     ]}
 
 
-def validate(name: str, table: pa.Table) -> pa.Table:
-    """Reject rows that violate the named schema, keys, units or value constraints."""
+def validate(name: str, table: arrow.Table) -> arrow.Table:
+    """Check the Parquet wire type and validate the actual normalized records."""
     if not table.schema.equals(SCHEMAS[name], check_metadata=True):
         raise ValueError(f"Schema mismatch: {name}")
-    if name == "prices":
-        try:
-            read_prices(table)
-        except SchemaError as error:
-            raise ValueError(f"Invalid prices: {error}") from error
-        return table
-    for f in SCHEMAS[name]:
-        if not f.nullable and table[f.name].null_count:
-            raise ValueError(f"Required column contains null: {name}/{f.name}")
-        if pa.types.is_floating(f.type) and any(v is not None and not math.isfinite(v) for v in table[f.name].to_pylist()):
-            raise ValueError(f"Non-finite value: {name}/{f.name}")
-    rows = table.to_pylist()
-    keys = [tuple(r[k] for k in KEYS[name]) for r in rows]
-    if len(set(keys)) != len(keys):
-        raise ValueError(f"Duplicate input row key: {name}")
-    if any(r["timing_evidence"] not in {"witnessed", "documented", "assumed", "unknown"} for r in rows):
-        raise ValueError(f"Unknown timing evidence: {name}")
-    if name == "weather" and any(r["variable"] in FIELDS and r["unit"] != FIELDS[r["variable"]] for r in rows):
-        raise ValueError("Weather units differ from the source contract")
+    frame = pl.from_arrow(table)
+    assert isinstance(frame, pl.DataFrame)
+    try:
+        _MODELS[name].validate(frame)
+    except SchemaError as error:
+        raise ValueError(f"Invalid {name}: {error}") from error
     return table
+
+
+def _storage_schema(model: type[VersionedInput]) -> arrow.Schema:
+    wire_types = {pl.String: arrow.string(), pl.Float64: arrow.float64(),
+                  pl.Int16: arrow.int16(), pl.Datetime("us", "UTC"): arrow.timestamp("us", tz="UTC")}
+    return arrow.schema([
+        arrow.field(name, wire_types[column.dtype.type], nullable=column.nullable, metadata=column.metadata)
+        for name, column in model.to_schema().columns.items()
+    ])
+
+
+_MODELS: dict[str, type[VersionedInput]] = {"prices": PriceVersions, "weather": WeatherVersions, "demand": DemandVersions}
+SCHEMAS = {name: _storage_schema(model) for name, model in _MODELS.items()}

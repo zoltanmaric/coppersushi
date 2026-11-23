@@ -7,6 +7,7 @@ from pandera.typing.polars import DataFrame
 import polars as pl
 import pyarrow as pa
 
+from forecasts.inputs.availability import available_at
 from forecasts.inputs.input_config import FIELDS, WEATHER_LOCATIONS
 from forecasts.inputs.input_types import DemandVersion, PriceSeries, Row
 from forecasts.inputs.prices import PriceHistory, PriceVersions, latest_versions, read_prices, select_history
@@ -38,15 +39,6 @@ class InputReader:
         return dict(latest_versions(self._prices).select("valid_utc", "price_eur_mwh").iter_rows())
 
 
-def eligible(row: Row, deadline: datetime, live: bool = False) -> bool:
-    """Check update/retrieval cutoffs and the permitted timing-evidence categories."""
-    if row["source_update_utc"] is not None and row["source_update_utc"] > deadline:
-        return False
-    if live and (row["retrieved_at_utc"] is None or row["retrieved_at_utc"] > deadline):
-        return False
-    return row["timing_evidence"] in {"witnessed", "documented", "assumed"}
-
-
 def select_records(tables: Mapping[str, pa.Table | list[Row]], day: date, live: bool = False, issue_time: datetime | None = None) -> dict[str, list[Row]]:
     """Select source versions eligible for a delivery day and its issue time."""
     deadline = issue_deadline(day, live, issue_time)
@@ -62,17 +54,16 @@ def select_covariates(records: Mapping[str, list[Row]], day: date, deadline: dat
                        live: bool) -> dict[str, list[Row]]:
     """Read eligible weather and demand records for the archived-source diagnostic."""
     selected: dict[str, list[Row]] = {"weather": [], "demand": []}
-    for row in records["weather"]:
+    for row in _available_rows("weather", records["weather"], deadline, live):
         if (row["model"] != "icon_eu" or row["lead_hours"] != 48 or row["data_kind"] != "forecast"
                 or row["location"] not in LOCATIONS or row["variable"] not in FIELDS
                 or row["valid_utc"].astimezone(BERLIN).date() != day
-                or row["source_valid_utc"] - timedelta(hours=48) > deadline
-                or not eligible(row, deadline, live)):
+                or row["source_valid_utc"] - timedelta(hours=48) > deadline):
             continue
         selected["weather"].append(row)
-    for row in records["demand"]:
+    for row in _available_rows("demand", records["demand"], deadline, live):
         if (row["area_code"] == COUNTRY and row["valid_utc"].astimezone(BERLIN).date() == day
-                and row["source_update_utc"] is not None and eligible(row, deadline, live)):
+                and row["source_update_utc"] is not None):
             selected["demand"].append(row)
     selected["weather"] = _latest_rows(selected["weather"], ["valid_utc", "location", "variable"], "value")
     return selected
@@ -80,7 +71,8 @@ def select_covariates(records: Mapping[str, list[Row]], day: date, deadline: dat
 
 def select_demand(versions: list[DemandVersion], deadline: datetime) -> tuple[float | None, datetime | None, str]:
     """Select the latest nonmissing version eligible by the issue deadline."""
-    usable = [v for v in versions if v["updated"] is not None and v["updated"] <= deadline and v["value"] is not None]
+    usable = [v for v in versions if v["updated"] is not None and v["updated"] <= deadline and v["value"] is not None
+              and v.get("eligible_at_issue", True)]
     if usable:
         latest = max(v["updated"] for v in usable if v["updated"] is not None)
         selected = [v for v in usable if v["updated"] == latest]
@@ -89,6 +81,13 @@ def select_demand(versions: list[DemandVersion], deadline: datetime) -> tuple[fl
         return selected[0]["value"], latest, "usable"
     reason = "absent" if not versions else "late_or_missing_update_or_value"
     return None, None, reason
+
+
+def _available_rows(source: str, records: list[Row], deadline: datetime, live: bool) -> list[Row]:
+    table = pa.Table.from_pylist(records, schema=SCHEMAS[source])
+    frame = pl.from_arrow(table)
+    assert isinstance(frame, pl.DataFrame)
+    return frame.filter(available_at(deadline, live=live)).to_dicts()
 
 
 def _latest_rows(rows: list[Row], keys: Sequence[str], value: str) -> list[Row]:

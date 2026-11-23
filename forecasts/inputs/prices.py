@@ -1,33 +1,14 @@
 """Price table contracts and issue-time version selection."""
 from datetime import date, datetime
-from typing import Annotated, cast
+from typing import cast
 
 import pandera.polars as pa
 import polars as pl
 import pyarrow as arrow
 from pandera.typing.polars import DataFrame
 
-UTC = Annotated[pl.Datetime, "us", "UTC"]
-
-
-class PriceVersions(pa.DataFrameModel):
-    """One retained price revision per UTC delivery quarter and version ID."""
-    valid_utc: UTC
-    source_update_utc: UTC = pa.Field(nullable=True)
-    retrieved_at_utc: UTC = pa.Field(nullable=True)
-    timing_evidence: str = pa.Field(isin=["witnessed", "documented", "assumed", "unknown"])
-    version_id: str
-    raw_key: str
-    price_eur_mwh: float = pa.Field(nullable=True, metadata={"unit": "EUR/MWh"})
-
-    class Config:
-        strict = True
-        unique = ["valid_utc", "version_id"]
-
-    @pa.check("price_eur_mwh")
-    def finite_prices(cls, data: pa.PolarsData) -> pl.LazyFrame:
-        """Allow missing and negative prices, but reject NaN and infinity."""
-        return data.lazyframe.select(pl.col("price_eur_mwh").is_finite())
+from forecasts.inputs.availability import available_at
+from forecasts.inputs.schemas import PriceVersions, UTC
 
 
 class PriceHistory(pa.DataFrameModel):
@@ -58,15 +39,10 @@ def select_history(prices: DataFrame[PriceVersions], day: date, deadline: dateti
     Historical selection permits documented or assumed timing. Live selection
     also requires retrieval by the actual issue time. Unknown timing is excluded.
     """
-    if deadline.utcoffset() is None:
-        raise ValueError("Price selection requires a timezone-aware cutoff")
     eligible = prices.filter(
         (pl.col("valid_utc").dt.convert_time_zone("Europe/Berlin").dt.date() < day)
-        & (pl.col("source_update_utc").is_null() | (pl.col("source_update_utc") <= deadline))
-        & pl.col("timing_evidence").is_in(["witnessed", "documented", "assumed"])
+        & available_at(deadline, live=live)
     )
-    if live:
-        eligible = eligible.filter(pl.col("retrieved_at_utc") <= deadline)
     return latest_versions(cast(DataFrame[PriceVersions], eligible))
 
 
@@ -87,14 +63,3 @@ def latest_versions(prices: DataFrame[PriceVersions]) -> DataFrame[PriceVersions
             .unique("valid_utc", keep="last", maintain_order=True)
             .sort("_first").drop("_position", "_first"))
     return cast(DataFrame[PriceVersions], selected)
-
-
-def snapshot_schema() -> arrow.Schema:
-    """Derive the unchanged Parquet wire schema from the price contract."""
-    fields = []
-    for name, column in PriceVersions.to_schema().columns.items():
-        dtype = column.dtype.type
-        kind = (arrow.string() if dtype == pl.String else arrow.float64() if dtype == pl.Float64
-                else arrow.timestamp(dtype.time_unit, tz=dtype.time_zone))
-        fields.append(arrow.field(name, kind, nullable=column.nullable, metadata=column.metadata))
-    return arrow.schema(fields)

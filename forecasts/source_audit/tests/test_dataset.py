@@ -9,7 +9,8 @@ from zipfile import ZipFile
 import pyarrow as pa
 
 from forecasts.inputs.schemas import SCHEMAS
-from forecasts.inputs.sources import load_weather, stamp
+from forecasts.inputs.sources import COUNTRY, load_weather, stamp
+from forecasts.market import cutoff
 from forecasts.source_audit.dataset import build_rows, replay_snapshot
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -40,6 +41,25 @@ class SourceAuditTests(unittest.TestCase):
         self.assertEqual(next_hour["wind_speed_120m_hamburg_missing"], 1)
         self.assertEqual(next_hour["weather_source_unavailable"], 0)
         self.assertEqual(metadata["retrieved_at_utc"], "2026-04-01T12:00:00+00:00")
+
+    def test_snapshot_and_raw_audits_retain_late_demand_evidence(self) -> None:
+        day = date(2026, 3, 29)
+        end = day + timedelta(days=1)
+        valid = stamp("2026-03-29T00:00:00Z")
+        late = cutoff(day) + timedelta(seconds=1)
+        raw = build_rows(self.prices, {}, {valid: [{"updated": late, "value": 1300.0, "source": "file"}]}, day, end)
+        demand = {"valid_utc": valid, "area_code": COUNTRY, "demand_mw": 1300.0,
+                  "source_update_utc": late, "retrieved_at_utc": None, "timing_evidence": "documented",
+                  "version_id": "late", "raw_key": "file"}
+        tables = {name: pa.Table.from_pylist([demand] if name == "demand" else [], schema=schema)
+                  for name, schema in SCHEMAS.items()}
+        replay = replay_snapshot(tables, day, end)
+        for rows in (raw, replay):
+            quarter = next(row for row in rows if row["delivery_utc"] == valid.isoformat())
+            self.assertIsNone(quarter["demand_mw"])
+            self.assertEqual(quarter["demand_screen"], "late_or_missing_update_or_value")
+            self.assertEqual(quarter["demand_archive_versions"], 1)
+            self.assertEqual(quarter["demand_archived_latest_update_utc"], late.isoformat())
 
     def test_missing_sources_and_targets_do_not_drop_rows(self) -> None:
         rows = build_rows(self.prices, {"wind_speed_120m_hamburg": {}}, {}, date(2026, 3, 29), date(2026, 3, 30))

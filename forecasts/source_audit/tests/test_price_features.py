@@ -69,7 +69,8 @@ class FeatureSelectionTests(unittest.TestCase):
         for source in (original, enlarged):
             tables = {name: pa.Table.from_pylist(source[name], schema=schema) for name, schema in SCHEMAS.items()}
             replayed = replay_snapshot(tables, day, day + timedelta(days=1))
-            rows.append([{key: value for key, value in row.items() if key not in {"price_eur_mwh", "target_missing"}}
+            retrospective = {"price_eur_mwh", "target_missing", "demand_archive_versions", "demand_archived_latest_update_utc"}
+            rows.append([{key: value for key, value in row.items() if key not in retrospective}
                          for row in replayed])
         self.assertEqual(rows[0], rows[1])
 

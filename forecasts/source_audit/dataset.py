@@ -18,7 +18,7 @@ from forecasts.inputs.prices import PriceHistory
 from forecasts.inputs.selection import InputReader, select_covariates, select_demand
 from forecasts.inputs.snapshot import read_local
 from forecasts.inputs.sources import (
-    END, PAYLOADS, START, TIMING, load_demand, load_prices, load_weather, verify_payloads,
+    COUNTRY, END, PAYLOADS, START, TIMING, load_demand, load_prices, load_weather, verify_payloads,
 )
 from forecasts.provenance import ROOT, digest
 from forecasts.market import BERLIN, cutoff, quarters
@@ -86,7 +86,7 @@ def replay_snapshot(tables: Mapping[str, arrow.Table], start: date, end: date) -
     for day in days:
         deadline = cutoff(day)
         selected = select_covariates({name: by_day[day] for name, by_day in daily.items()}, day, deadline, False)
-        weather, demand = _covariate_inputs(selected)
+        weather, demand = _covariate_inputs(selected, daily["demand"][day])
         history = reader.price_history(day, deadline, earliest_day=day - timedelta(days=14))
         features = build_price_features(history, list(quarters(day, day + timedelta(days=1))))
         rows.extend(assemble_rows(features, {field: weather.get(field, {}) for field in WEATHER_TABLE_FIELDS}, demand, targets))
@@ -189,7 +189,7 @@ def holidays(year: int) -> set[date]:
     }
 
 
-def _covariate_inputs(selected: Mapping[str, list[Row]]) -> tuple[WeatherSeries, DemandSeries]:
+def _covariate_inputs(selected: Mapping[str, list[Row]], archive: list[Row]) -> tuple[WeatherSeries, DemandSeries]:
     weather: WeatherSeries = {}
     demand: DemandSeries = {}
     for row in selected["weather"]:
@@ -198,8 +198,14 @@ def _covariate_inputs(selected: Mapping[str, list[Row]]) -> tuple[WeatherSeries,
         if row["valid_utc"] in values and values[row["valid_utc"]] != row["value"]:
             raise ValueError("Ambiguous eligible weather versions")
         values[row["valid_utc"]] = row["value"]
-    for row in selected["demand"]:
-        demand.setdefault(row["valid_utc"], []).append({"updated": row["source_update_utc"], "value": row["demand_mw"], "source": row["raw_key"]})
+    eligible_keys = {(row["valid_utc"], row["version_id"]) for row in selected["demand"]}
+    for row in archive:
+        if row["area_code"] == COUNTRY:
+            timestamp = row["valid_utc"]
+            demand.setdefault(timestamp, []).append({
+                "updated": row["source_update_utc"], "value": row["demand_mw"], "source": row["raw_key"],
+                "eligible_at_issue": (timestamp, row["version_id"]) in eligible_keys,
+            })
     return weather, demand
 
 

@@ -2,7 +2,7 @@
 
 [Forecasts](../README.md) · [Archive coverage](../source_audit/README.md)
 
-[Snapshot collection](snapshot.py) validates and hashes provider archives, writes typed Parquet tables, and publishes the manifest last. Loading verifies the snapshot ID, hashes, row counts, and [schemas](schemas.py). The manifest records the code revision, environment, and source retrieval evidence.
+[Snapshot collection](snapshot.py) validates and hashes provider archives, writes typed Parquet tables, and publishes the manifest last. Loading verifies the snapshot ID, hashes, row counts, and [normalized input models](schemas.py). Each model supplies its Parquet schema and manifest description. The [v1 compatibility test](tests/test_schemas.py) checks both against the frozen format. The manifest records the code revision, environment, and source retrieval evidence.
 
 [InputReader.price_history()](selection.py) selects earlier delivery days and revisions available by the issue cutoff. Live selection also requires retrieval by the actual issue time. Historical selection permits recorded timing assumptions. See the [point-in-time contract](../../wiki/price-forecasting/data-sources.md#point-in-time).
 

@@ -1,7 +1,7 @@
 """Adversarial selector and publication checks using small invented input histories."""
 from forecasts.inputs.input_types import Report
 import base64
-from datetime import date
+from datetime import date, timedelta
 import hashlib
 import json
 from pathlib import Path
@@ -108,6 +108,34 @@ class SnapshotTests(unittest.TestCase):
             select_records(tables, day, live=True)
         with self.assertRaisesRegex(ValueError, "after.*deadline"):
             select_records(tables, day, live=True, issue_time=stamp("2026-03-28T10:00:01Z"))
+
+    def test_all_sources_use_inclusive_live_receipt_and_update_cutoffs(self) -> None:
+        source = history()
+        day = date(2026, 3, 29)
+        deadline = cutoff(day)
+        for offset in (0, 2):
+            tables = {name: [dict(source[name][0], source_update_utc=deadline - timedelta(minutes=5),
+                                  retrieved_at_utc=deadline + timedelta(minutes=offset))] for name in SCHEMAS}
+            selected = select_records(tables, day, live=True, issue_time=deadline)
+            for name in SCHEMAS:
+                with self.subTest(source=name, receipt_offset_minutes=offset):
+                    self.assertEqual(selected[name], tables[name] if offset == 0 else [])
+            self.assertGreater(tables["weather"][0]["valid_utc"], deadline)
+
+    def test_witness_only_price_needs_timely_receipt_in_historical_replay(self) -> None:
+        records = history()
+        day = date(2026, 3, 29)
+        deadline = cutoff(day)
+        for evidence, receipt, expected in [
+            ("witnessed", deadline, True), ("witnessed", None, False),
+            ("witnessed", deadline + timedelta(seconds=1), False),
+            ("assumed", None, True), ("documented", None, True), ("unknown", deadline, False),
+        ]:
+            price = dict(records["prices"][0], timing_evidence=evidence, source_update_utc=None,
+                         retrieved_at_utc=receipt)
+            selected = select_records({"prices": [price], "weather": [], "demand": []}, day)
+            with self.subTest(evidence=evidence, receipt=receipt):
+                self.assertEqual(selected["prices"], [price] if expected else [])
 
     def test_schema_rejects_null_keys_and_duplicates(self) -> None:
         rows = history()["prices"]
