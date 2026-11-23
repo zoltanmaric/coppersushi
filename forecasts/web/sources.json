@@ -1,18 +1,18 @@
 {
   "contract": {
     "path": "wiki/price-forecasting/germany-luxembourg.md",
-    "sha256": "d9a4d09ffb53fe63f2303b80f77608e93fbec689dd581011770a7b7827073704"
+    "sha256": "1b873f5e5da95bcfd27908ca32fcf6911205114a8f3196640fbadaa009c8149f"
   },
   "evaluation": {
     "path": "wiki/price-forecasting/evaluation.md",
-    "sha256": "7609c91a2856d5739617082eb11e09ccd93b3386429ab9f4f4d43abc396122dd"
+    "sha256": "42aa06bc90ffb69795dd7a610b9da152d428f5df4bc6e9d51895d71e936dbf96"
   },
   "inputs": {
     "path": "wiki/price-forecasting/data-sources.md",
-    "sha256": "8b309dc902fa5e6b1a8de46ea2808e840abc0e28b609f7664ad2ce9c02c969bf"
+    "sha256": "85be347fa39b0cb70e53ef28f248686523da574d6420ab2bbda867a634a0f1a0"
   },
   "infrastructure": {
     "path": "wiki/price-forecasting/forecast-infrastructure.md",
-    "sha256": "e92bff9e4ad2843531724768019d768443c6d79d184dcd86b62bb432efe0383b"
+    "sha256": "e6fbbac5c906c24b7414d0dc155e4f5670eb4eba5209aba211127622bf45a2ba"
   }
 }
