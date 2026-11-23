@@ -27,7 +27,7 @@
   "labels": {
     "title": "Choose past prices to learn from",
     "input": "Realised prices for delivery dates before the monthly fit.",
-    "operation": "Use only price versions known by 11:00 Berlin on the day before the first delivery day being evaluated that month. Each past day’s model inputs still use that day’s original information deadline; later revisions cannot replace them.",
+    "operation": "The SMARD archive lacks revision timestamps. For the monthly fit, use prices assumed available by 11:00 Berlin on the day before the first delivery day being evaluated, under the archive timing policy. Each past day’s model inputs still use that day’s original information deadline; later revisions cannot replace them.",
     "output": "Past inputs paired with prices the model can learn from. Prices for the month being evaluated are reserved for scoring predictions afterwards."
   },
   "fit": {
