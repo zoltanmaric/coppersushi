@@ -1,13 +1,15 @@
 """Fit the three feature-set models and reference for a single month."""
 from datetime import date
 from dataclasses import asdict
+from collections.abc import Callable
 import json
 from pathlib import Path
 
 from catboost import CatBoostError, CatBoostRegressor
 import polars as pl
-from typing import cast
+from typing import Annotated, cast
 from pandera.typing.polars import DataFrame
+from pydantic import StringConstraints, TypeAdapter
 from forecasts.tables import Features
 
 from forecasts.config import RunConfig
@@ -16,6 +18,8 @@ from forecasts.features import feature_matrix
 from forecasts.reference import fit_reference
 from forecasts.snapshot import InputReader
 from forecasts.labels import select_labels
+
+_FAILURES = TypeAdapter(dict[str, Annotated[str, StringConstraints(pattern=r"\S")]])
 
 
 def fit_month(reader: InputReader, features: DataFrame[Features], fit_day: date,
@@ -57,11 +61,18 @@ def select_training_data(reader: InputReader, features: DataFrame[Features],
     return TrainingData(cast(DataFrame[Features], paired.drop("_label")), paired["_label"].to_numpy())
 
 
-def load_models(source: Path, config: RunConfig) -> tuple[dict[str, Predictor], dict[str, str]]:
+def load_models(source: Path, config: RunConfig, *,
+                verify_model: Callable[[Path], None] | None = None) -> tuple[dict[str, Predictor], dict[str, str]]:
     """Load saved models, respecting failures recorded when the month was fitted."""
-    failures = json.loads((source / "failures.json").read_text())
-    models = {name: CatBoostRegressor().load_model(str(source / f"{name}.cbm"))
-              for name in config.features if name not in failures}
+    failures = _FAILURES.validate_json((source / "failures.json").read_bytes(), strict=True)
+    unknown = failures.keys() - config.features.keys()
+    if unknown:
+        raise ValueError(f"Saved model failures name unknown feature sets: {', '.join(sorted(unknown))}")
+    model_paths = {name: source / f"{name}.cbm" for name in config.features if name not in failures}
+    if verify_model is not None:
+        for path in model_paths.values():
+            verify_model(path)
+    models = {name: CatBoostRegressor().load_model(str(path)) for name, path in model_paths.items()}
     return models, failures
 
 
