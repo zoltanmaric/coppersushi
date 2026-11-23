@@ -32,7 +32,7 @@ def main() -> None:
 
 
 def issue_day(day: date, snapshot: Path, run: Path, output: Path, *, replay: bool) -> None:
-    """Verify inputs and the month's fit, select eligible features, and publish once."""
+    """Publish a local forecast file once, by the live deadline when applicable."""
     started = datetime.now(timezone.utc)
     deadline = cutoff(day)
     issue_date = deadline.astimezone(BERLIN).date()
@@ -75,6 +75,8 @@ def issue_day(day: date, snapshot: Path, run: Path, output: Path, *, replay: boo
     snapshot_manifest, tables = read_local(snapshot)
     rows = InputReader(tables).features(day, live=not replay, issue_time=started, require_complete=True)
     forecast = predict_day(rows, models, reference, config)
+    # This records when prediction finished. The publication checks below cover
+    # the local file only. Observing its delivery requires a separate receipt.
     created = datetime.now(timezone.utc)
     if not replay and created > deadline:
         raise ValueError("Deadline passed during computation")
@@ -98,7 +100,12 @@ def issue_day(day: date, snapshot: Path, run: Path, output: Path, *, replay: boo
     with NamedTemporaryFile(mode="w", dir=output.parent, delete_on_close=False) as staging:
         json.dump(payload, staging, allow_nan=False)
         staging.close()
+        if not replay and datetime.now(timezone.utc) > deadline:
+            raise ValueError("Deadline passed before live forecast publication")
         os.link(staging.name, output)
+        if not replay and datetime.now(timezone.utc) > deadline:
+            output.unlink()
+            raise ValueError("Live forecast publication crossed the deadline")
 
 
 class _RunManifest(BaseModel):

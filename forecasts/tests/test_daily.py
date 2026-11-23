@@ -1,11 +1,16 @@
 """Saved daily forecast artifacts are checked before loading the input snapshot."""
 from datetime import date, datetime, timedelta
 import json
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import TextIO
 import unittest
 from unittest.mock import patch
 
+import numpy as np
+
+from forecasts.contracts import DayForecast
 from forecasts.daily import issue_day
 from forecasts.coverage import STATIC_INPUT_POLICY
 from forecasts.dataset import cutoff, digest, quarters
@@ -150,3 +155,37 @@ class SavedArtifactTests(unittest.TestCase):
                     day, live=not replay, issue_time=clock.now.return_value, require_complete=True,
                 )
                 self.assertFalse((self.saved_run / "output.json").exists())
+
+    def test_live_deadline_covers_staging_and_local_publication(self) -> None:
+        day = date(2026, 1, 1)
+        deadline = cutoff(day)
+        output = self.saved_run / "output.json"
+        self.manifest()
+        quantiles = np.zeros((1, 5))
+        forecast = DayForecast({}, {"prices": quantiles, "reference": quantiles}, {}, {}, "prices", "")
+        files = set(self.saved_run.iterdir())
+        dump, link = json.dump, os.link
+        with patch("forecasts.daily.datetime", wraps=datetime) as clock, patch(
+            "forecasts.daily.read_local", return_value=({"snapshot_id": "unused"}, {}),
+        ), patch("forecasts.daily.InputReader") as reader, patch("forecasts.daily.predict_day", return_value=forecast):
+            reader.return_value.features.return_value = {"delivery_utc": [next(quarters(day, day + timedelta(days=1)))]}
+            for step, error in (("staging", "before live forecast publication"),
+                                ("link", "publication crossed the deadline")):
+                with self.subTest(step=step):
+                    clock.now.return_value = deadline - timedelta(seconds=1)
+
+                    def stage(data: object, artifact: TextIO, *, allow_nan: bool) -> None:
+                        dump(data, artifact, allow_nan=allow_nan)
+                        if step == "staging":
+                            clock.now.return_value = deadline + timedelta(seconds=1)
+
+                    def publish(source: str, target: Path) -> None:
+                        link(source, target)
+                        clock.now.return_value = deadline + timedelta(seconds=1)
+
+                    with patch("forecasts.daily.json.dump", side_effect=stage), patch(
+                        "forecasts.daily.os.link", side_effect=publish,
+                    ) as publication, self.assertRaisesRegex(ValueError, error):
+                        issue_day(day, self.saved_run / "snapshot", self.saved_run, output, replay=False)
+                    self.assertEqual(publication.call_count, int(step == "link"))
+                    self.assertEqual(set(self.saved_run.iterdir()), files)

@@ -1,7 +1,7 @@
 """Export a checked historical run as an offline, read-only explanation website."""
 import argparse
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime
 import hashlib
 import json
 from pathlib import Path
@@ -61,7 +61,7 @@ def build_payload(run: Path) -> Report:
     if model_method not in (None, MODEL_METHOD) or report.get('model_method') != model_method:
         raise ValueError('Report model method differs from the configuration')
     methods = METHODS if model_method else HISTORICAL_METHODS
-    rows = pq.read_table(run / 'predictions.parquet').to_pylist()
+    rows = _prediction_rows(run / 'predictions.parquet', historical=model_method is None)
     if not rows:
         raise ValueError('No predictions to explain')
     rows.sort(key=lambda r: r['delivery_utc'])
@@ -118,11 +118,11 @@ def build_payload(run: Path) -> Report:
         days.append({'date': day.isoformat(), 'issue': issue.isoformat(), 'fold': selected[0]['fold'].isoformat(),
                      'metrics': scores(selected, methods), 'missing_truth': sum(r['target'] is None for r in selected),
                      'points': points})
-    run_id = {k: manifest[k] for k in
-              ('run_id', 'code_revision', 'exploratory', 'mlflow_run_id', 'metaflow_run_id')}
+    run_identity = {k: manifest[k] for k in
+                    ('run_id', 'code_revision', 'exploratory', 'mlflow_run_id', 'metaflow_run_id')}
     return {'schema_version': 1, 'model_method': model_method,
-            'evidence_status': report.get('evidence_status', manifest.get('evidence_status', 'unknown')),
-            'run': run_id,
+            'evidence_status': _evidence_status(manifest, report),
+            'run': run_identity,
             'snapshot': config['snapshot_id'], 'manifest_sha256': digest(run / 'manifest.json'),
             'config': {k: config[k] for k in ('train_start', 'evaluation_start', 'end_exclusive', 'catboost')},
             'features': {n: len(v) for n, v in config['features'].items()},
@@ -169,6 +169,31 @@ def _sources() -> dict[str, dict[str, str]]:
         sources[key] = {'path': name, 'sha256': source['sha256'], 'revision': revision,
                         'url': f'https://github.com/zoltanmaric/coppersushi/blob/{revision}/{name}'}
     return sources
+
+
+def _prediction_rows(path: Path, *, historical: bool) -> list[Row]:
+    rows: list[Row] = pq.read_table(path).to_pylist()
+    if historical and rows and isinstance(rows[0]['delivery_utc'], str):
+        for row in rows:
+            row['delivery_utc'] = datetime.fromisoformat(row['delivery_utc'])
+            row['delivery_date'] = date.fromisoformat(row['delivery_date'])
+            row['fold'] = date.fromisoformat(row['fold'])
+            if row['demand_selected_update_utc'] is not None:
+                row['demand_selected_update_utc'] = datetime.fromisoformat(row['demand_selected_update_utc'])
+    if any(row['delivery_utc'].utcoffset() is None for row in rows):
+        raise ValueError('Expected timezone-aware delivery timestamps')
+    return rows
+
+
+def _evidence_status(manifest: Report, report: Report) -> str:
+    if report.get('model_method') == MODEL_METHOD and not manifest['exploratory']:
+        receipt = json.loads((ROOT / 'forecasts/reports/evaluation.json').read_text())
+        if (receipt.get('run_id') == manifest['run_id']
+                and receipt.get('report_sha256') == manifest['artifacts']['report.json']
+                and receipt.get('evidence_status') == 'accepted_baseline'):
+            return 'accepted_baseline'
+    status = report.get('evidence_status', manifest.get('evidence_status'))
+    return status if status in ('invalid', 'superseded') else 'unknown'
 
 
 if __name__ == '__main__':

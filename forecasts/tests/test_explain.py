@@ -98,6 +98,33 @@ class ExplainTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'finite ordered'):
             build_payload(self.run_dir)
 
+    def test_original_parquet_string_timestamps_remain_readable(self) -> None:
+        columns = ('delivery_utc', 'delivery_date', 'fold', 'demand_selected_update_utc')
+        for row in self.rows:
+            for column in columns:
+                if row[column] is not None:
+                    row[column] = row[column].isoformat()
+        pq.write_table(pa.Table.from_pylist(self.rows), self.run_dir / 'predictions.parquet')
+        self.sign()
+        payload = build_payload(self.run_dir)
+        self.assertEqual([day['date'] for day in payload['days']], ['2026-03-29', '2026-10-25'])
+
+    def test_acceptance_requires_review_receipt_for_exact_artifact(self) -> None:
+        root = Path(self.tmp.name)
+        receipt = root / 'forecasts/reports/evaluation.json'
+        receipt.parent.mkdir(parents=True)
+        self.manifest['exploratory'] = False
+        report = {'model_method': 'prices'}
+        reviewed = {'run_id': self.manifest['run_id'], 'evidence_status': 'accepted_baseline',
+                    'report_sha256': self.manifest['artifacts']['report.json']}
+        with patch.object(explain, 'ROOT', root):
+            receipt.write_text(json.dumps(reviewed | {'report_sha256': 'changed'}))
+            self.assertEqual(explain._evidence_status(self.manifest, report), 'unknown')
+            receipt.write_text(json.dumps(reviewed | {'run_id': 'earlier-run'}))
+            self.assertEqual(explain._evidence_status(self.manifest, report), 'unknown')
+            receipt.write_text(json.dumps(reviewed))
+            self.assertEqual(explain._evidence_status(self.manifest, report), 'accepted_baseline')
+
     def test_changed_wiki_requires_narrative_review(self) -> None:
         actual_digest = explain.digest
         def changed(path: Path) -> str:

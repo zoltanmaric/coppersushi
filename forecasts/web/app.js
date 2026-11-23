@@ -186,8 +186,9 @@
         }
         $("metrics").append(card);
       }
-      const direction = m.wis === r.wis ? "Equal" : m.wis < r.wis ? "Lower" : "Higher";
-      $("verdict-title").textContent = `${direction} WIS than the reference.`;
+      $("verdict-title").textContent = m.wis === r.wis
+        ? "WIS matches the reference."
+        : `${m.wis < r.wis ? "Lower" : "Higher"} WIS than the reference.`;
       const c = D.report.comparison[model];
       const uncertainty = period === "all" && c?.ci_95
         ? `The full-period WIS difference is ${fmt(c.wis_difference)} €/MWh. The paired seven-day-block 95% interval is ${fmt(c.ci_95[0])} to ${fmt(c.ci_95[1])}.`
