@@ -122,20 +122,32 @@ class SnapshotTests(unittest.TestCase):
                     self.assertEqual(selected[name], tables[name] if offset == 0 else [])
             self.assertGreater(tables["weather"][0]["valid_utc"], deadline)
 
-    def test_witness_only_price_needs_timely_receipt_in_historical_replay(self) -> None:
-        records = history()
+    def test_historical_witness_only_revisions_require_timely_receipt_across_sources(self) -> None:
+        source = history()
         day = date(2026, 3, 29)
         deadline = cutoff(day)
-        for evidence, receipt, expected in [
-            ("witnessed", deadline, True), ("witnessed", None, False),
-            ("witnessed", deadline + timedelta(seconds=1), False),
-            ("assumed", None, True), ("documented", None, True), ("unknown", deadline, False),
-        ]:
-            price = dict(records["prices"][0], timing_evidence=evidence, source_update_utc=None,
-                         retrieved_at_utc=receipt)
-            selected = select_records({"prices": [price], "weather": [], "demand": []}, day)
-            with self.subTest(evidence=evidence, receipt=receipt):
-                self.assertEqual(selected["prices"], [price] if expected else [])
+        for receipt in (deadline, deadline + timedelta(minutes=2), None):
+            tables = {name: [dict(source[name][0], timing_evidence="witnessed", source_update_utc=None,
+                                  retrieved_at_utc=receipt)] for name in SCHEMAS}
+            selected = select_records(tables, day)
+            for name in SCHEMAS:
+                with self.subTest(source=name, receipt=receipt):
+                    # ENTSO-E demand additionally requires a known revision update.
+                    expected = tables[name] if receipt == deadline and name != "demand" else []
+                    self.assertEqual(selected[name], expected)
+
+    def test_historical_assumption_can_establish_availability_before_late_receipt(self) -> None:
+        source = history()
+        day = date(2026, 3, 29)
+        deadline = cutoff(day)
+        for evidence in ("assumed", "documented", "unknown"):
+            tables = {name: [dict(source[name][0], timing_evidence=evidence, source_update_utc=None,
+                                  retrieved_at_utc=deadline + timedelta(minutes=2))] for name in SCHEMAS}
+            selected = select_records(tables, day)
+            for name in SCHEMAS:
+                with self.subTest(source=name, evidence=evidence):
+                    expected = tables[name] if name != "demand" and evidence != "unknown" else []
+                    self.assertEqual(selected[name], expected)
 
     def test_schema_rejects_null_keys_and_duplicates(self) -> None:
         rows = history()["prices"]
