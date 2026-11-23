@@ -9,6 +9,7 @@ from typing import Any, ClassVar, Literal, Mapping
 
 QUANTILES = (.025, .25, .5, .75, .975)
 QUANTILE_LOSS = "MultiQuantile:alpha=0.025,0.25,0.5,0.75,0.975"
+MODEL_METHOD = "prices"
 
 
 @dataclass(frozen=True)
@@ -29,7 +30,8 @@ class RunConfig:
     bootstrap: BootstrapSettings
     tolerance: Tolerance
 
-    schema_version: ClassVar[Literal[1]] = 1
+    schema_version: ClassVar[Literal[2]] = 2
+    model_method: ClassVar[Literal["prices"]] = MODEL_METHOD
     refit: ClassVar[Literal["monthly_expanding"]] = "monthly_expanding"
     quantiles: ClassVar[tuple[float, ...]] = QUANTILES
 
@@ -48,6 +50,8 @@ class RunConfig:
             raise ValueError("Unsupported configuration schema")
         if data.get("refit") != cls.refit or data.get("quantiles") != list(QUANTILES):
             raise ValueError("Unsupported refit or quantile contract")
+        if data.get("model_method") != cls.model_method:
+            raise ValueError("Unsupported forecast model method")
         try:
             config = cls(
                 snapshot_id=SnapshotId(data["snapshot_id"]),
@@ -72,7 +76,7 @@ class RunConfig:
         data = asdict(self)
         for name in ("history_start", "train_start", "evaluation_start", "end_exclusive"):
             data[name] = getattr(self, name).isoformat()
-        data.update(schema_version=self.schema_version, refit=self.refit,
+        data.update(schema_version=self.schema_version, refit=self.refit, model_method=self.model_method,
                     quantiles=list(self.quantiles),
                     features={name: list(fields) for name, fields in self.features.items()})
         return data

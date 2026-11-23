@@ -25,8 +25,7 @@ class SavedArtifactTests(unittest.TestCase):
                           "calibration_rows": 1344, "excluded_rows": 0}
         self.write("reference.json", self.reference)
         self.write("failures.json", {})
-        for name in ("prices", "weather", "demand"):
-            (self.month / f"{name}.cbm").write_bytes(name.encode())
+        (self.month / "prices.cbm").write_bytes(b"prices")
         model = patch("forecasts.training.CatBoostRegressor.load_model")
         model.start()
         self.addCleanup(model.stop)
@@ -36,7 +35,8 @@ class SavedArtifactTests(unittest.TestCase):
 
     def manifest(self, **overrides: object) -> None:
         fields: dict[str, object] = {
-            "run_id": "verified-run", "input_policy": STATIC_INPUT_POLICY, "environment": {"legacy": True},
+            "run_id": "verified-run", "input_policy": STATIC_INPUT_POLICY, "model_method": "prices",
+            "environment": {"legacy": True},
             "artifacts": {p.relative_to(self.saved_run).as_posix(): digest(p)
                           for p in self.saved_run.rglob("*") if p.is_file() and p.name != "manifest.json"},
         }
@@ -98,6 +98,11 @@ class SavedArtifactTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "outside the saved monthly fit window"):
             self.issue()
 
+    def test_rejects_fit_without_prices_calendar_method(self) -> None:
+        self.manifest(model_method=None)
+        with self.assertRaisesRegex(ValueError, "does not declare the configured method prices"):
+            self.issue()
+
     def test_standalone_november_fit_uses_bundle_month_outside_original_evaluation(self) -> None:
         self.month.rename(self.month.with_name("2026-11-01"))
         fold = date(2026, 11, 1)
@@ -124,9 +129,9 @@ class SavedArtifactTests(unittest.TestCase):
             self.issue()
 
     def test_recorded_fit_failure_cannot_issue(self) -> None:
-        self.write("failures.json", {"demand": "training failed"})
+        self.write("failures.json", {"prices": "training failed"})
         self.manifest()
-        with self.assertRaisesRegex(ValueError, "Failed model fits recorded.*demand: training failed"):
+        with self.assertRaisesRegex(ValueError, "Failed model fits recorded.*prices: training failed"):
             self.issue()
 
     def test_live_and_replay_require_complete_inputs_before_writing(self) -> None:
@@ -136,9 +141,9 @@ class SavedArtifactTests(unittest.TestCase):
             "forecasts.daily.read_local", return_value=({"snapshot_id": "unused"}, {}),
         ), patch("forecasts.daily.InputReader") as reader:
             clock.now.return_value = cutoff(day) - timedelta(minutes=1)
-            reader.return_value.features.side_effect = ValueError("Missing eligible demand")
+            reader.return_value.features.side_effect = ValueError("Missing eligible prices")
             for replay in (False, True):
-                with self.subTest(replay=replay), self.assertRaisesRegex(ValueError, "Missing eligible demand"):
+                with self.subTest(replay=replay), self.assertRaisesRegex(ValueError, "Missing eligible prices"):
                     issue_day(day, self.saved_run / "snapshot", self.saved_run,
                               self.saved_run / "output.json", replay=replay)
                 reader.return_value.features.assert_called_with(

@@ -58,9 +58,8 @@ def forecast_months(reader: InputReader, features: DataFrame[Features], config: 
 
 def _prediction_table(rows: DataFrame[Features], forecast: DayForecast, fold: date,
                       config: RunConfig) -> pl.DataFrame:
-    metadata = [name for name in rows.columns if name.endswith(("_missing", "_unavailable"))
-                or name == "demand_selected_update_utc"]
-    result = rows.select("delivery_utc", "delivery_date", "demand_available").with_columns(
+    metadata = [name for name in rows.columns if name.endswith(("_missing", "_unavailable"))]
+    result = rows.select("delivery_utc", "delivery_date").with_columns(
         pl.lit(forecast.selected_model).alias("selected_model"),
         pl.lit(forecast.fallback_reason).alias("fallback_reason"), pl.lit(fold).alias("fold"))
     result = result.hstack(rows.select(metadata))

@@ -24,14 +24,14 @@ def score_forecasts(backtest: BacktestPredictions, truth: dict[datetime, float |
                     config: RunConfig) -> EvaluationResult:
     """Join realised prices only after prediction, then score common target rows.
 
-    Require the complete registered grid, full-system forecasts and realised
+    Require the complete registered grid, baseline and benchmark forecasts and realised
     prices before calculating any score.
     """
     require_quarters(backtest.rows["delivery_utc"], config.evaluation_start, config.end_exclusive,
                      "Evaluation forecast delivery grid")
     if backtest.failures:
         raise ValueError(f"Static scoring rejects prediction failures: {backtest.failures[0]}")
-    fallback = backtest.rows.filter((pl.col("selected_model") != "demand") | (pl.col("fallback_reason") != ""))
+    fallback = backtest.rows.filter((pl.col("selected_model") != config.model_method) | (pl.col("fallback_reason") != ""))
     if not fallback.is_empty():
         row = fallback.select("delivery_date", "selected_model", "fallback_reason").row(0, named=True)
         raise ValueError(f"Static scoring rejects a fallback on {row['delivery_date']}: "
@@ -39,19 +39,17 @@ def score_forecasts(backtest: BacktestPredictions, truth: dict[datetime, float |
     require_recorded_inputs(backtest.rows)
     require_realised_prices(truth, config.evaluation_start, config.end_exclusive)
     predictions = _join_truth(backtest.rows, truth)
-    names = [*config.features, "reference", "system"]
-    breakdowns: dict[str, Report] = {}
-    for group_name, group in (("month", pl.col("delivery_date").dt.strftime("%Y-%m")),
-                              ("demand_available", pl.col("demand_available").cast(pl.String))):
-        grouped = predictions.with_columns(group.alias("_group"))
-        breakdowns[group_name] = {}
-        for (key,), subset in grouped.partition_by("_group", as_dict=True, maintain_order=True).items():
-            rows = cast(DataFrame[ScoredPredictions], subset.drop("_group"))
-            breakdowns[group_name][key] = {
-                "delivery_rows": len(rows), "missing_truth": 0,
-                "forecast_coverage": 1., "metrics": _method_scores(rows, names, config)}
+    names = [config.model_method, "reference"]
+    monthly: Report = {}
+    grouped = predictions.with_columns(pl.col("delivery_date").dt.strftime("%Y-%m").alias("_month"))
+    for (month,), subset in grouped.partition_by("_month", as_dict=True, maintain_order=True).items():
+        rows = cast(DataFrame[ScoredPredictions], subset.drop("_month"))
+        monthly[month] = {
+            "delivery_rows": len(rows), "missing_truth": 0,
+            "forecast_coverage": 1., "metrics": _method_scores(rows, names, config)}
     report = {
-        "metrics": _method_scores(predictions, names, config), "breakdowns": breakdowns,
+        "model_method": config.model_method,
+        "metrics": _method_scores(predictions, names, config), "breakdowns": {"month": monthly},
         "comparison": paired_blocks(
             predictions["target"].to_numpy(),
             {name: predictions.select([f"{name}_q{q}" for q in config.quantiles]).to_numpy() for name in names},
@@ -61,9 +59,9 @@ def score_forecasts(backtest: BacktestPredictions, truth: dict[datetime, float |
         "fallback_rows": backtest.fallback_rows, "prediction_failures": backtest.failures,
         "raw_crossing_rows": backtest.crossing_rows,
         "raw_crossing_fraction": {name: count / len(predictions) for name, count in backtest.crossing_rows.items()},
-        "folds": backtest.folds, "timing_limits": TIMING,
+        "folds": backtest.folds, "timing_limits": {"prices": TIMING["prices"]},
         "limitations": ["Retrospective single-year evaluation; August–September were inspected in earlier diagnostics.",
-                        "Historical price/weather availability assumed; demand UpdateTime semantics conditional.",
+                        "Historical price availability is assumed.",
                         "Intervals are marginal per quarter; no trading-profitability or daily-readiness claim."]}
     return EvaluationResult(predictions, report)
 

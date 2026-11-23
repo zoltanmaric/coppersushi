@@ -26,7 +26,7 @@ class ExecutionTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name)
+        self.root = Path(self.temporary.name).resolve()
         self.repo = self.root / 'repo'
         sources = self.repo / 'forecasts'
         sources.mkdir(parents=True)
@@ -34,10 +34,13 @@ class ExecutionTests(unittest.TestCase):
         (sources / 'flow.py').write_text(FLOW)
         (sources / 'marker.txt').write_text('frozen version')
         (sources / 'run-config.json').write_bytes(CONFIG.read_bytes())
+        self.proposal = self.repo / 'wiki/price-forecasting/research/proposal.md'
+        self.proposal.parent.mkdir(parents=True)
+        self.proposal.write_text('Frozen evaluation proposal')
         self.environment = run._environment()
         (self.repo / 'pyproject.toml').write_text('[project]\nname = "fixture"\n')
         (self.repo / 'pixi.lock').write_text('frozen runtime dependencies\n')
-        for args in [('init', '-q'), ('add', 'forecasts', 'pyproject.toml', 'pixi.lock'),
+        for args in [('init', '-q'), ('add', 'forecasts', 'pyproject.toml', 'pixi.lock', 'wiki'),
                      ('-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'Fixture')]:
             subprocess.run(['git', '-C', str(self.repo), *args], check=True)
         for name, value in [('ROOT', self.repo), ('DATA_ROOT', self.root / 'data'), ('RUNS', self.root / 'data/runs')]:
@@ -60,7 +63,8 @@ class ExecutionTests(unittest.TestCase):
             run.prepare(self.repo / 'forecasts/run-config.json')
 
     def test_prepared_execution_ignores_later_source_and_lock_edits(self) -> None:
-        directory, _ = run.prepare(self.repo / 'forecasts/run-config.json')
+        directory, _ = run.prepare(self.repo / 'forecasts/run-config.json', proposal=self.proposal)
+        self.proposal.write_text('edited proposal')
         (self.repo / 'forecasts/marker.txt').write_text('edited checkout')
         (self.repo / 'forecasts/flow.py').write_text('raise AssertionError("mutable checkout executed")\n')
         (self.repo / 'pixi.lock').write_text('different dependencies')
@@ -71,10 +75,16 @@ class ExecutionTests(unittest.TestCase):
         self.assertEqual((directory / 'executed.txt').read_text(), 'frozen version')
         manifest = json.loads((directory / 'manifest.json').read_text())
         self.assertEqual(manifest['environment'], self.environment)
+        self.assertEqual(manifest['proposal']['wiki_path'], self.proposal.relative_to(self.repo).as_posix())
+        self.assertEqual(manifest['proposal']['git_revision'], manifest['code_revision'])
+        self.assertEqual(manifest['proposal']['sha256'], run.digest(directory / 'proposal.md'))
         client = run.tracking_client()
         experiment = client.get_experiment_by_name('germany-luxembourg-local')
         assert experiment is not None
-        self.assertEqual(client.search_runs([experiment.experiment_id])[0].info.status, 'FINISHED')
+        tracked = client.search_runs([experiment.experiment_id])[0]
+        self.assertEqual(tracked.info.status, 'FINISHED')
+        frozen_proposal = Path(client.download_artifacts(tracked.info.run_id, 'research/proposal.md'))
+        self.assertEqual(frozen_proposal.read_text(), 'Frozen evaluation proposal')
         self.assertEqual((self.repo / 'forecasts/marker.txt').read_text(), 'edited checkout')
 
     def test_changed_frozen_definitions_are_rejected_before_install(self) -> None:
@@ -105,6 +115,9 @@ class ExecutionTests(unittest.TestCase):
                 (output / 'verification.json').write_text(json.dumps({
                     'run_id': source.name, 'predictions_match': True, 'scores_match': True}))
                 calls.append(output.parent)
+                if len(calls) > 1:
+                    self.assertEqual(args[args.index('--snapshot') + 1], str(self.root / 'snapshot'))
+                    self.assertNotIn('--profile', args)
 
         with patch.object(run.subprocess, 'run', side_effect=fail_install):
             with self.assertRaises(subprocess.CalledProcessError):
@@ -116,7 +129,7 @@ class ExecutionTests(unittest.TestCase):
         with patch.object(run.subprocess, 'run', side_effect=replay), \
                 patch.object(run, '_probe_environment', return_value=self.environment):
             first = run.reproduce(source.name, 'fixture', 'fixture', 'eu-west-1')
-            second = run.reproduce(source.name, 'fixture', 'fixture', 'eu-west-1')
+            second = run.reproduce(source.name, snapshot=self.root / 'snapshot')
         self.assertEqual(len({failed, first, second}), 3)
         self.assertEqual((failed / 'attempt.json').read_bytes(), original)
         for attempt in calls:

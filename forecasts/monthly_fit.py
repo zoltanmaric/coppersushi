@@ -41,6 +41,7 @@ def fit_bundle(fit_day: date, snapshot: Path, config: RunConfig, output: Path) -
     reader = InputReader(tables)
     manifest = {
         "kind": "monthly_fit",
+        "model_method": config.model_method,
         "fit_day": fit_day.isoformat(),
         "fit_cutoff_utc": cutoff(fit_day).isoformat(),
         "code_revision": _git("rev-parse", "HEAD"),

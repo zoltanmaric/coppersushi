@@ -61,6 +61,8 @@ def issue_day(day: date, snapshot: Path, run: Path, output: Path, *, replay: boo
     for path in (config_file, failures_file, reference_file):
         verify(path)
     config = RunConfig.from_dict(json.loads(config_file.read_text()))
+    if manifest.model_method != config.model_method:
+        raise ValueError(f"Fit {manifest.run_id} does not declare the configured method {config.model_method}")
     if not monthly_bundle and not config.evaluation_start <= day < config.end_exclusive:
         raise ValueError("Delivery day is outside the saved monthly fit window")
     if monthly_bundle:
@@ -89,9 +91,8 @@ def issue_day(day: date, snapshot: Path, run: Path, output: Path, *, replay: boo
         "source_sha256": {path.name: digest(path) for path in sorted(source.glob("*.py"))},
         "pixi_lock_sha256": digest(source.parent / "pixi.lock"),
         "quantiles": config.quantiles, "method": forecast.selected_model,
-        "fallback_reason": forecast.fallback_reason, "prediction_failures": forecast.failures,
-        "quarters": [{"delivery_utc": ts.isoformat(), "system": system.tolist(), "reference": ref.tolist()}
-                     for ts, system, ref in zip(rows["delivery_utc"], forecast.ordered["system"],
+        "quarters": [{"delivery_utc": ts.isoformat(), "prices": prices.tolist(), "reference": ref.tolist()}
+                     for ts, prices, ref in zip(rows["delivery_utc"], forecast.ordered[forecast.selected_model],
                                                 forecast.ordered["reference"], strict=True)],
     }
     with NamedTemporaryFile(mode="w", dir=output.parent, delete_on_close=False) as staging:
@@ -109,6 +110,7 @@ class _RunManifest(BaseModel):
     kind: str | None = None
     fit_day: date | None = None
     input_policy: str | None = None
+    model_method: str | None = None
     fit_cutoff_utc: datetime | None = None
     training_rows: int | None = None
     expected_training_rows: int | None = None

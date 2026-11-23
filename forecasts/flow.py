@@ -10,7 +10,7 @@ from forecasts.config import RunConfig
 from forecasts.evaluation import save_evaluation, save_features
 from forecasts.features import build_features
 from forecasts.scoring import score_forecasts
-from forecasts.snapshot import InputReader, read_local
+from forecasts.snapshot import InputReader, canonical, read_local
 
 
 class ForecastEvaluation(FlowSpec):
@@ -30,6 +30,7 @@ class ForecastEvaluation(FlowSpec):
         if manifest["snapshot_id"] != self.settings.snapshot_id:
             raise ValueError("Run requires its frozen input snapshot")
         self.snapshot_id = manifest["snapshot_id"]
+        (Path(self.output) / "snapshot-manifest.json").write_bytes(canonical(manifest))
         self.next(self.features)
 
     @step

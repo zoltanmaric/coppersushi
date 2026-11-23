@@ -27,18 +27,15 @@ if TYPE_CHECKING:
     from mlflow import MlflowClient
 
 from forecasts.dataset import ROOT, digest
-from forecasts.snapshot import canonical, load
+from forecasts.snapshot import canonical, load, read_local
 
 DATA_ROOT = Path(os.environ.get("FORECAST_DATA_ROOT", ROOT / "data/forecasts")).resolve()
 RUNS = DATA_ROOT / "runs"
 
 
 APPROACHES = {
-    "prices": ("CatBoost · prices + calendar", "Uses earlier prices and calendar information."),
-    "weather": ("CatBoost · prices + calendar + weather", "Adds forecast weather to earlier prices and calendar information."),
-    "demand": ("CatBoost · prices + calendar + weather + demand", "Adds forecast demand to the price, calendar and weather inputs."),
+    "prices": ("Baseline · CatBoost prices + calendar", "Uses earlier prices and calendar information."),
     "reference": ("Benchmark · historical prices + past-error intervals", "Averages yesterday and last week's same-clock prices, with missing-history fallbacks and training-only error intervals."),
-    "system": ("System · complete inputs", "Uses the price, calendar, weather and demand model on the complete registered delivery grid."),
 }
 
 
@@ -49,6 +46,7 @@ def main() -> None:
     p = sub.add_parser("run")
     p.add_argument("--config", type=Path, default=ROOT / "forecasts/run-config.json")
     p.add_argument("--snapshot", type=Path, required=True)
+    p.add_argument("--proposal", type=Path, help="Committed evaluation proposal under wiki/price-forecasting/research")
     p.add_argument("--exploratory", action="store_true")
     p = sub.add_parser("reproduce")
     p.add_argument("run_id")
@@ -56,21 +54,27 @@ def main() -> None:
     p.add_argument("--source", type=Path, required=True)
     p.add_argument("--destination", type=Path, required=True)
     for p in (sub.choices["reproduce"], sub.choices["replay"]):
-        p.add_argument("--profile", required=True)
-        p.add_argument("--bucket", required=True)
+        transport = p.add_mutually_exclusive_group(required=True)
+        transport.add_argument("--snapshot", type=Path, help="A verified local copy of the saved input snapshot")
+        transport.add_argument("--profile", help="User-local AWS profile for the saved S3 snapshot")
+        p.add_argument("--bucket", help="Private bucket for the saved S3 snapshot")
         p.add_argument("--region", default="eu-west-1")
     args = parser.parse_args()
     if args.command == "run":
-        directory, _ = prepare(args.config, args.exploratory)
+        directory, _ = prepare(args.config, args.exploratory, proposal=args.proposal)
         print(f"Frozen run {directory.name}", flush=True)
         run_flow(directory, args.snapshot)
-    elif args.command == "reproduce":
-        reproduce(args.run_id, args.profile, args.bucket, args.region)
     else:
-        replay(args.source, args.destination, args.profile, args.bucket, args.region)
+        if bool(args.profile) != bool(args.bucket):
+            parser.error("Provide --snapshot or both --profile and --bucket")
+        if args.command == "reproduce":
+            reproduce(args.run_id, args.profile, args.bucket, args.region, snapshot=args.snapshot)
+        else:
+            replay(args.source, args.destination, args.profile, args.bucket, args.region, snapshot=args.snapshot)
 
 
-def prepare(config_path: Path, exploratory: bool = False) -> tuple[Path, RunConfig]:
+def prepare(config_path: Path, exploratory: bool = False, *,
+            proposal: Path | None = None) -> tuple[Path, RunConfig]:
     """Freeze committed code and environment definitions for a new attempt.
 
     Accepted execution restores Pixi's runtime from this archive, independently
@@ -86,12 +90,24 @@ def prepare(config_path: Path, exploratory: bool = False) -> tuple[Path, RunConf
                subprocess.check_output(["git", "-C", str(ROOT), "show", f"{code}:{name}"]))
         for name in ("pyproject.toml", "pixi.lock")}
     manifest = {"code_revision": code, "exploratory": exploratory, "config": config.to_dict(),
+                "model_method": config.model_method,
                 "environment_manager": "pixi", "runtime_environment": "runtime",
                 "platform": {"system": platform.system(), "machine": platform.machine()},
                 "project_sha256": hashlib.sha256(definitions["pyproject.toml"]).hexdigest(),
                 "lock_sha256": hashlib.sha256(definitions["pixi.lock"]).hexdigest()}
+    if proposal is not None:
+        research = ROOT / "wiki/price-forecasting/research"
+        proposal = proposal.resolve()
+        if proposal.parent != research or proposal.suffix != ".md" or proposal.name == "index.md":
+            raise ValueError("Expected a proposal in wiki/price-forecasting/research")
+        relative = proposal.relative_to(ROOT).as_posix()
+        proposal_bytes = subprocess.check_output(["git", "-C", str(ROOT), "show", f"{code}:{relative}"])
+        manifest["proposal"] = {"wiki_path": relative, "git_revision": code,
+                                "sha256": hashlib.sha256(proposal_bytes).hexdigest()}
     directory = RUNS / uuid.uuid4().hex[:24]
     directory.mkdir(parents=True, exist_ok=False)
+    if proposal is not None:
+        (directory / "proposal.md").write_bytes(proposal_bytes)
     (directory / "config.json").write_bytes(canonical(config.to_dict()))
     for name, content in definitions.items():
         (directory / name).write_bytes(content)
@@ -141,7 +157,8 @@ def run_flow(directory: Path, snapshot: Path) -> None:
             client.set_terminated(mlflow_run)
 
 
-def reproduce(run_id: str, profile: str, bucket: str, region: str) -> Path:
+def reproduce(run_id: str, profile: str | None = None, bucket: str | None = None,
+              region: str = "eu-west-1", *, snapshot: Path | None = None) -> Path:
     """Restore and verify a saved run in a new, retained attempt directory."""
     if len(run_id) != 24 or any(c not in '0123456789abcdef' for c in run_id):
         raise ValueError("Expected a 24-character accepted run identifier")
@@ -149,6 +166,14 @@ def reproduce(run_id: str, profile: str, bucket: str, region: str) -> Path:
     manifest = json.loads((source / "manifest.json").read_text())
     if manifest["exploratory"]:
         raise ValueError("Exploratory runs cannot satisfy accepted reproduction")
+    if snapshot is not None and "model_method" not in manifest:
+        raise ValueError("This archived run requires S3 reproduction; supply --profile and --bucket")
+    if snapshot is not None:
+        inputs = ["--snapshot", str(snapshot.resolve())]
+    elif profile and bucket:
+        inputs = ["--profile", profile, "--bucket", bucket, "--region", region]
+    else:
+        raise ValueError("Provide a local snapshot or an S3 profile and bucket")
     for name, expected in manifest["artifacts"].items():
         if digest(source / name) != expected:
             raise ValueError(f"Preserved artifact checksum mismatch: {name}")
@@ -172,8 +197,7 @@ def reproduce(run_id: str, profile: str, bucket: str, region: str) -> Path:
         attempt["status"] = "replaying"
         status.write_bytes(canonical(attempt))
         subprocess.run([*command, "-m", "forecasts.run", "replay", "--source", str(source.resolve()),
-                        "--destination", str(destination / "result"), "--profile", profile, "--bucket", bucket,
-                        "--region", region], cwd=code, env=env, check=True)
+                        "--destination", str(destination / "result"), *inputs], cwd=code, env=env, check=True)
         verification = json.loads((destination / "result/verification.json").read_text())
         if (verification.get("run_id") != run_id or not verification.get("predictions_match")
                 or not verification.get("scores_match")):
@@ -188,8 +212,9 @@ def reproduce(run_id: str, profile: str, bucket: str, region: str) -> Path:
     return destination
 
 
-def replay(source: Path, destination: Path, profile: str, bucket: str, region: str) -> None:
-    """Reload the S3 snapshot and verify predictions and scores from saved models."""
+def replay(source: Path, destination: Path, profile: str | None, bucket: str | None,
+           region: str, *, snapshot: Path | None = None) -> None:
+    """Verify the frozen inputs, predictions and scores from saved models."""
     import numpy as np
     import pyarrow.parquet as pq
     from forecasts.evaluation import evaluate
@@ -199,11 +224,19 @@ def replay(source: Path, destination: Path, profile: str, bucket: str, region: s
         raise ValueError("Restored dependency environment differs from the accepted run")
     _validate_definitions(ROOT, manifest)
     config = RunConfig.from_dict(manifest["config"])
-    snapshot = destination / "snapshot"
-    _, tables = load(profile, region, bucket, config.snapshot_id, snapshot)
+    if snapshot is not None:
+        snapshot_manifest, tables = read_local(snapshot)
+        if snapshot_manifest["snapshot_id"] != config.snapshot_id:
+            raise ValueError("Reproduction requires the saved run's input snapshot")
+    elif profile and bucket:
+        _, tables = load(profile, region, bucket, config.snapshot_id, destination / "snapshot")
+    else:
+        raise ValueError("Provide a local snapshot or an S3 profile and bucket")
     report = evaluate(InputReader(tables), config, destination, restore_models=source / "models")
     expected = pq.read_table(source / "predictions.parquet").to_pydict()
     actual = pq.read_table(destination / "predictions.parquet").to_pydict()
+    if actual.keys() != expected.keys():
+        raise ValueError("Reproduced prediction fields differ")
     tolerance = config.tolerance
     for name in expected:
         if '_q' in name or '_raw_q' in name or name == 'target':
@@ -291,13 +324,14 @@ def _start_tracking(directory: Path, config: RunConfig) -> str:
     experiment_id = experiment.experiment_id if experiment else client.create_experiment(
         name, artifact_location=(DATA_ROOT / "tracking/artifacts").as_uri())
     manifest = json.loads((directory / "manifest.json").read_text())
-    label = "Exploratory quantile evaluation" if manifest["exploratory"] else "Quantile evaluation"
+    label = "Exploratory prices/calendar baseline" if manifest["exploratory"] else "Prices/calendar baseline"
     run = client.create_run(experiment_id, tags={
         "mlflow.runName": f"{label} · {config.evaluation_start} to {config.end_exclusive} (exclusive)",
         "mlflow.note.content": "Local monthly expanding evaluation. Acceptance is a separate review decision. Duration spans orchestration, input loading, evaluation and result recording.",
         "record_type": "execution", "execution_role": "evaluation",
         "timing_semantics": "orchestration_and_computation",
         "snapshot_id": config.snapshot_id, "code_revision": manifest["code_revision"],
+        "model_method": config.model_method,
         "forecast_run": manifest["run_id"], "exploratory": str(manifest["exploratory"]),
         "experiment_fingerprint": manifest["experiment_fingerprint"],
     })
@@ -306,6 +340,14 @@ def _start_tracking(directory: Path, config: RunConfig) -> str:
             client.log_param(run.info.run_id, key, getattr(config, key).isoformat())
         for key, value in asdict(config.catboost).items():
             client.log_param(run.info.run_id, key, value)
+        if "proposal" in manifest:
+            proposal = manifest["proposal"]
+            path = directory / "proposal.md"
+            if digest(path) != proposal["sha256"]:
+                raise ValueError("Frozen evaluation proposal checksum mismatch")
+            client.set_tag(run.info.run_id, "proposal_path", proposal["wiki_path"])
+            client.set_tag(run.info.run_id, "proposal_revision", proposal["git_revision"])
+            client.log_artifact(run.info.run_id, str(path), artifact_path="research")
         client.log_artifact(run.info.run_id, str(directory / "manifest.json"), artifact_path="start")
     except BaseException:
         client.set_terminated(run.info.run_id, status="FAILED")

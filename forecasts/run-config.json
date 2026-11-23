@@ -1,5 +1,6 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "model_method": "prices",
   "snapshot_id": "8bf5b5de2dc94d9d5db62fe9178dee50ac7e08005c2c6790e351e95081910a6d",
   "history_start": "2025-10-01",
   "train_start": "2025-10-15",

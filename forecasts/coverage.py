@@ -7,12 +7,11 @@ from pandera.typing.polars import DataFrame
 import polars as pl
 
 from forecasts.dataset import BERLIN, quarters
-from forecasts.input_config import WEATHER_FIELDS
 from forecasts.prices import PRICE_FEATURES
-from forecasts.tables import Features, MISSING_FIELDS, Predictions, SOURCE_FLAGS
+from forecasts.tables import Features, PRICE_MISSING_FIELDS, PRICE_UNAVAILABLE, Predictions
 
 
-STATIC_INPUT_POLICY = "complete_historical_inputs_v1"
+STATIC_INPUT_POLICY = "complete_price_inputs_v1"
 
 
 def require_quarters(actual: Iterable[datetime], start: date, end: date, evidence: str) -> None:
@@ -38,36 +37,26 @@ def require_realised_prices(truth: Mapping[datetime, float | None], start: date,
 
 
 def require_static_features(rows: DataFrame[Features], start: date, end: date) -> None:
-    """Require price lags, weather and demand, allowing nonexistent DST clocks."""
+    """Require eligible price features except nonexistent spring clock quarters."""
     require_quarters(rows["delivery_utc"], start, end, "Historical feature delivery grid")
-    required = [*PRICE_FEATURES, *WEATHER_FIELDS, "demand_mw"]
-    missing = rows.filter(pl.any_horizontal(pl.col(required).is_null()))
-    for row in missing.select("delivery_utc", "delivery_date", "quarter_of_day", "demand_screen", *required).iter_rows(named=True):
-        for name in required:
-            if row[name] is not None:
-                continue
-            if _structural_lag_gap(name, row["delivery_date"], row["quarter_of_day"]):
-                continue
-            if name == "demand_mw":
-                source = "demand archive"
-            else:
-                source = "ICON-EU weather" if name in WEATHER_FIELDS else "SMARD prices"
-            evidence = f"; demand screen={row['demand_screen']}" if name == "demand_mw" else ""
-            raise ValueError(
-                f"Missing eligible {source} input {name} for {row['delivery_date']} "
-                f"at {row['delivery_utc'].isoformat()} (UTC delivery){evidence}"
-            )
-    for flag in SOURCE_FLAGS:
-        unavailable = rows.filter(pl.col(flag) == 1)
-        if not unavailable.is_empty():
-            raise ValueError(f"Historical source unavailable: {flag} for {unavailable['delivery_date'][0]}")
+    missing = rows.filter(pl.any_horizontal(pl.col(PRICE_FEATURES).is_null()) | (pl.col(PRICE_UNAVAILABLE) == 1))
+    for row in missing.iter_rows(named=True):
+        day, quarter = row["delivery_date"], row["quarter_of_day"]
+        for name in PRICE_FEATURES:
+            if row[name] is None and not _structural_lag_gap(name, day, quarter):
+                raise ValueError(
+                    f"Missing eligible SMARD prices input {name} for {day} "
+                    f"at {row['delivery_utc'].isoformat()} (UTC delivery)"
+                )
+        if row[PRICE_UNAVAILABLE]:
+            raise ValueError(f"Historical source unavailable: {PRICE_UNAVAILABLE} for {day}")
 
 
 def require_recorded_inputs(rows: DataFrame[Predictions]) -> None:
     """Reject missing inputs recorded during prediction before starting scoring."""
-    flags = [*MISSING_FIELDS, "demand_missing", *SOURCE_FLAGS]
-    missing = rows.filter(pl.any_horizontal(pl.col(flags) == 1) | (pl.col("demand_available") == 0))
-    for row in missing.select("delivery_date", "delivery_utc", "demand_available", *flags).iter_rows(named=True):
+    flags = [*PRICE_MISSING_FIELDS, PRICE_UNAVAILABLE]
+    missing = rows.filter(pl.any_horizontal(pl.col(flags) == 1))
+    for row in missing.select("delivery_date", "delivery_utc", *flags).iter_rows(named=True):
         local = row["delivery_utc"].astimezone(BERLIN)
         day = row["delivery_date"]
         quarter = local.hour * 4 + local.minute // 15
@@ -75,8 +64,6 @@ def require_recorded_inputs(rows: DataFrame[Predictions]) -> None:
             name = flag.removesuffix("_missing")
             if row[flag] and not _structural_lag_gap(name, day, quarter):
                 raise ValueError(f"Static scoring rejects missing input {name} on {day} at {row['delivery_utc']}")
-        if not row["demand_available"]:
-            raise ValueError(f"Static scoring rejects unavailable demand on {day} at {row['delivery_utc']}")
 
 
 def _structural_lag_gap(name: str, day: date, quarter: int) -> bool:

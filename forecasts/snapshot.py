@@ -1,5 +1,6 @@
 """Collect, publish and load fixed typed input snapshots; publish the manifest last."""
 from collections.abc import Mapping, Sequence
+from functools import cached_property
 from typing import cast
 
 import polars as pl
@@ -19,18 +20,18 @@ import time
 import pyarrow as pa
 from forecasts.coverage import require_quarters, require_static_features
 from forecasts.input_config import FIELDS, WEATHER_FIELDS, WEATHER_LOCATIONS, WEATHER_TABLE_FIELDS
-from forecasts.prices import LAGS, PriceHistory, PriceVersions, build_price_features, latest_versions, read_prices, select_history
+from forecasts.prices import LAGS, PriceFeatures, PriceHistory, PriceVersions, build_price_features, latest_versions, read_prices, select_history
 import pyarrow.parquet as pq
 
 from forecasts.dataset import (
-    BERLIN, COUNTRY, END, PAYLOADS, ROOT, START, TIMING, assemble_features, cutoff, diagnostic_rows, quarters,
+    BERLIN, COUNTRY, END, PAYLOADS, ROOT, START, TIMING, assemble_features, assemble_price_calendar, cutoff, diagnostic_rows, quarters,
     digest, load_demand, load_prices, load_weather, stamp,
     verify_payloads,
 )
 from forecasts.fresh_sources import fetch_demand, fetch_sources, require_coverage, source_receipts
 from forecasts.schemas import SCHEMAS, VERSION, describe, validate
 from forecasts.storage import get_verified, put_verified, verify_bucket
-from forecasts.tables import Features
+from forecasts.tables import DiagnosticFeatures, Features
 
 LOCATIONS = {location.name.lower() for location in WEATHER_LOCATIONS}
 
@@ -51,11 +52,14 @@ def collect(data_root: Path, output: Path, *,
     start, end = period if period is not None else (START, END)
     inputs, receipts = source_receipts(data_root) if period is not None else (verify_payloads(data_root), {})
     prices = load_prices(data_root / PAYLOADS["prices"])
-    weather, weather_metadata = load_weather(data_root / PAYLOADS["weather"], WEATHER_LOCATIONS)
-    demand = load_demand(data_root / PAYLOADS["demand"], start, end,
-                         require_country_metadata=period is not None)
-    if period is not None:
-        require_coverage(start, end, prices, weather, demand)
+    weather: WeatherSeries = {}
+    demand: DemandSeries = {}
+    weather_metadata: Report = {}
+    if period is None:
+        weather, weather_metadata = load_weather(data_root / PAYLOADS["weather"], WEATHER_LOCATIONS)
+        demand = load_demand(data_root / PAYLOADS["demand"], start, end)
+    else:
+        require_coverage(start, end, prices)
     output.mkdir(parents=True, exist_ok=period is None)
     raw, common = {}, {}
     for source, entry in inputs.items():
@@ -78,7 +82,7 @@ def collect(data_root: Path, output: Path, *,
         common[source] = {"source_update_utc": None,
                           "retrieved_at_utc": stamp(metadata["retrieved_at_utc"]) if metadata["retrieved_at_utc"] else None,
                           "timing_evidence": "assumed", "raw_key": raw[source]["key"]}
-    records: dict[str, list[Row]] = {"prices": [], "weather": [], "demand": []}
+    records: dict[str, list[Row]] = {name: [] for name in inputs}
     for valid, value in sorted(prices.items()):
         records["prices"].append({**common["prices"], "valid_utc": valid, "price_eur_mwh": value,
                                   "version_id": identity([inputs["prices"]["sha256"], valid.isoformat()])})
@@ -108,7 +112,7 @@ def collect(data_root: Path, output: Path, *,
         print(f"Validated {name}: {table.num_rows} rows", flush=True)
     commit = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip()
     dirty = bool(subprocess.check_output(["git", "-C", str(ROOT), "status", "--porcelain", "--", "forecasts", "pyproject.toml", "pixi.lock"], text=True).strip())
-    manifest = {"schema_version": VERSION, "files": files, "raw": raw, "timing_limits": TIMING,
+    manifest = {"schema_version": VERSION, "files": files, "raw": raw, "timing_limits": {name: TIMING[name] for name in inputs},
                 "code_revision": commit, "exploratory_code": dirty,
                 "environment": {"python": platform.python_version(), "pyarrow": pa.__version__, "project_sha256": digest(ROOT / "pyproject.toml"), "pixi_lock_sha256": digest(ROOT / "pixi.lock")}}
     if period is not None:
@@ -125,7 +129,7 @@ def read_local(directory: Path) -> tuple[Report, dict[str, pa.Table]]:
     """Verify snapshot identity, hashes and schemas before returning Arrow tables."""
     manifest = json.loads((directory / "manifest.json").read_text())
     snapshot_id = manifest["snapshot_id"]
-    if manifest["schema_version"] != VERSION or set(manifest["files"]) != set(SCHEMAS):
+    if manifest["schema_version"] != VERSION or set(manifest["files"]) not in ({"prices"}, set(SCHEMAS)) or set(manifest["files"]) != set(manifest["raw"]):
         raise ValueError("Unsupported or incomplete snapshot manifest")
     payload = {k: v for k, v in manifest.items() if k != "snapshot_id"}
     payload = json.loads(json.dumps(payload))
@@ -169,17 +173,14 @@ def select_records(tables: Mapping[str, pa.Table | list[Row]], day: date, live: 
 class InputReader:
     """One shared reader and feature path for replay and later prediction."""
     def __init__(self, tables: Mapping[str, pa.Table]) -> None:
-        self.daily: dict[str, defaultdict[date, list[Row]]] = {name: defaultdict(list) for name in ("weather", "demand")}
-        self.truth: PriceSeries = {}
+        self._tables = tables
         self.weather_fields = WEATHER_FIELDS
         self.prices = read_prices(tables["prices"])
-        for name, table in tables.items():
-            if name == "prices":
-                continue
-            for row in table.to_pylist():
-                self.daily[name][row["valid_utc"].astimezone(BERLIN).date()].append(row)
-        # Retrospective truth is joined only by replay(), never by features().
-        self.truth = dict(latest_versions(self.prices).select("valid_utc", "price_eur_mwh").iter_rows())
+
+    @cached_property
+    def truth(self) -> PriceSeries:
+        """Resolve retrospective realised prices for scoring and diagnostics."""
+        return dict(latest_versions(self.prices).select("valid_utc", "price_eur_mwh").iter_rows())
 
     def features(self, day: date, live: bool = False, issue_time: datetime | None = None, *,
                  require_complete: bool = False) -> DataFrame[Features]:
@@ -188,7 +189,9 @@ class InputReader:
         Live selection requires a timezone-aware issue_time no later than the
         deadline. Return a native quarter-hour table without realised outcomes.
         """
-        rows = Features.validate(self._day_features(day, live, issue_time, require_complete))
+        deadline = _issue_deadline(day, live, issue_time)
+        history = self._day_prices(day, deadline, live, require_complete)
+        rows = Features.validate(assemble_price_calendar(history))
         if require_complete:
             require_static_features(rows, day, day + timedelta(days=1))
         return rows
@@ -200,7 +203,8 @@ class InputReader:
             raise ValueError("Feature start must precede end")
         days = (start + timedelta(days=offset) for offset in range((end - start).days))
         rows = Features.validate(pl.concat([
-            self._day_features(day, False, None, complete_from is not None and day >= complete_from) for day in days
+            assemble_price_calendar(self._day_prices(day, cutoff(day), False, complete_from is not None and day >= complete_from))
+            for day in days
         ]))
         if complete_from is not None:
             checked = cast(DataFrame[Features], rows.filter(pl.col("delivery_date") >= complete_from))
@@ -208,12 +212,23 @@ class InputReader:
         return rows
 
     def replay(self, start: date, end: date) -> list[Row]:
-        """Build features in [start, end), then join retrospective scoring truth."""
-        return diagnostic_rows(self.historical_features(start, end), self.truth, WEATHER_TABLE_FIELDS)
+        """Build the separate archived-source diagnostic and attach realised prices."""
+        if start >= end:
+            raise ValueError("Feature start must precede end")
+        daily: dict[str, defaultdict[date, list[Row]]] = {name: defaultdict(list) for name in ("weather", "demand")}
+        for name, by_day in daily.items():
+            for row in self._tables[name].to_pylist():
+                by_day[row["valid_utc"].astimezone(BERLIN).date()].append(row)
+        days = (start + timedelta(days=offset) for offset in range((end - start).days))
+        frames = []
+        for day in days:
+            deadline = cutoff(day)
+            selected = _select_covariates({name: by_day[day] for name, by_day in daily.items()}, day, deadline, False)
+            weather, demand = _covariate_inputs(selected)
+            frames.append(assemble_features(self._day_prices(day, deadline, False, False), weather, demand))
+        return diagnostic_rows(DiagnosticFeatures.validate(pl.concat(frames)), self.truth, WEATHER_TABLE_FIELDS)
 
-    def _day_features(self, day: date, live: bool, issue_time: datetime | None,
-                      require_complete: bool) -> pl.DataFrame:
-        deadline = _issue_deadline(day, live, issue_time)
+    def _day_prices(self, day: date, deadline: datetime, live: bool, require_complete: bool) -> DataFrame[PriceFeatures]:
         # Fourteen local days cover every agreed lag and daily summary.
         candidates = cast(DataFrame[PriceVersions], self.prices.filter(
             pl.col("valid_utc").dt.convert_time_zone("Europe/Berlin").dt.date() >= day - timedelta(days=14)))
@@ -227,11 +242,7 @@ class InputReader:
                 require_quarters((timestamp for timestamp in quarters(lag_day, stop) if timestamp in observed),
                                  lag_day, stop,
                                  f"Eligible SMARD prices at {deadline.isoformat()} for delivery {day} (D-{lag})")
-        price_features = build_price_features(history, list(quarters(day, day + timedelta(days=1))))
-        covariates = _select_covariates({name: self.daily[name][day] for name in ("weather", "demand")},
-                                       day, deadline, live)
-        weather, demand = _covariate_inputs(covariates)
-        return assemble_features(price_features, weather, demand)
+        return build_price_features(history, list(quarters(day, day + timedelta(days=1))))
 
 
 def publish(profile: str, region: str, bucket: str, directory: Path, data_root: Path) -> None:
@@ -265,8 +276,9 @@ def load(profile: str, region: str, bucket: str, snapshot_id: str, directory: Pa
     manifest = json.loads((directory / "manifest.json").read_text())
     if manifest.get("snapshot_id") != snapshot_id:
         raise ValueError("Wrong snapshot identifier")
-    for name in SCHEMAS:
-        entry = manifest["files"][name]
+    if set(manifest["files"]) not in ({"prices"}, set(SCHEMAS)):
+        raise ValueError("Unsupported or incomplete snapshot manifest")
+    for name, entry in manifest["files"].items():
         if entry["file"] != f"{name}.parquet" or entry["key"] != f"snapshots/{snapshot_id}/{name}.parquet":
             raise ValueError("Invalid snapshot location")
         get_verified(profile, region, bucket, entry["key"], directory / entry["file"], entry["sha256"])
@@ -294,7 +306,6 @@ def main() -> None:
     p = sub.add_parser("refresh", help="Download all required sources and stage a new historical snapshot")
     p.add_argument("--start", type=date.fromisoformat, required=True)
     p.add_argument("--end-exclusive", type=date.fromisoformat, required=True)
-    p.add_argument("--entsoe-credentials", type=Path, required=True)
     p.add_argument("--data-root", type=Path, required=True, help="New directory for the raw responses")
     p.add_argument("--directory", type=Path, required=True, help="New directory for the typed snapshot")
     p = sub.add_parser("fetch-demand", help="Save official demand and receipt time for a delivery day")
@@ -319,7 +330,7 @@ def main() -> None:
     elif args.command == "refresh":
         if args.data_root.exists() or args.directory.exists() or args.data_root.resolve() == args.directory.resolve():
             parser.error("refresh requires new, distinct paths for the raw archives and typed snapshot")
-        fetch_sources(args.data_root, args.start, args.end_exclusive, args.entsoe_credentials)
+        fetch_sources(args.data_root, args.start, args.end_exclusive)
         manifest = collect(args.data_root, args.directory, period=(args.start, args.end_exclusive))
         print(manifest["snapshot_id"], flush=True)
     else:

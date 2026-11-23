@@ -1,4 +1,4 @@
-"""Fit the three feature-set models and reference for a single month."""
+"""Fit the prices and calendar model and benchmark for a single month."""
 from datetime import date
 from dataclasses import asdict
 from collections.abc import Callable

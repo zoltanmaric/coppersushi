@@ -1,4 +1,4 @@
-"""Predict one complete delivery day with the fixed model set."""
+"""Predict one complete delivery day with the selected model and benchmark."""
 from collections.abc import Mapping
 from datetime import timedelta
 
@@ -37,5 +37,5 @@ def predict_day(rows: DataFrame[Features], models: Mapping[str, Predictor], refe
             raise ValueError(f"{name} prediction failed for {day}: {error}") from error
         raw[name], predictions[name] = q, np.sort(q, axis=1)
         crossing[name] = int((np.diff(q, axis=1) < 0).any(axis=1).sum())
-    predictions.update(reference=ref, system=predictions["demand"])
-    return DayForecast(raw, predictions, {}, crossing, "demand", "")
+    predictions["reference"] = ref
+    return DayForecast(raw, predictions, {}, crossing, config.model_method, "")
