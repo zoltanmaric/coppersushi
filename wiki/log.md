@@ -652,3 +652,7 @@ The [design principles](forecasting-system-design.md) connect operational eviden
 ## [2026-11-23] decision | Forecast issue and scoring
 
 The [forecast design walkthrough](forecasting-system-design.md) tests whether a consumer can retrieve an edition before its outcome exists.
+
+## [2026-11-23] ingest | Attributing forecast gains
+
+The [matched day-ahead editions](price-forecasting/energy-arena-benchmarks.md#paired-week) show why comparing scores at two cutoffs cannot isolate the value of fresher inputs.
