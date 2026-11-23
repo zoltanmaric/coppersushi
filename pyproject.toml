@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-forecast = ["catboost==1.2.10"]
+forecast = ["catboost==1.2.10", "metaflow==2.19.39", "mlflow==3.17.0"]
 build = ["pypsa==1.2.4"]
 dev = [
     "scoringrules==0.11.0",
