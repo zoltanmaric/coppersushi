@@ -1,14 +1,12 @@
 """Validated tables at the feature, prediction and scoring stage boundaries."""
-from collections.abc import Sequence
+from functools import cache
 
 import pandera.polars as pa
-from pandera.typing.polars import DataFrame
 import polars as pl
 
 from forecasts.config import QUANTILES
-from forecasts.input_types import Row
+from forecasts.input_config import WEATHER_FIELDS
 from forecasts.prices import PriceFeatures, PRICE_FEATURES, UTC
-from forecasts.snapshot import WEATHER_FIELDS
 
 MODEL_METHODS = ("prices", "weather", "demand")
 FORECAST_METHODS = (*MODEL_METHODS, "reference", "system")
@@ -42,6 +40,7 @@ class Features(PriceFeatures):
     demand_archived_latest_update_utc: UTC = pa.Field(nullable=True)
 
     @classmethod
+    @cache
     def to_schema(cls) -> pa.DataFrameSchema:
         """Add the fixed weather inventory and its per-column missing flags."""
         schema = super().to_schema()
@@ -107,23 +106,6 @@ class ScoredPredictions(Predictions):
         return data.lazyframe.select(
             (pl.col("target_missing") == pl.col("target").is_null().cast(pl.Int64))
             & (pl.col("target").is_null() | pl.col("target").is_finite()))
-
-
-def feature_table(records: Sequence[Row]) -> DataFrame[Features]:
-    """Parse input assembly records before entering local evaluation."""
-    schema = Features.to_schema()
-    if any(row["price_eur_mwh"] is not None or row["target_missing"] != 1 for row in records):
-        raise ValueError("Feature inputs must not contain outcomes")
-    frame = pl.DataFrame(records, infer_schema_length=None).drop("price_eur_mwh", "target_missing")
-    for name, column in schema.columns.items():
-        dtype = column.dtype.type
-        if dtype == pl.Date:
-            frame = frame.with_columns(pl.col(name).str.to_date())
-        elif isinstance(dtype, pl.Datetime):
-            frame = frame.with_columns(pl.col(name).cast(pl.String).str.to_datetime(format="%+", time_zone="UTC", time_unit="us"))
-        else:
-            frame = frame.with_columns(pl.col(name).cast(dtype, strict=True))
-    return Features.validate(frame)
 
 
 def _finite(data: pa.PolarsData) -> pl.LazyFrame:

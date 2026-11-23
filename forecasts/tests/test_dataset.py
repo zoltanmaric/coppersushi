@@ -50,7 +50,7 @@ class DatasetTests(unittest.TestCase):
             demand = load_demand(path, date(2026, 3, 29), date(2026, 3, 30))
         self.assertEqual(len(demand[stamp("2026-03-29T00:00:00Z")]), 3)
         value, updated, reason = select_demand(demand[stamp("2026-03-29T00:00:00Z")], cutoff(date(2026, 3, 29)))
-        self.assertEqual((value, updated, reason), (1100, "2026-03-28T10:00:00+00:00", "usable"))
+        self.assertEqual((value, updated, reason), (1100, stamp("2026-03-28T10:00:00Z"), "usable"))
         self.assertIsNone(select_demand(demand[stamp("2026-03-29T00:15:00Z")], cutoff(date(2026, 3, 29)))[0])
         self.assertEqual(select_demand([], cutoff(date(2026, 3, 29)))[2], "absent")
 

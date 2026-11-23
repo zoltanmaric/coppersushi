@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from polars.testing import assert_frame_equal
 import pyarrow as pa
 import pyarrow.parquet as pq
 
@@ -97,7 +98,7 @@ class SnapshotTests(unittest.TestCase):
         self.assertEqual(before["weather"][0]["version_id"], "weather-before-future-valid")
         original_tables = {n: validate(n, pa.Table.from_pylist(original[n], schema=SCHEMAS[n])) for n in SCHEMAS}
         enlarged_tables = {n: validate(n, pa.Table.from_pylist(enlarged[n], schema=SCHEMAS[n])) for n in SCHEMAS}
-        self.assertEqual(InputReader(original_tables).features(day), InputReader(enlarged_tables).features(day))
+        assert_frame_equal(InputReader(original_tables).features(day), InputReader(enlarged_tables).features(day))
 
     def test_live_selection_requires_retrieval_by_issue_time(self) -> None:
         records = history()
@@ -126,7 +127,7 @@ class SnapshotTests(unittest.TestCase):
         enlarged = {n: records[n] + ([extra] if n == "weather" else []) for n in SCHEMAS}
         before = InputReader({n: pa.Table.from_pylist(original[n], schema=SCHEMAS[n]) for n in SCHEMAS})
         after = InputReader({n: pa.Table.from_pylist(enlarged[n], schema=SCHEMAS[n]) for n in SCHEMAS})
-        self.assertEqual(before.features(date(2026, 3, 29)), after.features(date(2026, 3, 29)))
+        assert_frame_equal(before.features(date(2026, 3, 29)), after.features(date(2026, 3, 29)))
 
     def test_schema_rejects_null_keys_and_duplicates(self) -> None:
         rows = history()["prices"]

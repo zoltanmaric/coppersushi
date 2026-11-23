@@ -17,20 +17,20 @@ import subprocess
 import time
 
 import pyarrow as pa
-from forecasts.input_config import WEATHER_LOCATIONS
+from forecasts.input_config import FIELDS, WEATHER_FIELDS, WEATHER_LOCATIONS, WEATHER_TABLE_FIELDS
 from forecasts.prices import PriceHistory, PriceVersions, build_price_features, latest_versions, read_prices, select_history
 import pyarrow.parquet as pq
 
 from forecasts.dataset import (
-    BERLIN, COUNTRY, END, FIELDS, PAYLOADS, ROOT, START, TIMING, assemble_rows, cutoff, quarters,
+    BERLIN, COUNTRY, END, PAYLOADS, ROOT, START, TIMING, assemble_features, cutoff, diagnostic_rows, quarters,
     digest, load_demand, load_prices, load_weather, stamp,
     verify_payloads,
 )
 from forecasts.schemas import SCHEMAS, VERSION, describe, validate
 from forecasts.storage import get_verified, put_verified, verify_bucket
+from forecasts.tables import Features
 
 LOCATIONS = {location.name.lower() for location in WEATHER_LOCATIONS}
-WEATHER_FIELDS = sorted(f"{variable}_{location}" for variable in FIELDS for location in LOCATIONS)
 
 
 def canonical(value: object) -> bytes:
@@ -170,12 +170,26 @@ class InputReader:
         # Retrospective truth is joined only by replay(), never by features().
         self.truth = dict(latest_versions(self.prices).select("valid_utc", "price_eur_mwh").iter_rows())
 
-    def features(self, day: date, live: bool = False, issue_time: datetime | None = None) -> list[Row]:
+    def features(self, day: date, live: bool = False, issue_time: datetime | None = None) -> DataFrame[Features]:
         """Build one delivery day’s features from inputs eligible at its issue.
 
         Live selection requires a timezone-aware issue_time no later than the
-        deadline. Return quarter-hour rows without realised target values.
+        deadline. Return a native quarter-hour table without realised outcomes.
         """
+        return Features.validate(self._day_features(day, live, issue_time))
+
+    def historical_features(self, start: date, end: date) -> DataFrame[Features]:
+        """Build and validate [start, end) using each day's issue cutoff."""
+        if start >= end:
+            raise ValueError("Feature start must precede end")
+        days = (start + timedelta(days=offset) for offset in range((end - start).days))
+        return Features.validate(pl.concat([self._day_features(day, False, None) for day in days]))
+
+    def replay(self, start: date, end: date) -> list[Row]:
+        """Build features in [start, end), then join retrospective scoring truth."""
+        return diagnostic_rows(self.historical_features(start, end), self.truth, WEATHER_TABLE_FIELDS)
+
+    def _day_features(self, day: date, live: bool, issue_time: datetime | None) -> pl.DataFrame:
         deadline = _issue_deadline(day, live, issue_time)
         # Fourteen local days cover every agreed lag and daily summary.
         candidates = cast(DataFrame[PriceVersions], self.prices.filter(
@@ -186,21 +200,7 @@ class InputReader:
         covariates = _select_covariates({name: self.daily[name][day] for name in ("weather", "demand")},
                                        day, deadline, live)
         weather, demand = _covariate_inputs(covariates)
-        for field in self.weather_fields:
-            weather.setdefault(field, {})
-        return assemble_rows(price_features, weather, demand, targets={})
-
-    def replay(self, start: date, end: date) -> list[Row]:
-        """Build features in [start, end), then join retrospective scoring truth."""
-        rows, day = [], start
-        while day < end:
-            daily = self.features(day)
-            for row in daily:
-                row["price_eur_mwh"] = self.truth.get(stamp(row["delivery_utc"]))
-                row["target_missing"] = int(row["price_eur_mwh"] is None)
-            rows.extend(daily)
-            day += timedelta(days=1)
-        return rows
+        return assemble_features(price_features, weather, demand)
 
 
 def publish(profile: str, region: str, bucket: str, directory: Path, data_root: Path) -> None:

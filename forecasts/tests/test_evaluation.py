@@ -1,7 +1,7 @@
 """Scores, operational fallbacks and the complete selection/fit boundary."""
 from forecasts.contracts import FloatArray, Reference
 from forecasts.input_types import Row
-from forecasts.tables import Features, ScoredPredictions, feature_table
+from forecasts.tables import Features, ScoredPredictions
 from pandera.errors import SchemaError
 import polars as pl
 from datetime import date, timedelta
@@ -20,7 +20,7 @@ import scoringrules
 
 from forecasts.dataset import BERLIN, COUNTRY, cutoff, quarters, stamp
 from forecasts.evaluation import evaluate
-from forecasts.features import FEATURES, feature_matrix
+from forecasts.features import FEATURES, build_features, feature_matrix
 from forecasts.prediction import predict_day
 from forecasts.training import fit_month, select_training_data
 from forecasts.schemas import SCHEMAS, validate
@@ -59,15 +59,12 @@ def reader(records: dict[str, list[Row]]) -> InputReader:
 
 class EvaluationTests(unittest.TestCase):
     def test_feature_contract_preserves_clocks_and_rejects_leaked_outcomes(self) -> None:
-        records = reader(history()).features(date(2026, 3, 29))
-        table = feature_table(records)
+        table = reader(history()).features(date(2026, 3, 29))
         self.assertEqual(table.height, 92)
         self.assertEqual(table.schema['delivery_date'], pl.Date)
         self.assertEqual(table.schema['delivery_utc'], pl.Datetime('us', 'UTC'))
         self.assertNotIn('price_eur_mwh', table.columns)
         self.assertNotIn('target_missing', table.columns)
-        with self.assertRaisesRegex(ValueError, 'outcomes'):
-            feature_table([{**row, 'price_eur_mwh': 42.} for row in records])
         # Inputs cannot silently become labels or carry a contradictory clock.
         with self.assertRaises(SchemaError):
             Features.validate(table.with_columns(pl.lit(42.).alias('price_eur_mwh')))
@@ -123,12 +120,12 @@ class EvaluationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             for i, records in enumerate([before, after]):
                 r = reader(records)
-                features = feature_table([row for d in range(28) for row in r.features(date(2026, 3, 1) + timedelta(days=d))])
+                features = build_features(r, date(2026, 3, 1), fit_day)
                 training = select_training_data(r, features, fit_day, date(2026, 3, 15))
                 fitted = fit_month(r, features, fit_day, c, Path(temporary) / str(i))
                 self.assertFalse(fitted.failures)
                 outcomes.append((feature_matrix(training.rows, FEATURES['demand']), training.targets, fitted.reference,
-                                 predict_day(feature_table(r.features(fit_day)), fitted.models, fitted.reference, c)))
+                                 predict_day(r.features(fit_day), fitted.models, fitted.reference, c)))
         np.testing.assert_allclose(outcomes[0][0], outcomes[1][0], equal_nan=True)
         np.testing.assert_array_equal(outcomes[0][1], outcomes[1][1])
         self.assertEqual(outcomes[0][2], outcomes[1][2])
@@ -165,7 +162,7 @@ class EvaluationTests(unittest.TestCase):
     def test_missing_sources_and_prediction_failure_choose_explicit_fallback(self) -> None:
         c = config()
         r = reader(history())
-        rows = feature_table(r.features(date(2026, 3, 29)))
+        rows = r.features(date(2026, 3, 29))
         class Model:
             def predict(self, x: FloatArray) -> FloatArray:
                 return np.tile([2., -2., 0., -1., 1.], (len(x), 1))
