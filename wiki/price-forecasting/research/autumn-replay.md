@@ -19,3 +19,12 @@ System WIS was 26.1% lower than the reference. Median MAE was 35.17 versus 53.36
 The system used the weather fallback on all 54 days. November 20 and 21 each lack all 96 realised prices. See MLflow execution `1f3699041bea421680bc01cbb18f39df` for the snapshot and fit manifests, daily forecasts, and scores. Historical availability is assumed. This replay supplies no prospective evidence.
 
 Repeat the input audit, fit from corrected eligible training inputs and rerun the full replay. Stop on unexpected gaps or model failures. Record evidence and obtain a specific decision for any upstream exception before scoring.
+
+### Scope of the rerun
+
+- **Step 1, collection.** Verify the required price, weather and German country demand versions across training, warmup and evaluation. Record exact missing dates, fields, cutoffs and retrieval evidence. A failed HTTP request is insufficient evidence for an upstream exception.
+- **Step 2, earlier baseline.** Reproducing stored predictions establishes computational parity. The strict full-input baseline needs new fits: each of its nine training windows included missing demand, and 28 evaluation days selected weather. Historical results retain their original missing-input policy.
+- **Step 3, daily forecast.** Retire the November fit and November 24 reconstruction as evidence for the intended system. Refit after repairing October and earlier training history, then repeat the known-day and November checks. The November 24 issue deadline has passed.
+- **Step 4, autumn replay.** Retain the frozen model settings, dates and metrics. Rebuild the October and November fits. Require the intended inputs and successful models for every forecast, and observed truth for scoring. Stop before reporting metrics when a requirement fails. Any exception needs source evidence, an explicit scope and a separate decision.
+
+The saved September demand file and the autumn extension contain the same demand Parquet bytes. The October fit used 33,696 training quarters, including 5,472 missing demand values. The November fit used 36,676, including 8,452 missing demand values. All 2,980 new October quarters lacked demand. Exact agreement with the old November reconstruction does not validate those inputs.
