@@ -655,4 +655,4 @@ The [forecast design walkthrough](forecasting-system-design.md) tests whether a 
 
 ## [2026-11-23] ingest | Value of faster intraday inputs
 
-The [intraday comparison](price-forecasting/operational-forecasting.md#intraday-comparison) distinguishes faster input delivery from issuing a forecast later.
+The [intraday study and proposed test](price-forecasting/operational-forecasting.md#intraday-study) distinguishes faster input delivery from issuing a forecast later.
