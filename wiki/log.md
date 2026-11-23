@@ -672,3 +672,7 @@ Recorded the reviews on #105 and #112 in MLflow research record `5136923c77484ac
 ## [2026-10-20] migration | Wiki research planning and MLflow execution evidence
 
 Migrated the baseline rationale, October 20 review and six candidate proposals to the [research index](price-forecasting/research/index.md). The index recommends diagnostics first without selecting or executing it. Eight written-only MLflow records are recoverably archived; actual executions retain their IDs/statuses, readable names, and retrospective baseline/review evidence. Accepted prediction, model and manifest artifacts are unchanged.
+
+## [2026-11-23] query | Historical German demand revisions
+
+The [demand source audit](price-forecasting/data-sources.md) recovered the four inputs to the country forecast for seven of 57 previously excluded training dates. All 672 reconstructed quarters passed the historical cutoff.
