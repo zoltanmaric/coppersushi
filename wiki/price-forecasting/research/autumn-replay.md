@@ -1,0 +1,5 @@
+# Frozen model on October and November 2026
+
+Selected November 23 at the user's request. Test whether the existing system retains its WIS advantage over its distributional reference on later dates. The [baseline review](baseline-review.md) motivates this check. Keep settings fixed and defer calibration and model changes until after scoring. Prospective issuance is a separate check.
+
+Predict October 1 through November 23 inclusive at each preceding Berlin 11:00 cutoff. Fit October from eligible labels before October 1 and reuse the saved November fit. Use the November 23 input snapshot. Keep missing demand and missing outcomes visible. Score both methods on identical observed quarters. Report pooled and monthly WIS, median MAE, central 95% width, coverage and lower/upper miss rates. Lower pooled system WIS supports the hypothesis for this period. Report reversals by month. Cost is one monthly fit and 54 daily predictions. This is a historical reconstruction under the recorded source timing assumptions.

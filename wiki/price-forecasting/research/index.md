@@ -18,3 +18,5 @@ As of 2026-10-20: six proposals, none selected or executed. [Retrospective basel
 Start with training-versus-future diagnostics: it uses saved models, avoids retraining, and can inform both simplification and calibration. Incremental input value is a useful low-cost alternative, but does not directly explain the broad interval failure. Defer model and calibration choices until the diagnostics and evaluation plan are reviewed; prospective validation requires operating commitments, while viewer work depends on the diagnostic schema.
 
 This recommendation is not a selection. User choice is pending. Before any execution, record the choice and deferrals on the selected proposal, freeze its plan in Git, and attach that exact proposal version to each execution in MLflow. Keep the original wiki proposal.
+
+[October–November frozen replay](autumn-replay.md) was selected on November 23 to check the existing forecast on later dates.
