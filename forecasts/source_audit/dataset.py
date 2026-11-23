@@ -4,17 +4,19 @@ from collections import Counter, defaultdict
 from collections.abc import Collection, Mapping, Sequence
 import csv
 from datetime import date, timedelta
+from functools import cache
 import json
 from pathlib import Path
 import platform
 
+import pandera.polars as pa
 from pandera.typing.polars import DataFrame
 import polars as pl
 import pyarrow as arrow
 
 from forecasts.inputs.input_config import WEATHER_FIELDS, WEATHER_LOCATIONS, WEATHER_TABLE_FIELDS
 from forecasts.inputs.input_types import DemandSeries, PriceSeries, Report, Row, WeatherSeries
-from forecasts.inputs.prices import PriceHistory
+from forecasts.inputs.prices import PriceHistory, UTC
 from forecasts.inputs.selection import InputReader, select_covariates, select_demand
 from forecasts.inputs.snapshot import read_local
 from forecasts.inputs.sources import (
@@ -22,7 +24,17 @@ from forecasts.inputs.sources import (
 )
 from forecasts.provenance import ROOT, digest
 from forecasts.market import BERLIN, cutoff, quarters
-from forecasts.source_audit.price_features import PriceFeatures, build_price_features
+from forecasts.model.calendar import CLOCK_COLUMNS, assemble_price_calendar
+from forecasts.config import CALENDAR_COLUMNS, PRICE_FEATURES, PRICE_UNAVAILABLE
+from forecasts.model.features import build_day_features
+from forecasts.model.price_features import build_price_features
+from forecasts.model.tables import Features
+
+TIMING_COLUMNS = ("price_timing_assumed", "weather_timing_assumed", "demand_timing_conditional")
+DEMAND_COLUMNS = ("demand_mw", "demand_available", "demand_missing", "demand_selected_update_utc",
+                  "demand_screen", "demand_archive_versions", "demand_archived_latest_update_utc")
+WEATHER_MISSING_FIELDS = [f"{field}_missing" for field in WEATHER_FIELDS]
+SOURCE_FLAGS = ("demand_source_unavailable", "weather_source_unavailable", PRICE_UNAVAILABLE)
 
 
 def main() -> None:
@@ -81,80 +93,24 @@ def replay_snapshot(tables: Mapping[str, arrow.Table], start: date, end: date) -
             by_day[row["valid_utc"].astimezone(BERLIN).date()].append(row)
     reader = InputReader(tables)
     days = (start + timedelta(days=offset) for offset in range((end - start).days))
-    rows = []
-    targets = reader.realized_prices()
+    frames = []
     for day in days:
         deadline = cutoff(day)
         selected = select_covariates({name: by_day[day] for name, by_day in daily.items()}, day, deadline, False)
         weather, demand = _covariate_inputs(selected, daily["demand"][day])
-        history = reader.price_history(day, deadline, earliest_day=day - timedelta(days=14))
-        features = build_price_features(history, list(quarters(day, day + timedelta(days=1))))
-        rows.extend(assemble_rows(features, {field: weather.get(field, {}) for field in WEATHER_TABLE_FIELDS}, demand, targets))
-    return rows
+        frames.append(_assemble_features(build_day_features(reader, day), weather, demand))
+    return _diagnostic_rows(DiagnosticFeatures.validate(pl.concat(frames)), reader.realized_prices(), WEATHER_TABLE_FIELDS)
 
 
 def build_rows(prices: PriceSeries, weather: WeatherSeries, demand: DemandSeries, start: date = START, end: date = END, targets: PriceSeries | None = None) -> list[Row]:
-    """Adapt unversioned archive values to tables for the raw diagnostic CLI.
-
-    Snapshot prediction keeps tables intact and calls assemble_rows directly.
-    """
+    """Adapt unversioned archive values for the raw diagnostic CLI."""
     history = PriceHistory.validate(pl.DataFrame(
         {"valid_utc": list(prices), "price_eur_mwh": list(prices.values())},
         schema={"valid_utc": pl.Datetime("us", "UTC"), "price_eur_mwh": pl.Float64}))
-    features = build_price_features(history, list(quarters(start, end)))
-    return assemble_rows(features, weather, demand, prices if targets is None else targets)
-
-
-def assemble_rows(price_features: DataFrame[PriceFeatures], weather: WeatherSeries,
-                  demand: DemandSeries, targets: PriceSeries) -> list[Row]:
-    """Join price features with calendar, weather, demand and optional outcomes.
-
-    Convert price features to records only here, at the shared assembly boundary.
-    Prediction passes empty targets; retrospective replay joins truth separately.
-    """
-    price_rows = price_features.to_dicts()
-    years = {row["delivery_utc"].astimezone(BERLIN).year for row in price_rows}
-    rows = []
-    holiday_dates = set().union(*(holidays(y) for y in years))
-    for price_row in price_rows:
-        timestamp = price_row["delivery_utc"]
-        local = timestamp.astimezone(BERLIN)
-        day, quarter = local.date(), local.hour * 4 + local.minute // 15
-        deadline = cutoff(day)
-        offset = local.utcoffset()
-        assert offset is not None  # local is explicitly Europe/Berlin-aware.
-        row: Row = {"delivery_utc": timestamp.isoformat(), "delivery_date": day.isoformat(), "issue_cutoff_utc": deadline.isoformat(),
-               "utc_offset_minutes": int(offset.total_seconds() / 60), "clock_fold": local.fold,
-               "price_eur_mwh": targets.get(timestamp), "target_missing": int(targets.get(timestamp) is None),
-               "quarter_of_day": quarter, "day_of_week": local.weekday(), "month": local.month,
-               "public_holiday": int(day in holiday_dates), "price_timing_assumed": 1,
-               "weather_timing_assumed": 1, "demand_timing_conditional": 1}
-        row.update({key: value for key, value in price_row.items() if key != "delivery_utc"})
-        for key in list(row):
-            if key.startswith(("price_lag_", "price_day_")):
-                row[key + "_missing"] = int(row[key] is None)
-        hour = timestamp.replace(minute=0)
-        for field, values in weather.items():
-            row[field] = values.get(hour)
-            row[field + "_missing"] = int(row[field] is None)
-        value, updated, reason = select_demand(demand.get(timestamp, []), deadline)
-        archived_updates = [v["updated"] for v in demand.get(timestamp, []) if v["updated"] is not None]
-        row.update(demand_mw=value, demand_available=int(value is not None), demand_missing=int(value is None),
-                   demand_selected_update_utc=updated.isoformat() if updated else None, demand_screen=reason,
-                   demand_archive_versions=len(demand.get(timestamp, [])),
-                   demand_archived_latest_update_utc=max(archived_updates).isoformat() if archived_updates else None)
-        rows.append(row)
-    by_day: dict[str, list[Row]] = defaultdict(list)
-    for row in rows:
-        by_day[row["delivery_date"]].append(row)
-    for daily in by_day.values():
-        demand_absent = int(all(r["demand_missing"] for r in daily))
-        weather_absent = int(all(r[f] is None for r in daily for f in weather))
-        prices_absent = int(all(r[f"price_lag_{d}"] is None for r in daily for d in (1, 2, 7, 14)))
-        for row in daily:
-            row.update(demand_source_unavailable=demand_absent, weather_source_unavailable=weather_absent,
-                       price_lags_unavailable=prices_absent)
-    return rows
+    price_features = build_price_features(history, list(quarters(start, end)))
+    price_calendar = assemble_price_calendar(price_features)
+    features = DiagnosticFeatures.validate(_assemble_features(price_calendar, weather, demand))
+    return _diagnostic_rows(features, prices if targets is None else targets, list(weather))
 
 
 def summarize(rows: list[Row], weather_fields: Collection[str]) -> Report:
@@ -172,21 +128,85 @@ def summarize(rows: list[Row], weather_fields: Collection[str]) -> Report:
     }
 
 
-def holidays(year: int) -> set[date]:
-    # Gregorian Easter (Meeus/Jones/Butcher); only nationwide German holidays.
-    """Return nationwide German holidays for the supplied year."""
-    a, b, c = year % 19, year // 100, year % 100
-    d, e = b // 4, b % 4
-    f = (b + 8) // 25
-    g = (b - f + 1) // 3
-    h = (19 * a + b - d - g + 15) % 30
-    i, k = c // 4, c % 4
-    l = (32 + 2 * e + 2 * i - h - k) % 7
-    m = (a + 11 * h + 22 * l) // 451
-    easter = date(year, (h + l - 7 * m + 114) // 31, (h + l - 7 * m + 114) % 31 + 1)
-    return {date(year, month, day) for month, day in [(1, 1), (5, 1), (10, 3), (12, 25), (12, 26)]} | {
-        easter + timedelta(days=offset) for offset in [-2, 1, 39, 50]
-    }
+class DiagnosticFeatures(Features):
+    """Historical source coverage, including weather and demand evidence."""
+
+    weather_timing_assumed: int = pa.Field(eq=1)
+    demand_timing_conditional: int = pa.Field(eq=1)
+    demand_mw: float = pa.Field(nullable=True)
+    demand_available: int = pa.Field(isin=[0, 1])
+    demand_missing: int = pa.Field(isin=[0, 1])
+    demand_selected_update_utc: UTC = pa.Field(nullable=True)
+    demand_screen: str
+    demand_archive_versions: int = pa.Field(ge=0)
+    demand_archived_latest_update_utc: UTC = pa.Field(nullable=True)
+
+    @classmethod
+    @cache
+    def to_schema(cls) -> pa.DataFrameSchema:
+        """Add the fixed weather inventory and its per-column missing flags."""
+        schema = super().to_schema()
+        columns = {name: pa.Column(float, nullable=True, checks=pa.Check(_finite))
+                   for name in WEATHER_FIELDS}
+        columns.update({name: pa.Column(int, checks=pa.Check.isin([0, 1]))
+                        for name in [*WEATHER_MISSING_FIELDS, "demand_source_unavailable", "weather_source_unavailable"]})
+        return schema.add_columns(columns)
+
+    @pa.dataframe_check
+    @classmethod
+    def valid_demand(cls, data: pa.PolarsData) -> pl.LazyFrame:
+        """Allow missing demand and reject non-finite values."""
+        return data.lazyframe.select(pl.col("demand_mw").is_null() | pl.col("demand_mw").is_finite())
+
+
+def _assemble_features(price_calendar: pl.DataFrame, weather: WeatherSeries,
+                       demand: DemandSeries) -> pl.DataFrame:
+    """Join weather and demand for the historical source diagnostic."""
+    rows = []
+    for timestamp, deadline in price_calendar.select("delivery_utc", "issue_cutoff_utc").iter_rows():
+        hour = timestamp.replace(minute=0)
+        versions = demand.get(timestamp, [])
+        value, updated, reason = select_demand(versions, deadline)
+        archived_updates = [v["updated"] for v in versions if v["updated"] is not None]
+        row: Row = {
+            "weather_timing_assumed": 1, "demand_timing_conditional": 1,
+            "demand_mw": value, "demand_available": int(value is not None), "demand_missing": int(value is None),
+            "demand_selected_update_utc": updated, "demand_screen": reason, "demand_archive_versions": len(versions),
+            "demand_archived_latest_update_utc": max(archived_updates, default=None),
+        }
+        row.update({name: values.get(hour) for name, values in weather.items()})
+        rows.append(row)
+    columns = DiagnosticFeatures.to_schema().columns
+    source_schema = {name: columns[name].dtype.type for name in (*TIMING_COLUMNS[1:], *WEATHER_FIELDS, *DEMAND_COLUMNS)}
+    features = price_calendar.hstack(pl.DataFrame(rows, schema=source_schema)).with_columns(
+        *[pl.col(name).is_null().cast(pl.Int64).alias(name + "_missing") for name in WEATHER_FIELDS],
+        _all_missing(["demand_mw"]).alias("demand_source_unavailable"),
+        _all_missing(WEATHER_FIELDS).alias("weather_source_unavailable"),
+    )
+    return features.select(*CLOCK_COLUMNS, *_feature_columns(WEATHER_TABLE_FIELDS))
+
+
+def _diagnostic_rows(features: DataFrame[DiagnosticFeatures], targets: PriceSeries, weather_fields: Sequence[str]) -> list[Row]:
+    """Join retrospective truth and serialize clocks for the diagnostic CSV."""
+    rows = []
+    for row in features.select(*CLOCK_COLUMNS, *_feature_columns(weather_fields)).to_dicts():
+        target = targets.get(row["delivery_utc"])
+        for name in ("delivery_utc", "delivery_date", "issue_cutoff_utc", "demand_selected_update_utc",
+                     "demand_archived_latest_update_utc"):
+            if row[name] is not None:
+                row[name] = row[name].isoformat()
+        clocks = {key: row.pop(key) for key in CLOCK_COLUMNS}
+        rows.append(dict(clocks, price_eur_mwh=target, target_missing=int(target is None), **row))
+    return rows
+
+
+def _all_missing(fields: Sequence[str]) -> pl.Expr:
+    return pl.all_horizontal(pl.col(fields).is_null()).all().over("delivery_date").cast(pl.Int64)
+
+
+def _feature_columns(weather_fields: Sequence[str]) -> list[str]:
+    return [*CALENDAR_COLUMNS, *TIMING_COLUMNS, *PRICE_FEATURES, *[f"{name}_missing" for name in PRICE_FEATURES],
+            *[key for name in weather_fields for key in (name, name + "_missing")], *DEMAND_COLUMNS, *SOURCE_FLAGS]
 
 
 def _covariate_inputs(selected: Mapping[str, list[Row]], archive: list[Row]) -> tuple[WeatherSeries, DemandSeries]:
@@ -207,6 +227,10 @@ def _covariate_inputs(selected: Mapping[str, list[Row]], archive: list[Row]) -> 
                 "eligible_at_issue": (timestamp, row["version_id"]) in eligible_keys,
             })
     return weather, demand
+
+
+def _finite(data: pa.PolarsData) -> pl.LazyFrame:
+    return data.lazyframe.select(pl.col(data.key).is_finite())
 
 
 if __name__ == "__main__":

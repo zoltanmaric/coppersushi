@@ -1,4 +1,4 @@
-"""Price lag and daily summary transforms for the historical coverage diagnostic."""
+"""Price lag and daily summary transforms on the market's local clock."""
 from collections.abc import Sequence
 from datetime import datetime
 
@@ -7,11 +7,7 @@ from pandera.typing.polars import DataFrame
 import polars as pl
 
 from forecasts.inputs.prices import PriceHistory, UTC
-
-from forecasts.inputs.input_config import PRICE_LAG_DAYS as LAGS
-SUMMARY_DAYS = (1, 7)
-PRICE_FEATURES = [f"price_lag_{d}" for d in LAGS] + [
-    f"price_day_{d}_{stat}" for d in SUMMARY_DAYS for stat in ("mean", "min", "max")]
+from forecasts.config import LAGS, PRICE_FEATURES, SUMMARY_DAYS
 
 
 class PriceFeatures(pa.DataFrameModel):

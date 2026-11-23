@@ -1,19 +1,21 @@
-"""Coverage diagnostic regressions for price lags and the local calendar."""
+"""Price lags, summaries and calendar fields on the Berlin delivery grid."""
 from collections.abc import Mapping
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 import unittest
 
-from pandera.typing.polars import DataFrame
 import polars as pl
 import pyarrow as pa
+from polars.testing import assert_frame_equal
+from forecasts.inputs.schemas import SCHEMAS, validate
+from forecasts.inputs.selection import InputReader, select_records
+from forecasts.inputs.tests.test_snapshot import history
+from forecasts.model.features import build_day_features
+from pandera.typing.polars import DataFrame
 
 from forecasts.inputs.prices import PriceHistory
-from forecasts.inputs.schemas import SCHEMAS
-from forecasts.inputs.selection import select_records
 from forecasts.inputs.sources import stamp
-from forecasts.inputs.tests.test_snapshot import history
-from forecasts.source_audit.dataset import holidays, replay_snapshot
-from forecasts.source_audit.price_features import build_price_features
+from forecasts.model.calendar import holidays
+from forecasts.model.price_features import build_price_features
 
 
 def price_history(values: Mapping[datetime, float | None]) -> DataFrame[PriceHistory]:
@@ -57,27 +59,26 @@ class CalendarTests(unittest.TestCase):
 
 
 class FeatureSelectionTests(unittest.TestCase):
-    def test_post_cutoff_revisions_do_not_change_replayed_features(self) -> None:
+    def test_post_cutoff_history_does_not_change_selected_versions_or_features(self) -> None:
         records = history()
+        original = {n: records[n] for n in SCHEMAS}
+        enlarged = {n: records[n] + records["append"][n] for n in SCHEMAS}
         day = date(2026, 3, 29)
-        original = {name: records[name] for name in SCHEMAS}
-        enlarged = {name: records[name] + records["append"][name] for name in SCHEMAS}
         before = select_records(original, day)
-        self.assertEqual(before, select_records(enlarged, day))
+        after = select_records(enlarged, day)
+        self.assertEqual(before, after)
         self.assertEqual(before["weather"][0]["version_id"], "weather-before-future-valid")
-        rows = []
-        for source in (original, enlarged):
-            tables = {name: pa.Table.from_pylist(source[name], schema=schema) for name, schema in SCHEMAS.items()}
-            replayed = replay_snapshot(tables, day, day + timedelta(days=1))
-            retrospective = {"price_eur_mwh", "target_missing", "demand_archive_versions", "demand_archived_latest_update_utc"}
-            rows.append([{key: value for key, value in row.items() if key not in retrospective}
-                         for row in replayed])
-        self.assertEqual(rows[0], rows[1])
+        original_tables = {n: validate(n, pa.Table.from_pylist(original[n], schema=SCHEMAS[n])) for n in SCHEMAS}
+        enlarged_tables = {n: validate(n, pa.Table.from_pylist(enlarged[n], schema=SCHEMAS[n])) for n in SCHEMAS}
+        assert_frame_equal(build_day_features(InputReader(original_tables), day),
+                           build_day_features(InputReader(enlarged_tables), day))
 
-    def test_unknown_weather_location_does_not_enter_selection(self) -> None:
+    def test_rejected_new_weather_location_does_not_expand_feature_inventory(self) -> None:
         records = history()
-        day = date(2026, 3, 29)
-        original = {name: records[name] for name in SCHEMAS}
+        original = {n: records[n] for n in SCHEMAS}
         extra = dict(records["append"]["weather"][0], location="unconfigured-location")
-        enlarged = {**original, "weather": [*original["weather"], extra]}
-        self.assertEqual(select_records(original, day), select_records(enlarged, day))
+        enlarged = {n: records[n] + ([extra] if n == "weather" else []) for n in SCHEMAS}
+        before = InputReader({n: pa.Table.from_pylist(original[n], schema=SCHEMAS[n]) for n in SCHEMAS})
+        after = InputReader({n: pa.Table.from_pylist(enlarged[n], schema=SCHEMAS[n]) for n in SCHEMAS})
+        assert_frame_equal(build_day_features(before, date(2026, 3, 29)),
+                           build_day_features(after, date(2026, 3, 29)))
