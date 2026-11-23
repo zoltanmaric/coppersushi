@@ -7,8 +7,9 @@ import math
 from types import MappingProxyType
 from typing import Any, ClassVar, Literal, Mapping
 
+from forecasts.inputs.input_config import PRICE_LAG_DAYS as LAGS
+
 MODEL_METHOD: Literal["prices"] = "prices"
-LAGS = (1, 2, 7, 14)
 SUMMARY_DAYS = (1, 7)
 PRICE_FEATURES = [f"price_lag_{d}" for d in LAGS] + [
     f"price_day_{d}_{stat}" for d in SUMMARY_DAYS for stat in ("mean", "min", "max")]
