@@ -25,7 +25,7 @@ Recommend a candidate for the user to choose before execution, unless the user h
 
 Save the selection decision on the chosen proposal before execution. Link the candidates considered, explain the choice and deferrals, and record the user's choice or delegated budget. Update the research index; keep deferred proposals available.
 
-Before execution, complete and freeze the selected proposal's evaluation plan in Git: comparison baseline, fixed evaluation dates and metrics, and what result would support the hypothesis.
+Before execution, complete and freeze the selected proposal's evaluation plan in Git: comparison baseline, fixed evaluation dates and metrics, and expected effect. For a design decision, state which outcomes would justify the change, retain the baseline or leave the choice unresolved. Identify the dates reserved for that decision.
 
 ## During execution
 
@@ -35,7 +35,7 @@ Give runs descriptive human-readable names; retain stable IDs for links and stor
 
 ## After execution
 
-Attach a conclusion to the execution run with results, evidence links, limitations and the next decision: keep, reject or investigate further. Compare against the baseline on matching evaluation rows. Record losses and failures as well as gains. If reviewing an existing run without a prior proposal, mark the rationale as retrospective; do not invent a pre-run hypothesis.
+Attach a conclusion to the execution run with results, evidence links, limitations and the next decision: keep, reject or investigate further. Compare against the baseline on matching evaluation rows. For a surprising result, identify a competing explanation and check one observation that distinguishes them before attributing the gain or loss. Record losses and failures as well as gains. If reviewing an existing run without a prior proposal, mark the rationale as retrospective; do not invent a pre-run hypothesis.
 
 Update the wiki proposal with a short outcome and links to its executions and conclusions; refresh the research index. Revisit deferred proposals in light of the results; link new proposals to their motivating evidence.
 

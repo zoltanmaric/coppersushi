@@ -652,3 +652,7 @@ The [design principles](forecasting-system-design.md) connect operational eviden
 ## [2026-11-23] decision | Forecast issue and scoring
 
 The [forecast design walkthrough](forecasting-system-design.md) tests whether a consumer can retrieve an edition before its outcome exists.
+
+## [2026-11-23] ingest | Value of faster intraday inputs
+
+The [intraday comparison](price-forecasting/operational-forecasting.md#intraday-comparison) distinguishes faster input delivery from issuing a forecast later.
