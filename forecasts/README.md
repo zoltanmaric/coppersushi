@@ -75,6 +75,26 @@ Choose a new output directory. The command checks the snapshot identity and writ
 
 The [research index](../wiki/price-forecasting/research/index.md) holds proposals and selection decisions. Actual MLflow executions retain evidence and conclusions. The baseline’s retrospective rationale explicitly records the absence of a pre-execution proposal; the interrupted execution is retained. New experiments must follow the [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) before execution; the workflow does not automate that procedure.
 
+## On-demand day-ahead forecast
+
+```mermaid
+flowchart LR
+    H["Training snapshot"] --> F["Fit once per month"]
+    F --> M["Monthly models and reference"]
+    M --> D["Predict one delivery day"]
+    S["Issue-day snapshot"] --> D
+    D --> O["Saved quarter-hour prices"]
+```
+
+Fit the delivery month once from a validated local snapshot. Reuse the fit each day with the latest available snapshot. The parent of each output must exist.
+
+```sh
+pixi run --locked python -m forecasts.monthly_fit --fit-day 2026-11-01 --snapshot "$TRAINING_SNAPSHOT" --output "$MONTHLY_FIT"
+pixi run --locked python -m forecasts.daily --delivery-date 2026-11-24 --snapshot "$ISSUE_SNAPSHOT" --run "$MONTHLY_FIT" --output forecast-2026-11-24.json
+```
+
+Run the second command on the preceding Berlin day by 11:00. Add `--replay` to reconstruct a historical delivery date under the source timing assumptions. Both modes save the actual creation time, input cutoff, model and input identities, fallback reason, system and reference quantiles. Choose a new output file for each attempt. An archived evaluation run with the matching month's models also works as `--run`.
+
 ## MLflow review
 
 Start the local UI on port 5001, then install the checked-in [view definitions](review-views.json):

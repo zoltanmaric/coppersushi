@@ -32,7 +32,7 @@ def fit_month(reader: InputReader, features: DataFrame[Features], fit_day: date,
     if restore_models is None:
         models, failures = _fit_models(training.rows, training.targets, config, directory)
     else:
-        models, failures = _restore_models(restore_models, config)
+        models, failures = load_models(restore_models, config)
         directory.mkdir(parents=True, exist_ok=True)
     (directory / "reference.json").write_text(json.dumps(reference, sort_keys=True))
     (directory / "failures.json").write_text(json.dumps(failures, sort_keys=True))
@@ -57,6 +57,14 @@ def select_training_data(reader: InputReader, features: DataFrame[Features],
     return TrainingData(cast(DataFrame[Features], paired.drop("_label")), paired["_label"].to_numpy())
 
 
+def load_models(source: Path, config: RunConfig) -> tuple[dict[str, Predictor], dict[str, str]]:
+    """Load saved models, respecting failures recorded when the month was fitted."""
+    failures = json.loads((source / "failures.json").read_text())
+    models = {name: CatBoostRegressor().load_model(str(source / f"{name}.cbm"))
+              for name in config.features if name not in failures}
+    return models, failures
+
+
 def _fit_models(rows: DataFrame[Features], y: FloatArray, config: RunConfig,
                 directory: Path) -> tuple[dict[str, Predictor], dict[str, str]]:
     directory.mkdir(parents=True, exist_ok=True)
@@ -69,12 +77,4 @@ def _fit_models(rows: DataFrame[Features], y: FloatArray, config: RunConfig,
             models[name] = model
         except (CatBoostError, ValueError) as error:
             failures[name] = str(error)
-    return models, failures
-
-
-
-def _restore_models(source: Path, config: RunConfig) -> tuple[dict[str, Predictor], dict[str, str]]:
-    failures = json.loads((source / "failures.json").read_text())
-    models = {name: CatBoostRegressor().load_model(str(source / f"{name}.cbm"))
-              for name in config.features if name not in failures}
     return models, failures
