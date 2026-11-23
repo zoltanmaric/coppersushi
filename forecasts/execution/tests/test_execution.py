@@ -120,6 +120,23 @@ class ExecutionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'pixi.lock'):
             run._restore_runtime(code, manifest, {})
 
+    def test_damaged_model_leaves_failed_reproduction_record(self) -> None:
+        source, _ = run.prepare(self.repo / 'forecasts/run-config.json', proposal=self.proposal)
+        model = source / 'prices.cbm'
+        model.write_bytes(b'original')
+        manifest = json.loads((source / 'manifest.json').read_text())
+        manifest['artifacts'] = {model.name: run.digest(model)}
+        (source / 'manifest.json').write_text(json.dumps(manifest))
+        model.write_bytes(b'damaged')
+
+        with self.assertRaisesRegex(ValueError, 'checksum mismatch: prices.cbm'):
+            run.reproduce(source.name, snapshot=self.root / 'snapshot')
+        parent = self.root / 'data/reproductions' / source.name
+        record, = parent.glob('*/attempt.json')
+        attempt = json.loads(record.read_text())
+        self.assertEqual(attempt['source_run_id'], source.name)
+        self.assertEqual(attempt['status'], 'failed')
+
     def test_reproduction_retries_preserve_failed_and_successful_attempts(self) -> None:
         source, _ = run.prepare(self.repo / 'forecasts/run-config.json', proposal=self.proposal)
         manifest = json.loads((source / 'manifest.json').read_text())

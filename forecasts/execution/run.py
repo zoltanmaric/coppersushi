@@ -155,12 +155,6 @@ def reproduce(run_id: str, profile: str | None = None, bucket: str | None = None
         inputs = ["--profile", profile, "--bucket", bucket, "--region", region]
     else:
         raise ValueError("Provide a local snapshot or an S3 profile and bucket")
-    for name, expected in manifest["artifacts"].items():
-        if digest(source / name) != expected:
-            raise ValueError(f"Preserved artifact checksum mismatch: {name}")
-    for key in ('system', 'machine'):
-        if _environment()[key] != manifest['environment'][key]:
-            raise ValueError("Reproduction requires the recorded platform")
     destination = data_root() / "reproductions" / run_id / uuid.uuid4().hex[:24]
     destination.mkdir(parents=True, exist_ok=False)
     attempt = {"attempt_id": destination.name, "source_run_id": run_id, "status": "restoring"}
@@ -168,6 +162,12 @@ def reproduce(run_id: str, profile: str | None = None, bucket: str | None = None
     status.write_bytes(canonical(attempt))
     print(f"Reproduction attempt {destination}", flush=True)
     try:
+        for name, expected in manifest["artifacts"].items():
+            if digest(source / name) != expected:
+                raise ValueError(f"Preserved artifact checksum mismatch: {name}")
+        for key in ('system', 'machine'):
+            if _environment()[key] != manifest['environment'][key]:
+                raise ValueError("Reproduction requires the recorded platform")
         code = destination / "code"
         with tarfile.open(source / "code.tar") as archive:
             archive.extractall(code, filter="data")
