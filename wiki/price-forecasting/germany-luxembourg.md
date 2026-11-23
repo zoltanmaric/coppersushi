@@ -4,26 +4,28 @@ An independent, public-fundamentals forecast under `forecasts/`. The first versi
 
 ## Contract
 
-Agreed project design, 2026-10-09:
+Current project design:
 
 | Choice | Decision |
 |---|---|
 | Market | Germany–Luxembourg |
 | Delivery resolution | Every quarter-hour of the next German local day |
 | Information deadline | 11:00 Europe/Berlin on the preceding day |
-| Model | One fixed CatBoost configuration, compared across three [feature sets](evaluation.md#controls) |
+| Model | One fixed CatBoost configuration, compared with the [seasonal price reference](evaluation.md#reference) |
 | Output | Five [price quantiles](evaluation.md#quantiles): 2.5%, 25%, 50%, 75%, 97.5% |
 | Main score | [Weighted interval score](evaluation.md#wis) |
-| Inputs | Past prices, calendar, weather and usable demand forecasts |
-| Missing demand | Missing numerical value plus an availability indicator; whole-source failure follows the agreed [fallback rules](evaluation.md#defaults) |
-| Evaluation | Chronological, all dates retained; overall, monthly and demand-availability results |
+| Inputs | Past prices and German calendar |
+| Complete inputs | Require complete eligible price history for fitting and issuance. Training and scoring require complete labels at their respective cutoffs. [Evaluation rules](evaluation.md#defaults). |
+| Evaluation | Chronological, all dates retained; overall and monthly results |
 | Initial data budget | Free sources |
+
+The baseline serves a researcher comparing an 11:00 forecast against the seasonal reference. The target is the DE–LU day-ahead auction clearing price in €/MWh for each delivery quarter. The frozen price snapshot supplies scoring truth. A trading service needs a decision owner and a last useful delivery time. Measuring service requires recording when each expected edition first becomes retrievable, including missed issues. [Forecast design principles](../forecasting-system-design.md#principles).
 
 The median is the central price estimate. The other four outputs give 50% and 95% central prediction ranges. They describe uncertainty for each quarter-hour, not complete scenarios for a whole day's price path. CatBoost's [MultiQuantile objective](https://catboost.ai/docs/en/concepts/loss-functions-regression#MultiQuantile) supports this in one fitted model.
 
 ## Inputs
 
-[Data contracts and evidence](data-sources.md) define the price source, fixed-lead weather, coordinates and demand timing screen. The starting weather set is the twelve tested locations; no larger geographical search is required before the first build. This is an implementation default supported by the diagnostic, not a claim that twelve is optimal.
+The [price contract](data-sources.md) governs this baseline. Weather and demand are deferred research candidates.
 
 Earlier auction prices, generator-threshold models, outages, fuel/carbon feeds, neighbours and network constraints are outside the first build. Electricity Maps' price forecast is not a feature or target anchor. Its live data access does not establish historical forecast runs before the chosen deadline; [access findings](../electricity-maps-api.md#forecast-history).
 
@@ -31,11 +33,9 @@ Earlier auction prices, generator-threshold models, outages, fuel/carbon feeds, 
 
 The preliminary point-model experiment found that broader geography mattered more than fresher weather: twelve locations improved absolute error roughly 5–6% over three in one matched repeat. Fresher weather improved average error only 0.68% across three repeats, with inconsistent direction. This is limited retrospective evidence, not proof of annual or commercial competitiveness. [Experiment results and limits](data-sources.md#diagnostics).
 
-## Start
+## Operation
 
-Read the [implementation spec](../../specs/day-ahead-price-forecast.html), then the [evaluation contract](evaluation.md). The [infrastructure design](forecast-infrastructure.md) starts with S3 inputs and local Metaflow/MLflow runs. Build the reproducible historical dataset first. Resolve and record the remaining mechanical defaults before fitting; do not reopen settled scope without contradictory evidence.
-
-As of 2026-10-09, the handover and diagnostic evidence exist; the five-quantile model, production dataset pipeline and daily forecast runner do not. Competition entry, publishing forecasts and deployment are separate work.
+Fit once per delivery month using the labels available at the first issue cutoff. Reuse that bundle for each daily issue with fresh eligible prices. Each edition identifies its fit and snapshot. A historical reconstruction cannot establish on-time delivery. [Fit and issue](../../forecasts/README.md#on-demand-day-ahead-forecast).
 
 ### Continuation
 

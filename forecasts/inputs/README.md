@@ -1,6 +1,6 @@
 # Forecast inputs
 
-[Forecasts](../README.md) · [Archive coverage](../source_audit/README.md)
+[Forecasts](../README.md) · [Model](../model/README.md)
 
 [Snapshot collection](snapshot.py) validates and hashes provider archives, writes typed Parquet tables, and publishes the manifest last. Loading verifies the snapshot ID, hashes, row counts, and [normalized input models](schemas.py). Each model supplies its Parquet schema and manifest description. The [v1 compatibility test](tests/test_schemas.py) checks both against the frozen format. The manifest records the code revision, environment, and source retrieval evidence.
 
