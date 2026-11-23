@@ -6,7 +6,7 @@ A small selection job chooses the check groups; the container check starts indep
 | Group | Responsibility | Reason for the boundary |
 |---|---|---|
 | Python | Four-worker app and agent-tooling tests, then forecast tests | Short forecast checks reuse the app environment. File-level pytest scheduling keeps module fixtures together. |
-| Quality | Type checking, recursive Copper Sushi import-cycle checks and frontend contracts, types and tests | These checks share setup without occupying the app's test workers. |
+| Quality | Type checking, recursive Copper Sushi and forecast import-cycle checks and frontend contracts, types and tests | These checks share setup without occupying the app's test workers. |
 | Ghost theme | Theme installation and validation | Independent of app checks; selected only for relevant changes. |
 | Ghost hosting | Ansible setup, Terraform/Ansible checks, Nginx cache headers and purge endpoint tests | Network-dependent setup can overlap the other groups. |
 | Container | Native publisher dependency and import check | Checks the publisher environment separately from development dependencies. |

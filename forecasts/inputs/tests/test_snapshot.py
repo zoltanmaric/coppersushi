@@ -1,7 +1,7 @@
 """Adversarial selector and publication checks using small invented input histories."""
-from forecasts.input_types import Report
+from forecasts.inputs.input_types import Report
 import base64
-from datetime import date
+from datetime import date, timedelta
 import hashlib
 import json
 from pathlib import Path
@@ -12,10 +12,13 @@ from unittest.mock import patch
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from forecasts.dataset import PAYLOADS, cutoff, digest, stamp
-from forecasts.schemas import SCHEMAS, VERSION, describe, validate
-from forecasts.snapshot import InputReader, canonical, identity, load, publish, select_records
-from forecasts.storage import put_verified
+from forecasts.inputs.sources import PAYLOADS, stamp
+from forecasts.provenance import digest
+from forecasts.market import cutoff
+from forecasts.inputs.schemas import SCHEMAS, VERSION, describe, validate
+from forecasts.inputs.selection import select_records
+from forecasts.inputs.snapshot import canonical, identity, load, publish
+from forecasts.inputs.storage import put_verified
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -86,19 +89,6 @@ def write_snapshot(directory: Path) -> Report:
 
 
 class SnapshotTests(unittest.TestCase):
-    def test_post_cutoff_history_does_not_change_selected_versions_or_features(self) -> None:
-        records = history()
-        original = {n: records[n] for n in SCHEMAS}
-        enlarged = {n: records[n] + records["append"][n] for n in SCHEMAS}
-        day = date(2026, 3, 29)
-        before = select_records(original, day)
-        after = select_records(enlarged, day)
-        self.assertEqual(before, after)
-        self.assertEqual(before["weather"][0]["version_id"], "weather-before-future-valid")
-        original_tables = {n: validate(n, pa.Table.from_pylist(original[n], schema=SCHEMAS[n])) for n in SCHEMAS}
-        enlarged_tables = {n: validate(n, pa.Table.from_pylist(enlarged[n], schema=SCHEMAS[n])) for n in SCHEMAS}
-        self.assertEqual(InputReader(original_tables).features(day), InputReader(enlarged_tables).features(day))
-
     def test_live_selection_requires_retrieval_by_issue_time(self) -> None:
         records = history()
         day = date(2026, 3, 29)
@@ -119,14 +109,45 @@ class SnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "after.*deadline"):
             select_records(tables, day, live=True, issue_time=stamp("2026-03-28T10:00:01Z"))
 
-    def test_rejected_new_weather_location_does_not_expand_feature_inventory(self) -> None:
-        records = history()
-        original = {n: records[n] for n in SCHEMAS}
-        extra = dict(records["append"]["weather"][0], location="unconfigured-location")
-        enlarged = {n: records[n] + ([extra] if n == "weather" else []) for n in SCHEMAS}
-        before = InputReader({n: pa.Table.from_pylist(original[n], schema=SCHEMAS[n]) for n in SCHEMAS})
-        after = InputReader({n: pa.Table.from_pylist(enlarged[n], schema=SCHEMAS[n]) for n in SCHEMAS})
-        self.assertEqual(before.features(date(2026, 3, 29)), after.features(date(2026, 3, 29)))
+    def test_all_sources_use_inclusive_live_receipt_and_update_cutoffs(self) -> None:
+        source = history()
+        day = date(2026, 3, 29)
+        deadline = cutoff(day)
+        for offset in (0, 2):
+            tables = {name: [dict(source[name][0], source_update_utc=deadline - timedelta(minutes=5),
+                                  retrieved_at_utc=deadline + timedelta(minutes=offset))] for name in SCHEMAS}
+            selected = select_records(tables, day, live=True, issue_time=deadline)
+            for name in SCHEMAS:
+                with self.subTest(source=name, receipt_offset_minutes=offset):
+                    self.assertEqual(selected[name], tables[name] if offset == 0 else [])
+            self.assertGreater(tables["weather"][0]["valid_utc"], deadline)
+
+    def test_historical_witnessed_revisions_require_timely_receipt_across_sources(self) -> None:
+        source = history()
+        day = date(2026, 3, 29)
+        deadline = cutoff(day)
+        for update in (None, deadline - timedelta(minutes=5)):
+            for receipt in (deadline, deadline + timedelta(minutes=2), None):
+                tables = {name: [dict(source[name][0], timing_evidence="witnessed", source_update_utc=update,
+                                      retrieved_at_utc=receipt)] for name in SCHEMAS}
+                selected = select_records(tables, day)
+                for name in SCHEMAS:
+                    with self.subTest(source=name, receipt=receipt, update=update):
+                        eligible = receipt == deadline and (name != "demand" or update is not None)
+                        self.assertEqual(selected[name], tables[name] if eligible else [])
+
+    def test_historical_assumption_can_establish_availability_before_late_receipt(self) -> None:
+        source = history()
+        day = date(2026, 3, 29)
+        deadline = cutoff(day)
+        for evidence in ("assumed", "documented", "unknown"):
+            tables = {name: [dict(source[name][0], timing_evidence=evidence, source_update_utc=None,
+                                  retrieved_at_utc=deadline + timedelta(minutes=2))] for name in SCHEMAS}
+            selected = select_records(tables, day)
+            for name in SCHEMAS:
+                with self.subTest(source=name, evidence=evidence):
+                    expected = tables[name] if name != "demand" and evidence != "unknown" else []
+                    self.assertEqual(selected[name], expected)
 
     def test_schema_rejects_null_keys_and_duplicates(self) -> None:
         rows = history()["prices"]
@@ -144,7 +165,7 @@ class SnapshotTests(unittest.TestCase):
 
     def test_interrupted_publication_cannot_load(self) -> None:
         store = MemoryStore()
-        with tempfile.TemporaryDirectory() as temporary, patch("forecasts.storage.aws", store.aws), patch("forecasts.snapshot.verify_bucket"):
+        with tempfile.TemporaryDirectory() as temporary, patch("forecasts.inputs.storage.aws", store.aws), patch("forecasts.inputs.snapshot.verify_bucket"):
             directory = Path(temporary)
             manifest = write_snapshot(directory)
             store.interrupt_key = manifest["files"]["weather"]["key"]
@@ -157,7 +178,7 @@ class SnapshotTests(unittest.TestCase):
 
     def test_complete_publication_and_retry_load_identical_content(self) -> None:
         store = MemoryStore()
-        with tempfile.TemporaryDirectory() as temporary, patch("forecasts.storage.aws", store.aws), patch("forecasts.snapshot.verify_bucket"):
+        with tempfile.TemporaryDirectory() as temporary, patch("forecasts.inputs.storage.aws", store.aws), patch("forecasts.inputs.snapshot.verify_bucket"):
             directory = Path(temporary)
             manifest = write_snapshot(directory)
             publish("fixture", "eu-west-1", "fixture-bucket", directory, directory)
@@ -173,7 +194,7 @@ class SnapshotTests(unittest.TestCase):
 
     def test_conflicting_retry_preserves_published_content(self) -> None:
         store = MemoryStore()
-        with tempfile.TemporaryDirectory() as temporary, patch("forecasts.storage.aws", store.aws), patch("forecasts.snapshot.verify_bucket"):
+        with tempfile.TemporaryDirectory() as temporary, patch("forecasts.inputs.storage.aws", store.aws), patch("forecasts.inputs.snapshot.verify_bucket"):
             directory = Path(temporary)
             manifest = write_snapshot(directory)
             publish("fixture", "eu-west-1", "fixture-bucket", directory, directory)

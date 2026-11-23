@@ -3,14 +3,14 @@
 AWS profiles belong to the user, never the repository. Account-specific state stays
 under ignored data/forecasts; this module does not read or export credentials.
 """
-from forecasts.input_types import Report
+from forecasts.inputs.input_types import Report
 import base64
 import json
 import os
 from pathlib import Path
 import subprocess
 
-from forecasts.dataset import digest
+from forecasts.provenance import digest
 
 
 def aws(profile: str, region: str, *args: str) -> Report:
