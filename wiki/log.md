@@ -664,3 +664,7 @@ The [prices-only baseline](price-forecasting/operational-forecasting.md#pipeline
 ## [2026-11-23] decision | Forecast automation scope
 
 Recorded the [foundation boundary and conditions for revisiting delivery and training automation](price-forecasting/forecast-infrastructure.md#automation-scope).
+
+## [2026-11-23] decision | Evidence at the forecast cutoff
+
+A late collector receipt cannot establish earlier availability on its own. A daily price refresh needs complete coverage on the dates used by the forecast. [Point-in-time and price contracts](price-forecasting/data-sources.md#point-in-time).

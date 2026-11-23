@@ -16,11 +16,15 @@ Retain source versions and record whether eligibility is witnessed, supported by
 
 For live forecasts, the input must have been retrieved by the actual issue time, which must be no later than the deadline. Historical replay may use the documented source screens and timing assumptions, but must disclose them. If no version qualifies under that declared policy, keep the input missing. A future valid time is allowed; future knowledge is not: tomorrow's weather forecast can be used, tomorrow's realised weather cannot.
 
+When a collector receipt is the only evidence of publication, the receipt must be at or before the cutoff even in replay. A first receipt at 11:02 cannot establish availability at 11:00. Documented publication or an explicitly disclosed historical timing assumption can support replay. Live issuance always requires timely retrieval. [Selection contract and tests](../../forecasts/inputs/tests/test_snapshot.py).
+
 ### Prices
 
 [SMARD's Germany–Luxembourg price feed](https://www.smard.de/app/chart_data/4169/DE/index_quarterhour.json), filter `4169`, provides the weekly quarter-hour series. The diagnostic collector records the exact requests. October 2025–September 2026 contains 35,040 quarter-hours with native market resolution. Attribute Bundesnetzagentur | SMARD.de.
 
-Keep negative prices. Use only auction results already available at forecast issue time. Candidate lags from the diagnostic: the same local-clock quarter 1, 2, 7 and 14 days earlier; previous-day/week mean, minimum and maximum. Publication latency of the public price feed was not independently audited. Define clock-change lag handling rather than assuming each local day has 96 rows.
+Keep negative prices. Use only auction results already available at forecast issue time. Candidate lags from the diagnostic: the same local-clock quarter 1, 2, 7 and 14 days earlier; previous-day/week mean, minimum and maximum. Publication latency of the public price feed was not independently audited. A Berlin delivery day can contain 92, 96 or 100 quarters.
+
+For a single delivery day, refresh requires every Berlin quarter on the four lag dates (1, 2, 7 and 14 days earlier). A contiguous training refresh requires every quarter throughout its requested window. The November 23, 2026 archive had gaps on November 20 and 21. Neither supplies a feature for November 25 delivery. This separates an irrelevant gap from a missing required price. [Daily refresh regression](../../forecasts/inputs/tests/test_fresh_sources.py) · [Source review](https://github.com/zoltanmaric/coppersushi/pull/320#discussion_r4671411210).
 
 ### Weather
 

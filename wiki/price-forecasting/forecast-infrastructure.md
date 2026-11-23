@@ -1,6 +1,6 @@
 # Forecast storage and execution
 
-Agreed direction, 2026-10-09. Typed S3 snapshots and the shared input/feature reader are implemented; local workflow/tracking and later cloud execution remain planned. This supports the [forecast design](germany-luxembourg.md); the [product overview](../price-forecasting.md) owns the architecture graph. Remaining work lives in the [implementation spec](../../specs/day-ahead-price-forecast.html).
+The [forecast contract](germany-luxembourg.md) defines the market and deadline. The [product overview](../price-forecasting.md) links to the implemented workflow. The [implementation spec](../../specs/day-ahead-price-forecast.html) covers remaining work.
 
 ## Promise
 
@@ -32,7 +32,7 @@ Metaflow's local metadata and artifacts stay on disk. Configure MLflow explicitl
 
 ## Inputs
 
-Access is mostly batch reads: months of history for training and recent history plus future weather/demand for prediction. Start with three named Parquet datasets: `prices`, `weather`, and `demand`. The [source contracts](data-sources.md) own units, locations, resolution and availability rules.
+The historical archive contains prices, weather and demand. A daily price refresh writes a prices-only snapshot. The [source contracts](data-sources.md) own units, locations, resolution and availability rules.
 
 Use a small, explicit S3 layout:
 
@@ -48,7 +48,7 @@ snapshots/<snapshot-id>/manifest.json
 
 A snapshot is a fixed set of input files. Write new object keys for each snapshot and never overwrite a published one. Write its manifest last, after validation and upload. Readers require that manifest; an interrupted upload is not a usable snapshot. The manifest records schema version, exact file keys and checksums, row counts, time coverage and links to raw retrieval records. Training receives an explicit snapshot identifier, never a changing `latest` folder.
 
-Keep schemas in version-controlled Python: column types, nullability, units and row keys, checked before publication and after loading. Preserve the timestamps, revisions and evidence required by the [point-in-time contract](data-sources.md#point-in-time); apply that contract when constructing features.
+The [Pandera models](../../forecasts/inputs/schemas.py) define field types, nullability, units and row keys. They generate the Arrow storage schemas and manifest descriptions. A [frozen v1 fixture](../../forecasts/inputs/tests/test_schemas.py) checks compatibility. Preserve the timestamps, revisions and evidence required by the [point-in-time contract](data-sources.md#point-in-time); apply that contract when constructing features.
 
 One file per dataset per snapshot is the starting layout. At the initial data volume, prefer this to daily partitions and compaction jobs. Measure bytes and cold-load time before changing it. A reader loads the fixed files locally and then performs model-specific feature construction in Python. Training and prediction use the same reader and feature functions.
 
