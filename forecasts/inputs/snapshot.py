@@ -12,7 +12,7 @@ from typing import cast
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from forecasts.inputs.fresh_sources import fetch_sources, require_coverage, source_receipts
+from forecasts.inputs.fresh_sources import fetch_sources, require_coverage, required_lag_dates, source_receipts
 from forecasts.inputs.input_config import FIELDS, WEATHER_LOCATIONS
 from forecasts.inputs.input_types import DemandSeries, Report, Row, WeatherSeries
 from forecasts.inputs.schemas import SCHEMAS, VERSION, describe, validate
@@ -34,8 +34,13 @@ def identity(value: object) -> str:
 
 
 def collect(data_root: Path, output: Path, *,
-            period: tuple[date, date] | None = None) -> Report:
+            period: tuple[date, date] | None = None, delivery_date: date | None = None) -> Report:
     """Validate archived sources and save typed snapshot tables and a manifest."""
+    if delivery_date is not None:
+        if period is not None:
+            raise ValueError("Choose a contiguous collection period or a delivery date")
+        lag_days = required_lag_dates(delivery_date)
+        period = min(lag_days), delivery_date
     start, end = period if period is not None else (START, END)
     inputs, receipts = source_receipts(data_root) if period is not None else (verify_payloads(data_root), {})
     prices = load_prices(data_root / PAYLOADS["prices"])
@@ -45,6 +50,9 @@ def collect(data_root: Path, output: Path, *,
     if period is None:
         weather, weather_metadata = load_weather(data_root / PAYLOADS["weather"], WEATHER_LOCATIONS)
         demand = load_demand(data_root / PAYLOADS["demand"], start, end)
+    elif delivery_date is not None:
+        for day in lag_days:
+            require_coverage(day, day + timedelta(days=1), prices)
     else:
         require_coverage(start, end, prices)
     output.mkdir(parents=True, exist_ok=period is None)
@@ -102,7 +110,10 @@ def collect(data_root: Path, output: Path, *,
     manifest = {"schema_version": VERSION, "files": files, "raw": raw, "timing_limits": {name: TIMING[name] for name in inputs},
                 "code_revision": commit, "exploratory_code": dirty,
                 "environment": {"python": platform.python_version(), "pyarrow": pa.__version__, "project_sha256": digest(ROOT / "pyproject.toml"), "pixi_lock_sha256": digest(ROOT / "pixi.lock")}}
-    if period is not None:
+    if delivery_date is not None:
+        manifest["delivery_date"] = delivery_date.isoformat()
+        manifest["required_dates_berlin"] = sorted(day.isoformat() for day in lag_days)
+    elif period is not None:
         manifest["required_period_berlin"] = {"start": start.isoformat(), "end_exclusive": end.isoformat()}
     snapshot_id = identity(manifest)
     for name, entry in files.items():
@@ -196,8 +207,10 @@ def main() -> None:
         if command == "collect":
             p.add_argument("--publish", action="store_true", help="Publish the validated collection to S3 in this run")
     p = sub.add_parser("refresh", help="Download SMARD prices and stage a price snapshot")
-    p.add_argument("--start", type=date.fromisoformat, required=True)
-    p.add_argument("--end-exclusive", type=date.fromisoformat, required=True)
+    dates = p.add_mutually_exclusive_group(required=True)
+    dates.add_argument("--delivery-date", type=date.fromisoformat, help="Require only the price lags for this forecast")
+    dates.add_argument("--start", type=date.fromisoformat, help="First day of contiguous price history")
+    p.add_argument("--end-exclusive", type=date.fromisoformat, help="Required with --start")
     p.add_argument("--data-root", type=Path, required=True, help="New directory for the raw responses")
     p.add_argument("--directory", type=Path, required=True, help="New directory for the typed snapshot")
     p = sub.add_parser("load")
@@ -216,8 +229,14 @@ def main() -> None:
     elif args.command == "refresh":
         if args.data_root.exists() or args.directory.exists() or args.data_root.resolve() == args.directory.resolve():
             parser.error("refresh requires new, distinct paths for the raw archives and typed snapshot")
-        fetch_sources(args.data_root, args.start, args.end_exclusive)
-        manifest = collect(args.data_root, args.directory, period=(args.start, args.end_exclusive))
+        if (args.start is None) != (args.end_exclusive is None):
+            parser.error("--start and --end-exclusive must be supplied together")
+        if args.delivery_date:
+            fetch_sources(args.data_root, min(required_lag_dates(args.delivery_date)), args.delivery_date)
+            manifest = collect(args.data_root, args.directory, delivery_date=args.delivery_date)
+        else:
+            fetch_sources(args.data_root, args.start, args.end_exclusive)
+            manifest = collect(args.data_root, args.directory, period=(args.start, args.end_exclusive))
         print(manifest["snapshot_id"], flush=True)
     else:
         load(args.profile, args.region, args.bucket, args.snapshot_id, args.directory)

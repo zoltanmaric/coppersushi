@@ -2,6 +2,9 @@
 from typing import NamedTuple
 
 
+PRICE_LAG_DAYS = (1, 2, 7, 14)
+
+
 class WeatherLocation(NamedTuple):
     """Named ICON-EU sampling coordinate in degrees north/east."""
     name: str

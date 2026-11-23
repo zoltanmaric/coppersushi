@@ -8,7 +8,7 @@ import polars as pl
 
 from forecasts.inputs.prices import PriceHistory, UTC
 
-LAGS = (1, 2, 7, 14)
+from forecasts.inputs.input_config import PRICE_LAG_DAYS as LAGS
 SUMMARY_DAYS = (1, 7)
 PRICE_FEATURES = [f"price_lag_{d}" for d in LAGS] + [
     f"price_day_{d}_{stat}" for d in SUMMARY_DAYS for stat in ("mean", "min", "max")]

@@ -8,11 +8,11 @@
 
 ## Refresh price history
 
-Run from the repository root. For November 25 delivery, collect all Berlin quarters from November 11 through November 24. The earliest lag is 14 days. Missing quarters stop collection. Choose new paths for the raw archives and snapshot.
+Run from the repository root. For November 25 delivery, require every Berlin quarter on November 11, 18, 23 and 24 (lags of 14, 7, 2 and 1 days). A missing quarter on a required date stops collection. Use `--start` and `--end-exclusive` for contiguous training history. Choose new paths for the raw archives and snapshot.
 
 ```sh
 pixi run --locked python -m forecasts.snapshot refresh \
-  --start 2026-11-11 --end-exclusive 2026-11-25 \
+  --delivery-date 2026-11-25 \
   --data-root data/forecasts/new-raw --directory data/forecasts/new-snapshot
 ```
 

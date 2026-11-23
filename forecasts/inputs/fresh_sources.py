@@ -5,6 +5,7 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from zipfile import ZIP_DEFLATED, ZipFile
 
+from forecasts.inputs.input_config import PRICE_LAG_DAYS
 from forecasts.inputs.sources import PAYLOADS
 from forecasts.provenance import digest
 from forecasts.market import BERLIN, quarters
@@ -20,6 +21,11 @@ def fetch_sources(root: Path, start: date, end: date) -> None:
         raise ValueError("Source collection requires a nonempty Berlin date range")
     (root / "inputs").mkdir(parents=True)
     _fetch_prices(root / PAYLOADS["prices"], start, end)
+
+
+def required_lag_dates(delivery_date: date) -> tuple[date, ...]:
+    """Return the Berlin delivery dates that supply this forecast's price features."""
+    return tuple(delivery_date - timedelta(days=lag) for lag in PRICE_LAG_DAYS)
 
 
 def require_coverage(start: date, end: date, prices: PriceSeries) -> None:
