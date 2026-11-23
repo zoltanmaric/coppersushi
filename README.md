@@ -153,7 +153,7 @@ pixi run --locked dev
 
 This builds local frontend assets and reads public datasets; it does not require a
 local solved network or producer catalogs. To preview an unpublished Power Flow
-network, use the exporter’s `--serve` command in [Power Flow preparation](coppersushi/pipelines/powerflow/README.md).
+network, follow [Preview a candidate network](coppersushi/pipelines/powerflow/README.md#preview-a-candidate-network).
 
 Producer preparation is separate: `pixi run --locked setup-app` pulls the solved
 network, downloads cached locator inputs and builds catalogs and country outlines
@@ -207,8 +207,7 @@ pixi run --locked python -m coppersushi.pipelines.powerflow.data_sources.pypsa_e
 ```
 checks the sibling out at the pinned commit, runs the workflow (a first run downloads about
 20 GB and takes an hour on a fast connection; later runs take minutes) and writes the solved
-network to the gitignored `coppersushi/networks/candidates/opf-<day>-<pin>.nc`, previewable by exporting it with
-`python -m coppersushi.frontend.packaging.opf_dataset <network-file> coppersushi/data/candidate-preview`. Iterate as often as you like; when a solve is the one to keep,
+network to the gitignored `coppersushi/networks/candidates/opf-<day>-<pin>.nc`, ready to [preview locally](coppersushi/pipelines/powerflow/README.md#preview-a-candidate-network). Iterate as often as you like; when a solve is the one to keep,
 ```bash
 pixi run --locked python -m coppersushi.pipelines.powerflow.data_sources.pypsa_eur promote coppersushi/networks/candidates/opf-<day>-<pin>.nc
 ```

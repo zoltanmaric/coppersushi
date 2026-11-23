@@ -20,8 +20,7 @@ name; positive signed flow follows bus0 to bus1. Intervals retain node generatio
 available capacity and load for browser tooltips. Missing optional values are null.
 Validation rejects incomplete intervals, duplicate identities and non-finite numbers.
 The v2 format uses a separate prefix so old figure-based clients retain a compatible
-v1 manifest during cutover. Candidate networks use the same export command with `--serve`; all map rendering
-runs in the browser.
+v1 manifest during cutover.
 
 From the repository root:
 
@@ -32,3 +31,11 @@ python -m coppersushi.pipelines.powerflow.data_sources.dataset coppersushi/netwo
 Add `--bucket` to publish data objects before their manifest. Deployment order and
 rollback belong to the [runbook](../../infra/lambda/README.md). Tests are colocated;
 run `pixi run test-app` from the root.
+
+## Preview a candidate network
+
+From the repository root, export the solved network and serve its local map:
+
+```sh
+pixi run --locked python -m coppersushi.frontend.packaging.opf_dataset <network-file> coppersushi/data/candidate-preview
+```
