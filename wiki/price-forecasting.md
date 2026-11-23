@@ -12,3 +12,6 @@ The Germany–Luxembourg day-ahead forecast has its own [product package](../for
 - [Evaluation](price-forecasting/evaluation.md): chronological comparisons and scoring.
 - [Implementation spec](../specs/day-ahead-price-forecast.html): remaining work and acceptance checks.
 
+## Research
+
+The [research index](price-forecasting/research/index.md) owns proposals, relationships, status and the recommended next choice. The [baseline review](price-forecasting/research/baseline-review.md) records the retrospective evidence and links to actual MLflow executions. The [baseline result](price-forecasting/evaluation.md#result) records the selected comparison. [Research-record contract](price-forecasting/forecast-infrastructure.md#research-history).
