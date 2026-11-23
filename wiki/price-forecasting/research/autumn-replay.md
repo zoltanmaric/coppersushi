@@ -4,7 +4,9 @@ Selected November 23 at the user's request. Test whether the existing system ret
 
 Predict October 1 through November 23 inclusive at each preceding Berlin 11:00 cutoff. Fit October from eligible labels before October 1 and reuse the saved November fit. Use the November 23 input snapshot. Keep missing demand and missing outcomes visible. Score both methods on identical observed quarters. Report pooled and monthly WIS, median MAE, central 95% width, coverage and lower/upper miss rates. Lower pooled system WIS supports the hypothesis for this period. Report reversals by month. Cost is one monthly fit and 54 daily predictions. This is a historical reconstruction under the recorded source timing assumptions.
 
-## Result
+## Invalid experiment — collection omitted demand
+
+The run completed computationally but failed to test the intended system. The refresh script requested prices and weather only. An unsuccessful REST probe did not establish that the historical country demand forecast was unavailable for the entire period. The November fit also used that incomplete October history. The scores below describe a weather-only diagnostic. Withdraw the conclusion about the intended system.
 
 | Period | Scored quarters | System WIS | Reference WIS | System 95% coverage | Reference 95% coverage | System width | Reference width |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -16,4 +18,4 @@ System WIS was 26.1% lower than the reference. Median MAE was 35.17 versus 53.36
 
 The system used the weather fallback on all 54 days. November 20 and 21 each lack all 96 realised prices. See MLflow execution `1f3699041bea421680bc01cbb18f39df` for the snapshot and fit manifests, daily forecasts, and scores. Historical availability is assumed. This replay supplies no prospective evidence.
 
-Retain the fixed result. Investigate interval calibration separately before changing the model.
+Repeat the input audit, fit from corrected eligible training inputs and rerun the full replay. Stop on unexpected gaps or model failures. Record evidence and obtain a specific decision for any upstream exception before scoring.
