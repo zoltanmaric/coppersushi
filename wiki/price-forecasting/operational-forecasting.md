@@ -2,7 +2,7 @@
 
 Start with [Energy-Arena’s DE–LU benchmark](energy-arena-benchmarks.md). It tests the same decision as this project: what distribution of prices was available by 11:00 German time for tomorrow’s delivery quarters? Sources checked 2026-11-23.
 
-## What did the price service deliver?
+## Service-performance
 
 Trace one delivery day through the Eiser et al. participant pipeline. Its suggested schedule runs a fundamentals model around 10:30 and an early-auction model around 11:15. Compare the last submissions received by 11:00, on identical quarters against one frozen price series. Report participation, weighted interval score (WIS), interval width and coverage. The [benchmark audit](energy-arena-benchmarks.md#paired-week) shows how much the cutoff changes the apparent result. [Energy-Arena conference paper, EEM 2026](https://doi.org/10.1109/EEM68581.2026.11589800) · [Participant implementation](https://github.com/GitMoritzraab/Operational-Forecasting-Pipeline-for-Day-Ahead-Electricity-Prices/blob/fd07ebacc51ad42c1e6ba32a47fc4a727c969bc3/README.md#running-the-complete-daily-pipeline)
 
@@ -12,7 +12,7 @@ Energy-Arena lets each participant choose its inputs. EnergyBench instead freeze
 
 For a testable participant baseline, Eiser and Kleinebrahm publish their spatial weather features and rolling price models. Their study reports gains from using regional weather clusters rather than a national average. Keep the issue time and calibration history fixed when testing that choice. [Participant paper, June 2026](https://doi.org/10.2139/ssrn.6901658)
 
-## How does a commercial price forecast change during the morning?
+## Price-editions
 
 Kpler describes one coupled day-ahead price model for over 40 European bidding zones. Weather feeds load, wind and solar estimates. The morning forecast for tomorrow changes again around 10:36 and 11:16 CET as British and Swiss auction results arrive. For an 11:00 replay, request the edition available at the decision time. The API supports historical as-of queries; FTP overwrites earlier morning editions. The API requires a key. The reviewed public materials describe the timing contract and do not supply the production weights. [Short-term methodology](https://help.kpler.com/en/articles/8925114-short-term-power-forecasts-methodology) · [API vintage queries](https://help.kpler.com/en/articles/16919536-8-september-2026-power-api-additions) · [API access](https://power.dev.kpler.com/)
 
@@ -20,15 +20,17 @@ A morning revision still predicts the day-ahead auction. Kpler separately publis
 
 Kpler’s API distinguishes historical vintage queries (runs since May 2024) from the per-record publication timestamp (available since March 2026). Vintage support is feed-specific. Kpler’s third-party load endpoint preserves editions only from 23 October 2026; earlier records contain final values timestamped at the publication deadline. Treating those timestamps as witnessed arrivals could admit later revisions into an earlier replay. [API additions](https://help.kpler.com/en/articles/16919536-8-september-2026-power-api-additions) · [Third-party load history](https://help.kpler.com/en/articles/18248401-6-november-2026-live-id-continuous-new-d-1-model-id-auction-price-forecasts-and-load-forecasts)
 
-## Which weather run reached the forecaster?
+## Weather-availability
 
 DeepMind’s WeatherBench-X tutorial requests a forecast at 21:00 UTC valid at midnight. Under its assumed six-hour publication delay, the eligible input is the **12:00 run at a 12-hour lead**. Google’s WeatherNext 3 schedule gives a real example. The full 06:00 UTC cycle targets 13:45 UTC on Cloud Storage, after the German 11:00 decision. The full 00:00 cycle targets 07:45 UTC. Delays can exceed an hour. Record when the required fields actually arrived. A replay using scheduled times relies on an assumption. [WeatherBench-X worked example](https://weatherbench-x.readthedocs.io/en/latest/how_to/forecast_latency.html) · [WeatherNext dissemination schedule](https://developers.google.com/weathernext/guides/dissemination)
+
+### Ensemble-aggregation
 
 DeepMind’s GenCast study converted wind to power at 5,344 wind farms **within each simulated weather trajectory**, then summed generation by region and scored the regional distribution. This preserves dependence between nearby farms. Adding each site’s 95th percentile would answer a different question. The study verified idealized power derived from wind and a turbine curve. A claim about German prices requires evaluation against observed auction prices. [GenCast, Figure 4 and Methods, December 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC11666454/)
 
 Google’s WeatherNext archive includes retrospective runs before the product launched. Historical access, live access and the license for a production application are separate checks. The same distinction applies to model weights: Google Research’s TimesFM-3 accepts future covariates, but its downloadable weights carry non-commercial, non-production terms. Its general benchmark is evidence for trying a matched comparison, not evidence of DE–LU price skill. [WeatherNext access](https://developers.google.com/weathernext/guides/access-forecast) · [WeatherNext storage](https://developers.google.com/weathernext/guides/gcs) · [TimesFM-3 study](https://research.google/blog/timesfm-3-a-zero-shot-foundation-model-for-multivariate-forecasting/) · [Weights license](https://huggingface.co/google/timesfm-3.0-pytorch/blob/main/LICENSE)
 
-## Who operates the trading service?
+## Delivery-latency
 
 **MetDesk operates Trading Weather.** In its July 2024 account with NVIDIA, MetDesk starts a run when ECMWF’s atmospheric analysis reaches its machines. It produces the deterministic weather forecast within about five minutes, then generates 50 perturbed ensemble members over the following 40 minutes. Country-weighted weather and wind and solar generation forecasts feed trading products. These timings start at receipt. An upstream delay still reduces the time left before the auction. [MetDesk and NVIDIA’s deployment account](https://developer.nvidia.com/blog/empowering-energy-trading-with-metdesk-and-nvidia-earth-2/)
 
@@ -36,12 +38,18 @@ NVIDIA publishes the Earth2Studio inference framework and the 73-channel SFNO we
 
 AWS and NVIDIA provide a worked FourCastNet-to-PyWake wind-farm simulation. Its output is estimated generation. A project using this design needs metered generation to claim power accuracy and auction prices to claim price accuracy. Microsoft’s BKW case likewise describes exploratory work on renewable generation and residual load. Neither establishes a lift on this project’s price target. [AWS and NVIDIA worked example](https://aws.amazon.com/blogs/hpc/aws-batch-enables-near-real-time-energy-production-forecasts-using-nvidia-earth-2/) · [Microsoft and BKW, June 2026](https://www.microsoft.com/en/customers/story/26785-bkw-fmb-energie-ag-foundry-models)
 
-## What would justify a release?
+## Calibration
 
 Microsoft Research’s July 2026 Aurora 1.5 paper reports better continuous ranked probability score (CRPS) than ECMWF’s ensemble on 88.9% of the weather variable and lead-time combinations tested. Its rank histograms also showed that Aurora’s ensemble was slightly too wide. For a price release, count misses above and below the predicted interval and measure interval width on the same quarters used for WIS. Microsoft’s ProbTS study also evaluates point and distributional performance across horizons. For a price forecast, a good daily average can hide poor coverage during the evening hours. A day-ahead price study across Germany and Italy illustrates recalibration by delivery hour. Its hourly bands only went up to 80%, so a 95% quarter-hour band needs its own test. [Aurora 1.5, §3.2 and Figure 2](https://www.microsoft.com/en-us/research/wp-content/uploads/2026/07/Aurora_1_5_Paper.pdf) · [Microsoft Research, ProbTS, September 2024](https://www.microsoft.com/en-us/research/articles/probts-unified-benchmarking-for-time-series-forecasting/) · [Brusaferri et al., Applied Energy, 2025](https://iris.cnr.it/retrieve/50287ff6-1b28-433a-9ef2-31e792200745/1-s2.0-S0306261925011420.pdf)
 
+### Release-comparisons
+
 ECMWF’s May 2026 AIFS upgrade changed the model and the data used to initialize it. One scorecard compared the complete old and new systems. A second gave both model versions the same new initial conditions. When a price release changes weather provider and price model together, the first comparison measures the change a customer sees. The second isolates the model change under the new input. [ECMWF release scorecards](https://confluence.ecmwf.int/spaces/FCST/pages/620418870/Implementation+of+AIFS+Single+v2)
 
-Google’s MLOps levels distinguish rerunning a training pipeline from testing and releasing changes to the pipeline code. In a forecast service there is a third event: issuing an edition with a previously approved model and newly arrived inputs. This gives the operator separate identities for the code release, fitted model and published edition. [Google Cloud, levels 1 and 2](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning)
+### Pipeline-triggers
+
+Google’s MLOps levels distinguish rerunning a training pipeline from testing and releasing changes to the pipeline code. Kpler reports daily retraining and two morning updates driven by new auction data. From those two accounts we derive three distinct events for our design: releasing code, fitting and approving a model, and issuing a prediction when inputs arrive. This gives the operator separate identities for the code release, fitted model and published edition. [Google Cloud, levels 1 and 2](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning) · [Kpler forecast methodology, Morning D+1 Updates](https://help.kpler.com/en/articles/8925114-short-term-power-forecasts-methodology)
+
+### Publication-retries
 
 A timeout after a successful write leaves the publisher uncertain whether an edition exists. AWS describes how a caller-supplied request identity lets the receiver recognize the same intent on retry. For a forecast, retrying an edition and issuing a deliberate revision have different meanings. The former should resolve to the same publication receipt. [AWS Builders’ Library, Making retries safe with idempotent APIs](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/)

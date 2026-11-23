@@ -10,7 +10,7 @@ Eiser's pre-11:00 model uses historical prices, ENTSO-E load forecasts and DWD I
 
 ## Paired-week
 
-For the German delivery dates 2–8 October 2026, both participants supplied all 672 quarter-hours at both cutoffs. On 23 November we joined five quantiles to Bundesnetzagentur | SMARD.de observations by UTC delivery timestamp and recomputed [WIS](evaluation.md#wis) and coverage. No rows were filled. Official Arena scores use ENTSO-E truth.
+For the German delivery dates 2–8 October 2026, both participants supplied all 672 quarter-hours at both cutoffs. On 23 November we joined five quantiles to Bundesnetzagentur | SMARD.de observations by UTC delivery timestamp and recomputed [WIS](evaluation.md#wis) and coverage. Use each participant’s `quantile_points`, join `ground_truth` on matching timestamps, and average the per-quarter scores with equal weight. Coverage is the fraction of joined observations inside the indicated pair of quantiles, including the endpoints. No rows were filled. Official Arena scores use ENTSO-E truth. [Platform scoring and chart data](https://energy-arena.org/faq)
 
 | Participant and cutoff (German time) | WIS (EUR/MWh, lower is better) | Central 50% coverage | Central 95% coverage |
 |---|---:|---:|---:|
