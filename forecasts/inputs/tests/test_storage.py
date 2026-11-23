@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import unittest
 
-from forecasts.storage import requires_tls
+from forecasts.inputs.storage import requires_tls
 
 
 class StorageTests(unittest.TestCase):

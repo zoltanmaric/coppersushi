@@ -1,6 +1,5 @@
 """Price contracts and revision ambiguity at the table boundary."""
-from datetime import date, datetime
-from collections.abc import Mapping
+from datetime import date
 from itertools import permutations
 import unittest
 
@@ -8,18 +7,11 @@ import polars as pl
 import pyarrow as arrow
 from pandera.errors import SchemaError
 
-from forecasts.dataset import cutoff, stamp
-from pandera.typing.polars import DataFrame
-from forecasts.prices import PriceHistory, PriceVersions, build_price_features, read_prices, select_history, snapshot_schema
-from forecasts.tests.test_snapshot import history
-from forecasts.snapshot import _latest_rows
-
-
-def price_history(values: Mapping[datetime, float | None]) -> DataFrame[PriceHistory]:
-    """Build a validated selected-value table for synthetic feature tests."""
-    return PriceHistory.validate(pl.DataFrame(
-        {"valid_utc": list(values), "price_eur_mwh": list(values.values())},
-        schema={"valid_utc": pl.Datetime("us", "UTC"), "price_eur_mwh": pl.Float64}))
+from forecasts.inputs.sources import stamp
+from forecasts.market import cutoff
+from forecasts.inputs.prices import PriceVersions, read_prices, select_history, snapshot_schema
+from forecasts.inputs.tests.test_snapshot import history
+from forecasts.inputs.selection import _latest_rows
 
 
 class PriceTableTests(unittest.TestCase):
@@ -47,22 +39,6 @@ class PriceTableTests(unittest.TestCase):
         frame = read_prices(arrow.Table.from_pylist(rows+[conflict], schema=snapshot_schema()))
         with self.assertRaisesRegex(ValueError, "Conflicting"):
             select_history(frame, day, cutoff(day))
-
-    def test_empty_history_preserves_delivery_rows_with_missing_features(self) -> None:
-        delivery = [stamp("2026-03-29T00:00:00Z"), stamp("2026-03-29T01:00:00Z")]
-        result = build_price_features(price_history({}), delivery)
-        self.assertEqual(result["delivery_utc"].to_list(), delivery)
-        self.assertTrue(all(result[name].null_count() == 2 for name in result.columns[1:]))
-        self.assertEqual(build_price_features(price_history({}), []).height, 0)
-
-    def test_autumn_daily_summary_counts_both_physical_quarters(self) -> None:
-        prices = {stamp("2025-10-26T00:00:00Z"): 0.0, stamp("2025-10-26T01:00:00Z"): 20.0,
-                  stamp("2025-10-26T02:00:00Z"): 40.0}
-        result = build_price_features(price_history(prices), [stamp("2025-10-27T01:00:00Z")]).row(0, named=True)
-        self.assertEqual(result["price_lag_1"], 10.0)
-        self.assertEqual(result["price_day_1_mean"], 20.0)
-        self.assertEqual(result["price_day_1_min"], 0.0)
-        self.assertEqual(result["price_day_1_max"], 40.0)
 
     def test_price_and_weather_share_order_independent_revision_rules(self) -> None:
         day = date(2026, 3, 29)

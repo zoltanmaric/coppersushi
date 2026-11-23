@@ -26,3 +26,8 @@ WEATHER_LOCATIONS: tuple[WeatherLocation, ...] = (
     WeatherLocation('Stuttgart', 48.78, 9.18),
     WeatherLocation('Nuremberg', 49.45, 11.08),
 )
+
+FIELDS = {"temperature_2m": "°C", "wind_speed_120m": "km/h", "shortwave_radiation": "W/m²"}
+# Diagnostic and feature-table columns retain the archive's location-first order.
+WEATHER_TABLE_FIELDS = [f"{variable}_{location.name.lower()}" for location in WEATHER_LOCATIONS for variable in FIELDS]
+WEATHER_FIELDS = sorted(WEATHER_TABLE_FIELDS)

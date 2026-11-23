@@ -11,6 +11,7 @@ WeatherSeries = dict[str, PriceSeries]
 
 
 class DemandVersion(TypedDict):
+    """One retained publication of the country-level demand forecast."""
     updated: datetime | None
     value: float | None
     source: str

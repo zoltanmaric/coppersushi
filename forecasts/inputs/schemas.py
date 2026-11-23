@@ -1,9 +1,9 @@
 """Versioned input schemas; UTC times remain distinct from availability evidence."""
-from forecasts.input_types import Report
+from forecasts.inputs.input_types import Report
 import math
 import pyarrow as pa
-from forecasts.dataset import FIELDS
-from forecasts.prices import PriceVersions, read_prices, snapshot_schema
+from forecasts.inputs.input_config import FIELDS
+from forecasts.inputs.prices import PriceVersions, read_prices, snapshot_schema
 from pandera.errors import SchemaError
 
 VERSION = 1

@@ -42,7 +42,7 @@ dev = [
 [tool.setuptools.packages.find]
 namespaces = false
 include = ["coppersushi*", "forecasts*"]
-exclude = ["forecasts.tests*", "forecasts.evidence*"]
+exclude = ["forecasts.tests*", "forecasts.*.tests*", "forecasts.evidence*"]
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
@@ -83,7 +83,7 @@ check-data = "python -m coppersushi.pipelines.preparation.data_sources.runtime_d
 dev = { cmd = "python -m coppersushi.frontend.packaging.preview", depends-on = ["frontend-build"] }
 build-zone-shapes = "python -m coppersushi.pipelines.grid.data_sources.zone_shapes"
 test-app = "python -m pytest -q -n 4 --dist loadfile --durations=20"
-test-forecast = "python -m unittest discover -s forecasts/tests -v"
+test-forecast = "python -m unittest discover -s forecasts -t . -v"
 typecheck = "python -m mypy --config-file mypy.ini"
 test-python = { depends-on = ["test-app", "test-forecast"] }
 component-imports = "lint-imports --no-cache"
@@ -107,7 +107,12 @@ frontend-test = "python -m coppersushi.frontend.packaging.contracts --check && n
 frontend-contracts = "python -m coppersushi.frontend.packaging.contracts && npm run --prefix coppersushi/frontend types"
 
 [tool.importlinter]
-root_package = "coppersushi"
+root_packages = ["forecasts", "coppersushi"]
+
+[[tool.importlinter.contracts]]
+name = "Forecast components have acyclic sibling imports"
+type = "acyclic_siblings"
+ancestors = ["forecasts"]
 
 [[tool.importlinter.contracts]]
 name = "Copper Sushi components have acyclic sibling imports"
