@@ -665,6 +665,16 @@ The [prices-only baseline](price-forecasting/operational-forecasting.md#pipeline
 
 Recorded the [foundation boundary and conditions for revisiting delivery and training automation](price-forecasting/forecast-infrastructure.md#automation-scope).
 
+## [2026-10-20] ingest | Retrospective forecast diagnostic review
+
+Recorded the reviews on #105 and #112 in MLflow research record `5136923c77484ace8c98dac6f843e308`, with six linked, unselected candidate proposals. Preserve the accepted baseline; no experiment was launched. Reviewer-reported diagnostics remain attributed rather than presented as newly reproduced results. [Research record and direction](price-forecasting.md#research).
+
+## [2026-11-23] query | Historical German demand revisions
+
+The [demand source audit](price-forecasting/data-sources.md) recovered the four inputs to the country forecast for seven of 57 previously excluded training dates. All 672 reconstructed quarters passed the historical cutoff.
+
+Selected the [price-history and calendar baseline](price-forecasting/research/prices-only-baseline.md) on 2026-11-23. The demand audit remains research evidence. The autumn replay remains invalid.
+
 ## [2026-11-23] decision | Evidence at the forecast cutoff
 
 A late collector receipt cannot establish earlier availability on its own. A daily price refresh needs complete coverage on the dates used by the forecast. [Point-in-time and price contracts](price-forecasting/data-sources.md#point-in-time).
