@@ -1,6 +1,6 @@
 # Price forecasting
 
-Start with the [forecasting system design principles](forecasting-system-design.md#principles). The [operational cases](price-forecasting/operational-forecasting.md) work through the evidence for the 11:00 DE–LU forecast.
+Start with the [forecasting system design principles](forecasting-system-design.md#principles). For a worked introduction, open [Reading Google’s MLOps guide for power forecasting](../lessons/forecasting-systems/index.html). The [operational cases](price-forecasting/operational-forecasting.md) work through the evidence for the 11:00 DE–LU forecast.
 
 An independent forecasting product under `forecasts/`, with no dependency on the power-flow application. The first market is Germany–Luxembourg day-ahead electricity prices. As of 2026-10-09, typed S3 inputs and feature replay exist; training and experiment tracking remain planned.
 

@@ -21,5 +21,10 @@ footer { border-top: 2px solid #16cba4; margin-top: 1rem; }
 .levels b, .levels small { display: block; }
 .levels b { margin: .3rem 0; color: white; }
 .levels a:hover b, .levels a:focus-visible b { text-decoration: underline; }
-.original img { width: 100%; height: auto; display: block; background: white; margin-bottom: .7rem; }
+.workflow ol { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; list-style: none; padding: 0; }
+.workflow li { border-top: 2px solid var(--line); padding-top: .5rem; }
+.workflow b, .workflow span { display: block; }
+.workflow b { color: var(--copper); }
+.workflow .sources { margin-bottom: 0; }
+@media(max-width: 580px){ .workflow ol { grid-template-columns: 1fr; gap: .2rem; } }
 @media(max-width: 580px){ .levels { grid-template-columns: 1fr; } }
