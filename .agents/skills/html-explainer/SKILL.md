@@ -11,6 +11,8 @@ When a reference series is supplied, read the full series before choosing the na
 
 For explainers about an existing project, inspect its owning stylesheet, fonts, design tokens and a representative page before styling. Reuse that visual identity and CSS conventions unless the user requests another style; do not invent a parallel palette.
 
+Open links to resources outside the current page in a new tab with `target="_blank" rel="noopener"`. Keep same-page navigation in place.
+
 Adapt source material to the visual narrative rather than mechanically porting Markdown. Preserve meaning and state: render checklists with semantic checkbox controls and explicit labels, keeping completed and pending items distinct. Make read-only status non-interactive; do not imply that changes persist unless they do.
 
 Inspect the rendered result against the design reference, including narrow layouts, diagrams and control states. Verify that the visuals teach the main concept and that checkboxes and other interactions behave as labelled. If browser inspection is unavailable, report visual verification as incomplete; source inspection alone does not establish rendering quality.

@@ -12,6 +12,12 @@ Every forecast uses only information available by its issue deadline. Historical
 
 Choose storage from the reads and writes the system needs. Add complexity only for a demonstrated requirement.
 
+## Automation-scope
+
+As of 2026-11-23, review the [open foundation stack at its cumulative tip (#326)](https://github.com/zoltanmaric/coppersushi/pull/326). The guide can be read on its own checkout. To run the foundation commands, use the stack checkout: [#320](https://github.com/zoltanmaric/coppersushi/pull/320) supplies inputs, #323 adds monthly fitting and daily issuance, #324 evaluates the forecast, and #325 records and reproduces the run. The stack’s acceptance boundary is local, on-demand execution with continuous integration checks. [Commands at the reviewed revision](https://github.com/zoltanmaric/coppersushi/blob/b99bc7e6bb735b587f11b23cac17b5ebddb111f5/forecasts/README.md)
+
+Continuous delivery (CD) and continuous training (CT) are goals for subsequent work. Revisit CD when a pipeline change needs a repeatable release to an identified operating environment. Revisit CT when fresh settled observations justify recurring fits and the team can say what evidence qualifies a candidate for use. Scheduling daily predictions is a separate decision. Set acceptance criteria for each capability in the spec for the stage that introduces it. [Google Cloud’s automation levels](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning#mlops_level_1_ml_pipeline_automation)
+
 ## First-stage
 
 Store inputs in Amazon S3. Run collection, training and evaluation locally through Metaflow. Use local MLflow Tracking to compare experiments and retain models and reports. S3 is the only required cloud service in this stage; no cloud scheduler or shared tracking server is required.

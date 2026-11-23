@@ -656,3 +656,11 @@ The [forecast design walkthrough](forecasting-system-design.md) tests whether a 
 ## [2026-11-23] ingest | Attributing forecast gains
 
 The [matched day-ahead editions](price-forecasting/energy-arena-benchmarks.md#paired-week) show why comparing scores at two cutoffs cannot isolate the value of fresher inputs.
+
+## [2026-11-23] query | Forecast release evidence
+
+The [prices-only baseline](price-forecasting/operational-forecasting.md#pipeline-triggers) distinguishes accepting a measured experiment from approving a model for issuance.
+
+## [2026-11-23] decision | Forecast automation scope
+
+Recorded the [foundation boundary and conditions for revisiting delivery and training automation](price-forecasting/forecast-infrastructure.md#automation-scope).
