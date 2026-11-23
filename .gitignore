@@ -51,3 +51,5 @@ dist/
 
 # Unpublished upstream issue/PR drafts are not implementation specs.
 /specs/upstream/
+# Local secrets written by `elevenlabs onboard`
+/.env
