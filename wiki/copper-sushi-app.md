@@ -22,6 +22,10 @@ registration returned HTTP 204 after propagation; the deployed app was then
 verified without overrides, and its host/path appeared in the dashboard. Headless
 test visits require removing the report’s bot exclusion to inspect them.
 
+[Cloudflare Web Analytics](https://developers.cloudflare.com/web-analytics/about/) is free. The [Observability pricing effective 2026-12-01](https://developers.cloudflare.com/observability/pricing/) applies to diagnostic logs and traces, including the cache-purge Worker’s logs.
+
+Exclude Ghost Admin paths (`/ghost/`) when estimating readership. Bot filtering can still count manual browser checks. To assess a deployment, start the reporting window after it went live so earlier slow loads do not skew the result.
+
 ### Article-cache
 
 The [article homepage](https://121gigawatts.org/) and
