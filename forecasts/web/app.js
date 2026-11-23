@@ -7,9 +7,16 @@
   const names = {
     system: "Automatic selection (with fallbacks)",
     reference: "Yesterday / last-week reference",
-    prices: "Price-history model",
+    prices: "Prices/calendar baseline",
     weather: "Price-history + weather model",
     demand: "Price-history + weather + demand model",
+  };
+  const methodDescriptions = {
+    prices: "CatBoost learns from previous same-clock prices, recent daily price summaries and the German calendar.",
+    reference: "Averages yesterday’s and last week’s same-clock prices. Uses the available price if one is absent, or an earlier same-quarter median if both are absent. Its bands come from training-period errors.",
+    system: "The older workflow could select a simpler method if inputs or prediction failed. The method used is shown below the chart.",
+    weather: "Adds temperature, wind and solar radiation forecasts to the price and calendar inputs.",
+    demand: "Adds German demand forecasts to the weather model.",
   };
   const ns = "http://www.w3.org/2000/svg";
   function svg(tag, attrs, parent, text) {
@@ -38,6 +45,28 @@
       throw Error(
         "No supported export loaded. Generate this website with python -m forecasts.explain.",
       );
+    const historical = D.model_method == null;
+    const model = D.model_method ?? "system";
+    const evidenceStatus = {
+      accepted_baseline: "Accepted baseline",
+      invalid: "Invalid experiment",
+      superseded: "Superseded experiment",
+    }[D.evidence_status] ?? "Evidence status unknown";
+    const methods = [model, ...Object.keys(D.report.metrics).filter((name) => name !== model)];
+    for (const method of methods) {
+      option($("method"), method, names[method]);
+      definition($("method-descriptions"), names[method], methodDescriptions[method]);
+    }
+    if (historical) {
+      $("status").textContent = "HISTORICAL DIAGNOSTIC";
+      $("historical-notice").hidden = false;
+      $("historical-notice").textContent =
+        `${evidenceStatus}. These forecasts use the earlier workflow with weather, demand and fallback options. The model and pipeline views describe the prices/calendar baseline.`;
+    } else if (D.run.exploratory) {
+      $("status").textContent = "EXPLORATORY RUN";
+    } else if (D.evidence_status === "accepted_baseline") {
+      $("status").textContent = "ACCEPTED BASELINE";
+    }
     let index = 0,
       quarterIndex = 0,
       node = "features";
@@ -60,7 +89,7 @@
       const i = D.days.findIndex((d) => d.date === params.get("day"));
       if (i >= 0) index = i;
     }
-    if (params.has("method") && Object.hasOwn(names, params.get("method")))
+    if (methods.includes(params.get("method")))
       $("method").value = params.get("method");
     for (const m of Object.keys(D.report.breakdowns.month))
       option($("period"), m, m);
@@ -92,7 +121,7 @@
         $("period").value = p.get("period");
       if (!visibleIndices().includes(index)) index = visibleIndices()[0];
       overview();
-      if (Object.hasOwn(names, p.get("method")))
+      if (methods.includes(p.get("method")))
         $("method").value = p.get("method");
       for (const section of document.querySelectorAll(".view"))
         section.hidden = section.id !== target;
@@ -118,10 +147,10 @@
       const period = $("period").value;
       const group =
         period === "all" ? D.report : D.report.breakdowns.month[period];
-      const m = group.metrics.system,
+      const m = group.metrics[model],
         r = group.metrics.reference;
       $("population").textContent =
-        `${period === "all" ? `${D.days[0].date} – ${D.days.at(-1).date}` : period} · ${m.rows.toLocaleString()} scored quarters · ${group.missing_truth} missing outcomes · dates in Europe/Berlin`;
+        `${period === "all" ? `${D.days[0].date} – ${D.days.at(-1).date}` : period} · ${m.rows.toLocaleString()} scored quarters${historical ? ` · ${group.missing_truth} missing outcomes` : ""} · dates in Europe/Berlin`;
       $("metrics").replaceChildren();
       for (const [key, label, value, sub] of [
         [
@@ -152,17 +181,19 @@
             ),
           );
           const teaching = $("wis-template").content.cloneNode(true);
-          teaching.querySelector(".wis-caveat p").textContent =
-            "WIS combines band-width cost with errors and misses; coverage asks only how often outcomes land inside. A system can win the combined score while its bands under-cover. Check both results for the selected period: the better score alone does not establish calibration.";
+          sourceLinks(teaching);
           card.append(teaching);
         }
         $("metrics").append(card);
       }
-      $("verdict-title").textContent =
-        `${m.wis < r.wis ? "Lower" : "Higher"} WIS than the reference. ${m.coverage_95 < 0.95 ? "The 95% band under-covers." : "Read coverage alongside width."}`;
-      const c = D.report.comparison.system;
+      const direction = m.wis === r.wis ? "Equal" : m.wis < r.wis ? "Lower" : "Higher";
+      $("verdict-title").textContent = `${direction} WIS than the reference.`;
+      const c = D.report.comparison[model];
+      const uncertainty = period === "all" && c?.ci_95
+        ? `The full-period WIS difference is ${fmt(c.wis_difference)} €/MWh. The paired seven-day-block 95% interval is ${fmt(c.ci_95[0])} to ${fmt(c.ci_95[1])}.`
+        : period === "all" ? "" : "This monthly comparison is descriptive.";
       $("verdict-text").textContent =
-        `The nominal 95% band contained ${pct(m.coverage_95)} of observed prices in this period. ${period === "all" ? `The full-period WIS difference is ${fmt(c.wis_difference)} €/MWh; its paired seven-day-block 95% interval is ${fmt(c.ci_95[0])} to ${fmt(c.ci_95[1])}.` : "This monthly comparison is descriptive; the full-period uncertainty interval does not apply to this subset."} Historical input timing remains assumed or conditional.`;
+        `The nominal 95% band contained ${pct(m.coverage_95)} of observed prices in this period. ${uncertainty}`;
       if (!m.rows) {
         $("verdict-title").textContent = "No observed prices in this period.";
         $("verdict-text").textContent =
@@ -217,7 +248,7 @@
         "Median with central 50% and 95% bands. Hover over the chart or use the daily values table to read exact prices. The price scale is fixed across all saved days and methods.",
       );
       const points = day.points,
-        reference = $("reference").checked,
+        reference = $("reference").checked && method !== "reference",
         W = 1100,
         H = 760,
         L = 64,
@@ -285,7 +316,7 @@
           " Z";
         svg("path", { d: path, fill, opacity }, root);
       }
-      if (reference && method !== "reference")
+      if (reference)
         band("reference", 0, 4, "var(--gold)", 0.22);
       band(method, 0, 4, "var(--band-wide)");
       band(method, 1, 3, "var(--band)");
@@ -299,7 +330,7 @@
         },
         root,
       );
-      if (reference && method !== "reference")
+      if (reference)
         svg(
           "path",
           {
@@ -373,6 +404,7 @@
         pointDetail();
       };
       $("reference-legend").hidden = !reference;
+      $("reference-control").hidden = method === "reference";
     }
     function pointDetail() {
       const day = D.days[index],
@@ -417,12 +449,23 @@
         item.append(el("strong", value));
         $("day-metrics").append(item);
       }
+      const timing = `${d.points.length} delivery quarters · Issue deadline ${d.issue}.`;
+      $("day-context").textContent = historical ? historicalDayContext(d, timing) : timing;
+      $("quarters").replaceChildren();
+      for (const p of d.points) {
+        const tr = el("tr");
+        for (const v of [p.clock, fmt(p.actual), ...p.q[method].map(fmt)])
+          tr.append(el("td", v));
+        $("quarters").append(tr);
+      }
+      links();
+    }
+    function historicalDayContext(d, timing) {
       const chosen = [...new Set(d.points.map((p) => p.selected))]
           .map((n) => names[n])
           .join(", "),
         reasons = [...new Set(d.points.map((p) => p.reason).filter(Boolean))];
-      $("day-context").textContent =
-        `${d.points.length} delivery quarters · ${d.missing_truth} missing outcomes. System used: ${chosen}. ${
+      return `${timing} ${d.missing_truth} missing outcomes. The historical workflow used ${chosen}. ${
           reasons.length
             ? `Fallback: ${reasons
                 .map((reason) =>
@@ -436,15 +479,7 @@
                 )
                 .join("; ")}.`
             : "No source fallback."
-        } Historical issue deadline: ${d.issue}.`;
-      $("quarters").replaceChildren();
-      for (const p of d.points) {
-        const tr = el("tr");
-        for (const v of [p.clock, fmt(p.actual), ...p.q[method].map(fmt)])
-          tr.append(el("td", v));
-        $("quarters").append(tr);
-      }
-      links();
+        }`;
     }
     function renderPipeline() {
       const root = $("pipeline");
@@ -504,7 +539,7 @@
       const facts = el("dl");
       evidence.append(facts);
       definition(facts, "Run", D.run.run_id);
-      if (["prices", "weather", "demand", "snapshot"].includes(node))
+      if (["prices", "snapshot"].includes(node))
         definition(facts, "Input snapshot", D.snapshot);
       if (node === "features")
         for (const [name, count] of Object.entries(D.features))
@@ -532,33 +567,32 @@
         definition(facts, "Scored quarters", D.report.scored_rows);
         definition(facts, "Missing outcomes", D.report.missing_truth);
       }
-      if (node === "fallback")
-        for (const [name, count] of Object.entries(D.report.fallback_rows))
-          definition(
-            facts,
-            `System selected ${names[name]}`,
-            `${count} quarters`,
-          );
-      panel.append(evidence);
+      if (!historical) panel.append(evidence);
       const link = el("a", "Read the source contract ↗");
       link.href =
         D.sources[
-          ["prices", "weather", "demand", "select", "snapshot"].includes(node)
+          ["prices", "select", "snapshot"].includes(node)
             ? "inputs"
             : "evaluation"
         ].url;
       panel.append(link);
     }
-    for (const a of document.querySelectorAll("[data-source]"))
-      a.href =
-        D.sources[a.dataset.source].url +
-        (a.dataset.anchor ? "#" + a.dataset.anchor : "");
-    $("coverage-explanation").textContent =
-      `Across the full saved evaluation, the nominal 95% system band covered ${pct(D.report.metrics.system.coverage_95)} of observed quarters; its mean width was ${fmt(D.report.metrics.system.width_95)} €/MWh. The reference covered ${pct(D.report.metrics.reference.coverage_95)} with width ${fmt(D.report.metrics.reference.width_95)} €/MWh.`;
+    function sourceLinks(root) {
+      for (const a of root.querySelectorAll("[data-source]"))
+        a.href =
+          D.sources[a.dataset.source].url +
+          (a.dataset.anchor ? "#" + a.dataset.anchor : "");
+    }
+    sourceLinks(document);
+    if (!historical) {
+      const { [model]: scored, reference } = D.report.metrics;
+      $("coverage-explanation").textContent =
+        `Across the full evaluation, the nominal 95% baseline band covered ${pct(scored.coverage_95)} of observed quarters with a mean width of ${fmt(scored.width_95)} €/MWh. The reference covered ${pct(reference.coverage_95)} with a mean width of ${fmt(reference.width_95)} €/MWh.`;
+    }
     for (const [k, v] of Object.entries(D.report.timing_limits))
       definition($("timing"), k, v);
     $("identity").textContent =
-      `Run ${D.run.run_id} · ${D.run.exploratory ? "Exploratory execution" : "Saved baseline execution"} · ${D.days.length} delivery days`;
+      `Run ${D.run.run_id} · ${evidenceStatus} · ${D.days.length} delivery days`;
     for (const [k, v] of Object.entries({
       ...D.run,
       snapshot: D.snapshot,

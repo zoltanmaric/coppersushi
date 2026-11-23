@@ -26,9 +26,18 @@ const change = (id, value) => {
   $(id).dispatchEvent(new window.Event("change"));
 };
 const data = window.FORECAST;
+const model = data.model_method ?? "system";
 assert($("error").hidden, $("error").textContent);
+assert.equal($("method").value, model);
+assert.equal($("historical-notice").hidden, Boolean(data.model_method));
+if (data.model_method) {
+  assert.deepEqual([...$("method").options].map((option) => option.value), ["prices", "reference"]);
+  assert(!/weather|demand|fallback/i.test($("pipeline").textContent));
+} else {
+  assert.match($("historical-notice").textContent, /superseded|invalid|status unknown/i);
+}
 assert(
-  $("metrics").textContent.includes(data.report.metrics.system.wis.toFixed(2)),
+  $("metrics").textContent.includes(data.report.metrics[model].wis.toFixed(2)),
 );
 assert.equal(
   $("wis-explanation").closest(".metric").querySelector(".metric-label")
@@ -74,7 +83,7 @@ change("day", monthDays.at(-1).date);
 assert($("next").disabled);
 assert(
   $("metrics").textContent.includes(
-    data.report.breakdowns.month[month].metrics.system.wis.toFixed(2),
+    data.report.breakdowns.month[month].metrics[model].wis.toFixed(2),
   ),
 );
 assert.equal($("pipeline").innerHTML, diagramBefore);
@@ -85,6 +94,8 @@ assert.deepEqual([$("chart").dataset.priceMin, $("chart").dataset.priceMax], ini
 assert($("point-detail").textContent.includes("Actual"));
 $("reference").checked = true;
 $("reference").dispatchEvent(new window.Event("change"));
+assert($("reference-legend").hidden);
+change("method", model);
 assert(!$("reference-legend").hidden);
 change("period", "all");
 const dst = data.days.find((d) => d.points.length !== 96);

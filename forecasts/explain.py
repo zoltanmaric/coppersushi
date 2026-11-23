@@ -13,28 +13,32 @@ import pyarrow.parquet as pq
 
 from .scoring import metrics
 from .input_types import Report, Row
-from .config import QUANTILES
+from .config import MODEL_METHOD, QUANTILES
+from .coverage import require_quarters
 from .dataset import BERLIN, cutoff
 
 Scores = dict[str, dict[str, float | int]]
 
 ROOT = Path(__file__).resolve().parents[1]
-METHODS = ('system', 'reference', 'prices', 'weather', 'demand')
+METHODS = (MODEL_METHOD, 'reference')
+HISTORICAL_METHODS = ('system', 'reference', 'prices', 'weather', 'demand')
 
 def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def scores(rows: list[Row]) -> Scores:
+def scores(rows: list[Row], methods: tuple[str, ...]) -> Scores:
     common = [r for r in rows if r['target'] is not None]
     days = [r['delivery_date'] for r in common]
     return {name: metrics([r['target'] for r in common],
                           [[r[f'{name}_q{q}'] for q in QUANTILES] for r in common],
-                          days) for name in METHODS}
+                          days) for name in methods}
 
 
 def reconcile(actual: Scores, expected: Scores) -> None:
-    for name in METHODS:
+    if actual.keys() != expected.keys():
+        raise ValueError('Report methods differ from the forecast contract')
+    for name in actual:
         if actual[name].keys() != expected[name].keys():
             raise ValueError(f'Metric fields differ for {name}')
         for key, value in actual[name].items():
@@ -53,6 +57,10 @@ def build_payload(run: Path) -> Report:
     if config['quantiles'] != list(QUANTILES):
         raise ValueError('Unsupported quantile contract')
     report = json.loads((run / 'report.json').read_text())
+    model_method = config.get('model_method')
+    if model_method not in (None, MODEL_METHOD) or report.get('model_method') != model_method:
+        raise ValueError('Report model method differs from the configuration')
+    methods = METHODS if model_method else HISTORICAL_METHODS
     rows = pq.read_table(run / 'predictions.parquet').to_pylist()
     if not rows:
         raise ValueError('No predictions to explain')
@@ -60,13 +68,20 @@ def build_payload(run: Path) -> Report:
     timestamps = [r['delivery_utc'] for r in rows]
     if len(set(timestamps)) != len(rows):
         raise ValueError('Duplicate delivery timestamps')
+    if model_method:
+        require_quarters(timestamps, date.fromisoformat(config['evaluation_start']),
+                         date.fromisoformat(config['end_exclusive']), 'Export delivery grid')
+        if any(row['target'] is None for row in rows):
+            raise ValueError('Prices/calendar baseline export requires all realised prices')
+        if any(row['selected_model'] != model_method or row['fallback_reason'] for row in rows):
+            raise ValueError('Prices/calendar baseline export requires the fitted model for every quarter')
     for row in rows:
         local = row['delivery_utc'].astimezone(BERLIN)
         if local.date() != row['delivery_date']:
             raise ValueError('Delivery date disagrees with Europe/Berlin timestamp')
         if row['target'] is not None and not np.isfinite(row['target']):
             raise ValueError('Non-finite target')
-        for name in METHODS:
+        for name in methods:
             q = [row[f'{name}_q{p}'] for p in QUANTILES]
             if not np.isfinite(q).all() or any(a > b for a, b in zip(q, q[1:])):
                 raise ValueError('Expected finite ordered quantiles, including unscored rows')
@@ -74,14 +89,14 @@ def build_payload(run: Path) -> Report:
             or sum(r['target'] is None for r in rows) != report['missing_truth']
             or sum(r['target'] is not None for r in rows) != report['scored_rows']):
         raise ValueError('Report population differs from predictions')
-    reconcile(scores(rows), report['metrics'])
+    reconcile(scores(rows, methods), report['metrics'])
     grouped: dict[date, list[Row]] = defaultdict(list)
     months: dict[str, list[Row]] = defaultdict(list)
     for row in rows:
         grouped[row['delivery_date']].append(row)
         months[row['delivery_date'].strftime('%Y-%m')].append(row)
     for month, selected in months.items():
-        reconcile(scores(selected), report['breakdowns']['month'][month]['metrics'])
+        reconcile(scores(selected, methods), report['breakdowns']['month'][month]['metrics'])
     folds = {f['first_delivery_day']: f for f in report['folds']}
     days = []
     for day, selected in sorted(grouped.items()):
@@ -92,36 +107,30 @@ def build_payload(run: Path) -> Report:
         points = []
         for row in selected:
             local = row['delivery_utc'].astimezone(BERLIN)
-            points.append({'utc': row['delivery_utc'].isoformat(), 'clock': local.strftime('%H:%M %Z'),
-                           'actual': row['target'], 'q': {n: [row[f'{n}_q{q}'] for q in QUANTILES] for n in METHODS},
-                           'selected': row['selected_model'], 'reason': row['fallback_reason'],
-                           'demand_update': row['demand_selected_update_utc'].isoformat() if row['demand_selected_update_utc'] is not None else None,
-                           'missing': [k.removesuffix('_missing') for k, v in row.items() if k.endswith('_missing') and v]})
+            point = {'utc': row['delivery_utc'].isoformat(), 'clock': local.strftime('%H:%M %Z'),
+                     'actual': row['target'], 'q': {n: [row[f'{n}_q{q}'] for q in QUANTILES] for n in methods},
+                     'missing': [k.removesuffix('_missing') for k, v in row.items() if k.endswith('_missing') and v]}
+            if model_method is None:
+                demand_update = row['demand_selected_update_utc']
+                point.update(selected=row['selected_model'], reason=row['fallback_reason'],
+                             demand_update=demand_update.isoformat() if demand_update is not None else None)
+            points.append(point)
         days.append({'date': day.isoformat(), 'issue': issue.isoformat(), 'fold': selected[0]['fold'].isoformat(),
-                     'metrics': scores(selected), 'missing_truth': sum(r['target'] is None for r in selected),
+                     'metrics': scores(selected, methods), 'missing_truth': sum(r['target'] is None for r in selected),
                      'points': points})
-    revision = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
-    sources = {}
-    for key, source in json.loads((ROOT / 'forecasts/web/sources.json').read_text()).items():
-        name = source['path']
-        if digest(ROOT / name) != source['sha256']:
-            raise ValueError(f'Explainer source changed; review narrative and update sources.json: {name}')
-        # Reject uncommitted knowledge: a revision link must identify the bytes used.
-        committed = subprocess.check_output(['git', '-C', str(ROOT), 'show', f'{revision}:{name}'])
-        if (ROOT / name).read_bytes() != committed:
-            raise ValueError(f'Commit wiki source before export: {name}')
-        sources[key] = {'path': name, 'sha256': digest(ROOT / name), 'revision': revision,
-                        'url': f'https://github.com/zoltanmaric/coppersushi/blob/{revision}/{name}'}
-    return {'schema_version': 1, 'run': {k: manifest[k] for k in
-            ('run_id', 'code_revision', 'exploratory', 'mlflow_run_id', 'metaflow_run_id')},
+    run_id = {k: manifest[k] for k in
+              ('run_id', 'code_revision', 'exploratory', 'mlflow_run_id', 'metaflow_run_id')}
+    return {'schema_version': 1, 'model_method': model_method,
+            'evidence_status': report.get('evidence_status', manifest.get('evidence_status', 'unknown')),
+            'run': run_id,
             'snapshot': config['snapshot_id'], 'manifest_sha256': digest(run / 'manifest.json'),
             'config': {k: config[k] for k in ('train_start', 'evaluation_start', 'end_exclusive', 'catboost')},
             'features': {n: len(v) for n, v in config['features'].items()},
-            'sources': sources,
+            'sources': _sources(),
             'presentation_sha256': {p.name: digest(p) for p in sorted((ROOT / 'forecasts/web').iterdir()) if p.is_file()},
             'report': {k: report[k] for k in
                 ('metrics', 'comparison', 'delivery_rows', 'scored_rows', 'missing_truth', 'breakdowns',
-                 'timing_limits', 'limitations', 'raw_crossing_fraction', 'prediction_failures', 'fallback_rows')},
+                 'timing_limits', 'limitations', 'raw_crossing_fraction')},
             'pipeline': json.loads((ROOT / 'forecasts/web/pipeline.json').read_text()),
             'folds': folds, 'days': days}
 
@@ -144,6 +153,22 @@ def main() -> None:
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     print(export(args.run, args.output).resolve())
+
+
+def _sources() -> dict[str, dict[str, str]]:
+    revision = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
+    sources = {}
+    for key, source in json.loads((ROOT / 'forecasts/web/sources.json').read_text()).items():
+        name = source['path']
+        if digest(ROOT / name) != source['sha256']:
+            raise ValueError(f'Explainer source changed; review narrative and update sources.json: {name}')
+        # A revision link must identify the bytes used.
+        committed = subprocess.check_output(['git', '-C', str(ROOT), 'show', f'{revision}:{name}'])
+        if (ROOT / name).read_bytes() != committed:
+            raise ValueError(f'Commit wiki source before export: {name}')
+        sources[key] = {'path': name, 'sha256': source['sha256'], 'revision': revision,
+                        'url': f'https://github.com/zoltanmaric/coppersushi/blob/{revision}/{name}'}
+    return sources
 
 
 if __name__ == '__main__':

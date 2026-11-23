@@ -47,6 +47,8 @@
         "modelVersionFilter": "All Runs",
         "selectedColumns": [
           "attributes.`Description`",
+          "tags.`model_method`",
+          "tags.`evidence_status`",
           "params.`evaluation_start`",
           "params.`end_exclusive`",
           "tags.`snapshot_id`",

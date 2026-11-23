@@ -12,7 +12,7 @@
     <header>
       <a class="brand" href="#explore"
         >COPPER SUSHI <span>/ FORECAST OBSERVATORY</span></a
-      ><span class="status">HISTORICAL EVALUATION</span>
+      ><span id="status" class="status">HISTORICAL EVALUATION</span>
     </header>
     <main>
       <div class="intro">
@@ -35,6 +35,7 @@
         available in the repository wiki.</noscript
       >
       <p id="error" role="alert" hidden></p>
+      <p id="historical-notice" class="verdict" hidden></p>
       <section id="explore" class="view" aria-labelledby="explore-title">
         <div class="section-heading">
           <div>
@@ -92,32 +93,13 @@
         </div>
         <details class="method-guide">
           <summary>What do these forecast methods mean?</summary>
-          <p>Three trained models use the same CatBoost approach, which learns relationships from past examples. They differ in their inputs. The reference is a simple comparison method; automatic selection chooses a method rather than fitting another model.</p>
-          <dl>
-            <dt>Automatic selection (with fallbacks)</dt>
-            <dd>Strict runs require the price-history + weather + demand model. The historical baseline could fall back to weather, price history, then the reference. The method actually used on this day is shown below the chart.</dd>
-            <dt>Price-history model</dt>
-            <dd>Uses previous prices at the same time of day, recent daily price summaries, and calendar information such as weekday and holidays.</dd>
-            <dt>Price-history + weather model</dt>
-            <dd>Adds forecast temperature, wind and solar radiation from twelve locations to the price-history model’s inputs.</dd>
-            <dt>Price-history + weather + demand model</dt>
-            <dd>Also adds forecast electricity demand for Germany, with indicators for missing inputs.</dd>
-            <dt>Yesterday / last-week reference</dt>
-            <dd>Averages yesterday’s and last week’s same-clock prices. Uses either when only one is available, or an earlier same-quarter median when neither is available. Its bands come from past forecast errors in the training data.</dd>
-          </dl>
-          <p class="muted">All five are saved historical predictions. Training expands monthly using earlier eligible data. If an individual trained model fails, its displayed prediction uses the reference.</p>
+          <dl id="method-descriptions"></dl>
         </details>
         <div class="chart-card">
           <div class="chart-toolbar">
             <label
-              >Forecast method<select id="method">
-                <option value="system">Automatic selection (with fallbacks)</option>
-                <option value="weather">Price-history + weather model</option>
-                <option value="demand">Price-history + weather + demand model</option>
-                <option value="prices">Price-history model</option>
-                <option value="reference">Yesterday / last-week reference</option>
-              </select></label
-            ><label class="checkbox"
+              >Forecast method<select id="method"></select></label
+            ><label class="checkbox" id="reference-control"
               ><input type="checkbox" id="reference" /> Show reference median
               and 95% band</label
             >
@@ -170,9 +152,7 @@
           </div>
         </details>
         <p class="footnote">
-          All days are available, including poor forecasts and missing inputs.
-          Historical replay is subject to input-timing assumptions; it does not
-          show forecasts issued live.
+          Historical replay uses recorded input-timing assumptions.
         </p>
       </section>
       <section
@@ -265,17 +245,16 @@
           <article>
             <h3>What does the model see?</h3>
             <p>
-              Past prices and calendar features, forecast weather across twelve
-              locations, and eligible demand forecasts. Three fixed feature sets
-              expose the effect of adding weather and demand.
+              Earlier SMARD auction prices and German calendar features.
+              CatBoost uses same-clock price lags, daily summaries, quarter of
+              day, weekday, month and public holidays.
             </p>
             <p>
-              The system chooses demand → weather → prices/calendar → reference
-              when entire sources or model executions fail. Partial gaps remain
-              missing values. The choice never uses realised prices or test
-              scores.
+              The training period expands monthly. Every evaluation day keeps
+              its own historical information deadline. An unexpected gap or
+              failed prediction stops the run.
               <a data-source="evaluation" data-anchor="defaults"
-                >Fallback contract ↗</a
+                >Evaluation requirements ↗</a
               >
             </p>
           </article>
@@ -283,9 +262,8 @@
             <h3>What can this evidence establish?</h3>
             <p>
               It measures a retrospective evaluation on a fixed snapshot.
-              Historical price and weather availability rely on assumptions;
-              demand timing is conditional on its update timestamp.
-              Reproducibility does not establish historical availability.
+              Historical price availability retains the timing assumptions
+              recorded with that snapshot.
             </p>
             <p>
               Some evaluation dates were inspected in earlier development. Daily
@@ -308,7 +286,7 @@
           <a href="#explore" class="button-link">Explore results ↗</a>
         </div>
         <p>
-          The system-level method: where inputs come from, what each
+          Follow the prices/calendar baseline: where inputs come from, what each
           transformation means, and how the pieces produce a forecast. Select a
           stage to explore it. This view is independent of the day selected in
           Results.
@@ -591,23 +569,14 @@
               in the selected period. Its units are €/MWh, but
               <strong>WIS is not the typical price error</strong>; the median’s
               MAE answers that question.
-              <a
-                href="https://github.com/zoltanmaric/coppersushi/blob/d536ba4d1d07759a8cd04d234869d13ffd3b585b/wiki/price-forecasting/evaluation.md#wis"
-                >Exact formula and weights ↗</a
-              >
+              <a data-source="evaluation" data-anchor="wis">Exact formula and weights ↗</a>
             </p>
             <div class="wis-caveat">
               <h4>How can the score improve while coverage is poor?</h4>
               <p>
-                The reference’s bands are much wider. WIS combines that width
-                cost with errors and misses; coverage asks only how often the
-                outcome lands inside. Our system wins that combined comparison
-                while its nominal 95% band contains only 63.7% of outcomes.
-                <strong
-                  >The better score does not make those bands well
-                  calibrated.</strong
-                >
-                Both results belong in the headline.
+                WIS counts band width and missed prices. Coverage measures how
+                often outcomes fall inside a band. Check both for the selected
+                period.
               </p>
             </div>
           </div>
