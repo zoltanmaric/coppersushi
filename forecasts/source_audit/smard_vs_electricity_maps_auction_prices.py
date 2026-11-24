@@ -3,7 +3,7 @@ import argparse
 from datetime import date, datetime, UTC
 from pathlib import Path
 
-from coppersushi.pipelines.data_sources.auction_prices import api_token, fetch_zone
+from coppersushi.pipelines.data_sources.electricity_maps_auction_prices import api_token, fetch_zone
 from coppersushi.pipelines.market_day import MarketDay
 from forecasts.inputs.sources import load_prices
 

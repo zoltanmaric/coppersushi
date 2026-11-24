@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, FiniteFloat, AwareDatetime
 
 from coppersushi.pipelines.cnec import attribution as cnec_attribution
 from coppersushi.pipelines.data_model.cnec_attribution import AllocationConstraint, NetPosition, PolishAlternative, JaoRecord
-from coppersushi.pipelines.data_sources import auction_prices
+from coppersushi.pipelines.data_sources import electricity_maps_auction_prices
 from coppersushi.pipelines.cnec.data_sources import electricity_maps
 from coppersushi.pipelines.jao.data_sources import publication as jao
 from coppersushi.pipelines.market_day import MarketDay
@@ -185,7 +185,7 @@ def collect(day: MarketDay, cache: Path) -> pd.DataFrame:
         started_at = datetime.now(UTC)
         prices = electricity_maps.fetch_day(key, ZONES)
         prices.to_csv(price_path, index=False)
-        urls = [f"{auction_prices.BASE_URL}?{urllib.parse.urlencode(auction_prices.query(zone, day))}"
+        urls = [f"{electricity_maps_auction_prices.BASE_URL}?{urllib.parse.urlencode(electricity_maps_auction_prices.query(zone, day))}"
                 for zone in ZONES]
         record_retrieval(price_path, urls, started_at)
     prices = prices[prices.zone.isin(ZONES)]
@@ -238,7 +238,7 @@ def main() -> None:
     if args.start < date(2026, 8, 14) or args.end < args.start or args.price_tolerance < 0:
         parser.error("Require 2026-08-14 <= start <= end and nonnegative price tolerance")
     if args.price_token_file:
-        auction_prices.TOKEN_FILE = args.price_token_file
+        electricity_maps_auction_prices.TOKEN_FILE = args.price_token_file
     args.output.mkdir(parents=True, exist_ok=True)
     cache = args.output / "inputs"
     cache.mkdir(exist_ok=True)

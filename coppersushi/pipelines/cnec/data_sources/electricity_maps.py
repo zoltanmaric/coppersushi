@@ -24,7 +24,7 @@ from coppersushi.pipelines.cnec import prices as market
 from coppersushi.pipelines.cnec import spread_prices
 from coppersushi.pipelines.jao.data_sources import publication as jao
 from coppersushi.pipelines.data_sources import cache
-from coppersushi.pipelines.data_sources import auction_prices
+from coppersushi.pipelines.data_sources import electricity_maps_auction_prices
 from coppersushi.pipelines.data_model.market import DayAheadPrices
 from coppersushi.pipelines.data_model.market import ElectricityMapsPriceResponse
 from coppersushi.pipelines.market_day import MarketDay
@@ -41,11 +41,11 @@ def fetch_day(
 ) -> DataFrame[DayAheadPrices]:
     """Fetch one Core market day's published prices, one per zone and market time unit."""
     market_day = MarketDay.on(day)
-    credential = token or auction_prices.api_token()
+    credential = token or electricity_maps_auction_prices.api_token()
 
     def fetch_zone(zone: str) -> ElectricityMapsPriceResponse | None:
         try:
-            return auction_prices.fetch_zone(zone, market_day, credential)
+            return electricity_maps_auction_prices.fetch_zone(zone, market_day, credential)
         except market.IncompletePrices:
             return None
 
