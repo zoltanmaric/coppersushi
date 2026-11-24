@@ -20,7 +20,8 @@ test-app` and regenerate changed contracts with `pixi run frontend-contracts`.
 ```mermaid
 flowchart LR
     PSE["PSE requirements and basic purchases"] --> Publisher["Daily publisher"]
-    Market["JAO and prices"] --> Publisher
+    Market["JAO market data"] --> Publisher
+    Prices["Shared Electricity Maps auction prices"] --> Publisher
     Publisher --> Objects["Immutable v3 interval objects"]
     Objects -->|Pinned generations| Study["Offline fixed-study builder"]
     Baseline["Investigated observations"] --> Study

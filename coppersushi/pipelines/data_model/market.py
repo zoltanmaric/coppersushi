@@ -68,3 +68,7 @@ class DayAheadPrices(ZonalPrices):
         strict = False
         coerce = True
         unique = ["interval", "zone"]
+
+
+class IncompletePrices(ValueError):
+    """Expected zone intervals have not all been published yet."""

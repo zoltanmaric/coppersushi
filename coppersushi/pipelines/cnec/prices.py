@@ -3,6 +3,7 @@
 import pandas as pd
 from pandera.typing import DataFrame
 
+from coppersushi.pipelines.data_model.market import IncompletePrices as IncompletePrices
 from coppersushi.pipelines.data_model.market import CORE_ZONES
 from coppersushi.pipelines.data_model.market import DayAheadPrices
 from coppersushi.pipelines.data_model.market import ElectricityMapsPriceResponse
@@ -37,10 +38,6 @@ def day_ahead_prices(payloads: list[ElectricityMapsPriceResponse]) -> DataFrame[
         updated_at=pd.to_datetime(frame.updated_at, utc=True),
     )
     return frame[columns].sort_values(["interval", "zone"], ignore_index=True).pipe(DayAheadPrices.validate)
-
-
-class IncompletePrices(ValueError):
-    """Expected zone intervals have not all been published yet."""
 
 
 def check_complete(prices: DataFrame[DayAheadPrices], day: MarketDay, zones: tuple[str, ...]) -> None:

@@ -12,82 +12,26 @@ repository fixtures; cached CSVs live under ignored ``data/electricity-maps/``.
 """
 
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
 import logging
 import sys
-import urllib.error
-import urllib.parse
-import urllib.request
 from pathlib import Path
 
 import pandas as pd
 import pandera.pandas as pa
 from pandera.typing import DataFrame
 
-from coppersushi import REPO
 from coppersushi.pipelines.cnec import prices as market
 from coppersushi.pipelines.cnec import spread_prices
 from coppersushi.pipelines.jao.data_sources import publication as jao
 from coppersushi.pipelines.data_sources import cache
-from coppersushi.pipelines.data_sources import credentials
+from coppersushi.pipelines.data_sources import auction_prices
 from coppersushi.pipelines.data_model.market import DayAheadPrices
 from coppersushi.pipelines.data_model.market import ElectricityMapsPriceResponse
 from coppersushi.pipelines.market_day import MarketDay
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://api.electricitymap.org/v4/price-day-ahead/actual"
 CACHE_DIR = cache.DATA_DIR / "electricity-maps"
-TOKEN_FILE = REPO / ".secrets" / ".electricity_maps_api_key"
-TIMEOUT_SECONDS = 60
-# The route's names for the market time units `MarketDay.market_time_unit` can name.
-TEMPORAL_GRANULARITY = {"h": "hourly", "15min": "15_minutes"}
-
-
-def api_token() -> str:
-    """The API credential, never included in a URL or log message."""
-    return credentials.token("ELECTRICITY_MAPS_API_KEY", TOKEN_FILE)
-
-
-def _stamp(moment: datetime) -> str:
-    return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def query(zone: str, day: MarketDay) -> dict[str, str]:
-    """The route's parameters: one zone, the day's UTC window, and its market time unit."""
-    return {
-        "zone": zone,
-        "start": _stamp(day.start_time_utc),
-        "end": _stamp(day.end_time_utc),
-        "temporalGranularity": TEMPORAL_GRANULARITY[day.market_time_unit],
-    }
-
-
-def _get(zone: str, day: MarketDay, token: str) -> ElectricityMapsPriceResponse:
-    logger.info("electricity maps: GET published prices for %s on %s", zone, day.date)
-    url = f"{BASE_URL}?{urllib.parse.urlencode(query(zone, day))}"
-    request = urllib.request.Request(url, headers={"auth-token": token})
-    try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
-            return ElectricityMapsPriceResponse.model_validate_json(response.read())
-    except urllib.error.HTTPError as error:
-        if error.code == 404 and b"No data for zone" in error.read(512):
-            raise market.IncompletePrices(f"{zone} prices unavailable for {day.date}") from error
-        raise
-
-
-def check_answered_as_asked(zone: str, day: MarketDay, payload: ElectricityMapsPriceResponse) -> None:
-    """Raise unless the envelope names the zone and resolution the request asked for.
-
-    The rows are checked later, as one table against the market day; this is what the envelope
-    alone can answer, and what a default answer fails.
-    """
-    if payload.zone != zone:
-        raise RuntimeError(f"price response says zone {payload.zone!r}, expected {zone!r}")
-    asked = TEMPORAL_GRANULARITY[day.market_time_unit]
-    answered = payload.temporalGranularity
-    if answered != asked:
-        raise RuntimeError(f"{zone} prices for {day.date} came {answered!r}, asked {asked!r}")
 
 
 def fetch_day(
@@ -97,17 +41,13 @@ def fetch_day(
 ) -> DataFrame[DayAheadPrices]:
     """Fetch one Core market day's published prices, one per zone and market time unit."""
     market_day = MarketDay.on(day)
-    credential = token or api_token()
+    credential = token or auction_prices.api_token()
 
     def fetch_zone(zone: str) -> ElectricityMapsPriceResponse | None:
         try:
-            payload = _get(zone, market_day, credential)
+            return auction_prices.fetch_zone(zone, market_day, credential)
         except market.IncompletePrices:
             return None
-        check_answered_as_asked(zone, market_day, payload)
-        if any(row.zone != zone for row in payload.data):
-            raise ValueError(f"Unexpected zone in {zone} price rows")
-        return payload
 
     with ThreadPoolExecutor(max_workers=12) as pool:
         payloads = list(pool.map(fetch_zone, zones))

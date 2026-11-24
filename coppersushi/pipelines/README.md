@@ -13,6 +13,8 @@ configuration and credentials access live in `data_sources/`. A shared helper ne
 actual callers in multiple features. No request-serving application is required for
 published map data.
 
+Critical Elements and the [forecast source audit](../../forecasts/source_audit/README.md) share the [direct auction-price reader](data_sources/auction_prices.py).
+
 Grid and Critical Elements share [JAO publications and constraint normalization](jao/).
 [Runtime preparation](preparation/data_sources/runtime_data.py) assembles inputs across all three pipelines.
 Run `pixi run --locked component-imports` to check for circular dependencies between sibling components at every package level.
