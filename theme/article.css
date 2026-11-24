@@ -53,7 +53,7 @@ a {
   text-underline-offset: 4px;
 }
 a:hover {
-  color: var(--green);
+  color: var(--teal);
 }
 .intro {
   border-bottom: 2px solid #aa66ed;
@@ -80,7 +80,7 @@ h1 {
   margin-bottom: 22px;
 }
 em {
-  color: var(--green);
+  color: var(--teal);
   font-weight: normal;
 }
 h2 {
@@ -135,7 +135,7 @@ h1 em {
   }
 }
 @media print {
-  :root { color-scheme: light; --paper: #fff; --surface: #fff; --ink: #20182a; --muted: #51475b; --line: #cfc6d7; --accent: #64339a; --green: #226d73; --soft: #f4f0f7; }
+  :root { color-scheme: light; --paper: #fff; --surface: #fff; --ink: #20182a; --muted: #51475b; --line: #cfc6d7; --accent: #64339a; --teal: #226d73; --soft: #f4f0f7; }
   body, body > header { background: white; }
   body > header, .intro { box-shadow: none; }
   h1, h2, h3, h4 { color: var(--ink); }

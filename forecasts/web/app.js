@@ -337,7 +337,7 @@
         {
           d: pathFor(points.map((p) => p.q[method][2])),
           fill: "none",
-          stroke: "var(--green)",
+          stroke: "var(--teal)",
           "stroke-width": 2.5,
         },
         root,

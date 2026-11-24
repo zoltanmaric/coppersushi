@@ -176,7 +176,7 @@ select:focus-visible,
 summary:focus-visible,
 input:focus-visible,
 [role="button"]:focus-visible {
-  outline: 3px solid var(--green);
+  outline: 3px solid var(--teal);
   outline-offset: 4px;
 }
 .chart-card {
@@ -215,7 +215,7 @@ input:focus-visible,
   vertical-align: middle;
 }
 .legend .median:before {
-  background: var(--green);
+  background: var(--teal);
 }
 .legend .band50:before {
   height: 9px;
@@ -311,7 +311,7 @@ svg text {
     normal 32px/1.3 system-ui, sans-serif;
 }
 .statement em {
-  color: var(--green);
+  color: var(--teal);
 }
 .statement .eyebrow {
   color: var(--accent);
@@ -338,17 +338,17 @@ svg text {
 }
 #pipeline { padding: 18px; }
 .pipeline-phase + .pipeline-phase { margin-top: 28px; }
-.pipeline-phase h3 { font: 700 15px system-ui; color: var(--green); margin: 0 0 16px; }
+.pipeline-phase h3 { font: 700 15px system-ui; color: var(--teal); margin: 0 0 16px; }
 .pipeline-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
 .pipeline-connection { font: 13px/1.5 system-ui; color: var(--muted); margin: 12px 0; }
 button.pipeline-node { display: flex; flex-direction: column; gap: 7px; width: 100%; text-align: left;
-  white-space: normal; padding: 14px; border: 1px solid var(--line); border-left: 4px solid var(--green);
+  white-space: normal; padding: 14px; border: 1px solid var(--line); border-left: 4px solid var(--teal);
   border-radius: 2px; background: var(--surface); color: var(--ink); }
 button.pipeline-node.data { border: 1px solid var(--line); border-radius: 22px; background: var(--soft); }
 button.pipeline-node strong { font: 600 15px/1.4 system-ui; }
 button.pipeline-node span { font: 12px/1.5 system-ui; }
 button.pipeline-node .eyebrow { margin: 0; font-size: 10px; }
-button.pipeline-node[aria-pressed="true"] { outline: 2px solid var(--green); outline-offset: 2px; }
+button.pipeline-node[aria-pressed="true"] { outline: 2px solid var(--teal); outline-offset: 2px; }
 button.pipeline-node:hover { border-color: var(--accent); }
 @media (min-width: 901px) { #node-detail { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow: auto; } }
 #node-detail {
@@ -503,10 +503,10 @@ footer li {
   cursor: pointer;
   padding: 20px 25px;
   font-weight: 650;
-  color: var(--green);
+  color: var(--teal);
 }
 .wis-explanation summary:focus-visible {
-  outline: 3px solid var(--green);
+  outline: 3px solid var(--teal);
   outline-offset: 3px;
 }
 .wis-body {
@@ -607,7 +607,7 @@ footer li {
   font-size: 17px;
   padding: 12px 0;
   border-top: 1px solid var(--line);
-  color: var(--green);
+  color: var(--teal);
   font-variant-numeric: tabular-nums;
 }
 
@@ -657,7 +657,7 @@ button.sort-column {
   white-space: nowrap;
 }
 .sort-indicator {
-  color: var(--green);
+  color: var(--teal);
 }
 
 .statement em { font-weight: 650; font-style: normal; }
@@ -671,7 +671,7 @@ input { accent-color: var(--accent); }
 svg [stroke="#bcc9b9"] { stroke: var(--line); }
 svg [fill="#dbe8dd"] { fill: var(--band-wide); }
 svg [fill="#abcbb9"] { fill: var(--band); }
-svg [stroke="#287967"] { stroke: var(--green); }
+svg [stroke="#287967"] { stroke: var(--teal); }
 svg [fill="#aa502d"] { fill: var(--gold); }
 @media print {
   .metric-value { color: var(--ink); }
