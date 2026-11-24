@@ -13,7 +13,7 @@ from coppersushi import REPO
 from coppersushi.pipelines.cnec import prices as market
 from coppersushi.pipelines.data_model.market import ElectricityMapsPriceResponse
 from coppersushi.pipelines.data_sources import electricity_maps_auction_prices
-from coppersushi.pipelines.cnec.data_sources import electricity_maps
+from coppersushi.pipelines.cnec import daily_prices
 from coppersushi.pipelines.market_day import MarketDay
 
 FIXTURES = REPO / 'coppersushi/pipelines/cnec/testdata/synthetic-electricity-maps'
@@ -52,7 +52,7 @@ def test_fetch_day_uses_the_market_day_window_and_does_not_put_the_token_in_data
         return hourly_day()
 
     monkeypatch.setattr(electricity_maps_auction_prices, "fetch_zone", fake_get)
-    prices = electricity_maps.fetch_day("2024-08-29", zones=("AT",), token="secret")
+    prices = daily_prices.fetch_day("2024-08-29", zones=("AT",), token="secret")
     assert set(prices.zone) == {"AT"}
     assert all(call[1].start_time_utc.isoformat() == "2024-08-28T22:00:00+00:00" for call in calls)
     assert "secret" not in prices.to_string()
@@ -60,7 +60,7 @@ def test_fetch_day_uses_the_market_day_window_and_does_not_put_the_token_in_data
 
 def test_a_quarter_hourly_day_is_fetched_whole(monkeypatch):
     monkeypatch.setattr(electricity_maps_auction_prices, "fetch_zone", lambda zone, day, token: quarter_hourly_day())
-    prices = electricity_maps.fetch_day("2026-09-10", zones=("AT",), token="secret")
+    prices = daily_prices.fetch_day("2026-09-10", zones=("AT",), token="secret")
     assert len(prices) == 96
     assert prices.interval.iloc[1] - prices.interval.iloc[0] == pd.Timedelta(minutes=15)
 
@@ -76,26 +76,26 @@ def test_an_answer_for_another_zone_is_refused():
 
 
 def test_price_cache_round_trip_restores_aware_timestamps(tmp_path, monkeypatch):
-    monkeypatch.setattr(electricity_maps, "CACHE_DIR", tmp_path)
+    monkeypatch.setattr(daily_prices, "CACHE_DIR", tmp_path)
     prices = market.day_ahead_prices(one_hour())
-    path = electricity_maps.write_day("2024-08-29", prices)
-    restored = electricity_maps.read_day(Path(path))
+    path = daily_prices.write_day("2024-08-29", prices)
+    restored = daily_prices.read_day(Path(path))
     assert str(restored.interval.dt.tz) == "UTC"
     assert str(restored.updated_at.dt.tz) == "UTC"
     assert restored.price.tolist() == [50.0, 70.0]
 
 
 def test_an_hourly_cache_of_a_quarter_hourly_day_is_fetched_again(tmp_path, monkeypatch):
-    monkeypatch.setattr(electricity_maps, "CACHE_DIR", tmp_path)
+    monkeypatch.setattr(daily_prices, "CACHE_DIR", tmp_path)
     monkeypatch.setattr(market, "CORE_ZONES", ("AT",))  # the fixture's Core is one zone
     day = "2026-09-10"
     current = market.day_ahead_prices([quarter_hourly_day()])
     # What the adapter cached before it asked for the market time unit: the route's hourly default.
-    electricity_maps.write_day(day, current[current.interval.dt.minute.eq(0)])
+    daily_prices.write_day(day, current[current.interval.dt.minute.eq(0)])
     fetched = []
-    monkeypatch.setattr(electricity_maps, "fetch_day", lambda d: fetched.append(d) or current)
-    assert len(electricity_maps.load_day(day)) == 96
-    assert len(electricity_maps.load_day(day)) == 96
+    monkeypatch.setattr(daily_prices, "fetch_day", lambda d: fetched.append(d) or current)
+    assert len(daily_prices.load_day(day)) == 96
+    assert len(daily_prices.load_day(day)) == 96
     assert fetched == [day]
 
 
@@ -105,14 +105,14 @@ def test_an_hourly_cache_of_a_quarter_hourly_day_is_fetched_again(tmp_path, monk
     ids=["a row missing", "a row doubled"],
 )
 def test_a_damaged_cache_is_fetched_again(tmp_path, monkeypatch, damage):
-    monkeypatch.setattr(electricity_maps, "CACHE_DIR", tmp_path)
+    monkeypatch.setattr(daily_prices, "CACHE_DIR", tmp_path)
     monkeypatch.setattr(market, "CORE_ZONES", ("AT",))
     day = "2026-09-10"
     current = market.day_ahead_prices([quarter_hourly_day()])
-    electricity_maps.write_day(day, damage(current))
+    daily_prices.write_day(day, damage(current))
     fetched = []
-    monkeypatch.setattr(electricity_maps, "fetch_day", lambda d: fetched.append(d) or current)
-    assert len(electricity_maps.load_day(day)) == 96
+    monkeypatch.setattr(daily_prices, "fetch_day", lambda d: fetched.append(d) or current)
+    assert len(daily_prices.load_day(day)) == 96
     assert fetched == [day]
 
 
@@ -130,14 +130,14 @@ def test_zone_requests_overlap_and_still_return_a_complete_day(monkeypatch):
         return by_zone[zone]
 
     monkeypatch.setattr(electricity_maps_auction_prices, "fetch_zone", get)
-    prices = electricity_maps.fetch_day("2024-08-29", zones=tuple(by_zone), token="secret")
+    prices = daily_prices.fetch_day("2024-08-29", zones=tuple(by_zone), token="secret")
     assert prices.groupby("zone").size().to_dict() == dict.fromkeys(by_zone, 24)
 
 
 def test_one_failed_zone_does_not_cache_a_partial_day(tmp_path, monkeypatch):
     payloads = json.loads((FIXTURES / "day-ahead-prices-core-day.json").read_text())
     by_zone = {payload["zone"]: ElectricityMapsPriceResponse.model_validate(payload) for payload in payloads}
-    monkeypatch.setattr(electricity_maps, "CACHE_DIR", tmp_path)
+    monkeypatch.setattr(daily_prices, "CACHE_DIR", tmp_path)
     monkeypatch.setattr(electricity_maps_auction_prices, "api_token", lambda: "secret")
 
     def get(zone, day, token):
@@ -147,8 +147,8 @@ def test_one_failed_zone_does_not_cache_a_partial_day(tmp_path, monkeypatch):
 
     monkeypatch.setattr(electricity_maps_auction_prices, "fetch_zone", get)
     with pytest.raises(OSError, match="prices unavailable"):
-        electricity_maps.load_day("2024-08-29")
-    assert not electricity_maps.day_path("2024-08-29").exists()
+        daily_prices.load_day("2024-08-29")
+    assert not daily_prices.day_path("2024-08-29").exists()
 
 
 def test_http_boundary_returns_validated_price_records(monkeypatch):
@@ -182,8 +182,8 @@ def test_fallback_uses_signed_spreads_and_requires_consistent_anchors(monkeypatc
             return payload
         raise market.IncompletePrices("No data for zone")
 
-    def spreads(endpoint, start, end):
-        assert endpoint == "priceSpread"
+    def spreads(day):
+        assert day == MarketDay.on("2026-09-10")
         rows = [dict(dateTimeUtc=row.datetime, border_HU_AT=2, border_HU_RO=-3)
                 for row in payload.data]
         if failure == "conflict":
@@ -193,15 +193,15 @@ def test_fallback_uses_signed_spreads_and_requires_consistent_anchors(monkeypatc
         return rows
 
     monkeypatch.setattr(electricity_maps_auction_prices, "fetch_zone", get)
-    monkeypatch.setattr(electricity_maps.jao, "_get", spreads)
+    monkeypatch.setattr(daily_prices.jao, "fetch_price_spreads", spreads)
     zones = ("AT", "HU", "RO")
     if failure:
         with pytest.raises(ValueError if failure == "conflict" else market.IncompletePrices) as caught:
-            electricity_maps.fetch_day("2026-09-10", zones, token="secret")
+            daily_prices.fetch_day("2026-09-10", zones, token="secret")
         if failure == "conflict":
             assert not isinstance(caught.value, market.IncompletePrices)
         return
-    prices = electricity_maps.fetch_day("2026-09-10", zones, token="secret")
+    prices = daily_prices.fetch_day("2026-09-10", zones, token="secret")
     assert set(prices[prices.zone.ne("AT")].source) == {SOURCE}
     assert prices[prices.zone.eq("AT")].source.tolist() == [r.source for r in payload.data]
     assert prices[prices.zone.eq("RO")].price.tolist() == pytest.approx([r.value - 5 for r in payload.data])
@@ -221,13 +221,13 @@ def test_two_neighbors_for_one_missing_quarter_hour(monkeypatch, second_spread):
         return day.model_copy(update={"zone": zone, "data": rows})
 
     monkeypatch.setattr(electricity_maps_auction_prices, "fetch_zone", get)
-    monkeypatch.setattr(electricity_maps.jao, "_get", lambda *args: [
+    monkeypatch.setattr(daily_prices.jao, "fetch_price_spreads", lambda *args: [
         dict(dateTimeUtc=missing, border_AT_HU=2, border_HU_RO=second_spread)])
     if second_spread != 3:
         with pytest.raises(ValueError, match="Conflicting"):
-            electricity_maps.fetch_day("2026-09-10", tuple(prices), token="secret")
+            daily_prices.fetch_day("2026-09-10", tuple(prices), token="secret")
         return
-    result = electricity_maps.fetch_day("2026-09-10", tuple(prices), token="secret")
+    result = daily_prices.fetch_day("2026-09-10", tuple(prices), token="secret")
     assert result.price.tolist() == [prices[z] for z in result.zone]
     derived = result[result.source.eq(SOURCE)]
     assert list(zip(derived.interval, derived.zone)) == [(missing, "HU")]

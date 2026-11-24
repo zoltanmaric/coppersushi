@@ -18,7 +18,7 @@ from coppersushi.pipelines.cnec.models import DayBundle
 from coppersushi.pipelines.data_model.market import ZonalPrices
 from coppersushi.pipelines.data_sources import cache
 from coppersushi.pipelines.cnec.data_sources import cnec_attribution
-from coppersushi.pipelines.cnec.data_sources import electricity_maps
+from coppersushi.pipelines.cnec import daily_prices
 from coppersushi.pipelines.grid.data_sources import element_catalog
 from coppersushi.pipelines.jao.data_sources import publication as jao
 from coppersushi.pipelines.grid.data_sources import zone_shapes
@@ -38,7 +38,7 @@ def prepare(day: MarketDay, refresh: bool = False, *, allow_partial_attribution:
     if not context.drop(columns=["polish_alt"] if allow_partial_attribution else []).notna().all().all():
         raise PublicationNotReady(f'Attribution feeds are incomplete for {day.date}')
     active = jao.load_active_day(key, refresh=refresh)
-    prices = electricity_maps.load_day(key, refresh=refresh)
+    prices = daily_prices.load_day(key, refresh=refresh)
     inputs = Day(day, zone_shapes.load(), active.constraints, active.ptdfs,
                  ZonalPrices.validate(prices), context)
     directory = Path(os.environ.get('COPPERSUSHI_ELEMENT_CATALOG', str(PRODUCT / 'data/element-catalog')))

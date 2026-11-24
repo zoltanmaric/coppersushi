@@ -75,6 +75,11 @@ class ActiveDay(NamedTuple):
     ptdfs: DataFrame[ConstraintPtdfs]
 
 
+def fetch_price_spreads(day: MarketDay) -> list[dict]:
+    """Read JAO's published border price spreads for the requested delivery day."""
+    return _get("priceSpread", day.start_time_utc, day.end_time_utc)
+
+
 def day_dir(day: str) -> Path:
     return JAO_DIR / day
 

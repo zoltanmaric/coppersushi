@@ -19,7 +19,7 @@ from pydantic import BaseModel, ConfigDict, FiniteFloat, AwareDatetime
 from coppersushi.pipelines.cnec import attribution as cnec_attribution
 from coppersushi.pipelines.data_model.cnec_attribution import AllocationConstraint, NetPosition, PolishAlternative, JaoRecord
 from coppersushi.pipelines.data_sources import electricity_maps_auction_prices
-from coppersushi.pipelines.cnec.data_sources import electricity_maps
+from coppersushi.pipelines.cnec import daily_prices, prices as market_prices
 from coppersushi.pipelines.jao.data_sources import publication as jao
 from coppersushi.pipelines.market_day import MarketDay
 
@@ -180,16 +180,16 @@ def collect(day: MarketDay, cache: Path) -> pd.DataFrame:
                                       feed("netPos", NetPosition), feed("DA_PL_AC", PolishAlternative, True))
     price_path = cache / f"{key}-prices.csv"
     if price_path.exists():
-        prices = electricity_maps.read_day(price_path)
+        prices = daily_prices.read_day(price_path)
     else:
         started_at = datetime.now(UTC)
-        prices = electricity_maps.fetch_day(key, ZONES)
+        prices = daily_prices.fetch_day(key, ZONES)
         prices.to_csv(price_path, index=False)
         urls = [f"{electricity_maps_auction_prices.BASE_URL}?{urllib.parse.urlencode(electricity_maps_auction_prices.query(zone, day))}"
                 for zone in ZONES]
         record_retrieval(price_path, urls, started_at)
     prices = prices[prices.zone.isin(ZONES)]
-    electricity_maps.market.check_complete(prices, day, ZONES)
+    market_prices.check_complete(prices, day, ZONES)
     frame = context.drop(columns="alpha").merge(
         prices.pivot(index="interval", columns="zone", values="price").reset_index(),
         on="interval", how="left", validate="one_to_one")

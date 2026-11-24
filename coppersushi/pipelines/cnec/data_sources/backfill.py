@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from coppersushi.pipelines.data_sources import cache
 from coppersushi.pipelines.cnec.data_sources import cnec_attribution
-from coppersushi.pipelines.cnec.data_sources import electricity_maps
+from coppersushi.pipelines.cnec import daily_prices
 from coppersushi.pipelines.jao.data_sources import publication as jao
 from coppersushi.pipelines.market_day import MARKET_TZ
 from coppersushi.pipelines.market_day import MarketDay
@@ -58,7 +58,7 @@ def audit(day: MarketDay) -> Coverage:
     except Exception as error:
         result.errors.append(f'attribution: {type(error).__name__}: {error}')
     try:
-        prices = electricity_maps.load_day(str(day.date))
+        prices = daily_prices.load_day(str(day.date))
     except Exception as error:
         result.errors.append(f'prices: {type(error).__name__}: {error}')
     if active is not None and context is not None and prices is not None:

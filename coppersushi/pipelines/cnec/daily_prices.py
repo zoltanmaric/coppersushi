@@ -1,15 +1,4 @@
-"""Electricity Maps' published European day-ahead prices, cached outside git.
-
-The v4 ``price-day-ahead/actual`` route takes one zone, a UTC half-open window and the
-resolution to answer at. The resolution is asked for explicitly, as the day's market time
-unit. Left unasked, the route answers hourly, and for a quarter-hourly day an hourly value is
-the mean of four cleared prices and equal to none of them; the map at app.electricitymaps.com
-shows the quarter-hours.
-
-Authentication comes from ``ELECTRICITY_MAPS_API_KEY`` or the gitignored
-``.secrets/.electricity_maps_api_key``. Neither responses nor derived prices are distributable
-repository fixtures; cached CSVs live under ignored ``data/electricity-maps/``.
-"""
+"""Assemble and cache complete CNEC market days from Electricity Maps prices and JAO spreads."""
 
 from concurrent.futures import ThreadPoolExecutor
 import logging
@@ -58,7 +47,7 @@ def fetch_day(
         if prices.empty:
             raise
         logger.warning("Attempting JAO spread recovery: %s", error)
-        rows = jao._get("priceSpread", market_day.start_time_utc, market_day.end_time_utc)
+        rows = jao.fetch_price_spreads(market_day)
         prices = spread_prices.recover(prices, market_day.market_time_units(), zones,
                                       spread_prices.parse_spreads(rows, zones))
         market.check_complete(prices, market_day, zones)

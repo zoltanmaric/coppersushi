@@ -4,7 +4,8 @@
 
 Owns market-day calculations, price attribution and complete
 daily publication. `interval.py`, `prices.py` and `attribution.py`
-transform typed inputs; `data_sources/` uses the shared JAO source, fetches prices and optional PSE reserve evidence, builds bundles and
+transform typed inputs. [Daily price assembly](daily_prices.py) fills missing Electricity Maps prices from anchored JAO spreads and caches the complete day.
+`data_sources/` fetches optional PSE reserve evidence, builds bundles and
 runs scheduled publication. `models.py` defines the browser publication contract.
 
 Grid preparation supplies static geography; each daily run fetches and validates
@@ -21,7 +22,9 @@ test-app` and regenerate changed contracts with `pixi run frontend-contracts`.
 flowchart LR
     PSE["PSE requirements and basic purchases"] --> Publisher["Daily publisher"]
     Market["JAO market data"] --> Publisher
-    Prices["Shared Electricity Maps auction prices"] --> Publisher
+    Prices["Electricity Maps auction prices"] --> Day["CNEC daily prices"]
+    Market -->|Border spreads for gaps| Day
+    Day --> Publisher
     Publisher --> Objects["Immutable v3 interval objects"]
     Objects -->|Pinned generations| Study["Offline fixed-study builder"]
     Baseline["Investigated observations"] --> Study
