@@ -22,6 +22,10 @@ For a revision marked witnessed, replay requires a receipt at or before the cuto
 
 ### Prices
 
+The target is the DE–LU price from the coupled day-ahead auction run by the [nominated electricity market operators](../flow-based-market-coupling.md#nemo). SMARD credits ENTSO-E for its wholesale price series. Fetching directly from ENTSO-E removes one publication step. During an EPEX SPOT disruption, SMARD reported prices from the exchanges that remained coupled. A feed labelled “German day-ahead price” therefore needs an identifiable auction as well as a zone and delivery interval. [SMARD price definition](https://www.smard.de/page/en/wiki-article/6076/5976) · [SMARD incident account](https://www.smard.de/page/en/topic-article/5892/213898/coal-generation-at-record-quarterly-low)
+
+**Source decision for live collection (2026-11-24).** Use ENTSO-E directly as primary, with SMARD and Electricity Maps as alternate feeds for missing prices. The merged collector still uses SMARD. An alternate must supply the same auction, DE–LU zone, delivery quarter and €/MWh unit by the issue cutoff. Record the selected source and receipt time. A disagreement needs investigation. The registered baseline uses its frozen snapshot.
+
 [SMARD's Germany–Luxembourg price feed](https://www.smard.de/app/chart_data/4169/DE/index_quarterhour.json), filter `4169`, provides the weekly quarter-hour series. The diagnostic collector records the exact requests. October 2025–September 2026 contains 35,040 quarter-hours with native market resolution. Attribute Bundesnetzagentur | SMARD.de.
 
 Keep negative prices. Use only auction results already available at forecast issue time. Candidate lags from the diagnostic: the same local-clock quarter 1, 2, 7 and 14 days earlier; previous-day/week mean, minimum and maximum. Publication latency of the public price feed was not independently audited. A Berlin delivery day can contain 92, 96 or 100 quarters.

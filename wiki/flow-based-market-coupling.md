@@ -6,6 +6,14 @@ How the European day-ahead market decides how much power may cross a border betw
 
 The day-ahead auction ([EUPHEMIA](literature/euphemia-public-description.md)) sets one price per bidding zone, usually a country. It pretends the grid inside a zone has no limits. Between zones it needs to know how much power may be traded tomorrow. The grid operators (TSOs) have to give the market that limit before bids close. There are two ways to describe it.
 
+### NEMO
+
+A nominated electricity market operator (NEMO) is a power exchange authorised to take orders for the coupled market. A country can have several, and an exchange can serve several countries. Germany lists Nord Pool EMCO as domestically designated and EPEX SPOT and EXAA as active through “passporting”, which lets an exchange designated in one member state serve another. Greece lists HEnEx as its sole day-ahead operator. [ACER country register, January 2026](https://www.acer.europa.eu/sites/default/files/documents/en/Electricity/MARKET-CODES/CAPACITY-ALLOCATION-AND-CONGESTION-MANAGEMENT/Documents/NEMOs-list-January-2026.pdf)
+
+The Single Day-Ahead Coupling roster lists **16 exchange entries** as checked on 2026-11-24. They are BRM, BSP, CROPEX, EPEX SPOT, EXAA, GME, HEnEx, HUPX, IBEX, Nord Pool, OKTE, OMIE, OPCOM, OTE, SEMOpx and TGE. The roster groups EirGrid and SONI under SEMOpx. [ENTSO-E, “Involved parties”](https://www.entsoe.eu/network_codes/cacm/implementation/sdac/)
+
+**Who runs the calculation?** Exchanges submit orders and grid operators supply network limits. The operator on coordinator duty runs the PCR Matcher Broker, which launches EUPHEMIA. Its run produces the official results for all participating hubs. Operators equipped to run the matching system rotate the coordinator and backup roles. An exchange can also participate through a servicing operator, so the participant roster alone cannot identify the coordinator on a given day. The public procedures describe operational responsibility without identifying a physical host. [Day-ahead operating procedures, p. 11](https://www.nemo-committee.eu/assets/files/SDAC_OTH_01%20-%20SDAC%20Procedures%20Reading%20Instructions-928745d53196460d8d1e72f43c7cf16c.pdf) · [Algorithm methodology](https://www.nordpoolgroup.com/globalassets/french-site/20200130-algorithm-methodology-da-and-id.pdf)
+
 ## Method 1: NTC, one pipe per border
 
 **Net Transfer Capacity** (NTC) is a single number per border and direction. The TSOs on both sides agree: tomorrow, at most X MW may be sold from Germany to France. The market sees one pipe per border and nothing else.
