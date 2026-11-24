@@ -10,7 +10,7 @@ pixi run --locked python -m forecasts.explain --run data/forecasts/runs/RUN_ID -
 
 Open the exported `index.html` in a browser. Keep it with the adjacent scripts, styles and `data.js` for offline use. Choose a new directory for each export. Re-export after a review decision changes.
 
-The viewer shows individual delivery days, model and reference quantiles, full-period and monthly scores, and run provenance. **How it works** owns the forecast architecture. Edit its stages and explanations in [pipeline.json](pipeline.json). The [exporter](explain.py) verifies consumed artifact hashes and reconciles scores against predictions. When a linked wiki page changes, review the narrative and update [sources.json](sources.json). Commit the reviewed wiki bytes before exporting so the source links identify the exact revision.
+The viewer shows individual delivery days, model and reference quantiles, full-period and monthly scores, and run provenance. **How it works** owns the forecast architecture. Edit its stages and explanations in [pipeline.json](pipeline.json). The [exporter](explain.py) verifies consumed artifact hashes and reconciles scores against predictions. When a linked wiki page changes, review the narrative and update [sources.json](sources.json). The forecast CI suite checks each recorded SHA-256 against the wiki file and its committed bytes using the export validator.
 
 Run the DOM integration check against an export.
 
