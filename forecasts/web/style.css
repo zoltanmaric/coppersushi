@@ -1,110 +1,3 @@
-:root {
-  color-scheme: dark;
-  --surface: #222128;
-  --soft: #2d2439;
-  --band-wide: #806697;
-  --copper: #c49bff;
-  --paper: #191b1f;
-  --ink: #e9e5ef;
-  --muted: #b4acbf;
-  --line: #484052;
-  --accent: #c49bff;
-  --green: #65dfdc;
-  --band: #b68bdf;
-  --gold: #ffd180;
-}
-* {
-  box-sizing: border-box;
-}
-body {
-  margin: 0;
-  background: var(--paper);
-  color: var(--ink);
-  font:
-    16px/1.6 system-ui,
-    -apple-system,
-    sans-serif;
-}
-header {
-  padding: 24px 4vw;
-  border-bottom: 1px solid var(--line);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-.brand {
-  font-weight: 800;
-  letter-spacing: 2px;
-  font-size: 13px;
-  text-decoration: none;
-}
-.brand span {
-  font-weight: 400;
-  letter-spacing: 1px;
-  font-size: 11px;
-  margin-left: 16px;
-}
-.status {
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 5px 12px;
-  white-space: nowrap;
-}
-main {
-  max-width: 1280px;
-  margin: auto;
-  padding: 0 44px;
-}
-a {
-  color: inherit;
-  text-underline-offset: 4px;
-}
-a:hover {
-  color: var(--accent);
-}
-.intro {
-  padding: 64px 0 40px;
-}
-.eyebrow {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: var(--accent);
-  margin: 0 0 16px;
-}
-h1,
-h2,
-h3,
-p {
-  margin-top: 0;
-}
-h1 {
-  font:
-    normal clamp(46px, 6vw, 76px) / 1.06 system-ui, sans-serif;
-  letter-spacing: -2px;
-  margin-bottom: 22px;
-}
-em {
-  color: var(--green);
-  font-weight: normal;
-}
-h2 {
-  font:
-    normal 31px/1.2 system-ui, sans-serif;
-  margin-bottom: 12px;
-}
-h3 {
-  font:
-    normal 25px/1.3 system-ui, sans-serif;
-  margin-bottom: 14px;
-}
-.dek {
-  font-size: 18px;
-  color: var(--muted);
-}
 nav {
   display: flex;
   border-bottom: 1px solid var(--line);
@@ -492,27 +385,6 @@ footer li {
   display: none !important;
 }
 @media (max-width: 700px) {
-  header {
-    padding: 18px 20px;
-  }
-  .brand span {
-    display: none;
-  }
-  .status {
-    font-size: 8px;
-  }
-  main {
-    padding: 0 20px;
-  }
-  .intro {
-    padding: 36px 0 20px;
-  }
-  h1 {
-    letter-spacing: -1.5px;
-  }
-  .dek {
-    font-size: 15px;
-  }
   nav {
     gap: 15px;
     margin-bottom: 28px;
@@ -779,21 +651,13 @@ button.sort-column {
   color: var(--green);
 }
 
-/* 1.21 Gigawatts: charcoal reading surfaces with restrained neon accents. */
-body { background-image: radial-gradient(ellipse at 85% 0, #8d41d226, transparent 650px); }
-header { background: #191820; box-shadow: 0 1px 18px #a64de51a; }
-h1, h2, h3, h4 { color: #f3eef8; font-weight: 750; }
-h1 em, .statement em { font-weight: 650; font-style: normal; }
-a { color: var(--accent); } a:hover { color: var(--green); }
-.intro { border-bottom: 2px solid #aa66ed; box-shadow: 0 12px 20px -20px #d75bd0; }
-.status { color: #d5b8ff; background: var(--soft); }
+.statement em { font-weight: 650; font-style: normal; }
 .metric-value { color: #dec5ff; }
 .verdict { border-left-color: var(--gold); }
 select, input[type="date"], button, .button-link { background: var(--surface); }
 input { accent-color: var(--accent); }
 .legend .band50:before { background: var(--band); }
 .legend .band95:before { background: var(--band-wide); }
-::selection { background: #7643a2; color: #fff; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 svg [stroke="#bcc9b9"] { stroke: var(--line); }
 svg [fill="#dbe8dd"] { fill: var(--band-wide); }
@@ -801,8 +665,6 @@ svg [fill="#abcbb9"] { fill: var(--band); }
 svg [stroke="#287967"] { stroke: var(--green); }
 svg [fill="#aa502d"] { fill: var(--gold); }
 @media print {
-  :root { color-scheme: light; --paper: #fff; --surface: #fff; --ink: #20182a; --muted: #51475b; --line: #cfc6d7; --accent: #64339a; --copper: #64339a; --green: #226d73; --soft: #f4f0f7; --band: #b49acb; --band-wide: #e6ddec; --gold: #805116; }
-  body { background: #fff; } header { background: #fff; box-shadow: none; }
-  h1, h2, h3, h4, .metric-value { color: var(--ink); } .intro { box-shadow: none; }
-  .statement { background: var(--soft); } .status { color: var(--accent); }
+  .metric-value { color: var(--ink); }
+  .statement { background: var(--soft); }
 }

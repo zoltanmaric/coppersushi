@@ -20,7 +20,7 @@ from forecasts.market import BERLIN, cutoff, require_quarters
 Scores = dict[str, dict[str, float | int]]
 
 WEB = Path(__file__).resolve().parent
-PRESENTATION = ('app.js', 'index.html', 'pipeline.json', 'sources.json', 'style.css')
+PRESENTATION = ('app.js', 'index.html', 'pipeline.json', 'sources.json', 'style.css', 'synthwave.css')
 METHODS = (MODEL_METHOD, 'reference')
 HISTORICAL_METHODS = ('system', 'reference', 'prices', 'weather', 'demand')
 
