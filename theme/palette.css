@@ -1,0 +1,13 @@
+:root {
+  --font-family: Arial, sans-serif;
+  --surface: #222128;
+  --soft: #2d2439;
+  --paper: #191b1f;
+  --glow: radial-gradient(ellipse at 85% 0, #8d41d226, transparent 650px);
+  --ink: #e9e5ef;
+  --muted: #b4acbf;
+  --line: #484052;
+  --focus: #af77ed;
+  --accent: #c69af5;
+  --green: #65dfdc;
+}

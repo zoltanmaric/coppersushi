@@ -1,11 +1,12 @@
+@import "../../theme/palette.css";
 .plot-host {height:100%;width:100%;}
-body {margin:0;background:#222;color:#eee;font-family:Arial,sans-serif;display:flex;flex-direction:column;height:100dvh}
+body {margin:0;background:var(--glow) top / 100% 800px no-repeat var(--paper);color:var(--ink);font-family:var(--font-family);display:flex;flex-direction:column;height:100dvh}
 a {color:#00bc8c}
 #app-root {flex:1;min-height:0}
 .cnec-sources {width:max-content;max-width:calc(100% - 48px);color:#aaa;font-size:11px;line-height:1.2;text-align:center;pointer-events:none}
 .cnec-sources a {color:inherit;pointer-events:auto;text-decoration:none}
-.cnec-sources a:hover,.cnec-sources a:focus-visible {color:#eee;text-decoration:underline}
-.cnec-panel {background:rgba(18,18,18,.85);border-radius:5px;color:#eee}
+.cnec-sources a:hover,.cnec-sources a:focus-visible {color:var(--ink);text-decoration:underline}
+.cnec-panel {background:rgba(18,18,18,.85);border-radius:5px;color:var(--ink)}
 .cnec-footer {display:grid;place-items:center;min-height:24px}
 .cnec-time-controls {padding:8px 6px;display:flex;flex-wrap:wrap;align-items:flex-start;column-gap:12px;z-index:3;border-radius:10px}
 .cnec-date-time {flex:0 1 auto;margin-inline:auto;display:flex;flex-wrap:wrap;justify-content:center;column-gap:4px;font-size:14px}
@@ -13,11 +14,11 @@ a {color:#00bc8c}
 .cnec-control-row>button {display:flex;align-items:center;justify-content:center;height:44px;padding:0;border:0;border-radius:6px;background:transparent;color:inherit;cursor:pointer}
 .cnec-control-row>button:hover:not(:disabled) {background:rgba(255,255,255,.06)}
 .cnec-control-row>button:disabled {opacity:.3;cursor:default}
-.cnec-control-row>button:focus-visible {outline:2px solid #af77ed;outline-offset:1px}
+.cnec-control-row>button:focus-visible {outline:2px solid var(--focus);outline-offset:1px}
 .cnec-control-row .cnec-date-picker {display:flex;align-items:center;gap:6px;white-space:nowrap;font:inherit;padding-inline:4px}
 .cnec-date-picker svg {color:#b6b6bd;flex-shrink:0}
-.cnec-calendar {margin:0;width:max-content;overflow:auto;background:#1c1c23;color:#eee;border:1px solid #555;border-radius:12px;padding:16px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);box-sizing:border-box;box-shadow:0 12px 48px #0008}
-.cnec-calendar .rdp-root {--rdp-accent-color:#c69af5;--rdp-accent-background-color:#39294d;--rdp-day-width:40px;--rdp-day-height:40px;--rdp-day_button-width:38px;--rdp-day_button-height:38px;font-size:14px}
+.cnec-calendar {margin:0;width:max-content;overflow:auto;background:#1c1c23;color:var(--ink);border:1px solid #555;border-radius:12px;padding:16px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);box-sizing:border-box;box-shadow:0 12px 48px #0008}
+.cnec-calendar .rdp-root {--rdp-accent-color:var(--accent);--rdp-accent-background-color:#39294d;--rdp-day-width:40px;--rdp-day-height:40px;--rdp-day_button-width:38px;--rdp-day_button-height:38px;font-size:14px}
 @media(max-width:360px){.cnec-calendar .rdp-root {--rdp-day-width:36px;--rdp-day_button-width:34px}}
 .cnec-calendar button {cursor:pointer;color:inherit}
 .cnec-calendar button:focus-visible {outline:2px solid #c69af5;outline-offset:2px}
@@ -27,7 +28,7 @@ a {color:#00bc8c}
 
 .cnec-timeline {position:relative;min-width:0;height:52px;--cnec-time-progress:0%}
 .cnec-timeline input {appearance:none;height:44px;background:transparent;margin:0;padding:0;border:0;box-sizing:border-box;display:block;width:100%;cursor:ew-resize}
-.cnec-timeline input:focus-visible {outline:2px solid #af77ed;outline-offset:2px;border-radius:4px}
+.cnec-timeline input:focus-visible {outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
 .cnec-timeline input:disabled {opacity:.4;cursor:default}
 .cnec-timeline input::-webkit-slider-runnable-track {height:4px;border-radius:4px;background:linear-gradient(to right,#af77ed var(--cnec-time-progress),#55585f var(--cnec-time-progress))}
 .cnec-timeline input::-moz-range-track {height:4px;border-radius:4px;background:linear-gradient(to right,#af77ed var(--cnec-time-progress),#55585f var(--cnec-time-progress))}
@@ -82,10 +83,10 @@ a {color:#00bc8c}
 .cnec-help-trigger {grid-column:1 / -1;justify-self:end;}
 .cnec-help-trigger,.cnec-help-close {font:24px Arial,sans-serif;pointer-events:auto;width:44px;height:44px;display:grid;place-items:center;padding:0;border:0;border-radius:5px;background:rgba(0,0,0,.82);color:#fff;cursor:pointer}
 .cnec-help-trigger:hover,.cnec-help-close:hover {background:rgba(35,28,44,.94)}
-.cnec-help-trigger:focus-visible,.cnec-help-close:focus-visible,.cnec-help a:focus-visible {outline:2px solid #af77ed;outline-offset:2px}
+.cnec-help-trigger:focus-visible,.cnec-help-close:focus-visible,.cnec-help a:focus-visible {outline:2px solid var(--focus);outline-offset:2px}
 .cnec-help-close {position:absolute;top:0;right:0;}
 .cnec-help:popover-open {display:flex;flex-direction:column;}
-.cnec-help {margin:0;padding:0;border:0;overflow:hidden;pointer-events:auto;width:340px;max-width:calc(100vw - 24px);box-sizing:border-box;border-radius:6px;background:rgba(0,0,0,.88);color:#eee;box-shadow:0 6px 24px #0004}
+.cnec-help {margin:0;padding:0;border:0;overflow:hidden;pointer-events:auto;width:340px;max-width:calc(100vw - 24px);box-sizing:border-box;border-radius:6px;background:rgba(0,0,0,.88);color:var(--ink);box-shadow:0 6px 24px #0004}
 .cnec-help-copy {padding:0 18px 18px;box-sizing:border-box;min-height:0;overflow:auto;font-size:14px;line-height:1.5}
 .cnec-help h2 {flex:none;padding:12px 56px 14px 18px;margin:0;font-size:18px;line-height:1.3;color:#fff}
 .cnec-help p {margin:0 0 12px}

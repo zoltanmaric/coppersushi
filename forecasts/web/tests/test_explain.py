@@ -87,8 +87,8 @@ class ExplainTest(unittest.TestCase):
     def test_export_contains_only_browser_assets_and_hashes_them(self) -> None:
         output = Path(self.tmp.name) / 'export'
         self.assertEqual(export(self.run_dir, output), output / 'index.html')
-        files = {p.name for p in output.iterdir()}
-        self.assertEqual(files, {'app.js', 'data.js', 'index.html', 'pipeline.json', 'sources.json', 'style.css', 'synthwave.css'})
+        files = {p.relative_to(output).as_posix() for p in output.rglob('*') if p.is_file()}
+        self.assertEqual(files, {'app.js', 'data.js', 'index.html', 'pipeline.json', 'sources.json', 'style.css', 'theme/palette.css', 'theme/article.css'})
         payload = build_payload(self.run_dir)
         self.assertEqual(payload['presentation_sha256'],
                          {name: digest(output / name) for name in files - {'data.js'}})

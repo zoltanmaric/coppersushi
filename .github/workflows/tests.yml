@@ -28,18 +28,16 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [[ "$EVENT_NAME" == workflow_dispatch ]]; then
-            ghost=true
-          elif git diff --quiet HEAD^1 HEAD -- 121gigawatts/ pyproject.toml pixi.lock .github/workflows/; then
-            ghost=false
-          else
-            ghost=true
-          fi
-          if [[ "$ghost" == true ]]; then
-            echo 'tasks=["test-python","test-quality","theme-test","hosting-test"]' >> "$GITHUB_OUTPUT"
-          else
-            echo 'tasks=["test-python","test-quality"]' >> "$GITHUB_OUTPUT"
-          fi
+          needs_check() {
+            [[ "$EVENT_NAME" == workflow_dispatch ]] ||
+              ! git diff --quiet HEAD^1 HEAD -- pyproject.toml pixi.lock .github/workflows/ "$@"
+          }
+
+          tasks=(test-python test-quality)
+          needs_check theme/ 121gigawatts/theme/ && tasks+=(theme-test)
+          needs_check 121gigawatts/hosting/ && tasks+=(hosting-test)
+          matrix=$(jq -cn --args '$ARGS.positional' "${tasks[@]}")
+          echo "tasks=$matrix" >> "$GITHUB_OUTPUT"
 
   test:
     needs: checks

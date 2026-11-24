@@ -1,3 +1,12 @@
+:root {
+  --band-wide: #806697;
+  --copper: var(--accent);
+  --band: #b68bdf;
+  --gold: #ffd180;
+}
+@media print {
+  :root { --band: #b49acb; --band-wide: #e6ddec; --gold: #805116; }
+}
 nav {
   display: flex;
   border-bottom: 1px solid var(--line);

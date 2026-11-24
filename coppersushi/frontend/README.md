@@ -5,7 +5,7 @@
 Owns the React map pages and their browser presentation. `pages/powerflow/` constructs
 network layers and tooltips from numeric snapshots; `pages/cnec/` owns market selection,
 contributions and reference-country behavior. Both use the same map interface. `pages/polish-export-caps/` composes the native CNEC map with a fixed-study graphic and table. Data loading and contracts
-live with each page. There is no intermediate source directory.
+live with each page. The [suite palette](../../theme/palette.css) supplies the map products, Forecasts, explainers and the 1.21 Gigawatts theme. [Article styles](../../theme/article.css) add the masthead and reading layout.
 
 ```mermaid
 flowchart TB

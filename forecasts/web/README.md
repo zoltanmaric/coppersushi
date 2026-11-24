@@ -1,4 +1,4 @@
-# Forecast observatory
+# Forecasts
 
 [Forecast overview](../README.md) · [Tracked execution](../execution/README.md)
 

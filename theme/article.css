@@ -1,29 +1,15 @@
-:root {
-  color-scheme: dark;
-  --surface: #222128;
-  --soft: #2d2439;
-  --band-wide: #806697;
-  --copper: #c49bff;
-  --paper: #191b1f;
-  --ink: #e9e5ef;
-  --muted: #b4acbf;
-  --line: #484052;
-  --accent: #c49bff;
-  --green: #65dfdc;
-  --band: #b68bdf;
-  --gold: #ffd180;
-}
+@import "./palette.css";
+
+:root { color-scheme: dark; }
 * {
   box-sizing: border-box;
 }
 body {
   margin: 0;
-  background: radial-gradient(ellipse at 85% 0, #8d41d226, transparent 650px) var(--paper);
+  background: var(--glow) var(--paper);
   color: var(--ink);
   font:
-    16px/1.6 system-ui,
-    -apple-system,
-    sans-serif;
+    16px/1.6 var(--font-family);
 }
 body > header {
   background: #191820;
@@ -89,7 +75,7 @@ p {
 }
 h1 {
   font:
-    750 clamp(46px, 6vw, 76px) / 1.06 system-ui, sans-serif;
+    750 clamp(46px, 6vw, 76px) / 1.06 var(--font-family);
   letter-spacing: -2px;
   margin-bottom: 22px;
 }
@@ -99,12 +85,12 @@ em {
 }
 h2 {
   font:
-    750 31px/1.2 system-ui, sans-serif;
+    750 31px/1.2 var(--font-family);
   margin-bottom: 12px;
 }
 h3 {
   font:
-    750 25px/1.3 system-ui, sans-serif;
+    750 25px/1.3 var(--font-family);
   margin-bottom: 14px;
 }
 .dek {
@@ -149,7 +135,7 @@ h1 em {
   }
 }
 @media print {
-  :root { color-scheme: light; --paper: #fff; --surface: #fff; --ink: #20182a; --muted: #51475b; --line: #cfc6d7; --accent: #64339a; --copper: #64339a; --green: #226d73; --soft: #f4f0f7; --band: #b49acb; --band-wide: #e6ddec; --gold: #805116; }
+  :root { color-scheme: light; --paper: #fff; --surface: #fff; --ink: #20182a; --muted: #51475b; --line: #cfc6d7; --accent: #64339a; --green: #226d73; --soft: #f4f0f7; }
   body, body > header { background: white; }
   body > header, .intro { box-shadow: none; }
   h1, h2, h3, h4 { color: var(--ink); }
