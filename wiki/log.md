@@ -690,3 +690,7 @@ Migrated the baseline rationale, October 20 review and six candidate proposals t
 ## [2026-10-20] decision | Forecast architecture ownership
 
 The forecast frontend “How it works” owns the architecture explanation, with readable stages and connections in `forecasts/web/pipeline.json`. The wiki retains scientific contracts and decisions; README owns commands and links. [Product overview](price-forecasting.md#architecture).
+
+## [2026-11-24] decision | Day-ahead price provenance
+
+Documented [who operates the coupled auction](flow-based-market-coupling.md#nemo) and the [live price source decision](price-forecasting/data-sources.md#prices).
