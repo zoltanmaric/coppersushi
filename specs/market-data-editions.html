@@ -10,6 +10,7 @@
 <p class="eyebrow">Market data collection · proposed design</p>
 <h1>Which price could we use at 11:00?</h1>
 <p>Collect every publisher independently. Preserve what arrived, when it arrived, and when it passed validation. Critical Elements ⚡️ and forecasting can then reconstruct a decision from the same archive.</p>
+<p>A researcher uses the DE–LU forecast to compare tomorrow’s quarter-hour price quantiles with the seasonal reference using information available by 11:00 Europe/Berlin on the preceding day. That is the input deadline. The time a researcher can retrieve the forecast is a separate observation. <a href="../wiki/forecasting-system-design.md#principles" target="_blank" rel="noopener">Forecast design principles</a> · <a href="../wiki/price-forecasting/germany-luxembourg.md#contract" target="_blank" rel="noopener">Baseline decision</a>.</p>
 <h2>Replay one delivery quarter</h2>
 <p>Illustrative times in Berlin. Both editions describe the same DE–LU auction quarter.</p>
 <table><thead><tr><th>Time</th><th>Event</th><th>What the consumer can use</th></tr></thead>
@@ -44,7 +45,7 @@
 <li><strong>Prove recovery.</strong> Replay November 20, 2026 as the JAO acceptance test. Recover the 384 missing zone-quarters across Croatia, Hungary, Romania and Slovakia. Match all 96 Slovak prices to the published settlement results and trace each to its anchor and spreads. <a href="https://github.com/zoltanmaric/coppersushi/pull/306" target="_blank" rel="noopener">Critical Elements ⚡️ incident replay</a>.
 <p><strong>Manual smoke test for November 21 delivery.</strong> Compare the retained November 24 SMARD and Electricity Maps responses for DE–LU. Expect zero of 96 quarters in SMARD and all 96 directly published by Electricity Maps. Inspect the publisher and receipt time for each response. This checks retrospective coverage only.</p>
 <p>Use synthetic inputs in the automated tests for direct alternate selection, missing anchors, conflicting prices and receipts arriving after cutoff. Keep the November 21 payloads out of the unit suite. <a href="https://github.com/zoltanmaric/coppersushi/blob/59a20334/wiki/electricity-maps-api.md#forecast-price-comparison" target="_blank" rel="noopener">November 21 source comparison</a>.</p></li>
-<li><strong>Switch consumers.</strong> Run the same archived day through Critical Elements ⚡️ and forecast issuance. Trace each selected price to its evidence. Reproduce the frozen evaluation with its original snapshot.</li>
+<li><strong>Switch consumers.</strong> Run the same archived day through Critical Elements ⚡️ and forecast issuance. Trace each selected price to its evidence. For one expected forecast edition, read the output through the researcher’s normal interface and record its first observed availability, issue time, pinned model and input manifest. When required data misses cutoff and no eligible substitute exists, record a missed edition. Test replay and issuance with identical eligible inputs and feature rules. Reproduce the frozen evaluation with its original snapshot.</li>
 </ol>
 <p>Start with schemas and manifests as the inventory. Add a queryable catalog when finding publisher coverage or editions becomes a measured problem. A database, feature store and changes to model fitting are outside the first slice.</p>
 <h2>Existing foundations</h2>
