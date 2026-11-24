@@ -106,4 +106,4 @@ no new global or skill rule was added.
 
 | Data source filenames | In [#328](https://github.com/zoltanmaric/coppersushi/pull/328), both the Electricity Maps reader and its comparison with SMARD were named `auction_prices.py`. The names hid which publisher each path used. |
 
-| Source failure evidence | In [#328](https://github.com/zoltanmaric/coppersushi/pull/328), reading a 404 consumed its explanation and recovery discarded the exception. The completeness check also discarded the identities of missing records. |
+| Source failure evidence | In [#328](https://github.com/zoltanmaric/coppersushi/pull/328), reading a 404 consumed its explanation and recovery discarded the exception. The completeness check also discarded the identities of missing records. Missing intervals and conflicting spreads shared a retryable exception even though they require different handling. |
