@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Which price could we use at 11:00?</title>
+  <link rel="stylesheet" href="spec.css">
+</head>
+<body><main>
+<p class="eyebrow">Market data collection · proposed design</p>
+<h1>Which price could we use at 11:00?</h1>
+<p>Collect every publisher independently. Preserve what arrived, when it arrived, and when it passed validation. Critical Elements ⚡️ and forecasting can then reconstruct a decision from the same archive.</p>
+<h2>Replay one delivery quarter</h2>
+<p>Illustrative times in Berlin. Both editions describe the same DE–LU auction quarter.</p>
+<table><thead><tr><th>Time</th><th>Event</th><th>What the consumer can use</th></tr></thead>
+<tbody>
+<tr><th>10:58</th><td>Edition A arrives.</td><td>The audit sees a receipt. Validation is pending.</td></tr>
+<tr><th>11:00</th><td>Forecast deadline.</td><td>No eligible edition for this quarter.</td></tr>
+<tr><th>11:02</th><td>A passes validation.</td><td>An 11:05 replay selects A.</td></tr>
+<tr><th>12:00</th><td>Correction B arrives and passes validation.</td><td>Subsequent reads can select B. The 11:05 replay still returns A.</td></tr>
+</tbody></table>
+
+<h2>From publisher to decision</h2>
+<ol>
+<li><strong>Lambda polls each publisher.</strong> Fetch ENTSO-E, Electricity Maps, SMARD and JAO independently. Success from one never suppresses another. Tune schedules to publication windows, the consumer deadline and each publisher’s rate limits. Isolate failures and cooldowns by publisher.</li>
+<li><strong>S3 preserves evidence.</strong> Give each poll an identity. Record publisher, dataset, request scope, outcome and completion time. Save the response and receipt time even for partial or malformed data. A timeout has an attempt record. Keep licensed payloads private and credentials out of diagnostics. Repeated polls can reference one content-addressed body.</li>
+<li><strong>Pandera validates editions for Parquet.</strong> Store published prices and signed border spreads in separate typed tables. Key versions by publisher, auction, zone or border, delivery interval and edition. Preserve units, upstream attribution and links to receipts. Write immutable objects, then publish their manifest last. Readers skip incomplete writes.</li>
+<li><strong>A shared reader selects by cutoff.</strong> Read only stored editions usable by the requested instant. For eligible direct prices prefer ENTSO-E, with SMARD and Electricity Maps as alternates. Require matching auction, zone, interval and unit. Surface conflicting values with both receipts. Record the selection policy version and chosen evidence in the decision manifest.</li>
+</ol>
+<details><summary>Which component owns each clock?</summary>
+<p>Use timezone-aware UTC columns. A weather forecast records its cycle and valid time. An auction price records its delivery interval. Preserve publisher update or publication time only with its documented meaning. Collectors witness receipt. Validation records when a version became usable for a named contract. Reprocessing an old body must preserve the original validation history. An issued forecast separately records issue time, first observed customer availability, and the pinned inputs, model and code.</p>
+</details>
+<details><summary>What can callers accept?</summary>
+<p>A published price points to its publisher and receipt. A derived price points to an eligible absolute price in another zone and every signed JAO spread connecting it to the target, all for the same quarter. If no anchor exists, return the missing interval and attempted sources. Reject inconsistent paths. Derivation time cannot establish earlier input availability.</p>
+<p>Critical Elements ⚡️ can require a complete regional table and accept derived quarters. Forecast issuance can accept a derived input when its policy allows it and all evidence was usable by the deadline. Evaluation pins its outcome snapshot. Source audits can inspect each publisher separately.</p>
+</details>
+<h2>Build and verify in slices</h2>
+<ol>
+<li><strong>Prove the clocks.</strong> Poll ENTSO-E and Electricity Maps for one DE–LU delivery window using the AWS collection path. Demonstrate the timeline above through the normal archive reader with network access disabled during replay. Show both attempts when one publisher fails.</li>
+<li><strong>Prove durable identity.</strong> Retry an interrupted write, repeat an identical poll, then ingest a correction. Verify one receipt per distinct attempt, stable body references, no half-published edition, and identical historical selections.</li>
+<li><strong>Prove recovery.</strong> Add SMARD prices and JAO spreads. Exercise a missing direct quarter, missing anchor, conflicting direct observations and a spread first received after cutoff. Verify values, failure reasons and evidence references.</li>
+<li><strong>Switch consumers.</strong> Run the same archived day through Critical Elements ⚡️ and forecast issuance. Trace each selected price to its evidence. Reproduce the frozen evaluation with its original snapshot.</li>
+</ol>
+<p>Start with schemas and manifests as the inventory. Add a queryable catalog when finding publisher coverage or editions becomes a measured problem. A database, feature store and changes to model fitting are outside the first slice.</p>
+<h2>Existing foundations</h2>
+<p>The merged forecast pipeline already uses typed input versions and frozen S3 snapshots. The collection cadence, shared archive reader and usability receipts above are proposed work. The earlier prototype supplies a tested Electricity Maps reader, comparison cases, and evidence-preservation and naming rules to recover selectively.</p>
+<p><a href="../forecasts/inputs/schemas.py" target="_blank" rel="noopener">Input schemas</a> · <a href="../wiki/price-forecasting/forecast-infrastructure.md" target="_blank" rel="noopener">Snapshot contract</a> · <a href="../lessons/forecasting-systems/index.html#metadata" target="_blank" rel="noopener">Forecast MLOps guide</a> · <a href="https://github.com/zoltanmaric/coppersushi/pull/328" target="_blank" rel="noopener">Prototype and tests</a></p>
+</main></body></html>
