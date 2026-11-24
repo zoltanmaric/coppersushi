@@ -71,4 +71,4 @@ class DayAheadPrices(ZonalPrices):
 
 
 class IncompletePrices(ValueError):
-    """Expected zone intervals have not all been published yet."""
+    """The available prices do not cover all required zone intervals."""

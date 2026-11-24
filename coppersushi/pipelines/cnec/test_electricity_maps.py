@@ -1,5 +1,6 @@
 import json
 from io import BytesIO
+from urllib.error import HTTPError
 
 from pydantic import ValidationError
 from threading import Barrier
@@ -195,8 +196,10 @@ def test_fallback_uses_signed_spreads_and_requires_consistent_anchors(monkeypatc
     monkeypatch.setattr(electricity_maps.jao, "_get", spreads)
     zones = ("AT", "HU", "RO")
     if failure:
-        with pytest.raises(market.IncompletePrices):
+        with pytest.raises(ValueError if failure == "conflict" else market.IncompletePrices) as caught:
             electricity_maps.fetch_day("2026-09-10", zones, token="secret")
+        if failure == "conflict":
+            assert not isinstance(caught.value, market.IncompletePrices)
         return
     prices = electricity_maps.fetch_day("2026-09-10", zones, token="secret")
     assert set(prices[prices.zone.ne("AT")].source) == {SOURCE}
@@ -221,10 +224,29 @@ def test_two_neighbors_for_one_missing_quarter_hour(monkeypatch, second_spread):
     monkeypatch.setattr(electricity_maps.jao, "_get", lambda *args: [
         dict(dateTimeUtc=missing, border_AT_HU=2, border_HU_RO=second_spread)])
     if second_spread != 3:
-        with pytest.raises(market.IncompletePrices, match="Conflicting"):
+        with pytest.raises(ValueError, match="Conflicting"):
             electricity_maps.fetch_day("2026-09-10", tuple(prices), token="secret")
         return
     result = electricity_maps.fetch_day("2026-09-10", tuple(prices), token="secret")
     assert result.price.tolist() == [prices[z] for z in result.zone]
     derived = result[result.source.eq(SOURCE)]
     assert list(zip(derived.interval, derived.zone)) == [(missing, "HU")]
+
+@pytest.mark.parametrize("status,reason", [(404, b"No data for zone"), (404, b"Unknown route"), (503, b"Unavailable")])
+def test_source_error_retains_full_diagnostics(monkeypatch, caplog, status, reason):
+    body = b"x" * 600 + reason + b": token=secret; upstream trace=abc"
+
+    def fail(request, **kwargs):
+        raise HTTPError(request.full_url, status, "failure", {"X-Request-ID": "42"}, BytesIO(body))
+
+    monkeypatch.setattr(electricity_maps_auction_prices.urllib.request, "urlopen", fail)
+    unavailable = reason == b"No data for zone"
+    with pytest.raises(market.IncompletePrices if unavailable else HTTPError) as caught:
+        electricity_maps_auction_prices.fetch_zone("AT", MarketDay.on("2024-08-29"), "secret")
+    assert "upstream trace=abc" in caplog.text
+    assert "request_id='42'" in caplog.text
+    assert "secret" not in caplog.text
+    if unavailable:
+        assert "upstream trace=abc" in str(caught.value)
+    else:
+        assert caught.value.read() == body.replace(b"secret", b"[redacted]")

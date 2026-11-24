@@ -62,7 +62,8 @@ def recover(prices: DataFrame[DayAheadPrices], times: pd.DatetimeIndex, zones: t
                 candidate = known[origin] + difference
                 if destination in known:
                     if known[destination] != candidate:
-                        raise IncompletePrices(f"Conflicting JAO spreads for {origin}/{destination} at {time}")
+                        raise ValueError(f"Conflicting JAO spreads for {origin}/{destination} at {time}: "
+                                         f"implied {candidate}, observed or derived {known[destination]}")
                 else:
                     known[destination] = candidate
                     pending.append(destination)

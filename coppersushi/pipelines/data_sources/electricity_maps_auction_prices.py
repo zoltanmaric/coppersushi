@@ -1,5 +1,6 @@
 """Direct zonal auction prices from Electricity Maps at the native market resolution."""
 from datetime import datetime
+from io import BytesIO
 import logging
 import urllib.error
 import urllib.parse
@@ -42,9 +43,20 @@ def fetch_zone(zone: str, day: MarketDay, token: str) -> ElectricityMapsPriceRes
         with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
             payload = ElectricityMapsPriceResponse.model_validate_json(response.read())
     except urllib.error.HTTPError as error:
-        if error.code == 404 and b"No data for zone" in error.read(512):
-            raise IncompletePrices(f"{zone} prices unavailable for {day.date}") from error
-        raise
+        with error:
+            body = error.read()
+        safe_body = body.replace(token.encode(), b"[redacted]") if token else body
+        request_id = error.headers.get("X-Request-ID") if error.headers else None
+        detail = (f"Electricity Maps GET {url} returned HTTP {error.code} {error.reason}; "
+                  f"request_id={request_id!r}, body={safe_body!r}")
+        # A caller can recover or retry immediately. Keep the publisher's explanation at receipt.
+        logger.warning("%s", detail)
+        if error.code == 404 and b"No data for zone" in body:
+            raise IncompletePrices(detail) from error
+        # Reading HTTPError consumes its stream. Give the caller a readable response.
+        failure = urllib.error.HTTPError(error.url, error.code, error.reason, error.headers, BytesIO(safe_body))
+        failure.add_note(detail)
+        raise failure from error
     check_answered_as_asked(zone, day, payload)
     if any(row.zone != zone for row in payload.data):
         raise ValueError(f"Unexpected zone in {zone} price rows")

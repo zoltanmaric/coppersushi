@@ -54,9 +54,10 @@ def fetch_day(
     prices = market.day_ahead_prices([payload for payload in payloads if payload is not None])
     try:
         market.check_complete(prices, market_day, zones)
-    except market.IncompletePrices:
+    except market.IncompletePrices as error:
         if prices.empty:
             raise
+        logger.warning("Attempting JAO spread recovery: %s", error)
         rows = jao._get("priceSpread", market_day.start_time_utc, market_day.end_time_utc)
         prices = spread_prices.recover(prices, market_day.market_time_units(), zones,
                                       spread_prices.parse_spreads(rows, zones))

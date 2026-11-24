@@ -56,5 +56,6 @@ def check_complete(prices: DataFrame[DayAheadPrices], day: MarketDay, zones: tup
         error = IncompletePrices if len(missing) and not len(extra) else ValueError
         raise error(
             f"prices for {day.date}: {len(missing)} zone market time units missing, "
-            f"{len(extra)} outside the day or its zones"
+            f"{len(extra)} outside the day or its zones; "
+            f"missing={missing.tolist()}, extra={extra.tolist()}"
         )
