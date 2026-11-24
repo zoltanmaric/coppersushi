@@ -1,6 +1,6 @@
 # Polish balancing capacity before the day-ahead auction
 
-This page owns the source contract for comparing upward balancing capacity with the [Polish export cap](polish-allocation-constraints.md). Evidence comes from the [November case queries fetched on 2026-11-12](polish-export-cap-investigation.md#retrieval) and the sources below. The [tooltip spec](../specs/polish-cap-reserve-tooltip.html) describes proposed integration; it is not implemented in the map.
+This page owns the source contract for comparing upward balancing capacity with the [Polish export cap](polish-allocation-constraints.md). Evidence comes from the [November case queries fetched on 2026-11-12](polish-export-cap-investigation.md#retrieval) and the sources below. The [CNEC pipeline](../coppersushi/pipelines/cnec/README.md) prepares these observations for the export-cap tooltip.
 
 ### Procurement
 

@@ -124,8 +124,8 @@ are separate embed units. The graphic describes the fixed investigated populatio
 table filters do not change that denominator. Table timestamps and map controls
 share selection, with the camera retained across interval changes. This composition
 reuses the existing CNEC renderer and hosting, without a reports framework.
-Implementation scope and remaining validation live in the
-[page spec](../specs/polish-export-cap-page.html). All matching table rows scroll independently beneath sticky headers and filters; pagination is unnecessary. The map and table share a viewport-sized area. The table shows signed required-minus-procured MW; negative values indicate procurement above the requirement. The graphic counts only positive differences as shortfalls. Map queries pin the study’s reconciled immutable generations to prevent later publications from changing its evidence.
+The [frontend README](../coppersushi/frontend/README.md) lists the page and embed routes.
+All matching table rows scroll independently beneath sticky headers and filters; pagination is unnecessary. The map and table share a viewport-sized area. The table shows signed required-minus-procured MW; negative values indicate procurement above the requirement. The graphic counts only positive differences as shortfalls. Map queries pin the study’s reconciled immutable generations to prevent later publications from changing its evidence.
 
 ## The CNEC page
 
