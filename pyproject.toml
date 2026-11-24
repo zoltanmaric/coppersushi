@@ -93,10 +93,10 @@ test-quality = { depends-on = ["typecheck", "component-imports", "frontend-test"
 test-core = { depends-on = ["test-python", "test-quality"] }
 test = { depends-on = ["test-core", "theme-test", "hosting-test"] }
 solve = "python -m coppersushi.pipelines.powerflow.data_sources.pypsa_eur solve"
-theme-install = { cmd = "yarn install --frozen-lockfile --ignore-optional", cwd = "121gigawatts" }
-theme-dev = { cmd = "yarn dev", cwd = "121gigawatts" }
-theme-test = { cmd = "yarn test:ci", cwd = "121gigawatts" }
-theme-zip = { cmd = "yarn zip", cwd = "121gigawatts" }
+theme-install = { cmd = "yarn install --frozen-lockfile --ignore-optional", cwd = "121gigawatts/theme" }
+theme-dev = { cmd = "yarn dev", cwd = "121gigawatts/theme" }
+theme-test = { cmd = "yarn test:ci", cwd = "121gigawatts/theme" }
+theme-zip = { cmd = "yarn zip", cwd = "121gigawatts/theme" }
 hosting-setup = "make -C 121gigawatts/hosting setup"
 hosting-test = "make -C 121gigawatts/hosting test"
 hosting-check = "make -C 121gigawatts/hosting check"
