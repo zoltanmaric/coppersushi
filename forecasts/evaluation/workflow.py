@@ -7,7 +7,7 @@ from pandera.typing.polars import DataFrame
 
 from forecasts.config import RunConfig
 from forecasts.evaluation.backtest import forecast_months
-from forecasts.evaluation.contracts import EvaluationResult
+from forecasts.evaluation.contracts import BacktestPredictions
 from forecasts.evaluation.scoring import score_forecasts
 from forecasts.inputs.input_types import Report
 from forecasts.inputs.selection import InputReader
@@ -23,26 +23,27 @@ def evaluate(reader: InputReader, config: RunConfig, output: Path,
     Save feature rows, models, predictions and the report in output. For accepted
     reproduction, restore_models selects preserved fits instead of retraining.
     """
+    features = prepare_features(reader, config, output)
+    predictions = forecast_months(reader, features, config, output, restore_models)
+    return score_predictions(predictions, reader, config, output)
+
+
+def prepare_features(reader: InputReader, config: RunConfig, output: Path) -> DataFrame[Features]:
+    """Build point-in-time feature rows and save their audit fields."""
     features = build_features(reader, config.history_start, config.end_exclusive,
                               complete_from=config.train_start)
-    save_features(features, output)
-    predictions = forecast_months(reader, features, config, output, restore_models)
-    result = score_forecasts(predictions, reader.realized_prices(), config)
-    save_evaluation(result, output)
-    return result.report
-
-
-def save_features(features: DataFrame[Features], output: Path) -> None:
-    """Save the selected features and audit fields as compressed Parquet."""
     output.mkdir(parents=True, exist_ok=True)
     features.write_parquet(output / "features.parquet", compression="zstd")
+    return features
 
 
-def save_evaluation(result: EvaluationResult, output: Path) -> None:
-    """Save scored prediction rows and the JSON report with native dates and UTC timestamps."""
-    output.mkdir(parents=True, exist_ok=True)
+def score_predictions(predictions: BacktestPredictions, reader: InputReader,
+                      config: RunConfig, output: Path) -> Report:
+    """Score fixed predictions against realised prices and save the rows and report."""
+    result = score_forecasts(predictions, reader.realized_prices(), config)
     result.rows.write_parquet(output / "predictions.parquet", compression="zstd")
     (output / "report.json").write_text(json.dumps(result.report, indent=2, allow_nan=False) + "\n")
+    return result.report
 
 
 def main() -> None:
