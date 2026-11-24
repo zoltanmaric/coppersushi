@@ -2,7 +2,7 @@
 
 [Forecast overview](../README.md) · [Reproducibility contract](../../wiki/price-forecasting/forecast-infrastructure.md#promise)
 
-[Runner](run.py) freezes the repository, run configuration, proposal and Pixi definitions. [Metaflow](flow.py) orchestrates the [evaluation](../evaluation/README.md) and saves artifacts at each stage. [Tracking](tracking.py) records the execution, method comparisons and final manifest in local MLflow.
+[Runner](run.py) freezes the repository, run configuration, proposal and Pixi definitions. [Metaflow](flow.py) runs the [shared evaluator](../evaluation/workflow.py) in one step. A retry of this step repeats feature construction, monthly fitting and scoring. [Tracking](tracking.py) records the execution, method comparisons and final manifest in local MLflow.
 
 ## Run and reproduce
 
