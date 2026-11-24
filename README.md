@@ -185,7 +185,7 @@ pixi run --locked test
 ```
 This runs app tests, forecast tests, forecast type checks, Ghost theme validation
 and hosting configuration checks. Node 22, Yarn, Terraform, Make and Ansible are
-installed by the same setup command. Theme npm packages retain `121gigawatts/yarn.lock`;
+installed by the same setup command. Theme npm packages retain `121gigawatts/theme/yarn.lock`;
 Terraform providers retain their `.terraform.lock.hcl` files.
 The tests run against small checked-in fixtures in each owning component’s `testdata/`, never against the
 networks. Tests require no Mapbox token; they build figures without fetching map tiles.

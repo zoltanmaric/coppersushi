@@ -7,12 +7,10 @@ from metaflow import FlowSpec, IncludeFile, Parameter, current, step
 
 from forecasts.evaluation.backtest import forecast_months
 from forecasts.config import RunConfig
-from forecasts.evaluation.workflow import save_evaluation, save_features
+from forecasts.evaluation.workflow import prepare_features, score_predictions
 from forecasts.execution.tracking import finish, record_comparisons
 from forecasts.inputs.selection import InputReader
 from forecasts.inputs.snapshot import canonical, read_local
-from forecasts.model.features import build_features
-from forecasts.evaluation.scoring import score_forecasts
 
 
 class ForecastEvaluation(FlowSpec):
@@ -38,11 +36,7 @@ class ForecastEvaluation(FlowSpec):
     @step
     def features(self) -> None:
         """Build each day's point-in-time feature rows and save their audit fields."""
-        self.feature_rows = build_features(InputReader(self.tables),
-                                           self.settings.history_start,
-                                           self.settings.end_exclusive,
-                                           complete_from=self.settings.train_start)
-        save_features(self.feature_rows, Path(self.output))
+        self.feature_rows = prepare_features(InputReader(self.tables), self.settings, Path(self.output))
         self.next(self.backtest)
 
     @step
@@ -55,9 +49,7 @@ class ForecastEvaluation(FlowSpec):
     @step
     def score(self) -> None:
         """Join realised outcomes after prediction and save the comparison report."""
-        result = score_forecasts(self.predictions, InputReader(self.tables).realized_prices(), self.settings)
-        save_evaluation(result, Path(self.output))
-        self.report = result.report
+        self.report = score_predictions(self.predictions, InputReader(self.tables), self.settings, Path(self.output))
         self.next(self.track)
 
     @step

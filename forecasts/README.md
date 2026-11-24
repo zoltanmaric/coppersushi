@@ -33,7 +33,7 @@ pixi run --locked python -m forecasts.evaluation --snapshot "$BASELINE_SNAPSHOT"
 
 Use the immutable snapshot named in [run-config.json](run-config.json) for the registered evaluation. Read the [evaluation workflow](evaluation/README.md) to follow the registered nine monthly folds. Use [tracked execution](execution/README.md) to retain a reproducible run.
 
-## Forecast observatory
+## Forecasts
 
 [Open a saved run in the viewer](web/README.md). Its **How it works** view explains the computation. [Source evidence](evidence/README.md) and [research decisions](../wiki/price-forecasting/research/index.md) document the basis for comparisons.
 

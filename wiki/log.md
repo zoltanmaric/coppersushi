@@ -697,4 +697,4 @@ Adopted the [forecasting system design principles](forecasting-system-design.md#
 
 ## [2026-11-24] decision | Explainer visual identity
 
-Recorded the [observatory theme as the default for Copper Sushi explainers](rule-provenance.md).
+Recorded the [shared theme for Copper Sushi explainers](rule-provenance.md).

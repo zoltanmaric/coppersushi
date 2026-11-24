@@ -2,14 +2,14 @@
 
 The custom Ghost theme and hosting code for [121gigawatts.org](https://121gigawatts.org/).
 The theme is based on [Casper](https://github.com/TryGhost/Casper) and targets
-Ghost 6, preserving the site's existing appearance.
+Ghost 6. Its dark palette comes from the [shared Copper Sushi stylesheet](../theme/palette.css).
 
 ## Repository guide
 
 | Part | Responsibility |
 | --- | --- |
-| Root `.hbs` files and `partials/` | Page layouts and shared Handlebars templates |
-| `assets/css/` and `assets/js/` | Theme styles and scripts; compiled output is in `assets/built/` |
+| `theme/*.hbs` and `theme/partials/` | Page layouts and shared Handlebars templates |
+| `theme/assets/css/` and `theme/assets/js/` | Theme styles and scripts; compiled output is in `theme/assets/built/` |
 | [hosting/](hosting/README.md) | Terraform infrastructure, Ansible setup and restore, and the deployment runbook |
 | [Root CI](../.github/workflows/tests.yml) | Theme and hosting configuration checks; no automatic deployment |
 
@@ -38,7 +38,7 @@ pixi run --locked theme-test
 pixi run --locked theme-zip
 ```
 
-Upload `121gigawatts/dist/121gigawatts.zip` through Ghost Admin's theme settings. Download the
+Upload `121gigawatts/theme/dist/121gigawatts.zip` through Ghost Admin's theme settings. Download the
 active theme as a backup first. Uploading a theme changes its presentation;
 it does not upgrade Ghost or restore content.
 
@@ -85,4 +85,4 @@ restore safeguards. It has no deployment credentials and does not change servers
 ## License
 
 Based on Casper. Copyright (c) 2013–2020 Ghost Foundation.
-Released under the [MIT license](LICENSE).
+Released under the [MIT license](theme/LICENSE).

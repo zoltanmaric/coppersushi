@@ -6,7 +6,7 @@ th, td { padding: .75rem; text-align: left; border-bottom: 1px solid var(--line)
 thead { color: var(--muted); }
 tbody th { font-variant-numeric: tabular-nums; }
 .deadline { background: var(--soft); }
-.deadline th { color: var(--green); }
+.deadline th { color: var(--teal); }
 li { margin-block: 1rem; }
 details { padding: .75rem 0; border-bottom: 1px solid var(--line); }
 summary { cursor: pointer; color: var(--accent); }

@@ -20,7 +20,11 @@ from forecasts.market import BERLIN, cutoff, require_quarters
 Scores = dict[str, dict[str, float | int]]
 
 WEB = Path(__file__).resolve().parent
-PRESENTATION = ('app.js', 'index.html', 'pipeline.json', 'sources.json', 'style.css', 'synthwave.css')
+PRESENTATION = {
+    **{name: WEB / name for name in ('app.js', 'index.html', 'pipeline.json', 'sources.json', 'style.css')},
+    'theme/article.css': ROOT / 'theme/article.css',
+    'theme/palette.css': ROOT / 'theme/palette.css',
+}
 METHODS = (MODEL_METHOD, 'reference')
 HISTORICAL_METHODS = ('system', 'reference', 'prices', 'weather', 'demand')
 
@@ -126,7 +130,7 @@ def build_payload(run: Path) -> Report:
             'config': {k: config[k] for k in ('train_start', 'evaluation_start', 'end_exclusive', 'catboost', 'bootstrap')},
             'features': {n: len(v) for n, v in config['features'].items()},
             'sources': _sources(),
-            'presentation_sha256': {name: digest(WEB / name) for name in PRESENTATION},
+            'presentation_sha256': {name: digest(source) for name, source in PRESENTATION.items()},
             'report': {k: report[k] for k in
                 ('metrics', 'comparison', 'delivery_rows', 'scored_rows', 'missing_truth', 'breakdowns',
                  'timing_limits', 'limitations', 'raw_crossing_fraction')},
@@ -139,8 +143,10 @@ def export(run: Path, output: Path) -> Path:
         raise ValueError('Choose a new output directory; exports are never overwritten')
     payload = build_payload(run)
     output.mkdir(parents=True)
-    for name in PRESENTATION:
-        shutil.copyfile(WEB / name, output / name)
+    for name, source in PRESENTATION.items():
+        destination = output / name
+        destination.parent.mkdir(exist_ok=True, parents=True)
+        shutil.copyfile(source, destination)
     (output / 'data.js').write_text('window.FORECAST = ' + json.dumps(payload, allow_nan=False, separators=(',', ':')) + ';\n')
     return output / 'index.html'
 
