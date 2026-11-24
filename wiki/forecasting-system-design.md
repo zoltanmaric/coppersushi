@@ -2,7 +2,7 @@
 
 ## Principles
 
-Start the design by naming the consumer, the action they can still take, and the last useful issue time. These are design recommendations derived from the linked cases. Apply them to one forecast edition before choosing infrastructure.
+Design and evaluate each forecast around the decision it serves. Name the consumer, the action they can take, and their deadline. Before choosing infrastructure, trace one forecast edition from the inputs available by that deadline to the output the consumer could retrieve in time. Apply the principles below when designing or reviewing a change to that path.
 
 | Design principle | What it changes |
 |---|---|

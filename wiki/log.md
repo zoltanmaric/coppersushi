@@ -690,3 +690,7 @@ Migrated the baseline rationale, October 20 review and six candidate proposals t
 ## [2026-10-20] decision | Forecast architecture ownership
 
 The forecast frontend “How it works” owns the architecture explanation, with readable stages and connections in `forecasts/web/pipeline.json`. The wiki retains scientific contracts and decisions; README owns commands and links. [Product overview](price-forecasting.md#architecture).
+
+## [2026-11-24] decision | Forecast design and review
+
+Adopted the [forecasting system design principles](forecasting-system-design.md#principles) for repository forecast changes.
