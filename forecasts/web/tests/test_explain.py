@@ -20,6 +20,19 @@ from forecasts.market import quarters
 from forecasts.web.explain import build_payload, digest, export, HISTORICAL_METHODS, METHODS, QUANTILES, scores
 
 
+class SourceManifestTest(unittest.TestCase):
+    def test_reviewed_sources_match_the_checkout(self) -> None:
+        explain._sources()
+
+    def test_changed_wiki_requires_narrative_review(self) -> None:
+        actual_digest = explain.digest
+        def changed(path: Path) -> str:
+            return 'changed' if path.name == 'germany-luxembourg.md' else actual_digest(path)
+        with patch.object(explain, 'digest', side_effect=changed):
+            with self.assertRaisesRegex(ValueError, 'review narrative'):
+                explain._sources()
+
+
 class ExplainTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
@@ -58,7 +71,6 @@ class ExplainTest(unittest.TestCase):
         self.review_reader = patch.object(explain, 'read_review', return_value={'evidence_status': None})
         self.review_reader.start()
         self.addCleanup(self.review_reader.stop)
-        self.check_sources = explain._sources
         sources = patch.object(explain, '_sources', return_value={})
         sources.start()
         self.addCleanup(sources.stop)
@@ -87,8 +99,8 @@ class ExplainTest(unittest.TestCase):
     def test_export_contains_only_browser_assets_and_hashes_them(self) -> None:
         output = Path(self.tmp.name) / 'export'
         self.assertEqual(export(self.run_dir, output), output / 'index.html')
-        files = {p.name for p in output.iterdir()}
-        self.assertEqual(files, {'app.js', 'data.js', 'index.html', 'pipeline.json', 'sources.json', 'style.css', 'synthwave.css'})
+        files = {p.relative_to(output).as_posix() for p in output.rglob('*') if p.is_file()}
+        self.assertEqual(files, {'app.js', 'data.js', 'index.html', 'pipeline.json', 'sources.json', 'style.css', 'theme/palette.css', 'theme/article.css'})
         payload = build_payload(self.run_dir)
         self.assertEqual(payload['presentation_sha256'],
                          {name: digest(output / name) for name in files - {'data.js'}})
@@ -177,14 +189,6 @@ class ExplainTest(unittest.TestCase):
             client.set_tag(tracked.info.run_id, 'forecast_run', 'different')
             with self.assertRaisesRegex(ValueError, 'differs from the saved forecast'):
                 build_payload(self.run_dir)
-
-    def test_changed_wiki_requires_narrative_review(self) -> None:
-        actual_digest = explain.digest
-        def changed(path: Path) -> str:
-            return 'changed' if path.name == 'germany-luxembourg.md' else actual_digest(path)
-        with patch.object(explain, 'digest', side_effect=changed):
-            with self.assertRaisesRegex(ValueError, 'review narrative'):
-                self.check_sources()
 
     def test_prices_only_export_checks_complete_delivery_grid_and_actuals(self) -> None:
         start, end = date(2026, 3, 1), date(2026, 4, 1)

@@ -11,8 +11,9 @@ A small selection job chooses the check groups; the container check starts indep
 | Ghost hosting | Ansible setup, Terraform/Ansible checks, Nginx cache headers and purge endpoint tests | Network-dependent setup can overlap the other groups. |
 | Container | Native publisher dependency and import check | Checks the publisher environment separately from development dependencies. |
 
-Ghost groups are selected when `121gigawatts/`, `pyproject.toml`, `pixi.lock` or
-workflow files change. Manual runs select every group. Selection compares the PR
+Changes under `theme/` or `121gigawatts/theme/` select theme validation.
+Changes under `121gigawatts/hosting/` select hosting checks. Changes to
+`pyproject.toml`, `pixi.lock`, or workflow files select both. Manual runs select every group. Selection compares the PR
 merge with its first parent, so checkout includes two commits. Superseded runs are cancelled.
 
 ## Setup choices

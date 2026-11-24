@@ -30,6 +30,7 @@ production stylesheet in assets/built/screen.css
 /* 1. Global - Set up the things
 /* ---------------------------------------------------------- */
 @import "global.css";
+@import "../../../../theme/palette.css";
 
 body {
     background: #fff;
@@ -2887,8 +2888,8 @@ Usage (In Ghost editor):
 /* ALWAYS PREFER DARK THEME */
 /* @media (prefers-color-scheme: dark) { */
     body {
-        color: rgba(255, 255, 255, 0.75);
-        background: var(--darkmode);
+        color: var(--ink);
+        background: var(--paper);
     }
 
     img {
@@ -2896,7 +2897,7 @@ Usage (In Ghost editor):
     }
 
     .post-feed {
-        background: var(--darkmode);
+        background: transparent;
     }
 
     .post-card,
@@ -2921,7 +2922,7 @@ Usage (In Ghost editor):
     }
 
     .post-card-title {
-        color: rgba(255, 255, 255, 0.85);
+        color: var(--ink);
     }
 
     .post-card-excerpt {
@@ -2936,15 +2937,15 @@ Usage (In Ghost editor):
     .site-main,
     .post-template .site-main,
     .page-template .site-main {
-        background: var(--darkmode);
+        background: var(--glow) top / 100% 800px no-repeat var(--paper);
     }
 
     .post-full-content {
-        background: var(--darkmode);
+        background: transparent;
     }
 
     .post-full-title {
-        color: rgba(255, 255, 255, 0.9);
+        color: var(--ink);
     }
 
     .post-full-custom-excerpt {
@@ -2984,8 +2985,9 @@ Usage (In Ghost editor):
     .post-full-content h2,
     .post-full-content h3,
     .post-full-content h4,
+    .post-full-content h5,
     .post-full-content h6 {
-        color: rgba(255, 255, 255, 0.9);
+        color: var(--ink);
     }
 
     .post-full-content a {
@@ -2993,12 +2995,9 @@ Usage (In Ghost editor):
         box-shadow: inset 0 -1px 0 #fff;
     }
 
-    .post-full-content strong {
-        color: #fff;
-    }
-
+    .post-full-content strong,
     .post-full-content em {
-        color: #fff;
+        color: var(--ink);
     }
 
     .post-full-content code {

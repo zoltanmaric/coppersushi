@@ -2,7 +2,7 @@
 
 The custom Ghost theme and hosting code for [121gigawatts.org](https://121gigawatts.org/).
 The theme is based on [Casper](https://github.com/TryGhost/Casper) and targets
-Ghost 6, preserving the site's existing appearance.
+Ghost 6. Its dark palette comes from the [shared Copper Sushi stylesheet](../theme/palette.css).
 
 ## Repository guide
 
