@@ -1,0 +1,18 @@
+main { max-width: 960px; padding-bottom: 4rem; }
+.intro { margin-bottom: 2rem; }
+h2 { margin-top: 2.5rem; }
+table { border-collapse: collapse; width: 100%; background: var(--surface); }
+th, td { padding: .75rem; text-align: left; border-bottom: 1px solid var(--line); }
+thead { color: var(--muted); }
+tbody th { font-variant-numeric: tabular-nums; }
+.deadline { background: var(--soft); }
+.deadline th { color: var(--green); }
+li { margin-block: 1rem; }
+details { padding: .75rem 0; border-bottom: 1px solid var(--line); }
+summary { cursor: pointer; color: var(--accent); }
+details p, li p { margin: .75rem 0 0; }
+@media (max-width: 600px) {
+  main { padding-inline: 1rem; }
+  th, td { padding: .4rem; }
+  .brand span { display: block; margin-left: 0; }
+}

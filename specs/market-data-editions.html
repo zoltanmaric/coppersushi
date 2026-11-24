@@ -4,21 +4,30 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Which price could we use at 11:00?</title>
-  <link rel="stylesheet" href="spec.css">
+  <link rel="stylesheet" href="../forecasts/web/synthwave.css">
+  <link rel="stylesheet" href="market-data-editions.css">
 </head>
-<body><main>
-<p class="eyebrow">Market data collection · proposed design</p>
-<h1>Which price could we use at 11:00?</h1>
-<p>Collect every publisher independently. Preserve what arrived, when it arrived, and when it passed validation. Critical Elements ⚡️ and forecasting can then reconstruct a decision from the same archive.</p>
+<body>
+<header>
+  <a class="brand" href="#overview">COPPER SUSHI <span>/ MARKET DATA</span></a>
+  <span class="status">PROPOSED DESIGN</span>
+</header>
+<main>
+<div class="intro" id="overview">
+<p class="eyebrow">DE–LU · DAY-AHEAD AUCTION</p>
+<h1>Which price could we use<br> at <em>11:00?</em></h1>
+<p class="dek">Collect every publisher independently. Preserve what arrived, when it arrived, and when it passed validation. Critical Elements ⚡️ and forecasting can then reconstruct a decision from the same archive.</p>
+</div>
 <p>A researcher uses the DE–LU forecast to compare tomorrow’s quarter-hour price quantiles with the seasonal reference using information available by 11:00 Europe/Berlin on the preceding day. That is the input deadline. The time a researcher can retrieve the forecast is a separate observation. <a href="../wiki/forecasting-system-design.md#principles" target="_blank" rel="noopener">Forecast design principles</a> · <a href="../wiki/price-forecasting/germany-luxembourg.md#contract" target="_blank" rel="noopener">Baseline decision</a>.</p>
 <h2>Replay one delivery quarter</h2>
 <p>Illustrative times in Berlin. Both editions describe the same DE–LU auction quarter.</p>
 <table><thead><tr><th>Time</th><th>Event</th><th>What the consumer can use</th></tr></thead>
 <tbody>
 <tr><th>10:58</th><td>Edition A arrives.</td><td>The audit sees a receipt. Validation is pending.</td></tr>
-<tr><th>11:00</th><td>Forecast deadline.</td><td>No eligible edition for this quarter.</td></tr>
-<tr><th>11:02</th><td>A passes validation.</td><td>An 11:05 replay selects A.</td></tr>
-<tr><th>12:00</th><td>Correction B arrives and passes validation.</td><td>Subsequent reads can select B. The 11:05 replay still returns A.</td></tr>
+<tr class="deadline"><th>11:00</th><td>Forecast deadline.</td><td>No eligible edition for this quarter.</td></tr>
+<tr><th>11:02</th><td>A passes validation.</td><td>The reader is still waiting for the manifest.</td></tr>
+<tr><th>11:04</th><td>The manifest becomes visible to the reader.</td><td>An 11:05 replay selects A.</td></tr>
+<tr><th>12:00</th><td>Correction B becomes reader-visible after validation.</td><td>Subsequent reads can select B. The 11:05 replay still returns A.</td></tr>
 </tbody></table>
 
 <h2>From publisher to decision</h2>
@@ -26,7 +35,7 @@
 <li><strong>Lambda polls each publisher.</strong> Fetch ENTSO-E, Electricity Maps, SMARD and JAO independently. Success from one never suppresses another. Tune schedules to publication windows, the consumer deadline and each publisher’s rate limits. Isolate failures and cooldowns by publisher.</li>
 <li><strong>S3 preserves evidence.</strong> Give each poll an identity. Record publisher, dataset, request scope, outcome and completion time. Save the response and receipt time even for partial or malformed data. A timeout has an attempt record. Keep licensed payloads private and credentials out of diagnostics. Repeated polls can reference one content-addressed body.</li>
 <li><strong>Pandera validates editions for Parquet.</strong> Store published prices and signed border spreads in separate typed tables. Key versions by publisher, auction, zone or border, delivery interval and edition. Preserve units, upstream attribution and links to receipts. An edition becomes visible through a manifest that names each immutable object and its checksum.</li>
-<li><strong>A shared reader selects by cutoff.</strong> Read only stored editions usable by the requested instant. For eligible direct prices prefer ENTSO-E, with SMARD and Electricity Maps as alternates. Require matching auction, zone, interval and unit. Surface conflicting values with both receipts. Record the selection policy version and chosen evidence in the decision manifest.</li>
+<li><strong>A shared reader selects by cutoff.</strong> Require both validation and reader-visible publication by the requested instant. Retain the time the normal read path first confirmed the committed manifest was retrievable and apply the consumer’s pinned source policy before ranking editions. For eligible direct prices prefer ENTSO-E, with SMARD and Electricity Maps as alternates. Require matching auction, zone, interval and unit. Surface conflicting values with both receipts. Record the selection policy version and chosen evidence in the decision manifest.</li>
 </ol>
 <details><summary>What if the writer stops halfway?</summary>
 <p>S3 publishes each object atomically. A crash between uploads can leave some files in the bucket. Readers discover editions only through committed manifests. Verify the complete object set before creating the manifest with <code>If-None-Match: *</code>. On a lost acknowledgement or concurrent retry, read the winning manifest: matching content means success; different content is a conflict. A missing or corrupt object referenced by a manifest fails the edition explicitly. Raw poll receipts remain available to the collection audit. <a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html" target="_blank" rel="noopener">S3 conditional writes</a></p>
@@ -36,12 +45,12 @@
 </details>
 <details><summary>What can callers accept?</summary>
 <p>A published price points to its publisher and receipt. A derived price points to an eligible absolute price in another zone and every signed JAO spread connecting it to the target, all for the same quarter. If no anchor exists, return the missing interval and attempted sources. Reject inconsistent paths. Derivation time cannot establish earlier input availability.</p>
-<p>Critical Elements ⚡️ can require a complete regional table and accept derived quarters. Forecast issuance can accept a derived input when its policy allows it and all evidence was usable by the deadline. Evaluation pins its outcome snapshot. Source audits can inspect each publisher separately.</p>
+<p>Critical Elements ⚡️ can require a complete regional table and accept derived quarters. The free-source forecast baseline excludes licensed Electricity Maps inputs, including derived prices anchored to them. A later forecast policy can admit them explicitly. Forecast issuance can accept a derived input when its policy allows it and all evidence was usable by the deadline. Evaluation pins its outcome snapshot. Source audits can inspect each publisher separately.</p>
 </details>
 <h2>Build and verify in slices</h2>
 <ol>
 <li><strong>Prove the clocks.</strong> Run at any hour. Use a controlled clock and two synthetic revisions to replay the timeline above, including a failed publisher attempt, offline through the normal reader. Separately, invoke the AWS collection path for one completed DE–LU delivery window. Poll ENTSO-E and Electricity Maps independently, retain their actual receipt and validation times, then replay just before and after usability with publisher access disabled. An afternoon poll proves afternoon availability. A future morning poll can establish performance against the live 11:00 deadline.</li>
-<li><strong>Prove durable identity.</strong> Stop the writer after its first object and verify the reader sees no new edition. Retry that write, simulate a lost manifest acknowledgement, repeat an identical poll, then ingest a correction. Verify one receipt per distinct attempt, stable body references, no half-published edition, and identical historical selections.</li>
+<li><strong>Prove durable identity.</strong> Stop the writer after its first object and verify the reader sees no new edition. Delay the manifest past cutoff after validation succeeds. Replay the cutoff after retry and verify the edition still cannot be selected. Simulate a lost manifest acknowledgement, repeat an identical poll, then ingest a correction. Verify one receipt per distinct attempt, stable body references, no half-published edition, and identical historical selections.</li>
 <li><strong>Prove recovery.</strong> Replay November 20, 2026 as the JAO acceptance test. Recover the 384 missing zone-quarters across Croatia, Hungary, Romania and Slovakia. Match all 96 Slovak prices to the published settlement results and trace each to its anchor and spreads. <a href="https://github.com/zoltanmaric/coppersushi/pull/306" target="_blank" rel="noopener">Critical Elements ⚡️ incident replay</a>.
 <p><strong>Manual smoke test for November 21 delivery.</strong> Compare the retained November 24 SMARD and Electricity Maps responses for DE–LU. Expect zero of 96 quarters in SMARD and all 96 directly published by Electricity Maps. Inspect the publisher and receipt time for each response. This checks retrospective coverage only.</p>
 <p>Use synthetic inputs in the automated tests for direct alternate selection, missing anchors, conflicting prices and receipts arriving after cutoff. Keep the November 21 payloads out of the unit suite. <a href="https://github.com/zoltanmaric/coppersushi/blob/59a20334/wiki/electricity-maps-api.md#forecast-price-comparison" target="_blank" rel="noopener">November 21 source comparison</a>.</p></li>
