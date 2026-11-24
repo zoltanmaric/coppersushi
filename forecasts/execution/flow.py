@@ -1,19 +1,20 @@
-"""Run the shared historical evaluation and record it in MLflow."""
+"""Local Metaflow stages: load → features → monthly backtest → score → record."""
 import json
 from pathlib import Path
 from typing import cast
 
 from metaflow import FlowSpec, IncludeFile, Parameter, current, step
 
+from forecasts.evaluation.backtest import forecast_months
 from forecasts.config import RunConfig
-from forecasts.evaluation.workflow import evaluate
+from forecasts.evaluation.workflow import prepare_features, score_predictions
 from forecasts.execution.tracking import finish, record_comparisons
 from forecasts.inputs.selection import InputReader
 from forecasts.inputs.snapshot import canonical, read_local
 
 
 class ForecastEvaluation(FlowSpec):
-    """Track a local evaluation against its frozen input snapshot."""
+    """Persist each pipeline stage locally; keep computation in ordinary Python."""
 
     # Metaflow replaces parameter declarations with parsed values before steps run.
     config = cast(str, IncludeFile("config", required=True))
@@ -30,12 +31,25 @@ class ForecastEvaluation(FlowSpec):
             raise ValueError("Run requires its frozen input snapshot")
         self.snapshot_id = manifest["snapshot_id"]
         (Path(self.output) / "snapshot-manifest.json").write_bytes(canonical(manifest))
-        self.next(self.evaluate)
+        self.next(self.features)
 
     @step
-    def evaluate(self) -> None:
-        """Save historical features, fitted models, predictions and scores."""
-        self.report = evaluate(InputReader(self.tables), self.settings, Path(self.output))
+    def features(self) -> None:
+        """Build each day's point-in-time feature rows and save their audit fields."""
+        self.feature_rows = prepare_features(InputReader(self.tables), self.settings, Path(self.output))
+        self.next(self.backtest)
+
+    @step
+    def backtest(self) -> None:
+        """Fit each month on earlier labels, then predict each day in that month."""
+        self.predictions = forecast_months(InputReader(self.tables), self.feature_rows,
+                                           self.settings, Path(self.output))
+        self.next(self.score)
+
+    @step
+    def score(self) -> None:
+        """Join realised outcomes after prediction and save the comparison report."""
+        self.report = score_predictions(self.predictions, InputReader(self.tables), self.settings, Path(self.output))
         self.next(self.track)
 
     @step
