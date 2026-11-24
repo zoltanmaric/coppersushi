@@ -6,6 +6,7 @@ Interactive map of the European transmission grid showing an **optimal power flo
 
 The surrounding article site has separate [Ghost theme and hosting code](../121gigawatts/README.md).
 Its [hosting runbook](../121gigawatts/hosting/README.md#configure) covers service recovery after database maintenance.
+The [static application runbook](../coppersushi/infra/lambda/README.md) covers map hosting and data publication.
 
 ### Analytics
 
@@ -75,14 +76,6 @@ featured crops retain their larger candidates. Smaller candidate URLs do not
 always save bytes: the VR image's original and 600/1000/2000-pixel URLs all return
 the same 480 × 320, 368,342-byte image. Its original resolution limits sharpness.
 
-### Application-host
-
-The [Lambda deployment README](../coppersushi/infra/lambda/README.md) defines production hosting and cache behavior.
-
-AWS Lambda with a durable S3 cache is the approved production host.
-
-Design for occasional visitors and low idle cost. An occasional load of roughly 30 seconds is acceptable; handling viral traffic is not a requirement. Cache misses should fetch the requested hour's missing endpoints and retain them for reuse; failed fetches should be retryable. Background fetching of whole days is not required. Resource settings and runtime limits are recorded in the deployment README.
-
 ## What the map shows
 
 - **Dots** = connection points (buses): nearby consumption + generation aggregated. Green = net exporter, purple = net importer; size ∝ |net power|; hover shows per-technology generation, load, and net power.
@@ -97,13 +90,13 @@ to demand, renewable availability, plant capacities and line limits. The pinned 
 and configuration are described in [the power-flow architecture](sushi-2.md).
 
 The normal and header-free map routes are documented in the
-[README](../README.md). OPF embeds use the same figure and callbacks as the normal view.
+[README](../README.md). Both Power Flow 🍣 routes use the same browser renderer.
 
 **Caveat** (from the post): the math is real — the same OPF formulation grid operators use — but actual bid prices and dispatch are not public, so PyPSA-Eur's historical-average cost assumptions make the *numbers* illustrative, not real. See ch. 4 of the [PyPSA-Eur paper](https://arxiv.org/abs/1806.01613).
 
 ## Map rendering direction
 
-The CNEC page is a static React application; OPF alone retains Dash. The browser calls Plotly directly and awaits its rendering promise. Plotly renders the map through Mapbox. Changing the UI framework alone would keep the same map rendering behavior if Plotly remains.
+Critical Elements ⚡️ and Power Flow 🍣 share a React map interface. The browser calls Plotly directly and awaits its rendering promise. Plotly renders the map through Mapbox. See the [frontend README](../coppersushi/frontend/README.md) for component ownership.
 
 Observed limitations to address in a future map renderer:
 
