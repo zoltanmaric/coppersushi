@@ -1,6 +1,6 @@
 # Website monitoring
 
-[System architecture](../README.md#system-design) · [Working spec](../specs/website-monitor.html)
+[System architecture](../README.md#system-design)
 
 Owns browser checks of the blog and both map apps, plus an uncached Ghost HTTP
 probe. Product code owns its readiness state. The runner uses one Chromium process
@@ -137,7 +137,13 @@ is accepted, delete tagged images except the active digest and one rollback dige
 Never delete a digest still used by Lambda. There is no screenshot storage.
 
 Change `interval_minutes` between 5 and 60 in a full Terraform plan; the schedule,
-four page alarms and checker alarm change together. Start at 30 minutes and 2 GB.
+four result alarms and checker alarm change together. Each result alarm requires
+two failing periods and ignores missing results. The separate heartbeat alarm treats
+two periods without a completed check run as a checker failure.
+
+Start at 30 minutes and 2 GB.
+For a sizing reference, a [recorded cold start](https://github.com/zoltanmaric/coppersushi/blob/e04a64e44e1128beb6e722bc4d95bba73d55f7c0/specs/website-monitor.html#L91) passed all four checks in 38 billed seconds with 1,180 MB peak memory. The [activation record](https://github.com/zoltanmaric/coppersushi/pull/293) confirms delivery of both ALARM and OK emails.
+
 Observe normal runs' Lambda REPORT billed duration and maximum memory, then report
 projected monthly cost. No comparative benchmark is required. Estimate compute as
 `runs × billed seconds × allocated GB × regional GB-second price`, then add

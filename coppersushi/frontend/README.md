@@ -58,7 +58,7 @@ the prepared interval object, including independent publication timestamps forma
 in Europe/Brussels. The browser never fetches PSE on hover. Missing evidence stays
 explicit; upward capacity is not shown as an explanation of import constraints.
 
-The investigation is directly linked at `/polish-export-caps`; the two-product
+The [Polish export-cap investigation](https://coppersushi.121gigawatts.org/polish-export-caps) has a direct link. The two-product
 navigation stays unchanged. `/embed/polish-export-caps/breakdown` renders only the
 fixed-population graphic and sources; `/embed/polish-export-caps/intervals` renders
 the map and table. All matching rows scroll independently under sticky column

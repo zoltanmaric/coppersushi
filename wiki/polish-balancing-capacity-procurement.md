@@ -1,6 +1,6 @@
 # Polish balancing capacity before the day-ahead auction
 
-This page owns the source contract for comparing upward balancing capacity with the [Polish export cap](polish-allocation-constraints.md). Evidence comes from the [November case queries fetched on 2026-11-12](polish-export-cap-investigation.md#retrieval) and the sources below. The [tooltip spec](../specs/polish-cap-reserve-tooltip.html) describes proposed integration; it is not implemented in the map.
+This page owns the source contract for comparing upward balancing capacity with the [Polish export cap](polish-allocation-constraints.md). Evidence comes from the [November case queries fetched on 2026-11-12](polish-export-cap-investigation.md#retrieval) and the sources below. The [CNEC pipeline](../coppersushi/pipelines/cnec/README.md) prepares these observations for the export-cap tooltip.
 
 ### Procurement
 
@@ -45,7 +45,7 @@ Do not conflate this with the [Q4 2025 simulation](literature/pse-allocation-con
 
 ### Reconciliation
 
-A six-date arithmetic check found `fcrg + afrrg + frrg + rrg = pk5l-wp.req_pow_res` in **145/145 hours**, with an exact difference of 0 MW. Dates: August 14 (24 hours), October 25 (25), and November 10–13 (24 each), 2026. Purchases matched that margin in 137 hours and fell short in eight. This is a sampled cross-check, not a full-period identity test.
+A six-date arithmetic check found `fcrg + afrrg + frrg + rrg = pk5l-wp.req_pow_res` in **145/145 hours**, with an exact difference of 0 MW. Dates: August 14 (24 hours), October 25 (25), and November 10–13 (24 each), 2026. Purchases matched that margin in 137 hours and fell short in eight. Shortfalls occurred on October 25 (two hours), November 11 (three), November 12 (two) and November 13 (one). This is a sampled cross-check, not a full-period identity test.
 
 Join `wmb.dtime_utc` and `mbp-tp.dtime_utc` to `pk5l-wp.plan_dtime_utc`, all hour-end timestamps, one-to-one. Query each endpoint by `business_date`. Planning records were fetched on 2026-11-14 and published on the delivery days; requirements/purchases came from the existing research cache, whose original per-file retrieval dates are unknown. These late plans validate the numerical relationship but cannot replace pre-submission evidence. An earlier November 12 evening plan also matched all 24 November 13 requirement sums.
 

@@ -105,3 +105,5 @@ no new global or skill rule was added.
 | `required-inputs` and PR failure-path review | The demand collector omitted October and November. All 54 replay days used the weather-only model and still produced scores. Earlier monthly fits also accepted missing demand inputs. The build and review rules require failures to surface before either path can claim success. [Replay investigation](https://github.com/zoltanmaric/coppersushi/pull/314) |
 
 | HTML explainer theme | The market-data spec used the generic spec stylesheet. Its linked MLOps guide was mistaken for the intended visual reference, so the repository CSS rule now points directly to the Copper Sushi theme. |
+
+| `reaper`: completed specs | Comparing spec status with merged features exposed two shipped Polish export-cap designs still described as pending. Independent review found a live page link and a per-date breakdown of eight shortfall hours to preserve. [Cleanup #336](https://github.com/zoltanmaric/coppersushi/pull/336) |

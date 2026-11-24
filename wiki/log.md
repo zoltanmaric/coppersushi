@@ -294,7 +294,7 @@ The [research-history design](price-forecasting/forecast-infrastructure.md#resea
 
 ## [2026-10-09] query | ALEGrO bound attribution
 
-Independent stationarity and observed BE–DE spread checks passed on all 114 ALEGrO binding intervals on 2026-09-12 and 2026-10-08. [Virtual-hub interconnectors](virtual-hub-interconnectors.md#alegro-validation) defines the signed middle term and paired-end treatment: shared asset identity does not make distinct dual rows duplicates. Newer interfaces still need adjacent-region validation.
+Independent stationarity and observed BE–DE spread checks passed on all 114 ALEGrO binding intervals on 2026-09-12 and 2026-10-08. [Virtual-hub interconnectors](https://github.com/zoltanmaric/coppersushi/blob/75065ba859c8b4873bbbdd6a990e7e17240fdd06/wiki/virtual-hub-interconnectors.md#alegro-validation) defines the signed middle term and paired-end treatment: shared asset identity does not make distinct dual rows duplicates. Newer interfaces still need adjacent-region validation.
 
 ## [2026-10-09] query | Polish cap publication precision
 
@@ -306,7 +306,7 @@ The [forecast-experiment skill](../.agents/skills/forecast-experiment/SKILL.md) 
 
 ## [2026-10-13] query | Adjacent-region endpoint attribution
 
-A paced [nine-interface audit](virtual-hub-interconnectors.md#adjacent-validation) sampled 40 binding cases over two delivery days. Nineteen lossless candidate reconstructions agree within €0.02/MWh; the remainder cannot be treated as publication precision. Nordic opposite endpoints are now mapped explicitly. Nord Pool documents loss pricing and ramping constraints, but the audit does not identify each residual’s cause. Loss-aware scaling and independently published missing terms remain open.
+A paced [nine-interface audit](https://github.com/zoltanmaric/coppersushi/blob/22d935e0615cfdbc8b9618812bdd8d5c412a15ae/wiki/virtual-hub-interconnectors.md#adjacent-validation) sampled 40 binding cases over two delivery days. Nineteen lossless candidate reconstructions agree within €0.02/MWh; the remainder cannot be treated as publication precision. Nordic opposite endpoints are now mapped explicitly. Nord Pool documents loss pricing and ramping constraints, but the audit does not identify each residual’s cause. Loss-aware scaling and independently published missing terms remain open.
 
 ## [2026-10-20] decision | Choosing the next forecast experiment
 
@@ -327,7 +327,7 @@ cutover remains a separate decision after measured trial behavior.
 
 A slow trial slider invocation had no Lambda initialization. Fresh processes loaded the
 full solved network just for polygons; bundled outlines and deferred OPF imports remove
-that work from CNECs. [Startup contract](../coppersushi/infra/lambda/README.md#runtime).
+that work from CNECs. [Startup contract](https://github.com/zoltanmaric/coppersushi/blob/6d49a20089a69e3468ea59a15ff0ffdcdef199ff/infra/lambda/README.md#runtime).
 
 ## [2026-10-27] decision | AWS production hosting approved
 

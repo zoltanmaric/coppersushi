@@ -1,6 +1,6 @@
 # Country import and export caps
 
-See [Polish allocation constraints](polish-allocation-constraints.md) for the Polish source contract and planned reserve tooltip. See [JAO constraint types](jao-constraint-types.md) for the complete classification problem and remaining metadata gaps.
+See [Polish allocation constraints](polish-allocation-constraints.md) for the Polish source contract and export-cap tooltip. See [JAO constraint types](jao-constraint-types.md) for the complete classification problem and remaining metadata gaps.
 
 ### Country-cap
 

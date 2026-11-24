@@ -10,7 +10,6 @@ The Germany–Luxembourg day-ahead forecast has its own [product package](../for
 - [Storage and execution](price-forecasting/forecast-infrastructure.md), including [foundation scope and when to revisit CD and CT](price-forecasting/forecast-infrastructure.md#automation-scope).
 - [Data sources](price-forecasting/data-sources.md): verified contracts and availability limits.
 - [Evaluation](price-forecasting/evaluation.md): chronological comparisons and scoring.
-- [Implementation spec](../specs/day-ahead-price-forecast.html): remaining work and acceptance checks.
 
 ## Architecture
 
