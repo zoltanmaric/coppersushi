@@ -9,7 +9,7 @@ Build a small working slice first and immediately open it in the user's side pan
 
 When a reference series is supplied, read the full series before choosing the narrative. Introduce concrete building blocks with inspectable numbers, then combine them; distinguish teaching examples from observations. Prefer a single editable HTML file for quick iteration. Keep initial polish proportional to the user's requested pace.
 
-For explainers about an existing project, inspect its owning stylesheet, fonts, design tokens and a representative page before styling. Reuse that visual identity and CSS conventions unless the user requests another style; do not invent a parallel palette.
+For Copper Sushi explainers and HTML specs, link the [shared synthwave stylesheet](../../../forecasts/web/synthwave.css) before page-specific layout CSS. Follow the [observatory markup](../../../forecasts/web/index.html) for the masthead and introduction. Use the theme’s color variables for diagrams and controls. Follow an explicit visual reference when supplied.
 
 Open links to resources outside the current page in a new tab with `target="_blank" rel="noopener"`. Keep same-page navigation in place.
 

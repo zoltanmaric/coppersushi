@@ -88,7 +88,7 @@ class ExplainTest(unittest.TestCase):
         output = Path(self.tmp.name) / 'export'
         self.assertEqual(export(self.run_dir, output), output / 'index.html')
         files = {p.name for p in output.iterdir()}
-        self.assertEqual(files, {'app.js', 'data.js', 'index.html', 'pipeline.json', 'sources.json', 'style.css'})
+        self.assertEqual(files, {'app.js', 'data.js', 'index.html', 'pipeline.json', 'sources.json', 'style.css', 'synthwave.css'})
         payload = build_payload(self.run_dir)
         self.assertEqual(payload['presentation_sha256'],
                          {name: digest(output / name) for name in files - {'data.js'}})
