@@ -1,6 +1,6 @@
 ---
 name: html-explainer
-description: Create or iterate on a standalone HTML explainer that visually teaches concepts to people. Use for explanatory HTML articles, not generic websites or inline chart-only responses.
+description: Creates and updates Copper Sushi HTML explainers and specs using the forecast observatory theme. Use for visual teaching articles and implementation specs.
 ---
 
 Design a beautiful visual explanation for a human reader, not an HTML transcription of a document. Identify what the reader should understand, then build the narrative around visuals that explain relationships, mechanisms or comparisons: annotated diagrams, timelines, worked examples or interactive demonstrations. Use prose to connect and interpret them. Choose visuals for explanatory value, not decoration; keep implementation detail secondary and expandable.
