@@ -195,3 +195,23 @@ Terraform plan from the existing state; later content updates do not. Invalidate
 frontend paths listed above. Wait for completion, then verify all three public
 routes, the fixed counts, filters, independent row scrolling, cross-day selection
 and camera reload. Rollback restores the archived study manifest and UI together.
+
+## Market archive collection
+
+Build and push the Lambda Dockerfile’s `market-collector` target. Set `market_collector_image_uri`
+to the immutable digest and configure the Electricity Maps and ENTSO-E credentials
+with `configure-keys.py --profile "$AWS_PROFILE" --market-archive`. The four independent Scheduler targets collect today's
+delivery day at fifteen-minute intervals from 09:00 to 10:45 Berlin and tomorrow's
+at half-hour intervals from 13:00 to 18:30. Each target polls one publisher and
+uses the scheduled date even when dispatch is delayed.
+
+To witness a completed delivery day on demand, invoke each publisher's Lambda:
+`aws lambda invoke --function-name coppersushi-trial-market-entsoe --cli-binary-format raw-in-base64-out --payload '{"publisher":"entsoe","delivery_day":"2026-11-20"}' /tmp/market-poll-result.json`.
+Repeat with `electricity_maps`, `smard`, or `jao` in both the function name and payload.
+Inspect FunctionError and the returned attempt IDs. Inspect private archive objects
+for diagnostics; an empty feed and an HTTP failure have distinct outcomes.
+
+Collect the required delivery days before cutting consumers over. An on-demand
+historical poll establishes usability from its actual collection and validation onward.
+For a pre-archive decision deadline use the registered historical replay contract.
+Keep `market-data/` private; only the product's existing public CNEC output is served.
