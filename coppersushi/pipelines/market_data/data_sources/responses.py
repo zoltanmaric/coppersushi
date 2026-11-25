@@ -8,7 +8,7 @@ from uuid import UUID
 from pydantic import TypeAdapter
 
 from coppersushi.pipelines.data_sources.s3 import put_once
-from coppersushi.pipelines.market_data.receipts import FailedAttempt, Poll, Receipt, ResponseReceipt, StoredResponse
+from coppersushi.pipelines.market_data.response_models import FailedAttempt, Poll, Receipt, ResponseReceipt, StoredResponse
 
 if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client

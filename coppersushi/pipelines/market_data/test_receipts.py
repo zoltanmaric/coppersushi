@@ -6,10 +6,10 @@ from uuid import uuid4
 import pytest
 from botocore.exceptions import ClientError
 
-from coppersushi.pipelines.market_data.data_sources.poll_receipts import (
+from coppersushi.pipelines.market_data.data_sources.responses import (
     NoResponseBody, read_attempt, read_response, save_failure, save_response,
 )
-from coppersushi.pipelines.market_data.receipts import FailedAttempt, Poll
+from coppersushi.pipelines.market_data.response_models import FailedAttempt, Poll
 
 
 class MemoryS3:
