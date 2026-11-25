@@ -207,13 +207,18 @@ uses the scheduled date even when dispatch is delayed.
 
 Set `market_collector_alert_topic_arn` to the monitoring stack’s `topic_arn` (or a same-region standard SNS topic with a confirmed operator subscription). An asynchronous invocation that exhausts Lambda’s retries sends its failure record to this topic. Each retry polls again with new attempt IDs. A publisher cooldown logs `poll_deferred` with the earlier attempt ID and retry time. A deferral confirms the pause only.
 
-Use the notification’s function ARN and request ID to find the invocation in CloudWatch Logs. Trace `poll_started`, `raw_saved`, and the failed operation by attempt ID. A raw receipt alone means “response received; processing outcome unknown.” An `edition_published` event with zero rows identifies a validated empty response. Before rollout, inject an edition write failure in an isolated trial and confirm a subscriber can trace the terminal notification to the retained raw response.
+Use the notification’s function ARN and request ID to find the invocation in CloudWatch Logs. Trace `poll_started`, `raw_saved`, and the failed operation by attempt ID. A raw receipt alone means “response received; processing outcome unknown.” An `edition_published` event with zero rows identifies a validated empty response.
 
 To witness a completed delivery day on demand, invoke each publisher's Lambda:
 `aws lambda invoke --function-name coppersushi-trial-market-entsoe --cli-binary-format raw-in-base64-out --payload '{"publisher":"entsoe","delivery_day":"2026-11-20"}' /tmp/market-poll-result.json`.
 Repeat with `electricity_maps`, `smard`, or `jao` in both the function name and payload.
 Inspect FunctionError and the returned attempt IDs. Inspect private archive objects
 for diagnostics; an empty feed and an HTTP failure have distinct outcomes.
+
+Before switching a consumer to the production archive, record both checks in the rollout notes:
+
+1. Use the first deployed poll that publishes an edition. With the consumer’s production role, call [`read_editions`](../../pipelines/market_data/data_sources/editions.py) for that delivery day and an aware cutoff after the publication second. Find the attempt ID from the collector log. Use [`read_response`](../../pipelines/market_data/data_sources/responses.py) with the edition’s attempt ID and check that the receipt matches the edition and identifies the expected publisher, zone and delivery day. Record the role, day, cutoff, edition key and attempt ID. Keep response bytes private.
+2. Send a clearly labeled rollout test to the configured `market_collector_alert_topic_arn`. Ask the intended on-call operator to confirm receipt of that specific message. Record its SNS message ID and the confirmation time.
 
 Collect the required delivery days before cutting consumers over. An on-demand
 historical poll establishes usability from its actual collection and validation onward.
