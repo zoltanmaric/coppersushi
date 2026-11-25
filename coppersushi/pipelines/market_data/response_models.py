@@ -55,11 +55,13 @@ class StoredResponse:
 
 
 class FailedAttempt(Poll):
-    """A request ended without a complete response."""
+    """A request ended without a complete body and may have returned HTTP headers."""
 
     kind: Literal["failure"]
     completed_at: AwareDatetime
     reason: Annotated[str, Field(min_length=1)]
+    http_status: Annotated[int, Field(ge=100, le=599)] | None = Field(default=None, exclude_if=lambda status: status is None)
+    headers: dict[str, str] = Field(default_factory=dict, exclude_if=lambda headers: not headers)
 
 
 Receipt = Annotated[ResponseReceipt | FailedAttempt, Field(discriminator="kind")]

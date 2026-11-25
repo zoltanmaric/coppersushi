@@ -8,7 +8,8 @@ Suppose a response arrives at 10:58 and its edition reaches S3 at 11:04. An 11:0
 
 ```mermaid
 flowchart TB
-    Caller["Publisher-data caller"]
+    Publishers["Market publishers"] -->|HTTP responses| Caller["Publisher collector"]
+    Caller -->|Publisher retry time| Archive
     Consumer["Price consumer"]
     subgraph Market["Market data · Python library"]
         Writer["Archive writer"]
@@ -34,6 +35,8 @@ Use `read_editions(client, bucket, day, cutoff)` for the validated tables. S3 re
 [`read_response`](data_sources/responses.py) returns the receipt and exact archived bytes, including an empty body or an HTTP error page. A transport failure raises `NoResponseBody` with the recorded reason. A parse failure leaves the raw bytes available for inspection.
 
 [`read_day_diagnostics`](data_sources/responses.py) returns failures recorded by cutoff. A raw receipt alone means the outcome is still unknown.
+
+Each [publisher client](data_sources/collect_market_editions.py) handles one feed. An empty auction series records zero observations. A failed request retains its diagnostics. The collector stores a publisher’s retry time before reading the response body. If the body stalls, the failure receipt retains the HTTP status and safe headers. If a response echoes a credential, the collector redacts it and records a failure.
 
 ## Price selection
 
