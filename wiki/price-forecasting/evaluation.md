@@ -88,3 +88,8 @@ Monthly expanding evaluation covers January–September 2026. This is retrospect
 The [frozen proposal](research/prices-only-baseline.md) kept the original dates and 11:00 Berlin information deadline. Across 273 days, the model improved median absolute error but lost on the registered interval score. Its central 95% band covered 60.1% of quarters, versus 92.2% for the reference. Retain the seasonal reference for subsequent comparisons. This result establishes reproducibility on previously inspected dates. [Run identities, scores and verification](../../forecasts/reports/evaluation.json).
 
 The [retrospective review](research/baseline-review.md) covers the superseded three-feature-set experiment.
+
+On 2026-11-24, replay through the accepted run's archived code and locked runtime
+verified predictions and scores. The archive issuance implementation also
+reproduced all 26,204 prediction rows and the full score report exactly using the
+same frozen snapshot and saved models. [Reproduction command](../../forecasts/execution/README.md#run-and-reproduce)

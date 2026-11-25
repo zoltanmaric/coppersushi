@@ -16,11 +16,13 @@ Point-in-time correctness means selecting only the information available at the 
 
 Retain source versions and record whether eligibility is witnessed, supported by documented timing, assumed, or unknown. Do not manufacture a publication timestamp from delivery time or a later download. Preserve the exact eligible version rather than replacing it with the archive's latest value. Apply each source's selection rule below; a newer model run is not a substitute for the specified fixed weather lead.
 
-For live forecasts, the input must have been retrieved by the actual issue time, which must be no later than the deadline. Historical replay may use the documented source screens and timing assumptions, but must disclose them. If no version qualifies, report the affected source, dates and quarters. A strict fit or forecast stops there. A future valid time is allowed; future knowledge is not: tomorrow's weather forecast can be used, tomorrow's realised weather cannot.
+For live forecasts, the [market archive](../../coppersushi/pipelines/market_data/README.md) must have received, validated and exposed each input by the issue decision, which must be no later than the deadline. Historical replay may use the documented source screens and timing assumptions, but must disclose them. If no version qualifies, report the affected source, dates and quarters. A strict fit or forecast stops there. A future valid time is allowed; future knowledge is not: tomorrow's weather forecast can be used, tomorrow's realised weather cannot.
 
 For a revision marked witnessed, replay requires a receipt at or before the cutoff even if the source reports an earlier update. A first receipt at 11:02 cannot establish availability at 11:00. Documented publication or an explicitly disclosed historical timing assumption can support replay. Live issuance always requires timely retrieval. [Selection contract and tests](../../forecasts/inputs/tests/test_snapshot.py).
 
 ### Prices
+
+The frozen training and evaluation contract below uses SMARD. For daily issuance the shared archive selects ENTSO-E first, permits SMARD, and permits JAO spreads with an eligible free-source anchor. It records each input’s edition and rejects conflicting direct prices.
 
 [SMARD's Germany–Luxembourg price feed](https://www.smard.de/app/chart_data/4169/DE/index_quarterhour.json), filter `4169`, provides the weekly quarter-hour series. The diagnostic collector records the exact requests. October 2025–September 2026 contains 35,040 quarter-hours with native market resolution. Attribute Bundesnetzagentur | SMARD.de.
 

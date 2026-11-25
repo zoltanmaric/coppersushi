@@ -214,7 +214,7 @@ class EvaluationTests(unittest.TestCase):
         self.assertEqual(rows["price_lag_1"].null_count(), 4)
         missing = stamp("2026-03-29T01:00:00Z")
         records["prices"] = [row for row in records["prices"] if row["valid_utc"] != missing]
-        with self.assertRaisesRegex(ValueError, "Eligible SMARD prices.*2026-03-30.*1 missing quarter"):
+        with self.assertRaisesRegex(ValueError, "Eligible prices.*2026-03-30.*1 missing quarter"):
             build_day_features(reader(records), day, require_complete=True)
 
     def test_training_failure_never_writes_a_fitted_model(self) -> None:

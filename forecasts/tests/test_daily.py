@@ -1,5 +1,7 @@
 """Saved daily forecast artifacts are checked before loading the input snapshot."""
 from datetime import date, datetime, timedelta
+from decimal import Decimal
+from io import StringIO
 import json
 import os
 from pathlib import Path
@@ -7,11 +9,15 @@ from tempfile import TemporaryDirectory
 from typing import TextIO
 import unittest
 from unittest.mock import patch
+from uuid import UUID
 
 import numpy as np
 
+from coppersushi.pipelines.market_data.resolution import (
+    FORECAST_POLICY, ConflictingPrices, Evidence, PriceUnavailable,
+)
 from forecasts.model.contracts import DayForecast
-from forecasts.daily import issue_day
+from forecasts.daily import RequiredPricesUnavailable, issue_day, main, read_edition
 from forecasts.model.coverage import STATIC_INPUT_POLICY
 from forecasts.provenance import digest
 from forecasts.market import cutoff, quarters
@@ -145,48 +151,190 @@ class SavedArtifactTests(unittest.TestCase):
         self.manifest()
         with patch("forecasts.daily.datetime", wraps=datetime) as clock, patch(
             "forecasts.daily.read_local", return_value=({"snapshot_id": "unused"}, {}),
-        ), patch("forecasts.daily.InputReader") as reader, patch("forecasts.daily.build_day_features") as features:
+        ), patch("forecasts.daily.InputReader") as reader, patch("forecasts.daily.ArchiveHistory") as archive, patch(
+            "forecasts.daily.build_day_features",
+        ) as features:
             clock.now.return_value = cutoff(day) - timedelta(minutes=1)
+            archive.return_value.missing.return_value = []
             features.side_effect = ValueError("Missing eligible prices")
             for replay in (False, True):
                 with self.subTest(replay=replay), self.assertRaisesRegex(ValueError, "Missing eligible prices"):
-                    issue_day(day, self.saved_run / "snapshot", self.saved_run,
-                              self.saved_run / "output.json", replay=replay)
+                    issue_day(day, self.saved_run / "snapshot" if replay else None, self.saved_run,
+                              self.saved_run / "output.json", replay=replay, archive_bucket=None if replay else "market")
                 features.assert_called_with(
-                    reader.return_value, day, live=not replay, issue_time=clock.now.return_value, require_complete=True,
+                    reader.return_value if replay else archive.return_value, day, live=not replay,
+                    issue_time=clock.now.return_value, require_complete=True,
                 )
                 self.assertFalse((self.saved_run / "output.json").exists())
 
     def test_live_deadline_covers_staging_and_local_publication(self) -> None:
         day = date(2026, 1, 1)
         deadline = cutoff(day)
-        output = self.saved_run / "output.json"
         self.manifest()
         quantiles = np.zeros((1, 5))
         forecast = DayForecast({}, {"prices": quantiles, "reference": quantiles}, {}, {}, "prices", "")
-        files = set(self.saved_run.iterdir())
         dump, link = json.dump, os.link
         with patch("forecasts.daily.datetime", wraps=datetime) as clock, patch(
-            "forecasts.daily.read_local", return_value=({"snapshot_id": "unused"}, {}),
-        ), patch("forecasts.daily.InputReader") as reader, patch("forecasts.daily.build_day_features") as features, patch("forecasts.daily.predict_day", return_value=forecast):
+            "forecasts.daily.ArchiveHistory",
+        ) as archive, patch("forecasts.daily.build_day_features") as features:
+            archive.return_value.missing.return_value = []
+            archive.return_value.input_manifest.return_value = {}
             features.return_value = {"delivery_utc": [next(quarters(day, day + timedelta(days=1)))]}
-            for step, error in (("staging", "before live forecast publication"),
-                                ("link", "publication crossed the deadline")):
+            for step, reason in (("prediction", "deadline_passed_during_prediction"),
+                                 ("staging", "deadline_passed_before_publication")):
                 with self.subTest(step=step):
+                    output = self.saved_run / f"{step}.json"
                     clock.now.return_value = deadline - timedelta(seconds=1)
 
-                    def stage(data: object, artifact: TextIO, *, allow_nan: bool) -> None:
+                    def stage(data: dict[str, object], artifact: TextIO, *, allow_nan: bool) -> None:
                         dump(data, artifact, allow_nan=allow_nan)
-                        if step == "staging":
+                        if step == "staging" and data["status"] == "issued":
                             clock.now.return_value = deadline + timedelta(seconds=1)
 
-                    def publish(source: str, target: Path) -> None:
-                        link(source, target)
-                        clock.now.return_value = deadline + timedelta(seconds=1)
+                    def predict(*args: object) -> DayForecast:
+                        if step == "prediction":
+                            clock.now.return_value = deadline + timedelta(seconds=1)
+                        return forecast
 
-                    with patch("forecasts.daily.json.dump", side_effect=stage), patch(
-                        "forecasts.daily.os.link", side_effect=publish,
-                    ) as publication, self.assertRaisesRegex(ValueError, error):
-                        issue_day(day, self.saved_run / "snapshot", self.saved_run, output, replay=False)
-                    self.assertEqual(publication.call_count, int(step == "link"))
-                    self.assertEqual(set(self.saved_run.iterdir()), files)
+                    def publish(source: str, target: Path) -> None:
+                        self.assertEqual(json.loads(Path(source).read_text())["status"], "missed")
+                        link(source, target)
+
+                    with (
+                        patch("forecasts.daily.json.dump", side_effect=stage),
+                        patch("forecasts.daily.predict_day", side_effect=predict),
+                        patch("forecasts.daily.os.link", side_effect=publish) as publication,
+                    ):
+                        self.assertFalse(issue_day(day, None, self.saved_run, output,
+                                                   replay=False, archive_bucket="market"))
+                    self.assertEqual(publication.call_count, 1)
+                    self.assertEqual(read_edition(output)["reason"], reason)
+
+    def test_archive_records_missed_only_after_cutoff(self) -> None:
+        day = date(2026, 1, 1)
+        deadline = cutoff(day)
+        output = self.saved_run / "output.json"
+        self.manifest()
+        missing = PriceUnavailable(zone="DE-LU", interval=deadline, policy_id=FORECAST_POLICY.id,
+                                   attempt_ids=(), reason="No eligible price")
+        with patch("forecasts.daily.datetime", wraps=datetime) as clock, patch(
+            "forecasts.daily.ArchiveHistory",
+        ) as archive:
+            archive.return_value.missing.return_value = [missing]
+            archive.return_value.input_manifest.return_value = {"prices": [missing.model_dump(mode="json")]}
+            clock.now.return_value = deadline - timedelta(seconds=1)
+            with self.assertRaisesRegex(RequiredPricesUnavailable, "required price quarters unavailable") as pending:
+                issue_day(day, None, self.saved_run, output, replay=False, archive_bucket="market")
+            self.assertEqual(pending.exception.input_manifest["prices"], [missing.model_dump(mode="json")])
+            self.assertFalse(output.exists())
+            clock.now.return_value = deadline + timedelta(seconds=1)
+            self.assertFalse(issue_day(day, None, self.saved_run, output, replay=False, archive_bucket="market"))
+            archive.assert_called_with("market", day, deadline)
+        edition = read_edition(output)
+        self.assertEqual(edition["status"], "missed")
+        self.assertEqual(edition["reason"], "required_prices_unavailable_at_cutoff")
+        self.assertEqual(edition["input_manifest"]["prices"][0]["interval"], missing.model_dump(mode="json")["interval"])
+        self.assertNotIn("availability", edition)
+
+    def test_archive_conflict_records_a_missed_edition_with_both_receipts(self) -> None:
+        day = date(2026, 1, 1)
+        deadline = cutoff(day)
+        started = deadline - timedelta(seconds=1)
+        interval = next(quarters(day - timedelta(days=1), day))
+        evidence = tuple(
+            Evidence(
+                publisher=publisher, attempt_id=UUID(int=number), edition_key=f"manifest-{number}",
+                interval=interval, zone="DE-LU", destination=None, value=Decimal(number),
+                received_at=started - timedelta(minutes=1), visible_at=started,
+                source_updated_at=None, upstream_source=None,
+            )
+            for number, publisher in enumerate(("entsoe", "smard"), start=1)
+        )
+        conflict = ConflictingPrices("DE-LU", interval, evidence)
+        self.manifest()
+        for final_read in (False, True):
+            with (
+                self.subTest(final_read=final_read),
+                patch("forecasts.daily.datetime", wraps=datetime) as clock,
+                patch("forecasts.daily.ArchiveHistory") as archive,
+                patch("forecasts.daily.build_day_features") as features,
+            ):
+                output = self.saved_run / f"conflict-{final_read}.json"
+                clock.now.return_value = started
+                if final_read:
+                    archive.return_value.missing.return_value = [PriceUnavailable(
+                        zone="DE-LU", interval=interval, policy_id=FORECAST_POLICY.id,
+                        attempt_ids=(), reason="No eligible price",
+                    )]
+                    archive.side_effect = [archive.return_value, conflict]
+                    clock.now.side_effect = [started, deadline, deadline]
+                else:
+                    archive.side_effect = conflict
+                with patch("sys.argv", ["daily", "--delivery-date", day.isoformat(), "--archive-bucket", "market",
+                                        "--run", str(self.saved_run), "--output", str(output)]):
+                    with self.assertRaises(SystemExit) as failure:
+                        main()
+                self.assertEqual(failure.exception.code, 1)
+                selected_at = deadline if final_read else started
+                archive.assert_called_with("market", day, selected_at)
+                features.assert_not_called()
+                edition = read_edition(output)
+                self.assertEqual(edition["status"], "missed")
+                self.assertEqual(edition["reason"], "conflicting_price_evidence")
+                self.assertEqual(edition["delivery_date"], day.isoformat())
+                self.assertEqual(edition["input_manifest"], {
+                    "policy": FORECAST_POLICY.id, "cutoff": selected_at.isoformat(),
+                    "prices": [{
+                        "kind": "conflict", "zone": "DE-LU", "interval": interval.isoformat(),
+                        "implied_price": None, "evidence": [row.model_dump(mode="json") for row in evidence],
+                    }],
+                })
+
+    def test_first_researcher_read_records_availability_once(self) -> None:
+        from datetime import UTC
+
+        output = self.saved_run / "output.json"
+        output.write_text(json.dumps({"status": "issued", "issued_at": "2026-11-24T09:58:00Z"}))
+        first = datetime(2026, 11, 24, 10, 1, tzinfo=UTC)
+        with patch("forecasts.daily.datetime", wraps=datetime) as clock:
+            clock.now.return_value = first
+            observation = read_edition(output)["availability"]
+            clock.now.return_value = first + timedelta(minutes=1)
+            self.assertEqual(read_edition(output)["availability"], observation)
+        self.assertEqual(datetime.fromisoformat(observation["first_observed_at"]), first)
+        self.assertEqual(observation["edition_sha256"], digest(output))
+        output.write_text(json.dumps({"status": "issued", "issued_at": "2026-11-24T09:59:00Z"}))
+        with self.assertRaisesRegex(ValueError, "does not match"):
+            read_edition(output)
+
+    def test_live_cli_edition_is_retrievable_with_its_input_and_model_evidence(self) -> None:
+        day = date(2026, 1, 1)
+        deadline = cutoff(day)
+        output = self.saved_run / "output.json"
+        self.manifest()
+        selected = {"policy": "forecast-free-v1", "prices": [{"evidence": [{"edition_key": "price-edition"}]}]}
+        values = np.zeros((1, 5))
+        forecast = DayForecast({}, {"prices": values, "reference": values}, {}, {}, "prices", "")
+        with (
+            patch("forecasts.daily.datetime", wraps=datetime) as clock,
+            patch("forecasts.daily.ArchiveHistory") as archive,
+            patch("forecasts.daily.build_day_features") as features,
+            patch("forecasts.daily.predict_day", return_value=forecast),
+        ):
+            clock.now.return_value = deadline - timedelta(seconds=1)
+            archive.return_value.missing.return_value = []
+            archive.return_value.input_manifest.return_value = selected
+            features.return_value = {"delivery_utc": [next(quarters(day, day + timedelta(days=1)))]}
+            with patch("sys.argv", ["daily", "--delivery-date", day.isoformat(), "--archive-bucket", "market",
+                                    "--run", str(self.saved_run), "--output", str(output)]):
+                main()
+            observed = deadline + timedelta(minutes=1)
+            clock.now.return_value = observed
+            captured = StringIO()
+            with patch("sys.argv", ["daily", "--read", str(output)]), patch("sys.stdout", captured):
+                main()
+        edition = json.loads(captured.getvalue())
+        self.assertEqual(edition["run_manifest_sha256"], digest(self.saved_run / "manifest.json"))
+        self.assertEqual(edition["input_manifest"], selected)
+        self.assertLess(datetime.fromisoformat(edition["issued_at"]), deadline)
+        self.assertEqual(datetime.fromisoformat(edition["availability"]["first_observed_at"]), observed)
