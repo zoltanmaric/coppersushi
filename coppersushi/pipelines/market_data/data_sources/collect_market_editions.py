@@ -1,9 +1,11 @@
 """Collect one publisher independently, retaining its evidence before normalization."""
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
+from contextlib import contextmanager
 from datetime import UTC, date, datetime
 from decimal import InvalidOperation
 from http import HTTPStatus
 from http.client import HTTPException, IncompleteRead
+import logging
 from typing import TYPE_CHECKING
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -25,6 +27,9 @@ from coppersushi.pipelines.market_day import MarketDay
 
 if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client
+
+_LOG = logging.getLogger(__name__)
+_LOG.setLevel(logging.INFO)
 
 _REQUEST = {
     "entsoe": entsoe_auction_prices.request, "electricity_maps": electricity_maps_auction_prices.request,
@@ -53,13 +58,20 @@ def collect_day(client: "S3Client", bucket: str, publisher: Publisher, delivery_
     for poll in polls:
         try:
             check_ready(client, bucket, publisher, clock())
-        except PublisherCoolingDown:
+        except PublisherCoolingDown as pause:
+            _LOG.info("poll_deferred publisher=%s zone=%s delivery_day=%s cooldown_attempt=%s retry_at=%s",
+                      publisher, poll.zone, delivery_day, pause.attempt, pause.until)
             if not outcomes:
                 raise
             break
+        _LOG.info("poll_started %s", _scope(poll))
         outcome = _collect(client, bucket, poll, clock)
         if outcome.outcome == "failed":
-            save_diagnostic(client, bucket, outcome)
+            _LOG.error("poll_failed %s reason=%s", _scope(poll), outcome.diagnostic)
+            with _archive_write(poll, "save_diagnostic"):
+                save_diagnostic(client, bucket, outcome)
+        else:
+            _LOG.info("edition_published %s outcome=%s rows=%d", _scope(poll), outcome.outcome, outcome.rows)
         outcomes.append(outcome)
     return tuple(outcomes)
 
@@ -86,7 +98,8 @@ def _collect(client: "S3Client", bucket: str, poll: Poll, clock: Callable[[], da
             key: _safe(response.headers[key].encode(), secrets).decode(errors="replace")
             for key in _HEADERS if key in response.headers
         }
-        save_retry_after(client, bucket, poll, status=status, retry_after=headers.get("Retry-After"),
+        with _archive_write(poll, "save_cooldown", secrets):
+            save_retry_after(client, bucket, poll, status=status, retry_after=headers.get("Retry-After"),
                          observed_at=clock())
         partial = False
         try:
@@ -101,8 +114,10 @@ def _collect(client: "S3Client", bucket: str, poll: Poll, clock: Callable[[], da
         received = clock()
 
     body = _safe(raw, secrets)
-    receipt = save_response(client, bucket, poll, body, received_at=received, http_status=status,
+    with _archive_write(poll, "save_raw_response", secrets):
+        receipt = save_response(client, bucket, poll, body, received_at=received, http_status=status,
                             request_url=request.full_url, headers=headers)
+    _LOG.info("raw_saved %s http_status=%d", _scope(poll), status)
     try:
         if partial:
             raise ValueError("HTTP response was truncated during transfer")
@@ -116,15 +131,22 @@ def _collect(client: "S3Client", bucket: str, poll: Poll, clock: Callable[[], da
             raise ValueError("Publisher echoed a credential; original bytes were redacted")
         else:
             rows = _PARSE[poll.publisher](body, poll.zone, day)
-        publish_edition(client, bucket, receipt, rows)
     except (ValueError, InvalidOperation, ParseError, SchemaError) as error:
-        return AttemptOutcome(**scope, completed_at=clock(), outcome="failed", rows=0, diagnostic=str(error))
+        return AttemptOutcome(**scope, completed_at=clock(), outcome="failed", rows=0, diagnostic="parse_response: " + _safe(str(error).encode(), secrets).decode(errors="replace"))
+    with _archive_write(poll, "publish_edition", secrets):
+        try:
+            publish_edition(client, bucket, receipt, rows)
+        except (ValueError, InvalidOperation, SchemaError) as error:
+            reason = _safe(str(error).encode(), secrets).decode(errors="replace")
+            return AttemptOutcome(**scope, completed_at=clock(), outcome="failed", rows=0,
+                                  diagnostic=f"publish_edition: {reason}")
     return AttemptOutcome(**scope, completed_at=clock(), outcome="validated" if rows else "empty",
                           rows=len(rows), diagnostic=None)
 
 
 def _save_failure(client: "S3Client", bucket: str, failure: FailedAttempt) -> AttemptOutcome:
-    save_failure(client, bucket, failure)
+    with _archive_write(failure, "save_transport_failure"):
+        save_failure(client, bucket, failure)
     return AttemptOutcome(attempt_id=failure.attempt_id, publisher=failure.publisher, zone=failure.zone,
                           dataset=failure.dataset, delivery_day=failure.delivery_day,
                           completed_at=failure.completed_at, outcome="failed", rows=0, diagnostic=failure.reason)
@@ -135,3 +157,20 @@ def _safe(raw: bytes, secrets: Sequence[bytes]) -> bytes:
         if secret:
             raw = raw.replace(secret, b"[redacted]")
     return raw
+
+
+def _scope(poll: Poll) -> str:
+    return (f"attempt_id={poll.attempt_id} publisher={poll.publisher} "
+            f"zone={poll.zone} delivery_day={poll.delivery_day}")
+
+
+@contextmanager
+def _archive_write(poll: Poll, operation: str, secrets: Sequence[bytes] = ()) -> Iterator[None]:
+    """Keep the attempt and failed archive operation visible when S3 cannot save a diagnostic."""
+    try:
+        yield
+    except Exception as error:
+        reason = _safe(str(error).encode(), secrets).decode(errors="replace")
+        message = f"{operation} failed {_scope(poll)}: {type(error).__name__}: {reason}"
+        _LOG.error("%s", message)
+        raise RuntimeError(message) from None

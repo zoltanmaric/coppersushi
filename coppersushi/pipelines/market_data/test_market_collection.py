@@ -153,3 +153,28 @@ def test_entsoe_400_keeps_provider_acknowledgement_and_distinguishes_no_data(mon
     receipt = read_attempt(store, "test", attempt.attempt_id)
     assert receipt.http_status == 400
     assert store.objects[f"market-data/attempts/{receipt.attempt_id}"] == body
+
+
+def test_publication_error_correlates_raw_receipt_without_leaking_token(monkeypatch, caplog):
+    monkeypatch.setenv("ENTSOE_API_TOKEN", "private-test-token")
+    store = CollectorS3()
+    body = b"<Acknowledgement_MarketDocument><Reason><text>No matching data found</text></Reason></Acknowledgement_MarketDocument>"
+
+    def empty(req, timeout):
+        raise HTTPError(req.full_url, 400, "Bad Request", {}, BytesIO(body))
+
+    def fail(*args):
+        raise OSError("write rejected private-test-token")
+
+    monkeypatch.setattr(collect_market_editions, "urlopen", empty)
+    monkeypatch.setattr(collect_market_editions, "publish_edition", fail)
+    with pytest.raises(RuntimeError, match="publish_edition failed") as caught:
+        collect_market_editions.collect_day(store, "test", "entsoe", DAY, clock=lambda: T)
+    key, = store.objects
+    attempt = key.split("/")[-1]
+    scope = f"attempt_id={attempt} publisher=entsoe zone=DE-LU delivery_day={DAY}"
+    assert f"poll_started {scope}" in caplog.text
+    assert f"raw_saved {scope}" in caplog.text
+    assert scope in str(caught.value) and "write rejected [redacted]" in str(caught.value)
+    assert "private-test-token" not in caplog.text
+    assert "edition_published" not in caplog.text
