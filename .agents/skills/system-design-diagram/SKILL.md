@@ -19,7 +19,7 @@ unless their separation changes how the system works. Retain a store, queue or
 cache when it explains a persistence, delivery or asynchronous boundary. Do not
 invent distributed services to make the picture look like a system-design interview.
 
-Put the whole-system overview in the root README. Label boxes with their role,
+At the root, group internal steps by owner and show the interfaces between owners. Expand each group in its component README. If no owner fits, examine the component boundary before simplifying the picture. Label boxes with their role,
 technology and runtime/host. Group by provider or server when it simplifies the
 view. Label arrows with the request, data or trigger they carry.
 Use brief text below the diagram for the few behaviors the picture cannot convey.
