@@ -15,6 +15,8 @@ flowchart TD
     Caller -->|Record a diagnosed failure| Fail["Diagnostic in S3"]
     Table -->|Day and cutoff| Read["Read eligible editions"]
     Fail -->|Day and cutoff| Audit["Read failure diagnostics"]
+    Read -->|Editions and source policy| Resolve["Resolve a price per quarter"]
+    Audit -->|Explain missing quarters| Resolve
 ```
 
 ## Write and read an edition
@@ -29,3 +31,9 @@ Use `read_editions(client, bucket, day, cutoff)` for the validated tables. S3 re
 [`read_response`](data_sources/responses.py) returns the receipt and exact archived bytes, including an empty body or an HTTP error page. A transport failure raises `NoResponseBody` with the recorded reason. A parse failure leaves the raw bytes available for inspection.
 
 [`read_day_diagnostics`](data_sources/responses.py) returns failures recorded by cutoff. A raw receipt alone means the outcome is still unknown.
+
+## Price selection
+
+Pass a delivery day, zones, cutoff and source policy to [`resolve_day`](data_sources/prices.py). The [resolver](resolution.py) selects revisions per publisher and quarter. A correction to one quarter preserves earlier quotes for the others. Each selected price carries the policy ID, edition key and raw attempt ID for each contributing observation.
+
+Critical Elements ⚡️ accepts Electricity Maps quotes. The free-source forecast excludes them, including as anchors for signed JAO border spreads. When an Electricity Maps quote disagrees with the price implied by eligible anchors and spreads, resolution stops with both evidence chains. Missing quarters carry the recorded reasons for eligible failed attempts.
