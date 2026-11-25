@@ -45,52 +45,20 @@ Clone with `GIT_LFS_SKIP_SMUDGE=1` to skip the files, e.g. to run only the tests
 
 ```mermaid
 flowchart TB
-    monitorSchedule["Monitoring schedule · EventBridge"] --> monitor["Browser checker · AWS Lambda"]
-    monitor -->|Public page and uncached probe| articleedge
-    monitor -->|Map pages and data| edge
-    monitor --> health["Health metrics and alarms · CloudWatch"]
-    health --> notify["Outage and recovery email · SNS"]
-    click monitor "https://github.com/zoltanmaric/coppersushi/blob/main/monitoring/README.md" "Website monitoring"
-    articles["Article reader’s browser"]
-    subgraph articlecloudflare["Cloudflare · article site"]
-        articleedge["Public HTML cache<br/>CDN"]
-        purge["Cache purge endpoint<br/>JavaScript · Workers"]
-    end
-    subgraph articlehetzner["Hetzner VM · Ubuntu"]
-        articlehost["Blog server<br/>Nginx, Ghost (Node.js), MySQL"]
-    end
-    articles --> articleedge
-    articleedge -->|Miss or revalidation| articlehost
-    articlehost -->|Signed site-change event| purge
-    purge -->|Purge public HTML tag| articleedge
-    click articlehost "https://github.com/zoltanmaric/coppersushi/blob/main/121gigawatts/hosting/README.md" "Ghost hosting"
-    click purge "https://github.com/zoltanmaric/coppersushi/blob/main/121gigawatts/hosting/README.md#public-page-caching" "Cache purge endpoint"
-    schedule["EventBridge schedule"] --> workflow["Step Functions"]
-    workflow -->|Retryable attempt| publication
-    market["JAO and Electricity Maps"] -->|Market inputs| publication["Native Lambda market-day publisher"]
-    pse["PSE morning reserve purchases + requirements"] -->|Optional reserve evidence| publication
-    pse --> investigation["Offline Polish export-cap analysis"]
-    market --> investigation
-    investigation --> research[("Local CSV and HTML explainer")]
-    research --> study["Offline fixed-study builder"]
-    prepared -->|Reconciled immutable generations| study
-    study -->|Versioned study JSON in S3| edge
-    catalog["Grid catalog"] -->|Located elements and outlines| publication
-    publication -->|Immutable generation and manifest| prepared[("Prepared market files")]
-    prepared -->|Private S3 objects| edge["CloudFront"]
-    build["Static site build"] -->|Shell and assets in S3| edge
-    edge -->|Maps, export-cap study and market data| browser["CNEC browser: React and Plotly"]
-    opf["OPF preparation"] -->|Numeric metadata, intervals and manifest| opffiles[("Static OPF files")]
-    opffiles --> edge
-    edge -->|Shell and selected hour| opfbrowser["OPF browser: React and Plotly"]
-    maps["Mapbox"] -->|Styles and tiles| browser
-    maps -->|Styles and tiles| opfbrowser
-    browser -->|Page views and performance| analytics["Cloudflare Web Analytics"]
-    opfbrowser -->|Page views and performance| analytics
-    click catalog "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/grid/README.md" "Grid catalog"
-    click opf "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/powerflow/README.md" "OPF"
-    click publication "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/cnec/README.md" "Publication"
-    click browser "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/frontend/README.md" "CNEC browser"
+    grid["Grid and constraint data"] --> critical["Critical Elements ⚡️"]
+    networks["Solved networks"] -->|Power Flow preparation| power["Power Flow 🍣"]
+    power -->|Static results| maps["Copper Sushi maps · CloudFront"]
+    critical -->|Published market days| maps
+    monitor["Website monitoring"] -->|Checks map pages| maps
+    monitor -->|Checks article pages| blog["1.21 Gigawatts"]
+    publishers["Market publishers"] -->|Market prices| critical
+    snapshot["Frozen forecast snapshot"] --> forecast["DE–LU price forecasts"]
+    click critical "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/cnec/README.md"
+    click power "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/powerflow/README.md"
+    click monitor "https://github.com/zoltanmaric/coppersushi/blob/main/monitoring/README.md"
+    click blog "https://github.com/zoltanmaric/coppersushi/blob/main/121gigawatts/hosting/README.md"
+    click forecast "https://github.com/zoltanmaric/coppersushi/blob/main/forecasts/README.md"
+    click maps "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/frontend/README.md"
 ```
 
 Components: [Ghost hosting](121gigawatts/hosting/README.md), [CNEC browser](coppersushi/frontend/README.md), [publication](coppersushi/pipelines/cnec/README.md),
