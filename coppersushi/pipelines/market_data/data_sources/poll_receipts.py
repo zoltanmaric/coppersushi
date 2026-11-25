@@ -5,9 +5,9 @@ import json
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from botocore.exceptions import ClientError
 from pydantic import TypeAdapter
 
+from coppersushi.pipelines.data_sources.s3 import put_once
 from coppersushi.pipelines.market_data.receipts import FailedAttempt, Poll, Receipt, ResponseReceipt
 
 if TYPE_CHECKING:
@@ -52,16 +52,7 @@ def _save_attempt(client: "S3Client", bucket: str, receipt: Receipt, body: bytes
         largest = max(fields, key=lambda name: len(json.dumps(fields[name], ensure_ascii=True)))
         raise ValueError(f"Poll {receipt.attempt_id} ({receipt.publisher}, {receipt.zone}, {receipt.delivery_day}) "
                          f"needs {size} bytes of S3 metadata; limit is 2048. Largest field: {largest}")
-    key = _receipt_key(receipt.attempt_id)
-    try:
-        client.put_object(Bucket=bucket, Key=key, Body=body, Metadata=metadata, IfNoneMatch="*")
-    except ClientError as error:
-        if error.response["ResponseMetadata"]["HTTPStatusCode"] != 412:
-            raise
-        existing = client.get_object(Bucket=bucket, Key=key)
-        with existing["Body"] as stream:
-            if existing["Metadata"] != metadata or stream.read() != body:
-                raise ValueError(f"Immutable archive key has different content: {key}") from error
+    put_once(client, bucket, _receipt_key(receipt.attempt_id), body, metadata=metadata)
 
 
 def _receipt_key(attempt_id: UUID) -> str:

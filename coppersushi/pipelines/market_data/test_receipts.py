@@ -6,7 +6,7 @@ from uuid import uuid4
 import pytest
 from botocore.exceptions import ClientError
 
-from coppersushi.pipelines.market_data.data_sources.s3 import read_attempt, save_failure, save_response
+from coppersushi.pipelines.market_data.data_sources.poll_receipts import read_attempt, save_failure, save_response
 from coppersushi.pipelines.market_data.receipts import FailedAttempt, Poll
 
 
