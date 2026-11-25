@@ -13,9 +13,10 @@ from coppersushi.pipelines.market_data.receipts import FailedAttempt, Poll, Resp
 class MemoryS3:
     def __init__(self):
         self.objects = {}
+        self.metadata = {}
         self.interrupt_receipt = True
 
-    def put_object(self, *, Bucket, Key, Body, IfNoneMatch):
+    def put_object(self, *, Bucket, Key, Body, IfNoneMatch, Metadata=None):
         assert IfNoneMatch == "*"
         if self.interrupt_receipt and "/attempts/" in Key:
             self.interrupt_receipt = False
@@ -24,9 +25,13 @@ class MemoryS3:
             raise ClientError({"Error": {"Code": "PreconditionFailed"},
                                "ResponseMetadata": {"HTTPStatusCode": 412}}, "PutObject")
         self.objects[Key] = Body
+        self.metadata[Key] = Metadata or {}
 
     def get_object(self, *, Bucket, Key):
-        return {"Body": BytesIO(self.objects[Key])}
+        return {"Body": BytesIO(self.objects[Key]), **self.head_object(Bucket=Bucket, Key=Key)}
+
+    def head_object(self, *, Bucket, Key):
+        return {"Metadata": self.metadata[Key]}
 
 
 def test_interrupted_poll_retry_and_independent_receipts():
@@ -39,15 +44,21 @@ def test_interrupted_poll_retry_and_independent_receipts():
                               received_at=now, body_sha256=sha256(body).hexdigest())
     with pytest.raises(TimeoutError):
         save_attempt(store, "bucket", receipt, body)
+    assert not store.objects
     with pytest.raises(KeyError):
         read_attempt(store, "bucket", poll.attempt_id)
     save_attempt(store, "bucket", receipt, body)
     save_attempt(store, "bucket", receipt, body)
     second = receipt.model_copy(update={"attempt_id": uuid4()})
     save_attempt(store, "bucket", second, body)
-    assert len(store.objects) == 3
+    assert list(store.objects.values()) == [body, body]
     assert read_attempt(store, "bucket", second.attempt_id) == second
     failed = FailedAttempt(**poll.model_dump(), kind="failure", completed_at=now, reason="timed out")
     with pytest.raises(ValueError, match="different content"):
         save_attempt(store, "bucket", failed)
     assert read_attempt(store, "bucket", poll.attempt_id) == receipt
+    with pytest.raises(ValueError, match="different content"):
+        save_attempt(store, "bucket", receipt.model_copy(update={"status": 503}), body)
+    failure = failed.model_copy(update={"attempt_id": uuid4(), "reason": "é" * 3000})
+    save_attempt(store, "bucket", failure)
+    assert read_attempt(store, "bucket", failure.attempt_id) == failure

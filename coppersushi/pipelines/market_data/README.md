@@ -10,9 +10,7 @@ A new poll gets its own ID even when its bytes match an earlier response.
 
 ```mermaid
 flowchart LR
-    Poll["Publisher poll"] -->|Exact response bytes| Body["S3 body by digest"]
-    Body -->|After successful write| Receipt["S3 receipt by attempt ID"]
-    Poll -->|Transport failure| Receipt
+    Poll["Publisher poll"] -->|Response bytes or failure detail + receipt metadata| Receipt["One immutable S3 object per attempt"]
 ```
 
 `read_attempt` retrieves one receipt. Its timestamp establishes receipt only.
