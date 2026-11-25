@@ -698,3 +698,7 @@ Adopted the [forecasting system design principles](forecasting-system-design.md#
 ## [2026-11-24] decision | Explainer visual identity
 
 Recorded the [shared theme for Copper Sushi explainers](rule-provenance.md).
+
+## [2026-11-25] query | Input availability and actual forecast use
+
+Distinguished S3 publication, publisher read-back and forecast input lineage in the [storage selection principle](price-forecasting/forecast-infrastructure.md#selection-principle).

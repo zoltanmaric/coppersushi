@@ -12,6 +12,8 @@ Every forecast uses only information available by its issue deadline. Historical
 
 Choose storage from the reads and writes the system needs. Add complexity only for a demonstrated requirement.
 
+For a single S3 object, a successful PUT makes the complete object available to subsequent authorized GET and LIST requests. A publisher reading it back witnesses access through the publisher’s credentials. To establish which inputs an issued forecast actually used, retain the edition identifiers from that forecast run. [Amazon S3 consistency model](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html#ConsistencyModel) · [Google Cloud MLOps metadata management](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning#metadata_management)
+
 ## Automation-scope
 
 The foundation runs locally and on demand, with checks in continuous integration. The [forecast runbook](../../forecasts/README.md) documents input selection, monthly fitting, daily issuance, evaluation and reproduction. The [evaluation receipt](../../forecasts/reports/evaluation.json) records the reproduced run and its agreement with daily issuance.
