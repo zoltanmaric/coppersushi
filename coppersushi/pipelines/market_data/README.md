@@ -10,6 +10,10 @@ validation at the forecast deadline even though its response has arrived.
 
 ## Poll storage
 
+To inspect the bytes archived for an attempt, call `read_response` with its ID.
+It returns the receipt and checksum-verified bytes, including empty responses and
+HTTP error pages. For a transport failure it raises `NoResponseBody` with the recorded reason.
+
 Each poll occupies one immutable object in private S3. `save_response` stores
 the bytes, including empty and HTTP error bodies, and returns their checksum in
 the receipt. `save_failure` records a transport failure and its redacted reason.

@@ -1,4 +1,5 @@
 """Evidence from a single publisher request for one delivery day."""
+from dataclasses import dataclass
 from datetime import date
 from typing import Annotated, Literal
 from uuid import UUID
@@ -23,8 +24,16 @@ class ResponseReceipt(Poll):
 
     kind: Literal["response"]
     received_at: AwareDatetime
-    status: Annotated[int, Field(ge=100, le=599)]
+    http_status: Annotated[int, Field(ge=100, le=599)]
     body_sha256: Annotated[str, Field(pattern="^[0-9a-f]{64}$")]
+
+
+@dataclass(frozen=True)
+class StoredResponse:
+    """The archived HTTP bytes and the receipt that identifies them."""
+
+    receipt: ResponseReceipt
+    body: bytes
 
 
 class FailedAttempt(Poll):
