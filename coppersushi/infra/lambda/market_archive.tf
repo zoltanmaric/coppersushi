@@ -4,6 +4,12 @@ variable "market_collector_image_uri" {
   default     = null
 }
 
+variable "market_collector_alert_topic_arn" {
+  description = "Same-region SNS topic with a confirmed operator subscription for exhausted collector invocations."
+  type        = string
+  default     = null
+}
+
 locals {
   market_publishers = var.market_collector_image_uri == null ? toset([]) : toset(["entsoe", "electricity_maps", "smard", "jao"])
   market_windows = {
@@ -33,11 +39,18 @@ resource "aws_iam_role_policy" "market_archive" {
   count = var.market_collector_image_uri == null ? 0 : 1
   role  = aws_iam_role.market_archive[0].id
   policy = jsonencode({ Version = "2012-10-17", Statement = [
+    { Effect = "Allow", Action = ["sns:Publish"], Resource = var.market_collector_alert_topic_arn },
     { Effect = "Allow", Action = ["s3:GetObject", "s3:PutObject"], Resource = "${aws_s3_bucket.cache.arn}/market-data/*" },
     { Effect = "Allow", Action = "s3:ListBucket", Resource = aws_s3_bucket.cache.arn, Condition = { StringLike = { "s3:prefix" = "market-data/*" } } },
     { Effect = "Allow", Action = "secretsmanager:GetSecretValue", Resource = aws_secretsmanager_secret.api.arn },
     { Effect = "Allow", Action = ["logs:CreateLogStream", "logs:PutLogEvents"], Resource = [for group in aws_cloudwatch_log_group.market_archive : "${group.arn}:*"] }
   ] })
+  lifecycle {
+    precondition {
+      condition     = var.market_collector_alert_topic_arn != null
+      error_message = "Set market_collector_alert_topic_arn when enabling market collection."
+    }
+  }
 }
 
 resource "aws_lambda_function" "market_archive" {
@@ -59,6 +72,17 @@ resource "aws_lambda_function" "market_archive" {
     }
   }
   depends_on = [aws_iam_role_policy.market_archive]
+}
+
+resource "aws_lambda_function_event_invoke_config" "market_archive" {
+  for_each               = aws_lambda_function.market_archive
+  function_name          = each.value.function_name
+  maximum_retry_attempts = 2
+  destination_config {
+    on_failure {
+      destination = var.market_collector_alert_topic_arn
+    }
+  }
 }
 
 resource "aws_iam_role_policy" "market_schedule" {
@@ -84,5 +108,5 @@ resource "aws_scheduler_schedule" "market_archive" {
       maximum_retry_attempts       = 2
     }
   }
-  depends_on = [aws_iam_role_policy.market_schedule]
+  depends_on = [aws_iam_role_policy.market_schedule, aws_lambda_function_event_invoke_config.market_archive]
 }

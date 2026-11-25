@@ -9,6 +9,8 @@ Suppose a response arrives at 10:58 and its edition reaches S3 at 11:04. An 11:0
 ```mermaid
 flowchart TB
     Publishers["Market publishers<br/>e.g. ENTSO-E, SMARD"]
+    Runtime["Scheduled collector · AWS Lambda"] -->|Publisher, day and zones| Caller
+    Runtime -->|Failed invocation record after retries| Alerts["Operator alerts · SNS"]
     Consumer["Price consumer"]
     subgraph Market["Market data · Python library"]
         Caller["Publisher collector"]
