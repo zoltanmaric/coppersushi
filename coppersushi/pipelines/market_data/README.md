@@ -2,25 +2,30 @@
 
 [Data pipelines](../README.md)
 
-What did the publisher return, and when did we receive it? For each day-ahead
-price request, this package saves the response bytes and their arrival time, or
-the reason the request failed. Look up a poll by its attempt ID with
-[`read_attempt`](data_sources/responses.py). A price can still be awaiting
-validation at the forecast deadline even though its response has arrived.
+An **edition** is the validated price or border-spread table from one publisher response. For a delivery day and cutoff, the archive returns every eligible edition, including zero-row tables and earlier versions later corrected.
 
-## Poll storage
-
-To inspect the bytes archived for an attempt, call [`read_response`](data_sources/responses.py) with its ID.
-It returns a [`StoredResponse`](response_models.py) with the receipt and checksum-verified bytes, including empty responses and
-HTTP error pages. For a transport failure it raises `NoResponseBody` with the recorded reason.
-
-Each poll occupies one immutable object in private S3. `save_response` stores
-the bytes, including empty and HTTP error bodies, and returns their checksum in
-the receipt. `save_failure` records a transport failure and its redacted reason.
-Retry an interrupted write with the same attempt ID and evidence. A new request
-gets a new ID even when the publisher returns identical bytes.
+Suppose a response arrives at 10:58 and its edition reaches S3 at 11:04. An 11:00 replay returns nothing. An 11:05 replay returns that edition. If a correction reaches S3 at noon, a 12:01 replay returns both.
 
 ```mermaid
-flowchart LR
-    Poll["Publisher poll"] -->|Response bytes or failure detail + receipt metadata| Receipt["One immutable S3 object per attempt"]
+flowchart TD
+    Caller["Caller with publisher response or transport error"]
+    Caller -->|First write: bytes or failure reason| Raw["Raw attempt in S3"]
+    Caller -->|After raw save: receipt and parsed rows| Writer["Validate and publish"]
+    Writer -->|One conditional PUT| Table["Edition in S3 · Parquet"]
+    Caller -->|Record a diagnosed failure| Fail["Diagnostic in S3"]
+    Table -->|Day and cutoff| Read["Read eligible editions"]
+    Fail -->|Day and cutoff| Audit["Read failure diagnostics"]
 ```
+
+## Write and read an edition
+
+1. Save the response with [`save_response`](data_sources/responses.py). It returns the receipt once the raw bytes are durable. A transport error goes through `save_failure`.
+2. Parse the bytes held by the caller. Pass the receipt and rows to [`publish_edition`](data_sources/editions.py). It validates the [price or spread schema](edition_models.py) and writes one immutable Parquet object. A retry with identical evidence preserves the original publication time.
+
+Use `read_editions(client, bucket, day, cutoff)` for the validated tables. S3 reports publication to the second, so the reader excludes objects written during the cutoff second.
+
+## Inspect an attempt
+
+[`read_response`](data_sources/responses.py) returns the receipt and exact archived bytes, including an empty body or an HTTP error page. A transport failure raises `NoResponseBody` with the recorded reason. A parse failure leaves the raw bytes available for inspection.
+
+[`read_day_diagnostics`](data_sources/responses.py) returns failures recorded by cutoff. A raw receipt alone means the outcome is still unknown.

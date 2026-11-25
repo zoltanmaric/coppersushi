@@ -1,6 +1,7 @@
 from datetime import UTC, date, datetime
 from hashlib import sha256
 from io import BytesIO
+import json
 from uuid import uuid4
 
 import pytest
@@ -88,3 +89,23 @@ def test_interrupted_poll_retry_and_independent_receipts():
         read_response(store, "bucket", failure.attempt_id)
     assert missing.value.failure == failure
     assert failure.reason in str(missing.value)
+
+
+def test_retry_preserves_receipt_written_before_optional_http_metadata():
+    store = MemoryS3()
+    store.interrupt_receipt = False
+    poll = Poll(attempt_id=uuid4(), publisher="entsoe", dataset="day_ahead_auction_prices",
+                zone="DE-LU", delivery_day=date(2026, 11, 20))
+    body = b"original response"
+    now = datetime(2026, 11, 19, 12, tzinfo=UTC)
+    fields = {
+        **poll.model_dump(mode="json"), "kind": "response", "received_at": "2026-11-19T12:00:00Z",
+        "http_status": 200, "body_sha256": sha256(body).hexdigest(),
+    }
+    key = f"market-data/attempts/{poll.attempt_id}"
+    metadata = {"receipt": json.dumps(fields, ensure_ascii=True, sort_keys=True, separators=(",", ":"))}
+    store.put_object(Bucket="bucket", Key=key, Body=body, Metadata=metadata, IfNoneMatch="*")
+
+    receipt = save_response(store, "bucket", poll, body, received_at=now, http_status=200)
+    assert read_attempt(store, "bucket", poll.attempt_id) == receipt
+    assert store.metadata[key] == metadata
