@@ -20,6 +20,8 @@ resource "aws_iam_role_policy" "producer" {
   policy = jsonencode({ Version = "2012-10-17", Statement = [
     { Effect = "Allow", Action = ["s3:ListBucket"], Resource = aws_s3_bucket.cache.arn },
     { Effect = "Allow", Action = ["s3:GetObject", "s3:PutObject"], Resource = ["${aws_s3_bucket.cache.arn}/cache/v1/*", "${aws_s3_bucket.cache.arn}/data/cnec/*"] },
+    { Effect = "Allow", Action = "s3:GetObject", Resource = "${aws_s3_bucket.cache.arn}/market-data/*" },
+    { Effect = "Allow", Action = "s3:PutObject", Resource = "${aws_s3_bucket.cache.arn}/market-data/decisions/*" },
     { Effect = "Allow", Action = ["secretsmanager:GetSecretValue"], Resource = aws_secretsmanager_secret.api.arn },
     { Effect = "Allow", Action = ["logs:CreateLogStream", "logs:PutLogEvents"], Resource = "${aws_cloudwatch_log_group.producer.arn}:*" }
   ] })
@@ -70,7 +72,10 @@ resource "aws_sfn_state_machine" "publication" {
         Type       = "Task", Resource = "arn:aws:states:::lambda:invoke",
         Parameters = { FunctionName = aws_lambda_function.producer[0].arn, Payload = { "started_at.$" = "$.started_at" } },
         ResultPath = "$.result", Next = "Published",
-        Retry      = [{ ErrorEquals = ["States.TaskFailed"], IntervalSeconds = 10, BackoffRate = 2, MaxAttempts = 3 }]
+        Retry = [
+          { ErrorEquals = ["ConflictingPrices"], MaxAttempts = 0 },
+          { ErrorEquals = ["States.TaskFailed"], IntervalSeconds = 10, BackoffRate = 2, MaxAttempts = 3 }
+        ]
       },
       Published = { Type = "Choice", Choices = [
         { And = [{ Variable = "$.result.Payload.awaiting_attribution", IsPresent = true }, { Variable = "$.result.Payload.awaiting_attribution", BooleanEquals = true }], Next = "WaitForAttribution" },

@@ -1,9 +1,10 @@
 """Day-scoped domain data consumed by the browser renderer."""
 from datetime import date
 from typing import Literal, Annotated
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 from pydantic.json_schema import SkipJsonSchema
 from coppersushi.pipelines.data_model.market import CoreZone
+from coppersushi.pipelines.market_data.resolution import PriceResult
 
 Coordinates = Annotated[list[float], Field(min_length=2, max_length=2)]
 
@@ -70,9 +71,19 @@ class DayMetadata(Contract):
     elements: dict[str, ElementGeometry]
     price_range: Coordinates
 
+
+class RegionalPriceDecision(Contract):
+    """Private cutoff, source policy and chosen evidence for one regional price table."""
+    day: date
+    cutoff: AwareDatetime
+    policy: str
+    prices: list[PriceResult]
+
+
 class DayBundle(DayMetadata):
     """Producer-side complete day; browser delivery uses separate interval objects."""
     awaiting_polish_price: SkipJsonSchema[bool] = Field(default=False, exclude=True)
+    price_decision: SkipJsonSchema[RegionalPriceDecision | None] = Field(default=None, exclude=True)
     intervals: list[MarketInterval]
 
 

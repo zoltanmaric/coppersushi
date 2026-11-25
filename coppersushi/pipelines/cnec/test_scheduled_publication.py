@@ -33,8 +33,8 @@ def test_partial_publication_waits_then_replaces_the_same_manifest(monkeypatch):
     writes = []
     monkeypatch.setattr(scheduled.bundles, 'publication_state', lambda *args: state)
 
-    def prepare(day, *, refresh, allow_partial_attribution, require_valid_rows):
-        assert refresh and require_valid_rows
+    def prepare(day, *, refresh, allow_partial_attribution, require_valid_rows, archive_bucket):
+        assert refresh and require_valid_rows and archive_bucket == 'test'
         if not source_ready and not allow_partial_attribution:
             raise PublicationNotReady('still waiting')
         return SimpleNamespace(awaiting_polish_price=not source_ready)

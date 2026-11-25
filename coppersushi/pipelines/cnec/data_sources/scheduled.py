@@ -4,6 +4,7 @@ from urllib.error import HTTPError, URLError
 
 
 from coppersushi.pipelines.cnec.prices import IncompletePrices
+from coppersushi.pipelines.cnec.data_sources.archive_prices import RegionalPricesUnavailable, retain_failed_decision
 from coppersushi.pipelines.jao.data_sources import publication as jao
 from coppersushi.pipelines.cnec.data_sources import bundles
 from coppersushi.pipelines.cnec.readiness import PublicationNotReady
@@ -23,7 +24,7 @@ def attempt(job: PublicationJob, bucket: str) -> PublicationResult:
         # An earlier partial response must not freeze a still-arriving publication.
         initial = state == "missing"
         bundle = bundles.prepare(day, refresh=True, allow_partial_attribution=initial,
-                                 require_valid_rows=True)
+                                 require_valid_rows=True, archive_bucket=bucket)
         options = {"IfNoneMatch": "*"} if initial else {"IfMatch": etag}
         bundles.publish(bundle, bucket, allow_partial_attribution=initial, manifest_options=options)
         return PublicationResult(ready=True, day=day.date.isoformat(), awaiting_attribution=bundle.awaiting_polish_price)
@@ -31,6 +32,10 @@ def attempt(job: PublicationJob, bucket: str) -> PublicationResult:
         if error.code != 429 and error.code < 500:
             raise
         logger.warning("Publication %s deferred: %s: %s", day.date, type(error).__name__, error)
+        return PublicationResult(ready=False, day=day.date.isoformat(), awaiting_attribution=state == "partial")
+    except RegionalPricesUnavailable as error:
+        key = retain_failed_decision(bucket, error.decision)
+        logger.warning("Publication %s deferred: %s. Decision evidence: %s", day.date, error, key)
         return PublicationResult(ready=False, day=day.date.isoformat(), awaiting_attribution=state == "partial")
     except (PublicationNotReady, jao.RateLimited, IncompletePrices, URLError, TimeoutError) as error:
         logger.warning("Publication %s deferred: %s: %s", day.date, type(error).__name__, error)

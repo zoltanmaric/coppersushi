@@ -6,6 +6,7 @@ from pandera.typing import DataFrame
 from coppersushi.pipelines.data_model.market import CORE_ZONES
 from coppersushi.pipelines.data_model.market import DayAheadPrices
 from coppersushi.pipelines.data_model.market import ElectricityMapsPriceResponse
+from coppersushi.pipelines.data_model.market import ZonalPrices
 from coppersushi.pipelines.market_day import MarketDay
 
 ZONE_NAMES = {
@@ -43,7 +44,7 @@ class IncompletePrices(ValueError):
     """Expected zone intervals have not all been published yet."""
 
 
-def check_complete(prices: DataFrame[DayAheadPrices], day: MarketDay, zones: tuple[str, ...]) -> None:
+def check_complete[T: ZonalPrices](prices: DataFrame[T], day: MarketDay, zones: tuple[str, ...]) -> None:
     """Raise unless ``prices`` holds every zone at every market time unit of ``day``, and nothing else.
 
     The market time unit is the grain prices are read at, by exact match. A table at a coarser

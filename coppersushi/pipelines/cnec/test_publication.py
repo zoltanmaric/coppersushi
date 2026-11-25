@@ -96,9 +96,9 @@ def test_interrupted_checkpoint_preserves_report_and_resume_skips_existing_manif
     report.write_text(original)
     result = backfill.Coverage.model_validate_json(original).model_copy(
         update={'status':'eligible', 'errors':[]})
-    monkeypatch.setattr(backfill, 'audit', lambda day: result.model_copy())
+    monkeypatch.setattr(backfill, 'audit', lambda day, **options: result.model_copy())
     monkeypatch.setattr(sys, 'argv', ['backfill', '2025-11-05', '2025-11-05',
-                                    '--report', str(report), '--bucket', 'test'])
+                                    '--report', str(report), '--bucket', 'test', '--legacy-prices'])
     published = []
     monkeypatch.setattr(backfill.bundles, 'is_published', lambda *args: bool(published))
     monkeypatch.setattr(backfill.bundles, 'prepare', lambda *args, **kwargs: object())
@@ -119,4 +119,45 @@ def test_interrupted_checkpoint_preserves_report_and_resume_skips_existing_manif
         backfill.main()
     assert exit.value.code == 0
     assert len(published) == 1
-    assert backfill.Coverage.model_validate_json(report.read_text().splitlines()[-1]).status == 'published'
+    assert backfill.Coverage.model_validate_json(report.read_text().splitlines()[-1]).status == 'existing'
+
+
+def test_backfill_reports_existing_generation_separately_and_resumes_equivalent_cutoff(tmp_path, monkeypatch):
+    import sys
+    from datetime import datetime
+    from coppersushi.pipelines.cnec.data_sources import backfill
+
+    monkeypatch.setattr(backfill.jao, '_pacer', backfill.jao.RequestPacer())
+    report = tmp_path / 'report.jsonl'
+    explicit_cutoff = '2025-11-06T10:00:00+00:00'
+    audits = []
+
+    def audit(day, *, archive_bucket, price_cutoff):
+        audits.append(price_cutoff)
+        return backfill.Coverage(day=day.date, expected_intervals=96, status='eligible')
+
+    monkeypatch.setattr(backfill, 'audit', audit)
+    monkeypatch.setattr(backfill.bundles, 'is_published', lambda *args: True)
+    command = ['backfill', '2025-11-05', '2025-11-05', '--report', str(report), '--bucket', 'test']
+
+    def run(*options):
+        monkeypatch.setattr(sys, 'argv', [*command, *options])
+        with pytest.raises(SystemExit) as stopped:
+            backfill.main()
+        assert stopped.value.code == 0
+        return backfill.Coverage.model_validate_json(report.read_text().splitlines()[-1])
+
+    historical = run('--price-cutoff', explicit_cutoff)
+    assert historical.status == 'existing'
+    assert historical.price_cutoff == datetime.fromisoformat(explicit_cutoff)
+    assert run('--price-cutoff', explicit_cutoff) == historical
+    assert audits == [historical.price_cutoff]
+
+    latest = run()
+    assert latest.status == 'existing'
+    assert latest.price_cutoff > historical.price_cutoff
+    assert run() == latest
+    assert audits == [historical.price_cutoff, latest.price_cutoff]
+
+    assert run('--price-cutoff', explicit_cutoff) == historical
+    assert audits == [historical.price_cutoff, latest.price_cutoff, historical.price_cutoff]
