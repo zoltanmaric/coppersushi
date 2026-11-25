@@ -1,5 +1,5 @@
 """Immutable S3 landing records for independent publisher polls."""
-from datetime import datetime
+from datetime import date, datetime
 from hashlib import sha256
 import json
 from typing import TYPE_CHECKING
@@ -8,7 +8,8 @@ from uuid import UUID
 from pydantic import TypeAdapter
 
 from coppersushi.pipelines.data_sources.s3 import put_once
-from coppersushi.pipelines.market_data.response_models import FailedAttempt, Poll, Receipt, ResponseReceipt, StoredResponse
+from coppersushi.pipelines.market_data.edition_models import object_visible_by
+from coppersushi.pipelines.market_data.response_models import AttemptOutcome, FailedAttempt, Poll, Receipt, ResponseReceipt, StoredResponse
 
 if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client
@@ -70,6 +71,35 @@ def _checked_receipt(fields: dict[str, object], attempt_id: UUID) -> Receipt:
     if receipt.attempt_id != attempt_id:
         raise ValueError(f"Receipt identity differs from requested attempt {attempt_id}")
     return receipt
+
+
+def save_diagnostic(client: "S3Client", bucket: str, outcome: AttemptOutcome) -> None:
+    """Record a diagnosed failure for point-in-time lookup by delivery day."""
+    if outcome.outcome != "failed":
+        raise ValueError("Only failed attempts have a separate diagnostic")
+    key = f"market-data/outcomes/{outcome.delivery_day}/{outcome.attempt_id}.json"
+    put_once(client, bucket, key, outcome.model_dump_json().encode())
+
+
+def read_day_diagnostics(client: "S3Client", bucket: str, delivery_day: date, cutoff: datetime) -> list[AttemptOutcome]:
+    """Find a day's diagnosed failures that were visible to the reader by cutoff."""
+    if cutoff.utcoffset() is None:
+        raise ValueError("A diagnostic lookup requires an aware cutoff")
+    prefix = f"market-data/outcomes/{delivery_day}/"
+    found = []
+    pages = client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix)
+    for page in pages:
+        for item in page.get("Contents", []):
+            if object_visible_by(item["LastModified"]) > cutoff:
+                continue
+            key = item["Key"]
+            with client.get_object(Bucket=bucket, Key=key)["Body"] as stream:
+                record = AttemptOutcome.model_validate_json(stream.read())
+            if record.delivery_day != delivery_day or key != f"{prefix}{record.attempt_id}.json":
+                raise ValueError(f"Attempt index identity mismatch at {key}")
+            if record.outcome == "failed" and record.completed_at <= cutoff:
+                found.append(record)
+    return sorted(found, key=lambda outcome: (outcome.completed_at, outcome.attempt_id))
 
 
 def _save_attempt(client: "S3Client", bucket: str, receipt: Receipt, body: bytes) -> None:
