@@ -14,6 +14,7 @@ flowchart TD
     Writer -->|One conditional PUT| Table["Edition in S3 · Parquet"]
     Caller -->|Record a diagnosed failure| Fail["Diagnostic in S3"]
     Table -->|Day and cutoff| Read["Read eligible editions"]
+    Raw -->|Check publisher for policy reads| Read
     Fail -->|Day and cutoff| Audit["Read failure diagnostics"]
     Read -->|Editions and source policy| Resolve["Resolve a price per quarter"]
     Audit -->|Explain missing quarters| Resolve
@@ -34,6 +35,6 @@ Use `read_editions(client, bucket, day, cutoff)` for the validated tables. S3 re
 
 ## Price selection
 
-Pass a delivery day, zones, cutoff and source policy to [`resolve_day`](data_sources/prices.py). The [resolver](resolution.py) selects revisions per publisher and quarter. The reader checks the raw receipt’s publisher before opening a Parquet file for a policy. Full-day audits read every eligible edition. A row qualifies once its edition is available and its reported publisher update time, if present, has passed or equals the cutoff. A derived price becomes available with its last qualifying input. A correction to one quarter preserves earlier quotes for the others. Each selected price carries the policy ID, edition key and raw attempt ID for each contributing observation.
+Pass a delivery day, zones, cutoff and source policy to [`resolve_day`](data_sources/prices.py). The [resolver](resolution.py) selects revisions per publisher and quarter. The reader checks the raw receipt’s publisher before opening a Parquet file for a policy. Full-day audits skip this receipt lookup and read every eligible edition. A row qualifies once its edition is available and its reported publisher update time, if present, has passed or equals the cutoff. A derived price becomes available with its last qualifying input. A correction to one quarter preserves earlier quotes for the others. Each selected price carries the policy ID, edition key and raw attempt ID for each contributing observation.
 
-Critical Elements ⚡️ accepts Electricity Maps quotes. The free-source forecast excludes them, including as anchors for signed JAO border spreads. When an Electricity Maps quote disagrees with the price implied by eligible anchors and spreads, resolution stops with both evidence chains. For a missing quarter, the resolver attaches direct-publisher failures in the requested zone or a zone reachable through eligible spreads that quarter. The day audit retains all failure diagnostics.
+Critical Elements ⚡️ accepts Electricity Maps quotes. The free-source forecast excludes them, including as anchors for signed JAO border spreads. Disagreeing eligible direct quotes raise a conflict. If Electricity Maps and another eligible direct publisher agree for the same zone and quarter, the resolver accepts the direct price. If Electricity Maps is the only eligible direct publisher for that zone and quarter, the resolver checks its quote against prices implied by eligible anchors and spreads. A disagreement stops resolution with both evidence chains. For a missing quarter, the resolver attaches direct-publisher failures in the requested zone or a zone reachable through eligible spreads that quarter. The day audit retains all failure diagnostics.
