@@ -13,17 +13,15 @@ if TYPE_CHECKING:
 def resolve_day(client: "S3Client", bucket: str, day: date, zones: tuple[str, ...],
                 cutoff: datetime, policy: SourcePolicy) -> list[PriceResult]:
     """Resolve all native intervals from the archive and attach observed failures to missing quarters."""
-    results = resolve_editions(day, zones, cutoff, policy, read_editions(client, bucket, day, cutoff))
+    tables = read_editions(client, bucket, day, cutoff, publishers=policy.publishers)
+    results = resolve_editions(day, zones, cutoff, policy, tables)
     if not any(isinstance(result, PriceUnavailable) for result in results):
         return results
     attempts = read_day_diagnostics(client, bucket, day, cutoff)
-    allowed = set(policy.direct)
-    if policy.allow_spreads:
-        allowed.add("jao")
     for i, result in enumerate(results):
         if isinstance(result, PriceUnavailable):
-            relevant = [record for record in attempts if record.publisher in allowed
-                        and (policy.allow_spreads or record.zone == result.zone)]
+            relevant = [record for record in attempts if record.publisher in policy.direct
+                        and record.zone in (result.zone, *result.connected_zones)]
             failures = [f"{record.publisher}/{record.zone}: {record.diagnostic}"
                         for record in relevant]
             results[i] = result.model_copy(update={

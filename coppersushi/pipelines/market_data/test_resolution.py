@@ -3,8 +3,9 @@ from decimal import Decimal
 
 import pytest
 
+from coppersushi.pipelines.market_data.data_sources.editions import read_editions
 from coppersushi.pipelines.market_data.data_sources.prices import resolve_day
-from coppersushi.pipelines.market_data.data_sources.responses import save_diagnostic
+from coppersushi.pipelines.market_data.data_sources.responses import read_day_diagnostics, save_diagnostic
 from coppersushi.pipelines.market_data.edition_models import SpreadRow
 from coppersushi.pipelines.market_data.response_models import AttemptOutcome
 from coppersushi.pipelines.market_data.resolution import (
@@ -168,3 +169,49 @@ def test_later_stale_or_partial_poll_preserves_newest_known_interval():
     publish(store, "entsoe", "DE-LU", [later])
     chosen = first(store, store.now + timedelta(seconds=1))
     assert chosen.price == Decimal("40") and chosen.evidence[0].attempt_id == accepted.attempt_id
+
+
+def test_forecast_skips_corrupt_excluded_edition_while_full_audit_fails():
+    store = ArchiveS3()
+    publish(store, "entsoe", "DE-LU", [price()])
+    excluded = publish(store, "electricity_maps", "DE-LU", [price()])
+    key = f"market-data/editions/v1/{DAY}/{excluded.attempt_id}.parquet"
+    store.objects[key] = b"invalid parquet"
+    cutoff = T + timedelta(seconds=1)
+    assert first(store, cutoff).price == Decimal("40")
+    assert key not in store.reads
+    with pytest.raises(ValueError, match="Invalid Parquet edition"):
+        read_editions(store, "test", DAY, cutoff)
+    with pytest.raises(ValueError, match="Invalid Parquet edition"):
+        first(store, cutoff, policy=CNEC_POLICY)
+
+
+def test_reported_availability_matches_cutoff_for_each_contributing_row():
+    store = ArchiveS3()
+    updated = T + timedelta(minutes=7)
+    publish(store, "entsoe", "AT", [price("40", "AT").model_copy(update={"source_updated_at": updated})])
+    spread_updated = updated + timedelta(minutes=2)
+    publish(store, "jao", "CORE", [spread("AT", "DE-LU", "2").model_copy(update={"source_updated_at": spread_updated})])
+    assert isinstance(first(store, updated - timedelta(microseconds=1), "AT"), PriceUnavailable)
+    direct = first(store, updated, "AT")
+    assert direct.available_at == updated
+    assert direct.evidence[0].visible_at == T + timedelta(seconds=1)
+    assert isinstance(first(store, spread_updated - timedelta(microseconds=1)), PriceUnavailable)
+    derived = first(store, spread_updated)
+    assert derived.price == Decimal("42") and derived.available_at == spread_updated
+
+
+def test_missing_quarter_cites_only_reachable_anchor_failures_and_spreads():
+    store = ArchiveS3()
+    croatian = landed(store, "entsoe", "HR")
+    failure = AttemptOutcome(**croatian.model_dump(include={"publisher", "dataset", "delivery_day", "zone", "attempt_id"}),
+                             completed_at=T, outcome="failed", rows=0, diagnostic="Croatian request failed")
+    save_diagnostic(store, "test", failure)
+    publish(store, "entsoe", "FR", [price("30", "FR")])
+    link = publish(store, "jao", "CORE", [spread("DE-LU", "HR", "2")])
+    cutoff = T + timedelta(seconds=1)
+    connected, disconnected, *_ = resolve_day(store, "test", DAY, ("DE-LU",), cutoff, FORECAST_POLICY)
+    assert set(connected.attempt_ids) == {croatian.attempt_id, link.attempt_id}
+    assert "Croatian request failed" in connected.reason
+    assert disconnected.attempt_ids == () and "Croatian request failed" not in disconnected.reason
+    assert read_day_diagnostics(store, "test", DAY, cutoff) == [failure]

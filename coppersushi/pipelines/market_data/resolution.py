@@ -19,6 +19,10 @@ class SourcePolicy(BaseModel):
     direct: tuple[str, ...]
     allow_spreads: bool
 
+    @property
+    def publishers(self) -> frozenset[str]:
+        return frozenset((*self.direct, "jao") if self.allow_spreads else self.direct)
+
 
 CNEC_POLICY = SourcePolicy(id="cnec-v2", direct=("entsoe", "smard", "electricity_maps"), allow_spreads=True)
 FORECAST_POLICY = SourcePolicy(id="forecast-free-v1", direct=("entsoe", "smard"), allow_spreads=True)
@@ -42,6 +46,12 @@ class Evidence(BaseModel):
     upstream_source: str | None
 
 
+    @property
+    def available_at(self) -> datetime:
+        """Earliest cutoff that admits this row under the archive and publisher clocks."""
+        return max(self.visible_at, self.source_updated_at or self.visible_at)
+
+
 class ResolvedPrice(BaseModel):
     """The EUR/MWh auction outcome with replayable source evidence, in derivation order."""
 
@@ -54,7 +64,7 @@ class ResolvedPrice(BaseModel):
 
     @property
     def available_at(self) -> datetime:
-        return max(row.visible_at for row in self.evidence)
+        return max(row.available_at for row in self.evidence)
 
 
 class PublishedPrice(ResolvedPrice):
@@ -75,6 +85,7 @@ class PriceUnavailable(BaseModel):
     policy_id: str
     reason: str
     attempt_ids: tuple[UUID, ...]
+    connected_zones: tuple[str, ...] = ()
 
 
 class ConflictingPrices(ValueError):
@@ -104,17 +115,13 @@ def resolve_editions(day: date, zones: tuple[str, ...], cutoff: datetime, policy
     direct: dict[datetime, dict[str, list[Evidence]]] = defaultdict(lambda: defaultdict(list))
     spreads: dict[datetime, list[Evidence]] = defaultdict(list)
     versions: dict[tuple[datetime, str, str, str | None], list[Evidence]] = defaultdict(list)
-    attempts = []
     for edition, rows in tables:
         receipt = edition.receipt
-        if receipt.delivery_day != day or max(edition.available_at, receipt.received_at) > cutoff:
+        if receipt.delivery_day != day or edition.available_at > cutoff:
             continue
-        if receipt.publisher not in policy.direct and not (policy.allow_spreads and receipt.publisher == "jao"):
+        if receipt.publisher not in policy.publishers:
             continue
-        attempts.append(receipt.attempt_id)
         for row in rows:
-            if row.source_updated_at is not None and row.source_updated_at > cutoff:
-                continue
             evidence = Evidence(
                 publisher=receipt.publisher, attempt_id=receipt.attempt_id, edition_key=edition.key,
                 interval=row.interval, zone=row.zone if isinstance(row, PriceRow) else row.origin,
@@ -124,6 +131,8 @@ def resolve_editions(day: date, zones: tuple[str, ...], cutoff: datetime, policy
                 upstream_source=row.upstream_source,
                 received_at=receipt.received_at, visible_at=edition.available_at,
             )
+            if evidence.available_at > cutoff:
+                continue
             versions[row.interval, receipt.publisher, evidence.zone, evidence.destination].append(evidence)
     for (interval, _, zone, destination), observations in versions.items():
         latest = _latest(observations)
@@ -136,7 +145,7 @@ def resolve_editions(day: date, zones: tuple[str, ...], cutoff: datetime, policy
     for time in MarketDay.on(day).market_time_units():
         for zone in zones:
             results.append(_resolve_interval(zone, time.to_pydatetime(), policy, direct[time],
-                                             spreads[time], tuple(attempts)))
+                                             spreads[time]))
     return results
 
 
@@ -173,8 +182,7 @@ def _published(zone: str, interval: datetime, policy: SourcePolicy, candidates: 
 
 
 def _resolve_interval(target: str, interval: datetime, policy: SourcePolicy,
-                      direct: dict[str, list[Evidence]], spreads: list[Evidence],
-                      attempts: tuple[UUID, ...]) -> PriceResult:
+                      direct: dict[str, list[Evidence]], spreads: list[Evidence]) -> PriceResult:
     published = None
     if target in direct:
         published = _published(target, interval, policy, direct[target])
@@ -214,7 +222,9 @@ def _resolve_interval(target: str, interval: datetime, policy: SourcePolicy,
     if published is not None:
         return published
     if not anchors:
-        return PriceUnavailable(zone=target, interval=interval, policy_id=policy.id, attempt_ids=attempts,
+        spread_attempts = {row.attempt_id for zone in paths for _, _, row in edges[zone]}
+        return PriceUnavailable(zone=target, interval=interval, policy_id=policy.id,
+                                attempt_ids=tuple(sorted(spread_attempts)), connected_zones=tuple(sorted(paths.keys() - {target})),
                                 reason="No eligible direct price or connected eligible absolute anchor")
     if len({candidate.price for candidate in anchors}) != 1:
         raise ConflictingPrices(target, interval, [row for candidate in anchors for row in candidate.evidence])
