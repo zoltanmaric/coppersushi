@@ -730,3 +730,7 @@ Linked five primary-source digests through [Agent harness engineering](agent-har
 ## [2026-11-27] decision | Consulting harness principles
 
 Recorded the [ablation exception](rule-provenance.md) for requests to improve how agents work.
+
+## [2026-11-27] decision | Training price evidence
+
+Recorded [historical fallback and cutoff rules](price-forecasting/forecast-infrastructure.md) for monthly training.

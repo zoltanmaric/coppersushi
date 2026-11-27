@@ -31,6 +31,16 @@ Use a local filesystem that updates the surviving inode's change time when a har
 
 Use `--replay` with the market archive to reconstruct the prices available at the 11:00 cutoff. Use `--replay --snapshot PATH` for historical reconstruction under a frozen snapshot's recorded timing assumptions. The output records reconstruction mode even when required prices are missing. Evaluation uses its pinned snapshot.
 
+### Monthly training from the market archive
+
+Use the November prices-only bundle `ef683f971ef0b733b5f7ad0b` for the frozen configuration and snapshot identity. Audit each feature at its historical issue deadline and the reference history and labels at the fit cutoff. Use a fresh coverage directory for each attempt.
+
+```sh
+pixi run --locked python -m forecasts.monthly_fit --fit-day 2026-12-01 --config "$NOVEMBER_FIT/config.json" --snapshot "$TRAINING_SNAPSHOT" --archive-bucket "$COPPERSUSHI_CACHE_BUCKET" --coverage-output "$COVERAGE_DIR" --audit-only
+```
+
+`coverage.json` reports counts. `selections.parquet` identifies each interval, cutoff, source, receipt or snapshot row version, and any gap. For a price conflict, the report identifies the affected quarter and its competing receipts. For a rejected frozen version, it records the timing evidence and reason. An unreadable receipt identifies the affected source day and cutoff. Any unresolved quarter fails the audit. Once the fit cutoff has passed and the frozen-row and daily-issuance comparisons pass, replace `--audit-only` with `--output "$MONTHLY_FIT"` and choose a fresh `--coverage-output`. The fit saves its audited selections in the bundle.
+
 ## Local model evaluation
 
 ```sh

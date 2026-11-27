@@ -13,7 +13,7 @@ import polars as pl
 from pydantic import StringConstraints, TypeAdapter
 
 from forecasts.config import RunConfig
-from forecasts.inputs.selection import InputReader
+from forecasts.inputs.selection import PriceHistoryReader
 from forecasts.market import cutoff, require_quarters
 from forecasts.model.contracts import FittedMonth, FloatArray, Predictor, TrainingData
 from forecasts.model.coverage import require_static_features
@@ -26,7 +26,7 @@ from forecasts.model.tables import Features
 _FAILURES = TypeAdapter(dict[str, Annotated[str, StringConstraints(pattern=r"\S")]])
 
 
-def fit_month(reader: InputReader, features: DataFrame[Features], fit_day: date,
+def fit_month(reader: PriceHistoryReader, features: DataFrame[Features], fit_day: date,
               config: RunConfig, directory: Path,
               restore_models: Path | None = None) -> FittedMonth:
     """Fit and save a month's models using labels eligible at its first issue.
@@ -46,7 +46,7 @@ def fit_month(reader: InputReader, features: DataFrame[Features], fit_day: date,
     return FittedMonth(models, reference, len(training.rows), {})
 
 
-def select_training_data(reader: InputReader, features: DataFrame[Features],
+def select_training_data(reader: PriceHistoryReader, features: DataFrame[Features],
                          fit_day: date, start: date) -> TrainingData:
     """Pair earlier features with label versions eligible at this fit's cutoff.
 
