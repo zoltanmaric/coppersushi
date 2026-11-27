@@ -1,6 +1,6 @@
 ---
 name: system-design-diagram
-description: Creates or revises README system-design diagrams at service and component level, with Mermaid and links to code ownership. Use for architecture overviews or simplifying a diagram that mixes abstraction levels.
+description: Designs, draws, and reviews README architecture diagrams when a diagram, component boundary, store, or data path changes. Covers service and component views, Mermaid, and ownership links.
 ---
 
 # System design diagram
@@ -9,20 +9,24 @@ Establish the product boundary and revision to describe. Read its owning archite
 document and implementation; for a PR stack, inspect the cumulative implementation
 at the requested tip.
 
-Trace the main user journeys and background data paths. Draw the clients, services,
-external systems and stores needed to explain them. Keep build-time preparation,
+Before editing or reviewing individual arrows, trace a main user journey or background
+data path in the implementation. Can a reader follow it in the existing diagram and
+identify each owner, store, and interface? Keep, revise, or redraw the whole view
+according to what best explains the resulting system, regardless of diff size.
+Draw the clients, services, external systems and stores that journey needs. Keep build-time preparation,
 scheduled production and request-time serving distinguishable.
 
 Choose boxes by responsibility and meaningful interfaces. Collapse internal files,
 models, validation steps, caches and rendering effects into their owning component
 unless their separation changes how the system works. Retain a store, queue or
-cache when it explains a persistence, delivery or asynchronous boundary. Do not
-invent distributed services to make the picture look like a system-design interview.
+cache when it explains a persistence, delivery or asynchronous boundary. Group
+responsibilities that share a runtime or package so the deployment boundary is clear.
 
 At the root, group internal steps by owner and show the interfaces between owners. Expand each group in its component README. If no owner fits, examine the component boundary before simplifying the picture. Label boxes with their role,
 technology and runtime/host. Group by provider or server when it simplifies the
-view. Label arrows with the request, data or trigger they carry.
-Use brief text below the diagram for the few behaviors the picture cannot convey.
+view. Read each arrow as “A sends X to B.” Check its direction and label it with
+the request, data, or event that crosses the interface. Explain sequencing and
+failure behavior below the diagram unless they introduce an architectural boundary.
 
 Give each owned component a folder README when its internal architecture needs
 explaining. Expand only that component, preserving the parent diagram's interfaces.
