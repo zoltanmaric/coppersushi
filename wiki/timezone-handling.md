@@ -1,6 +1,6 @@
 # Timezone handling
 
-**Convention** (`explicit-timezones` in `coppersushi/AGENTS.md`): no timestamp without a named zone. Time constructors always pass `tz=`/`tzinfo=`/`utc=`; `tz=None` only where a third party forces naiveness, declared at the conversion point. Enforced by a finite AST check in `tests/test_architecture.py`; as of 2026-09-08 no module in this repo constructs a timestamp, and the check waits for the first that does.
+**Convention** (`explicit-timezones` in `coppersushi/AGENTS.md`): no timestamp without a named zone. Time constructors always pass `tz=`/`tzinfo=`/`utc=`; `tz=None` only where a third party forces naiveness, declared at the conversion point. Enforced by a finite AST check in `tests/test_architecture.py`, which reads the zone as a **keyword**: `datetime.now(tz=timezone.utc)` passes, `datetime.now(timezone.utc)` does not. `coppersushi/networks.py` is the one module that constructs a timestamp — the UTC time that names a candidate solve.
 
 **Principle:** the zone must live somewhere — in the dtype, or in a convention declared at a boundary — never in someone's head.
 
