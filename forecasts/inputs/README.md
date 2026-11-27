@@ -4,9 +4,9 @@
 
 [Snapshot collection](snapshot.py) validates and hashes provider archives, writes typed Parquet tables, and publishes the manifest last. Loading verifies the snapshot ID, hashes, row counts, and [normalized input models](schemas.py). Each model supplies its Parquet schema and manifest description. The [v1 compatibility test](tests/test_schemas.py) checks both against the frozen format. The manifest records the code revision, environment, and source retrieval evidence.
 
-[InputReader.price_history()](selection.py) selects earlier delivery days and revisions available by the issue cutoff. Live selection also requires retrieval by the actual issue time. Historical selection permits recorded timing assumptions. See the [point-in-time contract](../../wiki/price-forecasting/data-sources.md#point-in-time).
+[ArchiveHistory](market_archive.py) supplies daily issuance with the free-source prices the shared archive could serve at the forecast cutoff. Each selected price links to its publisher evidence. For frozen snapshot replay, [InputReader](selection.py) selects eligible revisions under the snapshot’s recorded timing assumptions. Both readers supply the same price-history table to feature calculation. See the [point-in-time contract](../../wiki/price-forecasting/data-sources.md#point-in-time).
 
-## Refresh price history
+## Refresh a price snapshot
 
 Run from the repository root. For November 25 delivery, require every Berlin quarter on November 11, 18, 23 and 24 (lags of 14, 7, 2 and 1 days). A missing quarter on a required date stops collection. Use `--start` and `--end-exclusive` for contiguous training history. Choose new paths for the raw archives and snapshot.
 

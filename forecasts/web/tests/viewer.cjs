@@ -127,6 +127,13 @@ assert($("explore").hidden);
 window.location.hash = "#trace";
 window.dispatchEvent(new window.HashChangeEvent("hashchange"));
 assert(!$("trace").hidden);
+const issuance = $("issuance");
+issuance.querySelector("summary").click();
+assert(issuance.open);
+assert.match(issuance.textContent, /shared market archive/);
+assert.match(issuance.textContent, /11:00 Berlin/);
+assert.equal(issuance.querySelector("a").href, data.sources.inputs.url + "#prices");
+assert(!$("pipeline").contains(issuance));
 assert.equal(errors.length, 0, errors.join("\n"));
 dom.window.close();
 process.stdout.write(

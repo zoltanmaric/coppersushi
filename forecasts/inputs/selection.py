@@ -1,7 +1,7 @@
 """Read source records under the historical or live availability contract."""
 from collections.abc import Mapping, Sequence
 from datetime import date, datetime, timedelta
-from typing import cast
+from typing import Protocol, cast
 
 from pandera.typing.polars import DataFrame
 import polars as pl
@@ -16,6 +16,13 @@ from forecasts.inputs.sources import COUNTRY
 from forecasts.market import BERLIN, UTC, issue_deadline
 
 LOCATIONS = {location.name.lower() for location in WEATHER_LOCATIONS}
+
+
+class PriceHistoryReader(Protocol):
+    """Prices eligible on a delivery day at a named cutoff."""
+
+    def price_history(self, day: date, deadline: datetime, *, live: bool = False,
+                      earliest_day: date | None = None) -> DataFrame[PriceHistory]: ...
 
 
 class InputReader:

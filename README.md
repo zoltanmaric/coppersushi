@@ -55,18 +55,20 @@ flowchart TB
     monitor["Website monitoring"] -->|Checks map pages| maps
     monitor -->|Checks article pages| blog["1.21 Gigawatts"]
     shared -->|Prices and spreads| critical
-    snapshot["Frozen forecast snapshot"] --> forecast["DE–LU price forecasts"]
+    snapshot["Frozen forecast snapshot"] -->|Training and historical evaluation| forecast["DE–LU price forecasts"]
+    shared -->|On-demand issuance and replay| forecast
     click shared "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/market_data/README.md"
     click critical "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/cnec/README.md"
     click power "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/powerflow/README.md"
     click monitor "https://github.com/zoltanmaric/coppersushi/blob/main/monitoring/README.md"
     click blog "https://github.com/zoltanmaric/coppersushi/blob/main/121gigawatts/hosting/README.md"
     click forecast "https://github.com/zoltanmaric/coppersushi/blob/main/forecasts/README.md"
+    click snapshot "https://github.com/zoltanmaric/coppersushi/blob/main/forecasts/inputs/README.md"
     click maps "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/frontend/README.md"
 ```
 
 Components: [Ghost hosting](121gigawatts/hosting/README.md), [CNEC browser](coppersushi/frontend/README.md), [publication](coppersushi/pipelines/cnec/README.md),
-[market data](coppersushi/pipelines/market_data/README.md),
+[market data](coppersushi/pipelines/market_data/README.md), [daily forecast](forecasts/README.md),
 [grid catalog](coppersushi/pipelines/grid/README.md), [OPF](coppersushi/pipelines/powerflow/README.md).
 Prepared CNEC data is independent of request-time Python calculations. CloudFront serves the static CNEC shell and prepared files from private S3; OPF uses the same static hosting boundary.
 The local Flask server previews those same files.

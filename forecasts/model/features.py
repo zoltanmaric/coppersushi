@@ -7,7 +7,7 @@ import numpy as np
 from pandera.typing.polars import DataFrame
 import polars as pl
 
-from forecasts.inputs.selection import InputReader
+from forecasts.inputs.selection import PriceHistoryReader
 from forecasts.market import cutoff, issue_deadline, quarters, require_quarters
 from forecasts.model.calendar import assemble_price_calendar
 from forecasts.model.contracts import FloatArray
@@ -17,7 +17,7 @@ from forecasts.model.price_features import build_price_features
 from forecasts.model.tables import Features
 
 
-def build_features(reader: InputReader, start: date, end: date, *,
+def build_features(reader: PriceHistoryReader, start: date, end: date, *,
                    complete_from: date | None = None) -> DataFrame[Features]:
     """Build historical features in [start, end) at each day's issue cutoff."""
     if start >= end:
@@ -33,7 +33,7 @@ def build_features(reader: InputReader, start: date, end: date, *,
     return rows
 
 
-def build_day_features(reader: InputReader, day: date, live: bool = False,
+def build_day_features(reader: PriceHistoryReader, day: date, live: bool = False,
                        issue_time: datetime | None = None, *,
                        require_complete: bool = False) -> DataFrame[Features]:
     """Build one day from eligible prices, using the actual issue time in live mode."""
@@ -49,7 +49,7 @@ def feature_matrix(rows: DataFrame[Features], fields: Sequence[str]) -> FloatArr
     return rows.select(fields).to_numpy().astype(np.float64, copy=False)
 
 
-def _day_features(reader: InputReader, day: date, deadline: datetime, live: bool,
+def _day_features(reader: PriceHistoryReader, day: date, deadline: datetime, live: bool,
                   require_complete: bool) -> pl.DataFrame:
     history = reader.price_history(day, deadline, live=live, earliest_day=day - timedelta(days=max(LAGS)))
     if require_complete:
@@ -59,6 +59,6 @@ def _day_features(reader: InputReader, day: date, deadline: datetime, live: bool
             stop = lag_day + timedelta(days=1)
             require_quarters((timestamp for timestamp in quarters(lag_day, stop) if timestamp in observed),
                              lag_day, stop,
-                             f"Eligible SMARD prices at {deadline.isoformat()} for delivery {day} (D-{lag})")
+                             f"Eligible prices at {deadline.isoformat()} for delivery {day} (D-{lag})")
     prices = build_price_features(history, list(quarters(day, day + timedelta(days=1))))
     return assemble_price_calendar(prices)

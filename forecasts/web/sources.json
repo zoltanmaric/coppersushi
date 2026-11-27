@@ -5,14 +5,14 @@
   },
   "evaluation": {
     "path": "wiki/price-forecasting/evaluation.md",
-    "sha256": "42aa06bc90ffb69795dd7a610b9da152d428f5df4bc6e9d51895d71e936dbf96"
+    "sha256": "55a221ef25d497c2a30b3a31997255fc602d672e862525faf22868ca71ac654c"
   },
   "inputs": {
     "path": "wiki/price-forecasting/data-sources.md",
-    "sha256": "e07101b4b8c0af93be9790e4b73987fbbe7a1b3a9358ea1feb0517b01ac69ca2"
+    "sha256": "6987dde6d46352918959ed47af48f8bdcf597b9887b092b9fdaf9dd0d1bf11a3"
   },
   "infrastructure": {
     "path": "wiki/price-forecasting/forecast-infrastructure.md",
-    "sha256": "3d330525e7626b9c5e6987ddc00e721bd3bdcb1efbf3702d6ce9028966419668"
+    "sha256": "8fd0721acd2bc39d1ea0f94b3471153bae9887aa14837d465150d0f5963996e2"
   }
 }

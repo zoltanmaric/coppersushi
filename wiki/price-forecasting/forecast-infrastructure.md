@@ -10,7 +10,7 @@ Every forecast uses only information available by its issue deadline. Historical
 
 ### Selection-principle
 
-Replaying an issued forecast uses its saved fit and input editions. Reconstructing at the deadline can select a correction that arrived after issuance. In the [archive issuance implementation](https://github.com/zoltanmaric/coppersushi/blob/692072b7/forecasts/daily.py#L73-L88), live selection starts at the issue attempt's cutoff and replay selects at the deadline. The [issued record](https://github.com/zoltanmaric/coppersushi/blob/692072b7/forecasts/daily.py#L176-L194) identifies the fit manifest, prediction code, input cutoff and selected evidence.
+Replaying an issued forecast uses its saved fit and input editions. Reconstructing at the deadline can select a correction that arrived after issuance. The [daily issue command](../../forecasts/README.md#on-demand-day-ahead-forecast) records the mode, selected cutoff, fit identity and price evidence. An issued forecast's first successful validated read has a separate timestamp. A missed edition retains whether the attempt was live or a reconstruction.
 
 Choose storage from the reads and writes the system needs. Add complexity only for a demonstrated requirement.
 
@@ -38,7 +38,7 @@ Metaflow's local metadata and artifacts stay on disk. Configure MLflow explicitl
 
 ## Inputs
 
-Training reads months of historical prices. Issuance reads recent eligible prices. The fixed historical snapshot also preserves weather and demand for independent investigations. A fresh baseline snapshot contains only the prices table and its collection receipt.
+Training and retrospective evaluation use frozen snapshots. Live issuance selects recent prices from the [market data archive](../../coppersushi/pipelines/market_data/README.md) using the forecast's free-source policy. Its edition pins the price evidence and timestamps. The researcher read records first observed availability separately. The fixed historical snapshot also preserves weather and demand for independent investigations. [Daily issue and read](../../forecasts/README.md#on-demand-day-ahead-forecast)
 
 Use a small, explicit S3 layout:
 
@@ -56,7 +56,7 @@ A snapshot is a fixed set of input files. Write new object keys for each snapsho
 
 The [Pandera models](../../forecasts/inputs/schemas.py) define field types, nullability, units and row keys. They generate the Arrow storage schemas and manifest descriptions. A [frozen v1 fixture](../../forecasts/inputs/tests/test_schemas.py) checks compatibility. Preserve the timestamps, revisions and evidence required by the [point-in-time contract](data-sources.md#point-in-time); apply that contract when constructing features.
 
-One file per dataset per snapshot is the starting layout. At the initial data volume, prefer this to daily partitions and compaction jobs. Measure bytes and cold-load time before changing it. A reader loads the fixed files locally and then performs model-specific feature construction in Python. Training and prediction use the same reader and feature functions.
+One file per dataset per snapshot is the starting layout. At the initial data volume, prefer this to daily partitions and compaction jobs. Measure bytes and cold-load time before changing it. Snapshot and archive readers apply their own evidence rules, then supply eligible prices to the same feature functions.
 
 The three dataset names, checked schemas and snapshot manifests provide the initial inventory. Metaflow and MLflow record the snapshot identifier. A separate catalog, input database, feature store and cache service are deferred until a concrete access or discovery need appears.
 

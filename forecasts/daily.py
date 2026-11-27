@@ -1,46 +1,97 @@
-"""Issue one delivery day's prices from a fixed monthly model and input snapshot."""
+"""Issue or read a day-ahead forecast edition."""
 import argparse
-from datetime import date, datetime, timezone
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from datetime import date, datetime, timedelta, timezone
+import hashlib
 import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 from tempfile import NamedTemporaryFile
-from typing import Annotated
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, StringConstraints, field_validator
+from pydantic import (
+    AwareDatetime, BaseModel, ConfigDict, Field, FiniteFloat, StringConstraints, field_validator, model_validator,
+)
 
-from forecasts.config import QUANTILES, RunConfig
+from coppersushi.pipelines.market_data.resolution import (
+    FORECAST_POLICY, ConflictingPrices, DerivedPrice, PolicyId, PublishedPrice,
+)
+from forecasts.config import MODEL_METHOD, QUANTILES, RunConfig
+from forecasts.inputs.fresh_sources import required_lag_dates
 from forecasts.model.contracts import Reference
 from forecasts.model.coverage import STATIC_INPUT_POLICY
 from forecasts.provenance import digest, source_hashes
-from forecasts.market import BERLIN, cutoff, quarters
+from forecasts.market import BERLIN, cutoff, quarters, require_quarters
 from forecasts.model.prediction import predict_day
-from forecasts.inputs.selection import InputReader
+from forecasts.inputs.input_types import Report
+from forecasts.inputs.market_archive import ArchiveHistory
+from forecasts.inputs.selection import InputReader, PriceHistoryReader
 from forecasts.inputs.snapshot import read_local
 from forecasts.model.features import build_day_features
 from forecasts.model.training import load_models
 
 
 def main() -> None:
-    """Write one forecast to a new JSON file. Historical replay is explicit."""
+    """Issue from archived editions or explicitly reconstruct a frozen snapshot."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--delivery-date", type=date.fromisoformat, required=True)
-    parser.add_argument("--snapshot", type=Path, required=True)
-    parser.add_argument("--run", type=Path, required=True, help="Saved monthly fits and their manifest")
-    parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--replay", action="store_true", help="Reconstruct using historical timing assumptions")
+    parser.add_argument("--read", type=Path, metavar="EDITION", help="Read the edition and record first observed availability")
+    parser.add_argument("--delivery-date", type=date.fromisoformat)
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--snapshot", type=Path, help="Frozen historical snapshot; requires --replay")
+    source.add_argument("--archive-bucket", help="Private market archive; defaults to COPPERSUSHI_CACHE_BUCKET")
+    parser.add_argument("--run", type=Path, help="Saved monthly fits and their manifest")
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--replay", action="store_true", help="Reconstruct at the historical cutoff")
     args = parser.parse_args()
-    issue_day(args.delivery_date, args.snapshot, args.run, args.output, replay=args.replay)
+    if args.read:
+        if any((args.delivery_date, args.snapshot, args.archive_bucket, args.run, args.output, args.replay)):
+            parser.error("--read accepts only the edition path")
+        print(json.dumps(read_edition(args.read), allow_nan=False))
+        return
+    if not all((args.delivery_date, args.run, args.output)):
+        parser.error("Issuance requires --delivery-date, --run and --output")
+    if args.snapshot and not args.replay:
+        parser.error("--snapshot requires --replay")
+    bucket = None if args.snapshot else args.archive_bucket or os.environ.get("COPPERSUSHI_CACHE_BUCKET")
+    if not (args.snapshot or bucket):
+        parser.error("Set --archive-bucket or COPPERSUSHI_CACHE_BUCKET, or explicitly replay a snapshot")
+    try:
+        issued = issue_day(args.delivery_date, args.snapshot, args.run, args.output,
+                           replay=args.replay, archive_bucket=bucket)
+    except RequiredPricesUnavailable as error:
+        print(json.dumps({"status": "retryable", "reason": str(error), "input_manifest": error.input_manifest}),
+              file=sys.stderr)
+        raise SystemExit(1) from error
+    if not issued:
+        raise SystemExit(1)
 
 
-def issue_day(day: date, snapshot: Path, run: Path, output: Path, *, replay: bool) -> None:
+class RequiredPricesUnavailable(ValueError):
+    """A retryable issue attempt, with every selected or unavailable input."""
+
+    def __init__(self, message: str, input_manifest: Report) -> None:
+        super().__init__(message)
+        self.input_manifest = input_manifest
+
+
+def issue_day(day: date, snapshot: Path | None, run: Path, output: Path, *, replay: bool,
+              archive_bucket: str | None = None) -> bool:
     """Publish a local forecast file once, by the live deadline when applicable."""
     started = datetime.now(timezone.utc)
     deadline = cutoff(day)
     issue_date = deadline.astimezone(BERLIN).date()
-    if not replay and (started > deadline or started.astimezone(BERLIN).date() != issue_date):
-        raise ValueError("Live issue must be on the day before delivery, by the forecast deadline")
+    if (snapshot is None) == (archive_bucket is None):
+        raise ValueError("Choose exactly one issue input: market archive or snapshot")
+    if snapshot is not None and not replay:
+        raise ValueError("Live issuance requires the market archive")
+    if archive_bucket and replay and started < deadline:
+        raise ValueError("Archive replay requires a delivery day whose issue cutoff has passed")
+    if not replay and started.astimezone(BERLIN).date() < issue_date:
+        raise ValueError("Live issue opens on the day before delivery")
+    input_cutoff = deadline if replay else min(started, deadline)
     manifest = _RunManifest.model_validate_json((run / "manifest.json").read_bytes())
     fold = day.replace(day=1)
     if manifest.input_policy != STATIC_INPUT_POLICY:
@@ -75,22 +126,75 @@ def issue_day(day: date, snapshot: Path, run: Path, output: Path, *, replay: boo
             raise ValueError(f"Invalid training coverage in fit {manifest.run_id} for {fold}; expected {expected} quarters")
     reference = _SavedReference.model_validate_json(reference_file.read_bytes()).to_reference(config)
     models = load_models(model_dir, config, verify_model=verify)
-    snapshot_manifest, tables = read_local(snapshot)
-    rows = build_day_features(InputReader(tables), day, live=not replay, issue_time=started, require_complete=True)
+    fit_manifest_digest = digest(run / "manifest.json")
+    reader: PriceHistoryReader
+    input_evidence: Report
+
+    mode = "reconstruction" if replay else "live"
+
+    def missed_edition(reason: str, evidence: Report) -> Report:
+        return {
+            "delivery_date": day.isoformat(), "status": "missed", "mode": mode,
+            "recorded_at": datetime.now(timezone.utc).isoformat(), "deadline": deadline.isoformat(),
+            "input_cutoff": input_cutoff.isoformat(), "run_id": manifest.run_id, "fit_month": fold.isoformat(),
+            "run_manifest_sha256": fit_manifest_digest, "reason": reason, **evidence,
+        }
+
+    def record_miss(reason: str, evidence: Report) -> bool:
+        _write_edition(output, missed_edition(reason, evidence))
+        return False
+
+    if archive_bucket is not None:
+        try:
+            archive = ArchiveHistory(archive_bucket, day, input_cutoff)
+            missing = archive.missing()
+            if missing and input_cutoff < deadline:
+                if datetime.now(timezone.utc) < deadline:
+                    raise RequiredPricesUnavailable(
+                        f"{len(missing)} required price quarters unavailable by {input_cutoff}",
+                        archive.input_manifest(),
+                    )
+                input_cutoff = deadline
+                archive = ArchiveHistory(archive_bucket, day, input_cutoff)
+                missing = archive.missing()
+        except ConflictingPrices as conflict:
+            return record_miss("conflicting_price_evidence", {"input_manifest": {
+                "policy": FORECAST_POLICY.id,
+                "cutoff": input_cutoff.isoformat(),
+                "prices": [{
+                    "kind": "conflict",
+                    "zone": conflict.zone,
+                    "interval": conflict.interval.isoformat(),
+                    "implied_price": str(conflict.implied_price) if conflict.implied_price is not None else None,
+                    "evidence": [row.model_dump(mode="json") for row in conflict.evidence],
+                }],
+            }})
+        input_evidence = {"input_manifest": archive.input_manifest()}
+        if missing:
+            return record_miss("required_prices_unavailable_at_cutoff", input_evidence)
+        if not replay and datetime.now(timezone.utc) > deadline:
+            return record_miss("issuance_window_passed", input_evidence)
+        reader = archive
+    else:
+        assert snapshot is not None
+        snapshot_manifest, tables = read_local(snapshot)
+        input_evidence = {"snapshot_id": snapshot_manifest["snapshot_id"]}
+        reader = InputReader(tables)
+    rows = build_day_features(reader, day, live=not replay, issue_time=input_cutoff if not replay else started,
+                              require_complete=True)
     forecast = predict_day(rows, models, reference, config)
-    # This records when prediction finished. The publication checks below cover
-    # the local file only. Observing its delivery requires a separate receipt.
     created = datetime.now(timezone.utc)
     if not replay and created > deadline:
-        raise ValueError("Deadline passed during computation")
+        return record_miss("deadline_passed_during_prediction", input_evidence)
     source = Path(__file__).resolve().parent
     payload = {
-        "delivery_date": day.isoformat(), "mode": "reconstruction" if replay else "live",
+        "delivery_date": day.isoformat(), "status": "reconstructed" if replay else "issued",
+        "mode": mode,
         "created_at": created.isoformat(), "deadline": deadline.isoformat(),
-        "input_cutoff": (deadline if replay else started).isoformat(),
-        "snapshot_id": snapshot_manifest["snapshot_id"], "training_snapshot_id": config.snapshot_id,
+        "input_cutoff": input_cutoff.isoformat(),
+        **input_evidence, "training_snapshot_id": config.snapshot_id,
         "run_id": manifest.run_id, "fit_month": fold.isoformat(),
-        "run_manifest_sha256": digest(run / "manifest.json"),
+        "run_manifest_sha256": fit_manifest_digest,
         "prediction_revision": subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=Path(__file__).parent, text=True).strip(),
         "source_sha256": source_hashes(source),
@@ -100,23 +204,187 @@ def issue_day(day: date, snapshot: Path, run: Path, output: Path, *, replay: boo
                      for ts, prices, ref in zip(rows["delivery_utc"], forecast.ordered[forecast.selected_model],
                                                 forecast.ordered["reference"], strict=True)],
     }
-    with NamedTemporaryFile(mode="w", dir=output.parent, delete_on_close=False) as staging:
-        json.dump(payload, staging, allow_nan=False)
-        staging.close()
-        if not replay and datetime.now(timezone.utc) > deadline:
-            raise ValueError("Deadline passed before live forecast publication")
-        os.link(staging.name, output)
-        if not replay and datetime.now(timezone.utc) > deadline:
-            output.unlink()
-            raise ValueError("Live forecast publication crossed the deadline")
+    payload["issued_at"] = None if replay else datetime.now(timezone.utc).isoformat()
+    if replay:
+        _write_edition(output, payload)
+        return True
+    return _publish_live(output, payload, deadline, lambda reason: missed_edition(reason, input_evidence))
+
+
+def read_edition(output: Path) -> Report:
+    """Validate the published edition before recording first observed availability."""
+    with output.open("rb") as source:
+        raw = source.read()
+        state = os.fstat(source.fileno())
+        if state.st_nlink != 1 or not os.path.samestat(state, output.stat()):
+            raise ValueError(f"Forecast publication is unfinished or changed during read: {output}")
+    data = json.loads(raw)
+    if not isinstance(data, dict) or data.get("status") not in ("issued", "reconstructed", "missed"):
+        raise ValueError("Invalid forecast edition")
+    if data["status"] == "issued":
+        edition = _IssuedEdition.model_validate_json(raw)
+        if not _published_before(state, edition.deadline):
+            raise ValueError(f"Forecast publication finished after its deadline: {output}")
+        receipt = output.with_name(f"{output.name}.availability.json")
+        sha256 = hashlib.sha256(raw).hexdigest()
+        try:
+            _write_edition(receipt, {"edition_sha256": sha256,
+                                     "first_observed_at": datetime.now(timezone.utc).isoformat()})
+        except FileExistsError:
+            pass
+        evidence = _Availability.model_validate_json(receipt.read_bytes())
+        if evidence.edition_sha256 != sha256:
+            raise ValueError("Availability receipt does not match the forecast edition")
+        data["availability"] = evidence.model_dump(mode="json")
+    return data
+
+
+def _publish_live(output: Path, payload: Report, deadline: datetime,
+                  missed: Callable[[str], Report]) -> bool:
+    """Classify the edition using the filesystem time of its final release."""
+    with _stage_edition(output, payload) as staged:
+        if datetime.now(timezone.utc) > deadline:
+            _write_edition(output, missed("deadline_passed_before_publication"))
+            return False
+        os.link(staged, output)
+    if _published_before(output.stat(), deadline):
+        return True
+    with _stage_edition(output, missed("deadline_passed_during_publication")) as failure:
+        os.replace(failure, output)
+    return False
+
+
+def _published_before(state: os.stat_result, deadline: datetime) -> bool:
+    # Unlinking the staging name changes the inode's ctime and leaves the reader's
+    # only link. The cutoff applies to that filesystem change, including a late unlink.
+    epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    deadline_ns = ((deadline - epoch) // timedelta(microseconds=1)) * 1_000
+    return state.st_nlink == 1 and state.st_ctime_ns < deadline_ns
+
+def _write_edition(output: Path, payload: Report) -> None:
+    with _stage_edition(output, payload) as staged:
+        os.link(staged, output)
+
+
+@contextmanager
+def _stage_edition(output: Path, payload: Report) -> Iterator[str]:
+    with NamedTemporaryFile(mode="w", dir=output.parent, delete=False) as staging:
+        path = Path(staging.name)
+        try:
+            json.dump(payload, staging, allow_nan=False)
+            staging.close()
+            yield staging.name
+        except BaseException:
+            # An interrupted publisher must leave any provisional edition unreadable.
+            if path.exists() and path.stat().st_nlink == 1:
+                path.unlink()
+            raise
+        else:
+            path.unlink(missing_ok=True)
+
+
+type _Digest = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]
+type _Nonempty = Annotated[str, StringConstraints(pattern=r"\S")]
+type _QuantileValues = Annotated[list[FiniteFloat], Field(min_length=len(QUANTILES), max_length=len(QUANTILES))]
+type _SelectedPrice = Annotated[PublishedPrice | DerivedPrice, Field(discriminator="kind")]
+
+
+class _QuarterForecast(BaseModel):
+    """Model and reference quantiles for one physical delivery quarter."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    delivery_utc: AwareDatetime
+    prices: _QuantileValues
+    reference: _QuantileValues
+
+    @field_validator("prices", "reference")
+    @classmethod
+    def check_order(cls, values: list[float]) -> list[float]:
+        if any(lower > upper for lower, upper in zip(values, values[1:])):
+            raise ValueError("Forecast quantiles must be nondecreasing")
+        return values
+
+
+class _InputManifest(BaseModel):
+    """Resolved lag prices and the cutoff used to select them."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    policy: PolicyId
+    cutoff: AwareDatetime
+    prices: list[_SelectedPrice]
+
+
+class _IssuedEdition(BaseModel):
+    """The live forecast file whose first read can establish availability."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    status: Literal["issued"]
+    mode: Literal["live"]
+    delivery_date: date
+    created_at: AwareDatetime
+    issued_at: AwareDatetime
+    deadline: AwareDatetime
+    input_cutoff: AwareDatetime
+    input_manifest: _InputManifest
+    training_snapshot_id: _Digest
+    run_id: _Nonempty
+    fit_month: date
+    run_manifest_sha256: _Digest
+    prediction_revision: Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{40}$")]
+    source_sha256: Annotated[dict[_Nonempty, _Digest], Field(min_length=1)]
+    pixi_lock_sha256: _Digest
+    quantiles: list[FiniteFloat]
+    method: str
+    quarters: list[_QuarterForecast]
+
+    @model_validator(mode="after")
+    def check_edition(self) -> "_IssuedEdition":
+        day = self.delivery_date
+        if self.fit_month != day.replace(day=1):
+            raise ValueError("Fit month must match the forecast delivery date")
+        if self.deadline != cutoff(day) or not self.input_cutoff <= self.created_at <= self.issued_at <= self.deadline:
+            raise ValueError("Issued forecast times do not meet the delivery deadline")
+        if self.method != MODEL_METHOD or tuple(self.quantiles) != QUANTILES:
+            raise ValueError("Issued forecast must use the configured method and quantiles")
+        require_quarters((row.delivery_utc for row in self.quarters), day, day + timedelta(days=1), "Forecast")
+        self._check_inputs()
+        return self
+
+    def _check_inputs(self) -> None:
+        day = self.delivery_date
+        inputs = self.input_manifest
+        if inputs.policy != FORECAST_POLICY.id or inputs.cutoff != self.input_cutoff:
+            raise ValueError("Price evidence policy or cutoff does not match the forecast decision")
+        expected = {interval for lag in required_lag_dates(day) for interval in quarters(lag, lag + timedelta(days=1))}
+        if len(inputs.prices) != len(expected) or {price.interval for price in inputs.prices} != expected:
+            raise ValueError("Price evidence must cover exactly the required Berlin lag quarters")
+        for price in inputs.prices:
+            if price.zone != "DE-LU" or price.policy_id != inputs.policy or not price.evidence:
+                raise ValueError(f"Missing or inapplicable price evidence for {price.interval}")
+            for row in price.evidence:
+                if (not row.edition_key.strip() or row.publisher not in FORECAST_POLICY.publishers
+                        or row.interval != price.interval or row.received_at > row.visible_at
+                        or row.available_at > inputs.cutoff):
+                    raise ValueError(f"Ineligible price evidence for {price.interval}")
+
+
+class _Availability(BaseModel):
+    """First successful read of the content identified by its digest."""
+
+    model_config = ConfigDict(extra="forbid")
+    edition_sha256: _Digest
+    first_observed_at: AwareDatetime
 
 
 class _RunManifest(BaseModel):
     """The saved run fields needed to identify and verify a monthly fit."""
 
     model_config = ConfigDict(strict=True)
-    run_id: Annotated[str, StringConstraints(pattern=r"\S")]
-    artifacts: dict[str, Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]]
+    run_id: _Nonempty
+    artifacts: dict[str, _Digest]
     kind: str | None = None
     fit_day: date | None = None
     input_policy: str | None = None
@@ -131,7 +399,7 @@ class _SavedReference(BaseModel):
 
     model_config = ConfigDict(strict=True, extra="forbid")
     medians: dict[str, FiniteFloat]
-    offsets: Annotated[list[FiniteFloat], Field(min_length=len(QUANTILES), max_length=len(QUANTILES))]
+    offsets: _QuantileValues
     calibration_rows: Annotated[int, Field(gt=0)]
     excluded_rows: Annotated[int, Field(ge=0)]
 
