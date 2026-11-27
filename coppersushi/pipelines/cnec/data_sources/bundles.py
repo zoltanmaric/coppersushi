@@ -15,7 +15,7 @@ from pathlib import Path
 from coppersushi import PRODUCT
 from coppersushi.pipelines.cnec import bundle as cnec_bundle
 from coppersushi.pipelines.cnec.bundle import Day
-from coppersushi.pipelines.cnec.models import DayBundle
+from coppersushi.pipelines.cnec.models import DayBundle, DayManifest
 from coppersushi.pipelines.data_model.market import ZonalPrices
 from coppersushi.pipelines.data_sources import cache
 from coppersushi.pipelines.cnec.data_sources import archive_prices
@@ -48,7 +48,7 @@ def prepare(day: MarketDay, refresh: bool = False, *,
     active = jao.load_active_day(key, refresh=refresh)
     decision = None
     if legacy_prices:
-        prices = ZonalPrices.validate(electricity_maps.load_day(key, refresh=refresh))
+        prices = ZonalPrices.validate(electricity_maps.load_retained_day(day))
     else:
         bucket = archive_bucket or os.environ.get("COPPERSUSHI_CACHE_BUCKET")
         if not bucket:
@@ -91,11 +91,15 @@ def resolve_day_geometry(
     return {i: geometry.get(i, mapped) for i in range(len(times))}
 
 
+def _manifest_key(day: MarketDay) -> str:
+    return f'data/cnec/v3/{day.date}/manifest.json'
+
+
 def publication_state(day: MarketDay, bucket: str) -> tuple[str, str | None]:
     """Completed publications stay static; explicit refresh can publish a correction."""
     from botocore.exceptions import ClientError
     try:
-        head = cache._client().head_object(Bucket=bucket, Key=f'data/cnec/v3/{day.date}/manifest.json')
+        head = cache._client().head_object(Bucket=bucket, Key=_manifest_key(day))
     except ClientError as error:
         if error.response['Error']['Code'] in {'NoSuchKey', '404', 'NotFound'}:
             return "missing", None
@@ -105,6 +109,18 @@ def publication_state(day: MarketDay, bucket: str) -> tuple[str, str | None]:
 
 def is_published(day: MarketDay, bucket: str) -> bool:
     return publication_state(day, bucket)[0] != "missing"
+
+
+def verify_manifest(day: MarketDay, bucket: str) -> None:
+    """Verify the published pointer belongs to the requested delivery day."""
+    response = cache._client().get_object(Bucket=bucket, Key=_manifest_key(day))
+    with response['Body'] as stream:
+        body = stream.read()
+    if response.get('ContentEncoding') == 'gzip':
+        body = gzip.decompress(body)
+    manifest = DayManifest.model_validate_json(body)
+    if manifest.day != day.date:
+        raise ValueError(f'Expected a manifest for {day.date}; found {manifest.day}')
 
 
 def publish(bundle: DayBundle, bucket: str, *, allow_partial_attribution: bool = False,
@@ -149,7 +165,7 @@ def main() -> None:
     parser.add_argument('--refresh', action='store_true')
     source = parser.add_mutually_exclusive_group()
     source.add_argument('--archive-bucket', help='Market archive; defaults to the cache or publish bucket')
-    source.add_argument('--legacy-prices', action='store_true', help='Use the historical direct price cache before archive collection')
+    source.add_argument('--legacy-prices', action='store_true', help='Use only retained prices for a pre-archive delivery day')
     parser.add_argument('--price-cutoff', type=datetime.fromisoformat,
                         help='Replay archive eligibility at an aware instant')
     parser.add_argument('--allow-partial-attribution', action='store_true',

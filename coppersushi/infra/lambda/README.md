@@ -156,6 +156,21 @@ image does not rebuild those days. For a data-contract change:
    Existing open tabs may fail validation during this silent-release cutover; reload
    them after the new frontend is published. No cross-version compatibility is promised.
 
+For pre-archive delivery days, use `--legacy-prices` to rebuild from a retained
+price CSV in `electricity-maps/` under the local data directory, or from its private
+S3 cache entry in `COPPERSUSHI_CACHE_BUCKET` when the local file is absent.
+Both the single-day publisher and historical backfill require a validated price
+table for each requested delivery day. A missing or invalid table blocks that
+day. Restore the original retained input before retrying.
+With `--legacy-prices --refresh`, the single-day publisher still uses retained
+prices and refreshes the other inputs.
+
+To audit a pre-archive range, run
+`python -m coppersushi.pipelines.cnec.data_sources.backfill <start> <end> --report <report.jsonl> --legacy-prices`.
+Add `--bucket <publish_bucket>` to publish eligible days with no manifest.
+The report records each day's outcome and rechecks older rows that lack the
+retained-price audit.
+
 Rollback restores the saved manifests **as well as** the previous image and UI,
 then invalidates manifests and frontend assets. Old generations alone are insufficient:
 the restored manifest must point to the generation matching that reader's contract.

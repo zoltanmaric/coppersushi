@@ -39,7 +39,9 @@ evidence next to the preview directory. The scheduled publisher keeps the missin
 zone intervals and related attempts in a private record when archive coverage is
 incomplete. A deliberate pre-archive backfill uses `--legacy-prices`.
 When a backfill audit passes and a manifest already exists, its report records
-`existing` and the cutoff used for the audit. The report records `published`
+`existing` and the cutoff used for the audit. Backfill creates the manifest only
+if the key is absent. If another writer publishes first, backfill verifies that
+writer's manifest before reporting `existing`. The report records `published`
 when that run publishes a generation. Resuming an archive checkpoint requires the
 same cutoff mode and, for an explicit replay, the same instant.
 

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 from typing import Literal
 
+from botocore.exceptions import ClientError
 from pandera.typing import DataFrame
 from pydantic import BaseModel
 
@@ -38,6 +39,7 @@ class Coverage(BaseModel):
     archive_bucket: str | None = None
     price_cutoff: datetime | None = None
     price_cutoff_mode: Literal['latest', 'explicit'] | None = None
+    retained_prices: bool = False
     price_gaps: list[PriceUnavailable] = []
 
 
@@ -69,7 +71,7 @@ def audit(day: MarketDay, *, archive_bucket: str | None, price_cutoff: datetime 
         result.errors.append(f'attribution: {type(error).__name__}: {error}')
     try:
         if archive_bucket is None:
-            prices = ZonalPrices.validate(electricity_maps.load_day(str(day.date)))
+            prices = ZonalPrices.validate(electricity_maps.load_retained_day(day))
         else:
             assert price_cutoff is not None
             prices, _ = archive_prices.load_day(day, archive_bucket, price_cutoff)
@@ -99,7 +101,7 @@ def main() -> None:
     parser.add_argument('--bucket', help='Publish eligible days; omitted means audit only')
     source = parser.add_mutually_exclusive_group()
     source.add_argument('--archive-bucket', help='Market archive; defaults to the cache or publish bucket')
-    source.add_argument('--legacy-prices', action='store_true', help='Use the historical direct price cache before archive collection')
+    source.add_argument('--legacy-prices', action='store_true', help='Use only retained prices for pre-archive delivery days')
     parser.add_argument('--price-cutoff', type=datetime.fromisoformat, help='Replay one aware archive cutoff for the requested days')
     parser.add_argument('--jao-requests-per-minute', type=int, choices=(90, 180), default=90,
                         help='Shared request budget; 180 is an explicit throttle/backoff trial')
@@ -125,6 +127,7 @@ def main() -> None:
                     and previous.bucket == args.bucket
                     and previous.archive_bucket == archive_bucket
                     and previous.price_cutoff_mode == cutoff_mode
+                    and previous.retained_prices == args.legacy_prices
                     and (args.price_cutoff is None or previous.price_cutoff == args.price_cutoff)
                     and (not args.bucket or bundles.is_published(MarketDay.on(previous.day), args.bucket))):
                 done.add(previous.day)
@@ -142,6 +145,7 @@ def main() -> None:
             result.archive_bucket = archive_bucket
             result.price_cutoff = price_cutoff
             result.price_cutoff_mode = cutoff_mode
+            result.retained_prices = args.legacy_prices
             if args.bucket and result.status == 'eligible':
                 try:
                     if bundles.is_published(day, args.bucket):
@@ -151,9 +155,15 @@ def main() -> None:
                                                    archive_bucket=archive_bucket, price_cutoff=price_cutoff,
                                                    legacy_prices=args.legacy_prices)
                         bundle.validate_publication(prepared, allow_partial_attribution=True)
-                        bundles.publish(prepared, args.bucket, allow_partial_attribution=True,
-                                        archive_bucket=archive_bucket)
-                        result.status = 'published'
+                        try:
+                            bundles.publish(prepared, args.bucket, allow_partial_attribution=True,
+                                            archive_bucket=archive_bucket, manifest_options={'IfNoneMatch': '*'})
+                            result.status = 'published'
+                        except ClientError as error:
+                            if error.response['ResponseMetadata']['HTTPStatusCode'] != 412:
+                                raise
+                            bundles.verify_manifest(day, args.bucket)
+                            result.status = 'existing'
                 except Exception as error:
                     result.status = 'blocked'
                     result.errors.append(f'publication: {type(error).__name__}: {error}')

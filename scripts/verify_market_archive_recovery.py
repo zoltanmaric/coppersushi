@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 DAY = date(2026, 11, 20)
-POLICY = SourcePolicy(id="nov20-incident-audit-v1", direct=("electricity_maps",), allow_spreads=True)
+POLICY = SourcePolicy(id="electricity-maps-jao-audit-v1", direct=("electricity_maps",), allow_spreads=True)
 
 
 def verify_recovery(client: "S3Client", bucket: str, cutoff: datetime, cache_path: Path, okte_path: Path) -> None:
@@ -43,8 +43,7 @@ def verify_recovery(client: "S3Client", bucket: str, cutoff: datetime, cache_pat
     if len(expected) != 1152 or len(settlements) != 96 or sum(derived for _, derived in expected.values()) != 384:
         raise ValueError("Expected 1,152 retained zone-quarters, 384 original gaps, and 96 final OKTE prices")
     zones = tuple(sorted({zone for zone, _ in expected}))
-    tables = [(edition, rows) for edition, rows in read_editions(client, bucket, DAY, cutoff)
-              if edition.receipt.publisher in (*POLICY.direct, "jao")]
+    tables = read_editions(client, bucket, DAY, cutoff, publishers=frozenset((*POLICY.direct, "jao")))
     # Mask today's direct rows using the original cache's observed/derived designation.
     original_gaps = [(edition, [r for r in rows if isinstance(r, SpreadRow)
                                 or ((r.zone, r.interval) in expected and not expected[r.zone, r.interval][1])])

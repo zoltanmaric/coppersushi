@@ -2,6 +2,8 @@
 from datetime import timedelta
 from decimal import Decimal
 import json
+import subprocess
+import sys
 from unittest.mock import Mock
 from uuid import UUID
 
@@ -77,3 +79,9 @@ def test_complete_region_retains_an_anchored_price_and_private_decision(monkeypa
         archive_prices.load_day(day, "archive", cutoff)
     assert rejected.value.missing == resolver.return_value
     assert rejected.value.decision.prices == resolver.return_value
+
+
+def test_incident_verifier_cli_help() -> None:
+    result = subprocess.run([sys.executable, "-m", "scripts.verify_market_archive_recovery", "--help"],
+                            check=True, capture_output=True, text=True)
+    assert "--core-cache" in result.stdout and "--settlements" in result.stdout

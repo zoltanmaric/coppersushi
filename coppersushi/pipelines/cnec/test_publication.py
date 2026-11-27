@@ -54,6 +54,57 @@ def test_historical_policy_does_not_bypass_missing_receipts(monkeypatch):
         bundles.prepare(day, allow_partial_attribution=True)
 
 
+@pytest.fixture
+def legacy_rebuild_inputs(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    import pandas as pd
+    from coppersushi.pipelines.cnec.data_sources import bundles, electricity_maps
+
+    day = MarketDay.on('2025-11-05')
+    monkeypatch.setattr(electricity_maps, 'CACHE_DIR', tmp_path)
+    monkeypatch.delenv('COPPERSUSHI_CACHE_BUCKET', raising=False)
+    monkeypatch.setattr(electricity_maps, 'fetch_day', lambda *args: pytest.fail('Fetched live prices'))
+    monkeypatch.setattr(bundles.jao, '_get',
+                        lambda *args, **kwargs: [row.model_dump() for row in receipts(day)])
+    monkeypatch.setattr(bundles.jao, 'load_active_day',
+                        lambda *args, **kwargs: SimpleNamespace(constraints=[], ptdfs=[]))
+    monkeypatch.setattr(bundles.cnec_attribution, 'load_day', lambda *args, **kwargs: pd.DataFrame({
+        'interval': day.market_time_units(), 'polish_alt': 1.0,
+    }))
+    return day
+
+
+@pytest.mark.parametrize('invalid', [False, True], ids=['missing', 'invalid'])
+def test_historical_rebuilds_require_retained_prices(tmp_path, monkeypatch, legacy_rebuild_inputs, invalid):
+    import sys
+    from coppersushi.pipelines.cnec.data_sources import backfill, bundles, electricity_maps
+
+    day = legacy_rebuild_inputs
+    key = day.date.isoformat()
+    reason = 'Retained prices invalid' if invalid else 'No readable retained prices'
+    if invalid:
+        electricity_maps.day_path(key).write_text('interval,price\n2025-11-05T00:00:00Z,10\n')
+
+    monkeypatch.setattr(sys, 'argv', ['bundles', key, '--directory', str(tmp_path),
+                                    '--legacy-prices', '--refresh'])
+    with pytest.raises(electricity_maps.RetainedPricesUnavailable, match=f'{reason} for {key}'):
+        bundles.main()
+
+    report = tmp_path / 'backfill.jsonl'
+    previous = backfill.Coverage(day=day.date, expected_intervals=96, status='eligible')
+    report.write_text(previous.model_dump_json(exclude={'retained_prices'}) + '\n')
+    monkeypatch.setattr(backfill.jao, '_pacer', backfill.jao.RequestPacer())
+    monkeypatch.setattr(sys, 'argv', ['backfill', key, key, '--report', str(report), '--legacy-prices'])
+    with pytest.raises(SystemExit) as stopped:
+        backfill.main()
+    assert stopped.value.code == 1
+    result = backfill.Coverage.model_validate_json(report.read_text().splitlines()[-1])
+    assert result.day == day.date
+    assert result.status == 'blocked'
+    assert result.retained_prices
+    assert f'{reason} for {key}' in result.errors[0]
+
+
 def test_legacy_shadow_prices_receipt_identifies_active_fb_publication():
     day = MarketDay.on('2025-11-05')
     rows = receipts(day)
@@ -120,6 +171,75 @@ def test_interrupted_checkpoint_preserves_report_and_resume_skips_existing_manif
     assert exit.value.code == 0
     assert len(published) == 1
     assert backfill.Coverage.model_validate_json(report.read_text().splitlines()[-1]).status == 'existing'
+
+
+@pytest.mark.parametrize(('winner_day', 'expected_status'), [('2025-11-05', 'existing'), ('2025-11-06', 'blocked')])
+def test_backfill_preserves_and_verifies_manifest_created_during_preparation(tmp_path, monkeypatch,
+                                                                      winner_day, expected_status):
+    import gzip
+    from io import BytesIO
+    import sys
+
+    from botocore.exceptions import ClientError
+
+    from coppersushi.pipelines.cnec.data_sources import backfill
+    from coppersushi.pipelines.cnec.models import DayBundle, DayManifest, MarketInterval
+
+    day = MarketDay.on('2025-11-05')
+    manifest_key = f'data/cnec/v3/{day.date}/manifest.json'
+    winner = DayManifest(day=MarketDay.on(winner_day).date, generation='f' * 24)
+    winner_body = gzip.compress(winner.model_dump_json().encode())
+    objects = {}
+    events = []
+
+    class Store:
+        def head_object(self, *, Bucket, Key):
+            assert Key == manifest_key and Key not in objects
+            events.append('initial check')
+            raise ClientError({'Error': {'Code': '404'}}, 'HeadObject')
+
+        def put_object(self, *, Bucket, Key, Body, **options):
+            if Key == manifest_key:
+                events.append('manifest write')
+                if options.get('IfNoneMatch') == '*' and Key in objects:
+                    raise ClientError({'Error': {'Code': 'PreconditionFailed'},
+                                       'ResponseMetadata': {'HTTPStatusCode': 412}}, 'PutObject')
+            else:
+                assert 'IfNoneMatch' not in options
+            objects[Key] = Body
+
+        def get_object(self, *, Bucket, Key):
+            assert Key == manifest_key
+            events.append('verify winner')
+            return {'Body': BytesIO(objects[Key]), 'ContentEncoding': 'gzip'}
+
+    def prepare(day, **options):
+        events.append('prepare')
+        objects[manifest_key] = winner_body
+        labels = [timestamp.isoformat() for timestamp in day.market_time_units()]
+        intervals = [MarketInterval(index=index, label=label, prices={}, constraints=[], alpha=0.5,
+                                    caps=[], notes=[]) for index, label in enumerate(labels)]
+        return DayBundle(day=day.date, labels=labels, zones=[], elements={}, intervals=intervals, price_range=[0, 0])
+
+    monkeypatch.setattr(backfill.jao, '_pacer', backfill.jao.RequestPacer())
+    monkeypatch.setattr(backfill.cache, '_client', Store)
+    monkeypatch.setattr(backfill.bundles, 'prepare', prepare)
+    monkeypatch.setattr(backfill, 'audit', lambda day, **options: backfill.Coverage(
+        day=day.date, expected_intervals=96, status='eligible'))
+    report = tmp_path / 'report.jsonl'
+    monkeypatch.setattr(sys, 'argv', ['backfill', str(day.date), str(day.date), '--report', str(report),
+                                     '--bucket', 'test', '--archive-bucket', 'test'])
+    with pytest.raises(SystemExit) as stopped:
+        backfill.main()
+    assert stopped.value.code == int(expected_status == 'blocked')
+    assert events == ['initial check', 'prepare', 'manifest write', 'verify winner']
+    assert objects[manifest_key] == winner_body
+    result = backfill.Coverage.model_validate_json(report.read_text())
+    assert result.status == expected_status
+    if expected_status == 'blocked':
+        assert result.errors == ['publication: ValueError: Expected a manifest for 2025-11-05; found 2025-11-06']
+    else:
+        assert result.errors == []
 
 
 def test_backfill_reports_existing_generation_separately_and_resumes_equivalent_cutoff(tmp_path, monkeypatch):
