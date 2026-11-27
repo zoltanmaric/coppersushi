@@ -28,6 +28,8 @@ description: Guides pull request creation, review, stacking, and local cleanup w
 
 ## Run a review
 
+Use the runner for independent reviews, substantial questions that can be investigated separately, or a requested replay. Review a single coherent design question directly unless it needs an independent assessment.
+
 Check out the reviewed tip and use its merge base with the PR target. For a cumulative stack review, use the top tip and the stack’s trunk comparison base. Use the user's exact design or review question. For a general review, ask “Should this PR merge, and what must change first?” Use [model selection](../model-selection/SKILL.md) before selecting the lead and bounded specialist runner. Use [job supervision](../job-supervision/SKILL.md) for the command and choose a new output directory outside the checkout.
 
 ```bash
