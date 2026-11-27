@@ -24,7 +24,9 @@ Continuous delivery (CD) and continuous training (CT) are goals for subsequent w
 
 ## First-stage
 
-Store inputs in Amazon S3. Collect inputs locally. Metaflow orchestrates tracked evaluation. Use local MLflow Tracking to compare experiments and retain models and reports. S3 is the only required cloud service in this stage; no cloud scheduler or shared tracking server is required.
+Researchers collect frozen training snapshots locally and store them in S3. For retrospective evaluation, Metaflow runs locally and MLflow stores models and reports locally. S3 is the only cloud service this workflow requires.
+
+The shared market archive has a separate, opt-in collection schedule. EventBridge Scheduler invokes one Lambda per publisher to preserve responses and validated editions in private S3. See the [market archive rollout runbook](../../coppersushi/infra/lambda/README.md#market-archive-collection).
 
 | Technology | Responsibility |
 |---|---|
