@@ -17,6 +17,10 @@
 - [upstream-contributions.md](upstream-contributions.md) — how we contribute upstream (fork rehearsal, PyPSA-Eur's rules) and the ledger of dependency bugs we need fixed
 - [timezone-handling.md](timezone-handling.md) — the `explicit-timezones` convention, its rationale, and the PyPSA naive-UTC boundary
 
+## Agent engineering
+
+**Start here:** [Agent harness engineering](agent-harness-engineering.md) for tool design, session handoffs and evaluation.
+
 ## Price forecasting
 
 **Start here:** [Forecasting system design principles](forecasting-system-design.md#principles) for prices, weather, generation and demand.
@@ -43,6 +47,11 @@
 - [codebase-v1.md](codebase-v1.md) — v1 architecture, known weaknesses (v2 targets), lineage 2022→2026
 
 ## Literature (one digest per authoritative document, link only)
+- [OpenAI, Harness engineering](literature/openai-harness-engineering.md) — repository knowledge, executable constraints and agent-visible feedback
+- [Anthropic, Effective harnesses for long-running agents](literature/effective-harnesses-for-long-running-agents.md) — resuming and verifying work across sessions
+- [Anthropic, Demystifying evals for AI agents](literature/demystifying-evals-for-ai-agents.md) — tasks, graders and regression suites
+- [SWE-agent](literature/swe-agent.md) — measured effects of tool-interface choices on issue resolution
+- [τ-bench](literature/tau-bench.md) — final-state grading and repeated-trial reliability
 - [literature/pse-stepien-commercial-balancing-podcast.md](literature/pse-stepien-commercial-balancing-podcast.md) — full March interview transcript: organisational adaptation, cost pass-through, predictable alpha incentive and upward PICASSO scarcity claim
 - [literature/pse-commercial-balancing-july-2026.md](literature/pse-commercial-balancing-july-2026.md) — full-report review: portfolio imbalances, surplus versus shortage, assumed financial savings and limits for export-cap justification
 - [literature/acer-electricity-market-integration-monitoring-report.md](literature/acer-electricity-market-integration-monitoring-report.md) — 2026 monitoring: binding-cap frequency, regulatory scrutiny and an apparent outdated pre-auction procurement premise
