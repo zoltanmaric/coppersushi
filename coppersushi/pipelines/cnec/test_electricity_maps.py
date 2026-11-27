@@ -97,6 +97,23 @@ def test_an_hourly_cache_of_a_quarter_hourly_day_is_fetched_again(tmp_path, monk
     assert fetched == [day]
 
 
+def test_retained_price_cache_restores_and_validates_a_complete_day(tmp_path, monkeypatch):
+    monkeypatch.setattr(electricity_maps, "CACHE_DIR", tmp_path)
+    monkeypatch.setattr(market, "CORE_ZONES", ("AT",))
+    day = MarketDay.on("2026-09-10")
+    prices = market.day_ahead_prices([quarter_hourly_day()])
+
+    def restore(key, directory, names):
+        assert key == "prices/core/2026-09-10"
+        assert directory == tmp_path
+        assert names == ("2026-09-10.csv",)
+        electricity_maps.write_day("2026-09-10", prices)
+        return True
+
+    monkeypatch.setattr(electricity_maps.cache, "restore", restore)
+    assert electricity_maps.load_retained_day(day).equals(prices)
+
+
 @pytest.mark.parametrize(
     "damage",
     [lambda prices: prices.drop(index=40), lambda prices: pd.concat([prices, prices.iloc[[40]]])],

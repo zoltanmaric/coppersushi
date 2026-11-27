@@ -4,7 +4,7 @@
 
 Owns market-day calculations, price attribution and complete
 daily publication. `interval.py`, `prices.py` and `attribution.py`
-transform typed inputs; `data_sources/` uses the shared JAO source, fetches prices and optional PSE reserve evidence, builds bundles and
+transform typed inputs; `data_sources/` uses the shared JAO source and market archive, fetches optional PSE reserve evidence, builds bundles and
 runs scheduled publication. `models.py` defines the browser publication contract.
 
 Grid preparation supplies static geography; each daily run fetches and validates
@@ -20,7 +20,9 @@ test-app` and regenerate changed contracts with `pixi run frontend-contracts`.
 ```mermaid
 flowchart LR
     PSE["PSE requirements and basic purchases"] --> Publisher["Daily publisher"]
-    Market["JAO and prices"] --> Publisher
+    JAO["JAO constraints and attribution"] --> Publisher
+    Archive["Archived SDAC prices and JAO spreads"] --> Publisher
+    Publisher --> Decision["Private price decision evidence"]
     Publisher --> Objects["Immutable v3 interval objects"]
     Objects -->|Pinned generations| Study["Offline fixed-study builder"]
     Baseline["Investigated observations"] --> Study
@@ -28,6 +30,20 @@ flowchart LR
     Artifact --> Page["Export-cap investigation page"]
     Objects --> Tooltip["Critical Elements ⚡️ Polish export tooltip"]
 ```
+
+The publisher requires every Core zone and interval. It can recover a missing
+price from an eligible absolute price and signed JAO spreads. For each output
+generation, `market-data/decisions/cnec/` pins the cutoff, source policy and
+evidence for each price in private S3 storage. Local publication writes this
+evidence next to the preview directory. The scheduled publisher keeps the missing
+zone intervals and related attempts in a private record when archive coverage is
+incomplete. A deliberate pre-archive backfill uses `--legacy-prices`.
+When a backfill audit passes and a manifest already exists, its report records
+`existing` and the cutoff used for the audit. Backfill creates the manifest only
+if the key is absent. If another writer publishes first, backfill verifies that
+writer's manifest before reporting `existing`. The report records `published`
+when that run publishes a generation. Resuming an archive checkpoint requires the
+same cutoff mode and, for an explicit replay, the same instant.
 
 Reserve versions are selected independently before 10:30 Brussels on D−1.
 Unavailable reserve evidence does not block market publication. Use the existing

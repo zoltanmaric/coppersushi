@@ -54,7 +54,7 @@ flowchart TB
     critical -->|Published market days| maps
     monitor["Website monitoring"] -->|Checks map pages| maps
     monitor -->|Checks article pages| blog["1.21 Gigawatts"]
-    publishers -->|Market prices| critical
+    shared -->|Prices and spreads| critical
     snapshot["Frozen forecast snapshot"] --> forecast["DE–LU price forecasts"]
     click shared "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/market_data/README.md"
     click critical "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/cnec/README.md"
@@ -65,7 +65,8 @@ flowchart TB
     click maps "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/frontend/README.md"
 ```
 
-Components: [market data](coppersushi/pipelines/market_data/README.md), [Ghost hosting](121gigawatts/hosting/README.md), [CNEC browser](coppersushi/frontend/README.md), [publication](coppersushi/pipelines/cnec/README.md),
+Components: [Ghost hosting](121gigawatts/hosting/README.md), [CNEC browser](coppersushi/frontend/README.md), [publication](coppersushi/pipelines/cnec/README.md),
+[market data](coppersushi/pipelines/market_data/README.md),
 [grid catalog](coppersushi/pipelines/grid/README.md), [OPF](coppersushi/pipelines/powerflow/README.md).
 Prepared CNEC data is independent of request-time Python calculations. CloudFront serves the static CNEC shell and prepared files from private S3; OPF uses the same static hosting boundary.
 The local Flask server previews those same files.
@@ -138,12 +139,12 @@ Once the server starts, the web app will be available at http://localhost:8050
 
 ### Market Data
 
-The CNEC view uses JAO constraints and Electricity Maps day-ahead prices. When prices are missing, the publisher derives them from known zonal prices and JAO border spreads and labels the affected zones on the map. Put an
-Electricity Maps key in `.secrets/.electricity_maps_api_key`, or export
-`ELECTRICITY_MAPS_API_KEY`. Prepare a complete day before browsing:
+The CNEC view uses JAO constraints and day-ahead prices from the shared market
+archive. The publisher labels zones with prices derived from JAO border spreads.
+Prepare a complete archived day before browsing:
 
 ```sh
-pixi run --locked python -m coppersushi.pipelines.cnec.data_sources.bundles 2026-11-03 --directory coppersushi/data/browser
+pixi run --locked python -m coppersushi.pipelines.cnec.data_sources.bundles "$DELIVERY_DATE" --archive-bucket "$COPPERSUSHI_CACHE_BUCKET" --directory coppersushi/data/browser
 ```
 
 Preparation resolves elements through the [grid catalog](coppersushi/pipelines/grid/README.md).

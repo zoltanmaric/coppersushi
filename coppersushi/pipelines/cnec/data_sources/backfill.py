@@ -1,17 +1,23 @@
 """Audit historical delivery days before optionally publishing eligible generations."""
 import argparse
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
+import os
 from pathlib import Path
 from typing import Literal
 
+from botocore.exceptions import ClientError
+from pandera.typing import DataFrame
 from pydantic import BaseModel
 
 from coppersushi.pipelines.data_sources import cache
+from coppersushi.pipelines.cnec.data_sources import archive_prices
 from coppersushi.pipelines.cnec.data_sources import cnec_attribution
 from coppersushi.pipelines.cnec.data_sources import electricity_maps
+from coppersushi.pipelines.data_model.market import ZonalPrices
 from coppersushi.pipelines.jao.data_sources import publication as jao
 from coppersushi.pipelines.market_day import MARKET_TZ
 from coppersushi.pipelines.market_day import MarketDay
+from coppersushi.pipelines.market_data.resolution import PriceUnavailable
 from coppersushi.pipelines.cnec import bundle
 from coppersushi.pipelines.cnec.data_sources import bundles
 from coppersushi.pipelines.cnec.readiness import PublicationReceipt
@@ -27,12 +33,17 @@ class Coverage(BaseModel):
     expected_intervals: int
     missing_alternatives: int | None = None
     unavailable_intervals: int | None = None
-    status: Literal['blocked', 'eligible', 'published'] = 'blocked'
+    status: Literal['blocked', 'eligible', 'existing', 'published'] = 'blocked'
     errors: list[str] = []
     bucket: str | None = None
+    archive_bucket: str | None = None
+    price_cutoff: datetime | None = None
+    price_cutoff_mode: Literal['latest', 'explicit'] | None = None
+    retained_prices: bool = False
+    price_gaps: list[PriceUnavailable] = []
 
 
-def audit(day: MarketDay) -> Coverage:
+def audit(day: MarketDay, *, archive_bucket: str | None, price_cutoff: datetime | None) -> Coverage:
     """Inspect each source independently; a nonempty response never replaces a receipt."""
     result = Coverage(day=day.date, expected_intervals=len(day.market_time_units()))
     try:
@@ -42,7 +53,8 @@ def audit(day: MarketDay) -> Coverage:
         require_received(day, result.receipts)
     except Exception as error:
         result.errors.append(f'receipts: {type(error).__name__}: {error}')
-    active = context = prices = None
+    active = context = None
+    prices: DataFrame[ZonalPrices] | None = None
     try:
         active = jao.load_active_day(str(day.date))
         result.active_rows = len(active.constraints)
@@ -58,7 +70,14 @@ def audit(day: MarketDay) -> Coverage:
     except Exception as error:
         result.errors.append(f'attribution: {type(error).__name__}: {error}')
     try:
-        prices = electricity_maps.load_day(str(day.date))
+        if archive_bucket is None:
+            prices = ZonalPrices.validate(electricity_maps.load_retained_day(day))
+        else:
+            assert price_cutoff is not None
+            prices, _ = archive_prices.load_day(day, archive_bucket, price_cutoff)
+    except archive_prices.RegionalPricesUnavailable as error:
+        result.price_gaps = error.missing
+        result.errors.append(f'prices: {error}')
     except Exception as error:
         result.errors.append(f'prices: {type(error).__name__}: {error}')
     if active is not None and context is not None and prices is not None:
@@ -80,18 +99,36 @@ def main() -> None:
     parser.add_argument('end', type=date.fromisoformat)
     parser.add_argument('--report', type=Path, required=True)
     parser.add_argument('--bucket', help='Publish eligible days; omitted means audit only')
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument('--archive-bucket', help='Market archive; defaults to the cache or publish bucket')
+    source.add_argument('--legacy-prices', action='store_true', help='Use only retained prices for pre-archive delivery days')
+    parser.add_argument('--price-cutoff', type=datetime.fromisoformat, help='Replay one aware archive cutoff for the requested days')
     parser.add_argument('--jao-requests-per-minute', type=int, choices=(90, 180), default=90,
                         help='Shared request budget; 180 is an explicit throttle/backoff trial')
     args = parser.parse_args()
     if args.start > args.end or args.end >= datetime.now(tz=MARKET_TZ).date():
         parser.error('Require an ordered range ending before today')
+    if args.price_cutoff and (args.legacy_prices or args.price_cutoff.utcoffset() is None):
+        parser.error('--price-cutoff requires the archive and a timezone')
+    archive_bucket = None if args.legacy_prices else (
+        args.archive_bucket or os.environ.get('COPPERSUSHI_CACHE_BUCKET') or args.bucket)
+    if not (archive_bucket or args.legacy_prices):
+        parser.error('Set --archive-bucket or COPPERSUSHI_CACHE_BUCKET, or select --legacy-prices')
+    cutoff_mode: Literal['latest', 'explicit'] | None = None
+    if archive_bucket:
+        cutoff_mode = 'explicit' if args.price_cutoff is not None else 'latest'
+    accepted_statuses = {'existing', 'published'} if args.bucket else {'eligible'}
     jao._pacer = jao.RequestPacer(requests_per_minute=args.jao_requests_per_minute, retry_attempts=3)
     done: set[date] = set()
     if args.report.exists():
         for line in args.report.read_text().splitlines():
             previous = Coverage.model_validate_json(line)
-            if (previous.status == ('published' if args.bucket else 'eligible')
+            if (previous.status in accepted_statuses
                     and previous.bucket == args.bucket
+                    and previous.archive_bucket == archive_bucket
+                    and previous.price_cutoff_mode == cutoff_mode
+                    and previous.retained_prices == args.legacy_prices
+                    and (args.price_cutoff is None or previous.price_cutoff == args.price_cutoff)
                     and (not args.bucket or bundles.is_published(MarketDay.on(previous.day), args.bucket))):
                 done.add(previous.day)
             else:
@@ -102,15 +139,31 @@ def main() -> None:
     while current <= args.end:
         if current not in done:
             day = MarketDay.on(current)
-            result = audit(day)
+            price_cutoff = (args.price_cutoff or datetime.now(tz=UTC)) if archive_bucket else None
+            result = audit(day, archive_bucket=archive_bucket, price_cutoff=price_cutoff)
             result.bucket = args.bucket
+            result.archive_bucket = archive_bucket
+            result.price_cutoff = price_cutoff
+            result.price_cutoff_mode = cutoff_mode
+            result.retained_prices = args.legacy_prices
             if args.bucket and result.status == 'eligible':
                 try:
-                    if not bundles.is_published(day, args.bucket):
-                        prepared = bundles.prepare(day, allow_partial_attribution=True)
+                    if bundles.is_published(day, args.bucket):
+                        result.status = 'existing'
+                    else:
+                        prepared = bundles.prepare(day, allow_partial_attribution=True,
+                                                   archive_bucket=archive_bucket, price_cutoff=price_cutoff,
+                                                   legacy_prices=args.legacy_prices)
                         bundle.validate_publication(prepared, allow_partial_attribution=True)
-                        bundles.publish(prepared, args.bucket, allow_partial_attribution=True)
-                    result.status = 'published'
+                        try:
+                            bundles.publish(prepared, args.bucket, allow_partial_attribution=True,
+                                            archive_bucket=archive_bucket, manifest_options={'IfNoneMatch': '*'})
+                            result.status = 'published'
+                        except ClientError as error:
+                            if error.response['ResponseMetadata']['HTTPStatusCode'] != 412:
+                                raise
+                            bundles.verify_manifest(day, args.bucket)
+                            result.status = 'existing'
                 except Exception as error:
                     result.status = 'blocked'
                     result.errors.append(f'publication: {type(error).__name__}: {error}')

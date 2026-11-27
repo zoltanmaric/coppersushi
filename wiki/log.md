@@ -699,6 +699,14 @@ Adopted the [forecasting system design principles](forecasting-system-design.md#
 
 Recorded the [shared theme for Copper Sushi explainers](rule-provenance.md).
 
+## [2026-11-24] query | November 20 cleared-price recovery
+
+The [Electricity Maps incident replay](electricity-maps-api.md#price-spreads) measured how later direct observations changed agreement with final Slovak settlement.
+
+## [2026-11-24] query | Midnight price discrepancies
+
+The [four-zone comparison](electricity-maps-api.md#price-spreads) traced all twelve disputed values to the raw responses and checked them against ENTSO-E’s day-ahead series.
+
 ## [2026-11-25] query | Input availability and actual forecast use
 
 Distinguished S3 publication, publisher read-back and forecast input lineage in the [storage selection principle](price-forecasting/forecast-infrastructure.md#selection-principle).

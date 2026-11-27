@@ -11,7 +11,7 @@ from coppersushi.pipelines.market_data.edition_models import PriceRow, SpreadRow
 from coppersushi.pipelines.market_day import MarketDay
 
 
-type PolicyId = Literal["cnec-v2", "forecast-free-v1"]
+type PolicyId = Literal["cnec-v2", "forecast-free-v1", "electricity-maps-jao-audit-v1"]
 
 
 class SourcePolicy(BaseModel):

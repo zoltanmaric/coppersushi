@@ -20,6 +20,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from botocore.exceptions import BotoCoreError, ClientError
 import pandas as pd
 import pandera.pandas as pa
 from pandera.typing import DataFrame
@@ -35,6 +36,11 @@ from coppersushi.pipelines.data_model.market import ElectricityMapsPriceResponse
 from coppersushi.pipelines.market_day import MarketDay
 
 logger = logging.getLogger(__name__)
+
+
+class RetainedPricesUnavailable(ValueError):
+    """The historical price cache does not supply a validated delivery day."""
+
 
 BASE_URL = "https://api.electricitymap.org/v4/price-day-ahead/actual"
 CACHE_DIR = cache.DATA_DIR / "electricity-maps"
@@ -140,10 +146,29 @@ def write_day(day: str, prices: DataFrame[DayAheadPrices]) -> Path:
 def read_day(path: Path) -> DataFrame[DayAheadPrices]:
     frame = pd.read_csv(path)
     frame = frame.assign(
-        interval=pd.to_datetime(frame.interval, utc=True, format="ISO8601"),
-        updated_at=pd.to_datetime(frame.updated_at, utc=True, format="ISO8601"),
+        interval=pd.to_datetime(frame["interval"], utc=True, format="ISO8601"),
+        updated_at=pd.to_datetime(frame["updated_at"], utc=True, format="ISO8601"),
     )
     return frame.pipe(DayAheadPrices.validate)
+
+
+def load_retained_day(day: MarketDay) -> DataFrame[DayAheadPrices]:
+    """Read retained prices for a delivery day from the local or private S3 cache."""
+    key = day.date.isoformat()
+    path = day_path(key)
+    if not path.is_file():
+        try:
+            cache.restore(f"prices/core/{key}", path.parent, (path.name,))
+        except (BotoCoreError, ClientError, OSError) as error:
+            raise RetainedPricesUnavailable(f"Could not restore retained prices for {key}: {error}") from error
+    try:
+        prices = read_day(path)
+        market.check_complete(prices, day, market.CORE_ZONES)
+    except FileNotFoundError as error:
+        raise RetainedPricesUnavailable(f"No readable retained prices for {key}") from error
+    except (pa.errors.SchemaError, ValueError, KeyError, OSError) as error:
+        raise RetainedPricesUnavailable(f"Retained prices invalid for {key}: {error}") from error
+    return prices
 
 
 def load_day(day: str, refresh: bool = False) -> DataFrame[DayAheadPrices]:
@@ -162,7 +187,7 @@ def load_day(day: str, refresh: bool = False) -> DataFrame[DayAheadPrices]:
             prices = read_day(path)
             market.check_complete(prices, MarketDay.on(day), market.CORE_ZONES)
             return prices
-        except (pa.errors.SchemaError, ValueError) as stale:
+        except (pa.errors.SchemaError, ValueError, KeyError) as stale:
             logger.info("electricity maps: cached %s is fetched again: %s", day, stale)
     write_day(day, fetch_day(day))
     cache.publish(key, path.parent, (path.name,))

@@ -61,9 +61,14 @@ failures before concluding that S3 caching is absent or broken.
 
 ## Retention
 
-Future requirement, **not implemented by this note**: retain successful JAO responses
-privately so previously acquired inputs remain usable during upstream outages.
-Extend the existing cache rather than introduce a second storage system without need.
+The [market data archive](../coppersushi/pipelines/market_data/README.md) records
+raw JAO price-spread polls, including failures. Critical Elements ⚡️ can resolve an
+eligible missing price from an absolute anchor and signed spreads for the same
+interval. Its private decision records identify each selected edition or missing
+zone interval. The other JAO attribution feeds use the derived caches above.
+See [publication and recovery](../coppersushi/pipelines/cnec/README.md).
+
+For any additional JAO feed brought into the archive, preserve these properties:
 
 - Key responses by endpoint and normalized parameters, including the requested
   delivery interval; keep retrieval time, schema/adapter version and content hash.
