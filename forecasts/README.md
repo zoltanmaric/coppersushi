@@ -39,7 +39,7 @@ Use the November prices-only bundle `ef683f971ef0b733b5f7ad0b` for the frozen co
 pixi run --locked python -m forecasts.monthly_fit --fit-day 2026-12-01 --config "$NOVEMBER_FIT/config.json" --snapshot "$TRAINING_SNAPSHOT" --archive-bucket "$COPPERSUSHI_CACHE_BUCKET" --coverage-output "$COVERAGE_DIR" --audit-only
 ```
 
-`coverage.json` reports counts. `selections.parquet` identifies each interval, cutoff, source, receipt or snapshot row version, and any gap. A gap or archive error fails the audit. Once the fit cutoff has passed and the frozen-row and daily-issuance comparisons pass, replace `--audit-only` with `--output "$MONTHLY_FIT"` and choose a fresh `--coverage-output`. The fit saves its audited selections in the bundle.
+`coverage.json` reports counts. `selections.parquet` identifies each interval, cutoff, source, receipt or snapshot row version, and any gap. For a price conflict, the report identifies the affected quarter and its competing receipts. For a rejected frozen version, it records the timing evidence and reason. An unreadable receipt identifies the affected source day and cutoff. Any unresolved quarter fails the audit. Once the fit cutoff has passed and the frozen-row and daily-issuance comparisons pass, replace `--audit-only` with `--output "$MONTHLY_FIT"` and choose a fresh `--coverage-output`. The fit saves its audited selections in the bundle.
 
 ## Local model evaluation
 

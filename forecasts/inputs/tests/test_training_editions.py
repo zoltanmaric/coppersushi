@@ -6,6 +6,7 @@ import polars as pl
 import pyarrow as pa
 
 from coppersushi.pipelines.market_data.test_editions import ArchiveS3, DAY, QUARTER, price, publish
+from forecasts.inputs.availability import available_at, timing_rejections
 from forecasts.inputs.schemas import SCHEMAS
 from forecasts.inputs.training_editions import TrainingEditions
 from forecasts.market import cutoff, quarters
@@ -55,11 +56,22 @@ class TrainingEditionsTests(unittest.TestCase):
 
     def test_archive_conflict_blocks_frozen_fallback(self) -> None:
         store = ArchiveS3()
-        publish(store, "entsoe", "DE-LU", [price("40")])
-        publish(store, "smard", "DE-LU", [price("41")])
+        next_quarter = QUARTER + timedelta(minutes=15)
+        first = publish(store, "entsoe", "DE-LU", [price("40"), price("42").model_copy(update={"interval": next_quarter})])
+        second = publish(store, "smard", "DE-LU", [price("41")])
         inputs = reader(store)
-        failed = inputs.audit().filter(pl.col("source") == "error")
-        self.assertIn("Conflicting SDAC", failed["reason"][0])
+        audit = inputs.audit()
+        failed = audit.filter(pl.col("source") == "error").sort("cutoff")
+        self.assertEqual(failed["valid_utc"].to_list(), [QUARTER, QUARTER])
+        self.assertEqual(failed["cutoff"].to_list(), [cutoff(ISSUE_DAY), cutoff(FIT_DAY)])
+        for evidence in failed["archive_evidence"]:
+            self.assertEqual({row["attempt_id"] for row in json.loads(evidence)},
+                             {str(first.attempt_id), str(second.attempt_id)})
+        usable = audit.filter(pl.col("valid_utc") == next_quarter)
+        self.assertEqual(usable["source"].to_list(), ["archive", "archive"])
+        self.assertEqual(usable["price_eur_mwh"].to_list(), [42., 42.])
+        fallback = audit.filter(pl.col("valid_utc") == next_quarter + timedelta(minutes=15))
+        self.assertEqual(fallback["source"].to_list(), ["snapshot", "snapshot"])
         with self.assertRaisesRegex(ValueError, "Conflicting SDAC"):
             inputs.price_history(ISSUE_DAY, cutoff(ISSUE_DAY), earliest_day=DAY)
 
@@ -85,3 +97,41 @@ class TrainingEditionsTests(unittest.TestCase):
         for row, deadline in zip(failed.iter_rows(named=True), (cutoff(ISSUE_DAY), cutoff(FIT_DAY)), strict=True):
             for detail in (DAY.isoformat(), deadline.isoformat(), "ambiguous", "old", "snapshot-id"):
                 self.assertIn(detail, row["reason"])
+
+    def test_snapshot_rejections_retain_versions_clocks_and_reasons(self) -> None:
+        deadline = cutoff(ISSUE_DAY)
+        late = deadline + timedelta(seconds=1)
+        base = dict(valid_utc=QUARTER, price_eur_mwh=12.0, raw_key="frozen-source",
+                    version_id="late-update", source_update_utc=late, retrieved_at_utc=None,
+                    timing_evidence="documented")
+        variants = [base,
+                    dict(base, version_id="late-receipt", timing_evidence="witnessed", retrieved_at_utc=late),
+                    dict(base, version_id="no-receipt", source_update_utc=None, timing_evidence="witnessed"),
+                    dict(base, version_id="unknown", source_update_utc=None, timing_evidence="unknown"),
+                    dict(base, version_id="null", source_update_utc=None, price_eur_mwh=None)]
+        inputs = TrainingEditions(ArchiveS3(), "test", "frozen-id",
+                                  pa.Table.from_pylist(variants, schema=SCHEMAS["prices"]), ISSUE_DAY, FIT_DAY)
+        audit = inputs.feature_audit(ISSUE_DAY, deadline)
+        failed = audit.filter(pl.col("valid_utc") == QUARTER).row(0, named=True)
+        self.assertEqual((failed["source"], failed["snapshot_id"], failed["cutoff"]), ("missing", "frozen-id", deadline))
+        candidates = {row["version_id"]: row for row in json.loads(failed["snapshot_rejections"])}
+        self.assertEqual({k: v["reasons"] for k, v in candidates.items()}, {
+            "late-update": ["source update after cutoff"], "late-receipt": ["source update after cutoff", "receipt after cutoff"],
+            "no-receipt": ["required receipt missing"], "unknown": ["unknown timing evidence"], "null": ["null price"]})
+        self.assertEqual(candidates["late-update"]["source_update_utc"], late.isoformat())
+        self.assertEqual(candidates["late-receipt"]["retrieved_at_utc"], late.isoformat())
+        self.assertIsNone(candidates["no-receipt"]["retrieved_at_utc"])
+        self.assertEqual(candidates["unknown"]["raw_key"], "frozen-source")
+        absent = audit.filter(pl.col("valid_utc") == QUARTER + timedelta(minutes=15)).row(0, named=True)
+        self.assertIsNone(absent["snapshot_rejections"])
+        self.assertIn("no candidate for interval", absent["reason"])
+
+
+    def test_missing_timing_evidence_excludes_a_raw_record(self) -> None:
+        frame = pl.DataFrame({"timing_evidence": [None], "source_update_utc": [None], "retrieved_at_utc": [None]},
+                             schema={"timing_evidence": pl.String, "source_update_utc": pl.Datetime("us", "UTC"),
+                                     "retrieved_at_utc": pl.Datetime("us", "UTC")})
+        deadline = cutoff(ISSUE_DAY)
+        self.assertFalse(frame.select(available_at(deadline, live=False)).item())
+        self.assertEqual(frame.select(timing_rejections(deadline, live=False)).to_series().to_list(),
+                         [["unknown timing evidence"]])

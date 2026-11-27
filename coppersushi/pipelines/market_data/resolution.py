@@ -112,8 +112,8 @@ type Table = tuple[PublishedEdition, Sequence[PriceRow | SpreadRow]]
 
 
 def resolve_editions(day: date, zones: tuple[str, ...], cutoff: datetime, policy: SourcePolicy,
-                     tables: Sequence[Table]) -> list[PriceResult]:
-    """Resolve each requested zone and native interval using only eligible editions."""
+                     tables: Sequence[Table], *, conflicts: list[ConflictingPrices] | None = None) -> list[PriceResult]:
+    """Resolve eligible prices. An audit can collect conflicting quarters and continue."""
     if cutoff.utcoffset() is None:
         raise ValueError("A replay cutoff requires a timezone")
     direct: dict[datetime, dict[str, list[Evidence]]] = defaultdict(lambda: defaultdict(list))
@@ -151,8 +151,14 @@ def resolve_editions(day: date, zones: tuple[str, ...], cutoff: datetime, policy
     results: list[PriceResult] = []
     for time in MarketDay.on(day).market_time_units():
         for zone in zones:
-            results.append(_resolve_interval(zone, time.to_pydatetime(), policy, direct[time],
-                                             spreads[time], empty_direct))
+            try:
+                result = _resolve_interval(zone, time.to_pydatetime(), policy, direct[time], spreads[time], empty_direct)
+            except ConflictingPrices as error:
+                if conflicts is None:
+                    raise
+                conflicts.append(error)
+            else:
+                results.append(result)
     return results
 
 

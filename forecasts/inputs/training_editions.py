@@ -13,6 +13,7 @@ from coppersushi.pipelines.market_data.data_sources.parquet import SCHEMA_VERSIO
 from coppersushi.pipelines.market_data.data_sources.prices import resolve_day
 from coppersushi.pipelines.market_data.edition_models import object_visible_by
 from coppersushi.pipelines.market_data.resolution import FORECAST_POLICY, ConflictingPrices, PriceUnavailable
+from forecasts.inputs.availability import timing_rejections
 from forecasts.inputs.fresh_sources import required_lag_dates
 from forecasts.inputs.input_config import PRICE_LAG_DAYS
 from forecasts.inputs.prices import PriceHistory, PriceVersions, read_prices, select_history
@@ -26,7 +27,7 @@ _SCHEMA: dict[str, pl.DataType | type[pl.DataType]] = {
     "valid_utc": UTC_TIME, "price_eur_mwh": pl.Float64, "source": pl.String,
     "policy_id": pl.String, "snapshot_id": pl.String, "version_id": pl.String,
     "raw_key": pl.String, "timing_evidence": pl.String, "source_update_utc": UTC_TIME,
-    "retrieved_at_utc": UTC_TIME, "archive_evidence": pl.String, "reason": pl.String,
+    "retrieved_at_utc": UTC_TIME, "archive_evidence": pl.String, "snapshot_rejections": pl.String, "reason": pl.String,
 }
 
 
@@ -80,20 +81,22 @@ class TrainingEditions:
             return self._cache[key]
         reason = self._inventory_error
         archive = {}
+        conflicts: list[ConflictingPrices] = []
         if not reason and day in self._visible and self._visible[day] <= deadline:
             try:
                 archive = {result.interval: result for result in resolve_day(
-                    self.client, self.bucket, day, ("DE-LU",), deadline, FORECAST_POLICY)}
+                    self.client, self.bucket, day, ("DE-LU",), deadline, FORECAST_POLICY, conflicts=conflicts)}
             except (ClientError, BotoCoreError, ValueError, OSError) as error:
                 reason = f"Archive resolution failed for {day} at {deadline.isoformat()}: {error}"
-                if isinstance(error, ConflictingPrices):
-                    reason += " " + json.dumps([item.model_dump(mode="json") for item in error.evidence])
+        conflicts_by_interval = {error.interval: error for error in conflicts}
         grid = list(quarters(day, day + timedelta(days=1)))
         frozen = {}
+        rejections: dict[datetime, list[dict[str, object]]] = {}
         snapshot_errors: dict[datetime, str] = {}
         candidates = self._prices.get((day,))
         if not reason and not live and candidates is not None:
-            needed = [t for t in grid if t not in archive or isinstance(archive[t], PriceUnavailable)]
+            needed = [t for t in grid if t not in conflicts_by_interval
+                      and (t not in archive or isinstance(archive[t], PriceUnavailable))]
             if needed:
                 versions = cast(DataFrame[PriceVersions], candidates.filter(pl.col("valid_utc").is_in(needed)))
                 try:
@@ -112,12 +115,37 @@ class TrainingEditions:
                                 f"candidate versions {group['version_id'].to_list()}")
                         else:
                             frozen.update((row["valid_utc"], row) for row in selected.iter_rows(named=True))
+                if len(frozen) != versions.height or versions["price_eur_mwh"].null_count():
+                    annotated = versions.with_columns(timing_rejections(deadline, live=False).alias("reasons"))
+                    for candidate in annotated.iter_rows(named=True):
+                        interval = candidate.pop("valid_utc")
+                        winner = frozen.get(interval)
+                        if candidate["price_eur_mwh"] is None:
+                            candidate["reasons"].append("null price")
+                        if not candidate["reasons"]:
+                            if interval in snapshot_errors:
+                                candidate["reasons"].append("conflicting eligible revisions")
+                            elif winner is not None and candidate["version_id"] != winner["version_id"]:
+                                candidate["reasons"].append(f"superseded by version {winner['version_id']}")
+                            else:
+                                continue
+                        for field in ("source_update_utc", "retrieved_at_utc"):
+                            if candidate[field] is not None:
+                                candidate[field] = candidate[field].isoformat()
+                        rejections.setdefault(interval, []).append(candidate)
         rows = []
         for interval in grid:
             row: dict[str, object] = {"valid_utc": interval, "policy_id": FORECAST_POLICY.id}
+            if interval in rejections:
+                row["snapshot_rejections"] = json.dumps(rejections[interval], sort_keys=True)
+                row["snapshot_id"] = self.snapshot_id
             result = archive.get(interval)
             if reason:
                 row.update(source="error", reason=reason)
+            elif interval in conflicts_by_interval:
+                conflict = conflicts_by_interval[interval]
+                row.update(source="error", reason=str(conflict),
+                           archive_evidence=json.dumps([item.model_dump(mode="json") for item in conflict.evidence]))
             elif interval in snapshot_errors:
                 row.update(source="error", reason=snapshot_errors[interval], snapshot_id=self.snapshot_id)
                 if result:
@@ -138,8 +166,13 @@ class TrainingEditions:
                 if version is not None and version["price_eur_mwh"] is not None:
                     row.update(source="snapshot", reason=absence)
                 else:
-                    unavailable = ("live selection requires a witnessed edition" if live
-                                   else f"no eligible non-null price in snapshot {self.snapshot_id}")
+                    if live:
+                        unavailable = "live selection requires a witnessed edition"
+                    elif interval in rejections:
+                        unavailable = f"snapshot {self.snapshot_id} rejected candidates: {row['snapshot_rejections']}"
+                    else:
+                        row["snapshot_id"] = self.snapshot_id
+                        unavailable = f"no candidate for interval in snapshot {self.snapshot_id}"
                     row.update(source="missing", reason=f"{absence}; {unavailable}")
             rows.append(row)
         frame = pl.DataFrame(rows, schema=_SCHEMA)

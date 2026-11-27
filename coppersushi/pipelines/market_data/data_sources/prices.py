@@ -4,17 +4,17 @@ from typing import TYPE_CHECKING
 
 from coppersushi.pipelines.market_data.data_sources.editions import read_editions
 from coppersushi.pipelines.market_data.data_sources.responses import read_day_diagnostics
-from coppersushi.pipelines.market_data.resolution import PriceResult, PriceUnavailable, SourcePolicy, resolve_editions
+from coppersushi.pipelines.market_data.resolution import ConflictingPrices, PriceResult, PriceUnavailable, SourcePolicy, resolve_editions
 
 if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client
 
 
 def resolve_day(client: "S3Client", bucket: str, day: date, zones: tuple[str, ...],
-                cutoff: datetime, policy: SourcePolicy) -> list[PriceResult]:
+                cutoff: datetime, policy: SourcePolicy, *, conflicts: list[ConflictingPrices] | None = None) -> list[PriceResult]:
     """Resolve all native intervals from the archive and attach observed failures to missing quarters."""
     tables = read_editions(client, bucket, day, cutoff, publishers=policy.publishers)
-    results = resolve_editions(day, zones, cutoff, policy, tables)
+    results = resolve_editions(day, zones, cutoff, policy, tables, conflicts=conflicts)
     if not any(isinstance(result, PriceUnavailable) for result in results):
         return results
     attempts = read_day_diagnostics(client, bucket, day, cutoff)

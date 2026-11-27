@@ -1,11 +1,12 @@
 """Immutable S3 landing records for independent publisher polls."""
+from collections.abc import Mapping
 from datetime import date, datetime
 from hashlib import sha256
 import json
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, ValidationError
 
 from coppersushi.pipelines.data_sources.s3 import put_once
 from coppersushi.pipelines.market_data.edition_models import object_visible_by
@@ -44,8 +45,8 @@ def read_attempt(client: "S3Client", bucket: str, attempt_id: UUID) -> Receipt:
     """Read response receipts from metadata and transport diagnostics from the failure body."""
     key = _receipt_key(attempt_id)
     stored = client.head_object(Bucket=bucket, Key=key)
-    fields = json.loads(stored["Metadata"]["receipt"])
-    if fields["kind"] == "failure":
+    fields = _receipt_fields(stored.get("Metadata", {}), attempt_id)
+    if fields.get("kind") == "failure":
         with client.get_object(Bucket=bucket, Key=key)["Body"] as stream:
             fields["reason"] = stream.read().decode("utf-8")
     return _checked_receipt(fields, attempt_id)
@@ -56,8 +57,8 @@ def read_response(client: "S3Client", bucket: str, attempt_id: UUID) -> StoredRe
     stored = client.get_object(Bucket=bucket, Key=_receipt_key(attempt_id))
     with stored["Body"] as stream:
         body = stream.read()
-    fields = json.loads(stored["Metadata"]["receipt"])
-    if fields["kind"] == "failure":
+    fields = _receipt_fields(stored.get("Metadata", {}), attempt_id)
+    if fields.get("kind") == "failure":
         fields["reason"] = body.decode("utf-8")
     receipt = _checked_receipt(fields, attempt_id)
     if isinstance(receipt, FailedAttempt):
@@ -67,8 +68,25 @@ def read_response(client: "S3Client", bucket: str, attempt_id: UUID) -> StoredRe
     return StoredResponse(receipt, body)
 
 
+def _receipt_fields(metadata: Mapping[str, str], attempt_id: UUID) -> dict[str, object]:
+    raw = metadata.get("receipt")
+    if raw is None:
+        raise ValueError(f"Missing receipt metadata at {_receipt_key(attempt_id)}")
+    try:
+        fields = json.loads(raw)
+    except json.JSONDecodeError as error:
+        raise ValueError(f"Invalid receipt JSON at {_receipt_key(attempt_id)}: {error.msg}") from error
+    if not isinstance(fields, dict):
+        raise ValueError(f"Expected receipt object at {_receipt_key(attempt_id)}")
+    return fields
+
+
 def _checked_receipt(fields: dict[str, object], attempt_id: UUID) -> Receipt:
-    receipt = _receipt.validate_python(fields)
+    try:
+        receipt = _receipt.validate_python(fields)
+    except ValidationError as error:
+        detail = error.errors(include_input=False, include_context=False, include_url=False)
+        raise ValueError(f"Invalid receipt at {_receipt_key(attempt_id)}: {detail}") from error
     if receipt.attempt_id != attempt_id:
         raise ValueError(f"Receipt identity differs from requested attempt {attempt_id}")
     return receipt
