@@ -722,3 +722,7 @@ Recorded the [service-generated timestamps](price-forecasting/forecast-infrastru
 ## [2026-11-27] query | Replaying an issued forecast
 
 Distinguished reproducing a saved forecast from [reconstructing at its deadline](price-forecasting/forecast-infrastructure.md#selection-principle) when an input changes between issuance and the deadline.
+
+## [2026-11-27] query | Critical Elements price evidence
+
+The [November 28 generation comparison](copper-sushi-app.md) verified that including private price evidence in a generation's identity can preserve every public interval.
