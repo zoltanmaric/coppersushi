@@ -11,11 +11,14 @@ from coppersushi.pipelines.market_data.edition_models import PriceRow, SpreadRow
 from coppersushi.pipelines.market_day import MarketDay
 
 
+type PolicyId = Literal["cnec-v2", "forecast-free-v1"]
+
+
 class SourcePolicy(BaseModel):
     """Pinned ordered direct publishers and permission to reconstruct missing quarters."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
-    id: str
+    id: PolicyId
     direct: tuple[str, ...]
     allow_spreads: bool
 
@@ -24,6 +27,7 @@ class SourcePolicy(BaseModel):
         return frozenset((*self.direct, "jao") if self.allow_spreads else self.direct)
 
 
+# Version 2 follows the original Critical Elements price selection, which predates this archive.
 CNEC_POLICY = SourcePolicy(id="cnec-v2", direct=("entsoe", "smard", "electricity_maps"), allow_spreads=True)
 FORECAST_POLICY = SourcePolicy(id="forecast-free-v1", direct=("entsoe", "smard"), allow_spreads=True)
 
@@ -58,7 +62,7 @@ class ResolvedPrice(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     interval: AwareDatetime
     zone: str
-    policy_id: str
+    policy_id: PolicyId
     price: Decimal
     evidence: tuple[Evidence, ...]
 
@@ -82,7 +86,7 @@ class PriceUnavailable(BaseModel):
     kind: Literal["unavailable"] = "unavailable"
     zone: str
     interval: AwareDatetime
-    policy_id: str
+    policy_id: PolicyId
     reason: str
     attempt_ids: tuple[UUID, ...]
     connected_zones: tuple[str, ...] = ()
@@ -115,12 +119,15 @@ def resolve_editions(day: date, zones: tuple[str, ...], cutoff: datetime, policy
     direct: dict[datetime, dict[str, list[Evidence]]] = defaultdict(lambda: defaultdict(list))
     spreads: dict[datetime, list[Evidence]] = defaultdict(list)
     versions: dict[tuple[datetime, str, str, str | None], list[Evidence]] = defaultdict(list)
+    empty_direct: dict[str, set[UUID]] = defaultdict(set)
     for edition, rows in tables:
         receipt = edition.receipt
         if receipt.delivery_day != day or edition.available_at > cutoff:
             continue
         if receipt.publisher not in policy.publishers:
             continue
+        if not rows and receipt.publisher in policy.direct:
+            empty_direct[receipt.zone].add(receipt.attempt_id)
         for row in rows:
             evidence = Evidence(
                 publisher=receipt.publisher, attempt_id=receipt.attempt_id, edition_key=edition.key,
@@ -145,7 +152,7 @@ def resolve_editions(day: date, zones: tuple[str, ...], cutoff: datetime, policy
     for time in MarketDay.on(day).market_time_units():
         for zone in zones:
             results.append(_resolve_interval(zone, time.to_pydatetime(), policy, direct[time],
-                                             spreads[time]))
+                                             spreads[time], empty_direct))
     return results
 
 
@@ -182,7 +189,8 @@ def _published(zone: str, interval: datetime, policy: SourcePolicy, candidates: 
 
 
 def _resolve_interval(target: str, interval: datetime, policy: SourcePolicy,
-                      direct: dict[str, list[Evidence]], spreads: list[Evidence]) -> PriceResult:
+                      direct: dict[str, list[Evidence]], spreads: list[Evidence],
+                      empty_direct: dict[str, set[UUID]]) -> PriceResult:
     published = None
     if target in direct:
         published = _published(target, interval, policy, direct[target])
@@ -222,9 +230,11 @@ def _resolve_interval(target: str, interval: datetime, policy: SourcePolicy,
     if published is not None:
         return published
     if not anchors:
-        spread_attempts = {row.attempt_id for zone in paths for _, _, row in edges[zone]}
+        attempts = {row.attempt_id for zone in paths for _, _, row in edges[zone]}
+        for zone in paths:
+            attempts.update(empty_direct.get(zone, ()))
         return PriceUnavailable(zone=target, interval=interval, policy_id=policy.id,
-                                attempt_ids=tuple(sorted(spread_attempts)), connected_zones=tuple(sorted(paths.keys() - {target})),
+                                attempt_ids=tuple(sorted(attempts)), connected_zones=tuple(sorted(paths.keys() - {target})),
                                 reason="No eligible direct price or connected eligible absolute anchor")
     if len({candidate.price for candidate in anchors}) != 1:
         raise ConflictingPrices(target, interval, [row for candidate in anchors for row in candidate.evidence])

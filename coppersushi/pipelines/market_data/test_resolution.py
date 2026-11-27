@@ -215,3 +215,19 @@ def test_missing_quarter_cites_only_reachable_anchor_failures_and_spreads():
     assert "Croatian request failed" in connected.reason
     assert disconnected.attempt_ids == () and "Croatian request failed" not in disconnected.reason
     assert read_day_diagnostics(store, "test", DAY, cutoff) == [failure]
+
+
+def test_empty_direct_edition_explains_only_visible_and_reachable_missing_prices() -> None:
+    store = ArchiveS3()
+    empty = publish(store, "smard", "DE-LU", [])
+    assert first(store, T).attempt_ids == ()
+    cutoff = T + timedelta(seconds=1)
+    missing = first(store, cutoff)
+    assert isinstance(missing, PriceUnavailable)
+    assert missing.attempt_ids == (empty.attempt_id,)
+
+    link = publish(store, "jao", "CORE", [spread("DE-LU", "AT", "2")])
+    connected, disconnected, *_ = resolve_day(store, "test", DAY, ("AT",), cutoff, FORECAST_POLICY)
+    assert isinstance(connected, PriceUnavailable)
+    assert set(connected.attempt_ids) == {empty.attempt_id, link.attempt_id}
+    assert disconnected.attempt_ids == ()
