@@ -726,3 +726,7 @@ Distinguished reproducing a saved forecast from [reconstructing at its deadline]
 ## [2026-11-27] ingest | Agent harness engineering
 
 Linked five primary-source digests through [Agent harness engineering](agent-harness-engineering.md), covering tool design, multi-session work and evaluation.
+
+## [2026-11-27] decision | Consulting harness principles
+
+Recorded the [ablation exception](rule-provenance.md) for requests to improve how agents work.
