@@ -8,7 +8,7 @@ Suppose a response arrives at 10:58 and its edition reaches S3 at 11:04. An 11:0
 
 ```mermaid
 flowchart TB
-    Publishers["Market publishers"]
+    Publishers["Market publishers<br/>e.g. ENTSO-E, SMARD"]
     Consumer["Price consumer"]
     subgraph Market["Market data · Python library"]
         Caller["Publisher collector"]
