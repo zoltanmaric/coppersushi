@@ -727,6 +727,10 @@ Distinguished reproducing a saved forecast from [reconstructing at its deadline]
 
 Linked five primary-source digests through [Agent harness engineering](agent-harness-engineering.md), covering tool design, multi-session work and evaluation.
 
+## [2026-11-27] decision | Consulting harness principles
+
+Recorded the [ablation exception](rule-provenance.md) for requests to improve how agents work.
+
 ## [2026-11-27] decision | Training price evidence
 
 Recorded [historical fallback and cutoff rules](price-forecasting/forecast-infrastructure.md) for monthly training.
