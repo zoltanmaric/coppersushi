@@ -57,7 +57,7 @@ def collect_day(client: "S3Client", bucket: str, publisher: Publisher, delivery_
     outcomes: list[AttemptOutcome] = []
     for poll in polls:
         try:
-            check_ready(client, bucket, publisher, clock())
+            check_ready(client, bucket, publisher, clock(), invocation_id)
         except PublisherCoolingDown as pause:
             _LOG.info("poll_deferred publisher=%s zone=%s delivery_day=%s cooldown_attempt=%s retry_at=%s",
                       publisher, poll.zone, delivery_day, pause.attempt, pause.until)
@@ -65,7 +65,7 @@ def collect_day(client: "S3Client", bucket: str, publisher: Publisher, delivery_
                 raise
             break
         _LOG.info("poll_started %s", _scope(poll))
-        outcome = _collect(client, bucket, poll, clock)
+        outcome = _collect(client, bucket, poll, clock, invocation_id)
         if outcome.outcome == "failed":
             outcome = outcome.model_copy(update={"invocation_id": invocation_id})
             _LOG.error("poll_failed %s reason=%s", _scope(poll), outcome.diagnostic)
@@ -77,7 +77,8 @@ def collect_day(client: "S3Client", bucket: str, publisher: Publisher, delivery_
     return tuple(outcomes)
 
 
-def _collect(client: "S3Client", bucket: str, poll: Poll, clock: Callable[[], datetime]) -> AttemptOutcome:
+def _collect(client: "S3Client", bucket: str, poll: Poll, clock: Callable[[], datetime],
+             invocation_id: UUID | None) -> AttemptOutcome:
     day = MarketDay.on(poll.delivery_day)
     scope = poll.model_dump()
     secrets: list[bytes] = []
@@ -101,7 +102,7 @@ def _collect(client: "S3Client", bucket: str, poll: Poll, clock: Callable[[], da
         }
         with _archive_write(poll, "save_cooldown", secrets):
             retry_at = save_retry_after(client, bucket, poll, status=status, retry_after=headers.get("Retry-After"),
-                                        observed_at=clock())
+                                        observed_at=clock(), invocation_id=invocation_id)
         partial = False
         try:
             raw = response.read()

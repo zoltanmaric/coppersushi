@@ -62,7 +62,8 @@ def handler(event: dict, context: _Invocation) -> dict:
     try:
         attempts = collect_day(client, bucket, request.publisher, day, zones=zones, invocation_id=invocation_id)
     except PublisherCoolingDown as active:
-        return _deferred(request, day, active, read_invocation_failures(client, bucket, day, invocation_id))
+        previous = read_invocation_failures(client, bucket, day, invocation_id, active.invocation_attempts)
+        return _deferred(request, day, active, previous)
     failures = [attempt for attempt in attempts if attempt.outcome == "failed"]
     _raise_failures([failure for failure in failures if failure.publisher_retry_at is None])
     if failures:

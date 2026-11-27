@@ -89,9 +89,14 @@ def read_day_diagnostics(client: "S3Client", bucket: str, delivery_day: date, cu
     return _read_diagnostics(client, bucket, delivery_day, cutoff=cutoff)
 
 
-def read_invocation_failures(client: "S3Client", bucket: str, delivery_day: date, invocation_id: UUID) -> list[AttemptOutcome]:
+def read_invocation_failures(client: "S3Client", bucket: str, delivery_day: date, invocation_id: UUID,
+                             cooldown_attempts: tuple[UUID, ...] = ()) -> list[AttemptOutcome]:
     """Read actionable failures from earlier executions of the same asynchronous event."""
     records = _read_diagnostics(client, bucket, delivery_day, invocation_id=invocation_id)
+    unfinished = set(cooldown_attempts).difference(record.attempt_id for record in records)
+    if unfinished:
+        attempts = ", ".join(str(attempt) for attempt in sorted(unfinished))
+        raise RuntimeError(f"Unfinished archive write for {delivery_day}, invocation {invocation_id}, attempts: {attempts}")
     return [record for record in records if record.publisher_retry_at is None]
 
 

@@ -59,3 +59,38 @@ def test_retry_during_cooldown_reports_its_own_actionable_failure(monkeypatch: p
     unrelated = SimpleNamespace(aws_request_id=str(uuid4()))
     assert market_collection_handler.handler(event, unrelated)["status"] == "deferred"
     assert len(requested) == len(zones)
+
+
+@pytest.mark.parametrize("failed_prefix", ["market-data/attempts/", "market-data/outcomes/"])
+def test_cooldown_retry_reports_unfinished_archive_attempt(monkeypatch: pytest.MonkeyPatch, failed_prefix: str) -> None:
+    store = CollectorS3()
+    monkeypatch.setenv("COPPERSUSHI_CACHE_BUCKET", "test")
+    monkeypatch.setenv("ENTSOE_API_TOKEN", "test-key")
+    monkeypatch.setattr(market_collection_handler.boto3, "client", lambda service: store)
+    requests = []
+
+    def throttle(req: Request, timeout: int) -> None:
+        requests.append(req.full_url)
+        raise HTTPError(req.full_url, 429, "throttled", {"Retry-After": "900"}, BytesIO())
+
+    put = store.put_object
+
+    def fail_archive_write(**request):
+        if request["Key"].startswith(failed_prefix):
+            raise OSError("archive unavailable")
+        return put(**request)
+
+    monkeypatch.setattr(collect_market_editions, "urlopen", throttle)
+    monkeypatch.setattr(store, "put_object", fail_archive_write)
+    event = {"publisher": "entsoe", "delivery_day": DAY.isoformat(), "zones": ["DE-LU"]}
+    invocation = SimpleNamespace(aws_request_id=str(uuid4()))
+    with pytest.raises(RuntimeError, match="archive unavailable") as initial:
+        market_collection_handler.handler(event, invocation)
+    cooldown, = (key for key in store.objects if "/cooldowns/" in key)
+    attempt = cooldown.rsplit("/", 1)[1]
+    assert attempt in str(initial.value)
+    for _ in range(2):
+        with pytest.raises(RuntimeError, match=attempt):
+            market_collection_handler.handler(event, invocation)
+    assert market_collection_handler.handler(event, SimpleNamespace(aws_request_id=str(uuid4())))["status"] == "deferred"
+    assert len(requests) == 1
