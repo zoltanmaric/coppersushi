@@ -1,30 +1,24 @@
 """Resolve the pinned operating configuration and the scheduler's Berlin delivery date."""
-import hashlib
 import os
 from datetime import date, timedelta
 from zoneinfo import ZoneInfo
 
 import boto3
 from metaflow import current
-from pydantic import AwareDatetime, BaseModel, TypeAdapter
+from pydantic import AwareDatetime, TypeAdapter
+
+from forecasts.operations.artifacts import Artifacts, ObjectPin
 
 from forecasts.operations.jobs import Settings
 
 
-class ConfigurationPin(BaseModel):
-    bucket: str
-    key: str
-    version_id: str
-    sha256: str
-
-
-def settings_from_pin(value: str) -> Settings:
-    pin = ConfigurationPin.model_validate_json(value)
-    response = boto3.client("s3").get_object(Bucket=pin.bucket, Key=pin.key, VersionId=pin.version_id)
-    raw = response["Body"].read()
-    if hashlib.sha256(raw).hexdigest() != pin.sha256:
-        raise ValueError("Operating configuration checksum mismatch")
-    return Settings.model_validate_json(raw)
+def settings_from_pin(value: str, *, scheduled_live: str = "no") -> Settings:
+    pin = ObjectPin.model_validate_json(value)
+    raw = Artifacts(boto3.client("s3"), pin.bucket, None).pinned(pin).data
+    settings = Settings.model_validate_json(raw)
+    if scheduled_live not in {"yes", "no"} or (scheduled_live == "yes" and settings.replay is not None):
+        raise ValueError("Live schedule requires production settings")
+    return settings
 
 
 def delivery_date(scheduled_at: str) -> date:

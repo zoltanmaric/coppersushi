@@ -13,6 +13,7 @@ from forecasts.operations.jobs import check, issue, witness
 
 class DeLuDailyIssue(FlowSpec):
     scheduled_at = Parameter("scheduled_at", required=True)
+    scheduled_live = Parameter("scheduled_live", default="no")
     config_pin = Parameter("config_pin", default=os.environ.get("FORECAST_CONFIG_PIN"))
     check_only = Parameter("check_only", default="no")
 
@@ -24,7 +25,7 @@ class DeLuDailyIssue(FlowSpec):
         if self.check_only not in ("yes", "no"):
             raise ValueError("check_only must be yes or no")
         if self.check_only == "no":
-            settings = settings_from_pin(self.config_pin)
+            settings = settings_from_pin(self.config_pin, scheduled_live=self.scheduled_live)
             while True:
                 try:
                     issue(settings, self.day, trace())
@@ -40,7 +41,7 @@ class DeLuDailyIssue(FlowSpec):
            cpu=1, memory=2048, iam_role=os.environ.get("FORECAST_READER_ROLE"))
     @step
     def end(self) -> None:
-        settings = settings_from_pin(self.config_pin)
+        settings = settings_from_pin(self.config_pin, scheduled_live=self.scheduled_live)
         if self.check_only == "no":
             witness(settings, self.day, trace())
         else:

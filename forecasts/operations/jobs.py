@@ -43,17 +43,22 @@ class Settings(BaseModel):
 
     @model_validator(mode="after")
     def validate_policy(self) -> "Settings":
+        prefix = f"snapshots/{self.snapshot_id}/"
         names = set(self.snapshot_files)
         if names not in ({"manifest.json", "prices.parquet"},
                          {"manifest.json", "prices.parquet", "weather.parquet", "demand.parquet"}):
             raise ValueError("Pin the snapshot manifest and every snapshot table")
-        if self.replay is None and (self.archive_bucket is None or self.publication_time is None):
-            raise ValueError("Production requires the market archive and an explicit Berlin publication deadline")
+        if any(pin.key != prefix + name for name, pin in self.snapshot_files.items()):
+            raise ValueError("Snapshot pins must use canonical keys for the selected snapshot")
+        if self.replay is None and self.archive_bucket is None:
+            raise ValueError("Production requires the market archive")
         return self
 
     def deadline(self, delivery_day: date) -> datetime:
         """Resolve the explicit preceding-day Berlin publication SLA to UTC."""
         if self.publication_time is None:
+            if self.replay is None:
+                raise ValueError(f"Live issuance for {delivery_day} needs an agreed Berlin publication time")
             return cutoff(delivery_day)
         return datetime.combine(delivery_day - timedelta(days=1), time.fromisoformat(self.publication_time),
                                 BERLIN).astimezone(timezone.utc)
@@ -269,8 +274,8 @@ def _snapshot(store: Artifacts, settings: Settings, directory: Path) -> Path:
     directory.mkdir()
     manifest = store.pinned(settings.snapshot_files["manifest.json"]).data
     data = json.loads(manifest)
-    expected = {file["file"]: file["sha256"] for file in data["files"].values()}
-    supplied = {name: pin.sha256 for name, pin in settings.snapshot_files.items() if name != "manifest.json"}
+    expected = {file["file"]: (file["key"], file["sha256"]) for file in data["files"].values()}
+    supplied = {name: (pin.key, pin.sha256) for name, pin in settings.snapshot_files.items() if name != "manifest.json"}
     if data["snapshot_id"] != settings.snapshot_id or supplied != expected:
         raise ValueError("Pinned snapshot inventory does not match its manifest")
     (directory / "manifest.json").write_bytes(manifest)
@@ -340,6 +345,9 @@ def _validate_edition(raw: bytes, settings: Settings, day: date, fit: FitAuthori
     if (edition.run_id != fit.run_id or edition.run_manifest_sha256 != fit.files["manifest.json"].sha256
             or edition.training_snapshot_id != fit.snapshot_id):
         raise ValueError(f"Issue for {day} disagrees with its immutable fit")
+    grid = [row.delivery_utc for row in edition.quarters]
+    if grid != list(quarters(day, day + timedelta(days=1))) or any(ts.utcoffset() != timedelta(0) for ts in grid):
+        raise ValueError(f"Forecast must preserve the exact ordered UTC quarter grid for {day}")
     return edition
 
 

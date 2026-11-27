@@ -9,16 +9,17 @@ from forecasts.operations.jobs import fit
 
 class DeLuMonthlyFit(FlowSpec):
     scheduled_at = Parameter("scheduled_at", required=True)
+    scheduled_live = Parameter("scheduled_live", default="no")
     config_pin = Parameter("config_pin", default=os.environ.get("FORECAST_CONFIG_PIN"))
 
     @batch(log_driver="awslogs", log_options=["awslogs-group:/coppersushi/forecast-operations/batch", "awslogs-stream-prefix:forecast"],
-           cpu=2, memory=8192)
+           cpu=1, memory=4096)
     @step
     def start(self) -> None:
         day = delivery_date(self.scheduled_at)
         if day.day != 1:
             raise ValueError(f"Monthly training requires first-of-month delivery, got {day}")
-        self.fit_result = fit(settings_from_pin(self.config_pin), day, trace())
+        self.fit_result = fit(settings_from_pin(self.config_pin, scheduled_live=self.scheduled_live), day, trace())
         self.next(self.end)
 
     @batch(log_driver="awslogs", log_options=["awslogs-group:/coppersushi/forecast-operations/batch", "awslogs-stream-prefix:forecast"],
