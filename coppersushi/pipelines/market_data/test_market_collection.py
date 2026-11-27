@@ -1,6 +1,8 @@
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from io import BytesIO
+from pathlib import Path
+from urllib.response import addinfourl
 import json
 from urllib.error import HTTPError
 
@@ -193,3 +195,21 @@ def test_publication_error_correlates_raw_receipt_without_leaking_token(monkeypa
     assert scope in str(caught.value) and "write rejected [redacted]" in str(caught.value)
     assert "private-test-token" not in caplog.text
     assert "edition_published" not in caplog.text
+
+
+@pytest.mark.parametrize(("publisher", "fixture", "detail"), [
+    ("entsoe", "entsoe_missing_resolution.xml", "resolution"),
+    ("smard", "smard_nanosecond_epoch.json", "1795129200000000000"),
+])
+def test_malformed_price_response_preserves_evidence(monkeypatch, publisher, fixture, detail) -> None:
+    body = (Path(__file__).parent / "fixtures" / fixture).read_bytes()
+    monkeypatch.setenv("ENTSOE_API_TOKEN", "test-key")
+    monkeypatch.setattr(collect_market_editions, "urlopen",
+                        lambda req, timeout: addinfourl(BytesIO(body), {}, req.full_url, 200))
+    store = CollectorS3()
+    attempt, = collect_market_editions.collect_day(store, "test", publisher, DAY, clock=lambda: T)
+    assert attempt.outcome == "failed" and detail in attempt.diagnostic
+    assert read_response(store, "test", attempt.attempt_id).body == body
+    cutoff = T + timedelta(seconds=1)
+    assert read_day_diagnostics(store, "test", DAY, cutoff) == [attempt]
+    assert read_editions(store, "test", DAY, cutoff) == []

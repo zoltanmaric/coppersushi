@@ -29,7 +29,10 @@ def prices(body: bytes, zone: str, day: MarketDay) -> list[PriceRow]:
     weekly = _WeeklyPrices.model_validate(json.loads(body, parse_float=Decimal))
     rows = []
     for millis, price in weekly.series:
-        interval = datetime(1970, 1, 1, tzinfo=UTC) + timedelta(milliseconds=millis)
+        try:
+            interval = datetime(1970, 1, 1, tzinfo=UTC) + timedelta(milliseconds=millis)
+        except OverflowError as error:
+            raise ValueError(f"SMARD timestamp outside the supported millisecond range: {millis}") from error
         if price is not None and day.start_time_utc <= interval < day.end_time_utc:
             rows.append(PriceRow(interval=interval, zone=zone, price=price, upstream_source="ENTSO-E"))
     return rows

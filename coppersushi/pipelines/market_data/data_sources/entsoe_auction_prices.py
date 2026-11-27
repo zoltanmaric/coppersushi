@@ -56,7 +56,10 @@ def prices(body: bytes, zone: str, day: MarketDay) -> list[PriceRow]:
             raise ValueError(f"Unsupported ENTSO-E curve {curve}")
         for period in series.findall("{*}Period"):
             resolution = "PT15M" if day.market_time_unit == "15min" else "PT60M"
-            if period.findtext("{*}resolution") == resolution:
+            reported = period.findtext("{*}resolution")
+            if not reported or not reported.strip():
+                raise ValueError(f"Missing ENTSO-E period resolution for {zone}")
+            if reported == resolution:
                 rows.extend(_period(period, zone, day, curve))
     return rows
 

@@ -1,0 +1,16 @@
+<Publication_MarketDocument>
+  <type>A44</type>
+  <TimeSeries>
+    <in_Domain.mRID>10Y1001A1001A82H</in_Domain.mRID>
+    <out_Domain.mRID>10Y1001A1001A82H</out_Domain.mRID>
+    <contract_MarketAgreement.type>A01</contract_MarketAgreement.type>
+    <auction.type>A01</auction.type>
+    <currency_Unit.name>EUR</currency_Unit.name>
+    <price_Measure_Unit.name>MWH</price_Measure_Unit.name>
+    <curveType>A01</curveType>
+    <Period>
+      <timeInterval><start>2026-11-19T23:00Z</start><end>2026-11-19T23:15Z</end></timeInterval>
+      <Point><position>1</position><price.amount>42</price.amount></Point>
+    </Period>
+  </TimeSeries>
+</Publication_MarketDocument>
