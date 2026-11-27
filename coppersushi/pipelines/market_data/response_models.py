@@ -70,6 +70,8 @@ Receipt = Annotated[ResponseReceipt | FailedAttempt, Field(discriminator="kind")
 class AttemptOutcome(Poll):
     """Index entry left by a completed collection and normalization attempt."""
 
+    invocation_id: UUID | None = None
+    publisher_retry_at: AwareDatetime | None = None
     completed_at: AwareDatetime
     outcome: Literal["validated", "empty", "failed"]
     rows: Annotated[int, Field(ge=0)]

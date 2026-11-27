@@ -32,10 +32,10 @@ def check_ready(client: "S3Client", bucket: str, publisher: Publisher, now: date
 
 
 def save_retry_after(client: "S3Client", bucket: str, poll: Poll, *, status: int,
-                     retry_after: str | None, observed_at: datetime) -> None:
+                     retry_after: str | None, observed_at: datetime) -> datetime | None:
     """Record a pause from response headers before reading the publisher's body."""
     if status not in (HTTPStatus.TOO_MANY_REQUESTS, HTTPStatus.SERVICE_UNAVAILABLE):
-        return
+        return None
     delay = retry_after.strip() if retry_after else ""
     try:
         until = (observed_at + timedelta(seconds=int(delay)) if delay.isascii() and delay.isdigit()
@@ -44,12 +44,14 @@ def save_retry_after(client: "S3Client", bucket: str, poll: Poll, *, status: int
             raise ValueError("Retry-After date has no timezone")
     except (TypeError, ValueError, OverflowError):
         if status != HTTPStatus.TOO_MANY_REQUESTS:
-            return
+            return None
         # Without a usable retry time, leave the publisher at least one minute to recover.
         until = observed_at + timedelta(minutes=1)
     if until > observed_at:
         key = f"market-data/cooldowns/{poll.publisher}/{_timestamp(until)}/{poll.attempt_id}"
         put_once(client, bucket, key, b"")
+        return until
+    return None
 
 
 def _timestamp(value: datetime) -> str:

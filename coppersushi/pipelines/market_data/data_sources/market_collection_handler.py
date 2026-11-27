@@ -1,12 +1,14 @@
 """One independent market publisher poll, invoked by Scheduler or a researcher."""
 from datetime import date, timedelta
 import os
-from typing import Literal, get_args
+from typing import Literal, Protocol, get_args
+from uuid import UUID
 
 import boto3
 from pydantic import AwareDatetime, BaseModel, ConfigDict, model_validator
 
-from coppersushi.pipelines.market_data.response_models import AuctionZone, Publisher
+from coppersushi.pipelines.market_data.data_sources.responses import read_invocation_failures
+from coppersushi.pipelines.market_data.response_models import AttemptOutcome, AuctionZone, Publisher
 from coppersushi.pipelines.market_day import MarketDay
 from coppersushi.pipelines.market_data.data_sources.collect_market_editions import collect_day
 from coppersushi.pipelines.market_data.data_sources.publisher_cooldown import PublisherCoolingDown
@@ -45,20 +47,42 @@ class PollRequest(BaseModel):
         return MarketDay.containing(self.scheduled_at).date + timedelta(days=self.day_offset)
 
 
-def handler(event: dict, context: object) -> dict:
+class _Invocation(Protocol):
+    aws_request_id: str
+
+
+def handler(event: dict, context: _Invocation) -> dict:
     """Store every zone attempt before surfacing publisher failures to Lambda."""
     request = PollRequest.model_validate(event)
     day = request.day()
     zones = request.zones or (("DE-LU",) if request.publisher == "smard" else get_args(AuctionZone))
+    client = boto3.client("s3")
+    bucket = os.environ["COPPERSUSHI_CACHE_BUCKET"]
+    invocation_id = UUID(context.aws_request_id)
     try:
-        attempts = collect_day(boto3.client("s3"), os.environ["COPPERSUSHI_CACHE_BUCKET"],
-                               request.publisher, day, zones=zones)
+        attempts = collect_day(client, bucket, request.publisher, day, zones=zones, invocation_id=invocation_id)
     except PublisherCoolingDown as pause:
-        return {"publisher": request.publisher, "delivery_day": day.isoformat(),
-                "status": "deferred", "retry_at": pause.until.isoformat(),
-                "attempt_id": str(pause.attempt)}
-    failures = [str(attempt.attempt_id) for attempt in attempts if attempt.outcome == "failed"]
+        return _deferred(request, day, pause, read_invocation_failures(client, bucket, day, invocation_id))
+    failures = [attempt for attempt in attempts if attempt.outcome == "failed"]
+    _raise_failures([failure for failure in failures if failure.publisher_retry_at is None])
     if failures:
-        raise RuntimeError(f"{request.publisher} {day} failed poll receipts: {', '.join(failures)}")
+        throttle = failures[-1]
+        assert throttle.publisher_retry_at is not None
+        pause = PublisherCoolingDown(request.publisher, throttle.publisher_retry_at, throttle.attempt_id)
+        recovered = {attempt.zone for attempt in attempts if attempt.outcome != "failed"}
+        previous = read_invocation_failures(client, bucket, day, invocation_id)
+        return _deferred(request, day, pause, [failure for failure in previous if failure.zone not in recovered])
     return {"publisher": request.publisher, "delivery_day": day.isoformat(),
             "attempt_ids": [str(attempt.attempt_id) for attempt in attempts]}
+
+
+def _deferred(request: PollRequest, day: date, pause: PublisherCoolingDown, failures: list[AttemptOutcome]) -> dict:
+    _raise_failures(failures)
+    return {"publisher": request.publisher, "delivery_day": day.isoformat(),
+            "status": "deferred", "retry_at": pause.until.isoformat(), "attempt_id": str(pause.attempt)}
+
+
+def _raise_failures(failures: list[AttemptOutcome]) -> None:
+    if failures:
+        details = "; ".join(f"{f.publisher} {f.delivery_day} {f.zone} attempt {f.attempt_id}: {f.diagnostic}" for f in failures)
+        raise RuntimeError(f"Failed market polls: {details}")
