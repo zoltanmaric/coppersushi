@@ -7,7 +7,6 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import subprocess
 import sys
 from tempfile import NamedTemporaryFile
 from typing import Annotated, Literal
@@ -23,7 +22,7 @@ from forecasts.config import MODEL_METHOD, QUANTILES, RunConfig
 from forecasts.inputs.fresh_sources import required_lag_dates
 from forecasts.model.contracts import Reference
 from forecasts.model.coverage import STATIC_INPUT_POLICY
-from forecasts.provenance import digest, source_hashes
+from forecasts.provenance import checkout_identity, digest, source_hashes
 from forecasts.market import BERLIN, cutoff, quarters, require_quarters
 from forecasts.model.prediction import predict_day
 from forecasts.inputs.input_types import Report
@@ -44,15 +43,19 @@ def main() -> None:
     source.add_argument("--archive-bucket", help="Private market archive; defaults to COPPERSUSHI_CACHE_BUCKET")
     parser.add_argument("--run", type=Path, help="Saved monthly fits and their manifest")
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--publication-deadline", type=datetime.fromisoformat, metavar="TIMESTAMP",
+                        help="Timezone-aware live publication deadline; defaults to the 11:00 Berlin cutoff")
     parser.add_argument("--replay", action="store_true", help="Reconstruct at the historical cutoff")
     args = parser.parse_args()
     if args.read:
         if any((args.delivery_date, args.snapshot, args.archive_bucket, args.run, args.output, args.replay)):
-            parser.error("--read accepts only the edition path")
-        print(json.dumps(read_edition(args.read), allow_nan=False))
+            parser.error("--read accepts only the edition path and optional --publication-deadline")
+        print(json.dumps(read_edition(args.read, publication_deadline=args.publication_deadline), allow_nan=False))
         return
     if not all((args.delivery_date, args.run, args.output)):
         parser.error("Issuance requires --delivery-date, --run and --output")
+    if args.replay and args.publication_deadline is not None:
+        parser.error("--publication-deadline applies to live editions")
     if args.snapshot and not args.replay:
         parser.error("--snapshot requires --replay")
     bucket = None if args.snapshot else args.archive_bucket or os.environ.get("COPPERSUSHI_CACHE_BUCKET")
@@ -60,7 +63,7 @@ def main() -> None:
         parser.error("Set --archive-bucket or COPPERSUSHI_CACHE_BUCKET, or explicitly replay a snapshot")
     try:
         issued = issue_day(args.delivery_date, args.snapshot, args.run, args.output,
-                           replay=args.replay, archive_bucket=bucket)
+                           replay=args.replay, archive_bucket=bucket, publication_deadline=args.publication_deadline)
     except RequiredPricesUnavailable as error:
         print(json.dumps({"status": "retryable", "reason": str(error), "input_manifest": error.input_manifest}),
               file=sys.stderr)
@@ -78,20 +81,26 @@ class RequiredPricesUnavailable(ValueError):
 
 
 def issue_day(day: date, snapshot: Path | None, run: Path, output: Path, *, replay: bool,
-              archive_bucket: str | None = None) -> bool:
-    """Publish a local forecast file once, by the live deadline when applicable."""
+              archive_bucket: str | None = None, publication_deadline: datetime | None = None) -> bool:
+    """Publish one local edition, selecting live inputs no later than 11:00 Berlin.
+
+    The optional live publication deadline permits the file to finish later that day.
+    """
     started = datetime.now(timezone.utc)
-    deadline = cutoff(day)
-    issue_date = deadline.astimezone(BERLIN).date()
+    information_cutoff = cutoff(day)
+    if replay and publication_deadline is not None:
+        raise ValueError("Publication deadline applies to live editions")
+    deadline = _publication_deadline(information_cutoff, publication_deadline)
+    issue_date = information_cutoff.astimezone(BERLIN).date()
     if (snapshot is None) == (archive_bucket is None):
         raise ValueError("Choose exactly one issue input: market archive or snapshot")
     if snapshot is not None and not replay:
         raise ValueError("Live issuance requires the market archive")
-    if archive_bucket and replay and started < deadline:
+    if archive_bucket and replay and started < information_cutoff:
         raise ValueError("Archive replay requires a delivery day whose issue cutoff has passed")
     if not replay and started.astimezone(BERLIN).date() < issue_date:
         raise ValueError("Live issue opens on the day before delivery")
-    input_cutoff = deadline if replay else min(started, deadline)
+    input_cutoff = information_cutoff if replay else min(started, information_cutoff)
     manifest = _RunManifest.model_validate_json((run / "manifest.json").read_bytes())
     fold = day.replace(day=1)
     if manifest.input_policy != STATIC_INPUT_POLICY:
@@ -148,13 +157,13 @@ def issue_day(day: date, snapshot: Path | None, run: Path, output: Path, *, repl
         try:
             archive = ArchiveHistory(archive_bucket, day, input_cutoff)
             missing = archive.missing()
-            if missing and input_cutoff < deadline:
-                if datetime.now(timezone.utc) < deadline:
+            if missing and input_cutoff < information_cutoff:
+                if datetime.now(timezone.utc) < information_cutoff:
                     raise RequiredPricesUnavailable(
                         f"{len(missing)} required price quarters unavailable by {input_cutoff}",
                         archive.input_manifest(),
                     )
-                input_cutoff = deadline
+                input_cutoff = information_cutoff
                 archive = ArchiveHistory(archive_bucket, day, input_cutoff)
                 missing = archive.missing()
         except ConflictingPrices as conflict:
@@ -195,8 +204,7 @@ def issue_day(day: date, snapshot: Path | None, run: Path, output: Path, *, repl
         **input_evidence, "training_snapshot_id": config.snapshot_id,
         "run_id": manifest.run_id, "fit_month": fold.isoformat(),
         "run_manifest_sha256": fit_manifest_digest,
-        "prediction_revision": subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=Path(__file__).parent, text=True).strip(),
+        "prediction_revision": checkout_identity()[0],
         "source_sha256": source_hashes(source),
         "pixi_lock_sha256": digest(source.parent / "pixi.lock"),
         "quantiles": config.quantiles, "method": forecast.selected_model,
@@ -211,7 +219,7 @@ def issue_day(day: date, snapshot: Path | None, run: Path, output: Path, *, repl
     return _publish_live(output, payload, deadline, lambda reason: missed_edition(reason, input_evidence))
 
 
-def read_edition(output: Path) -> Report:
+def read_edition(output: Path, *, publication_deadline: datetime | None = None) -> Report:
     """Validate the published edition before recording first observed availability."""
     with output.open("rb") as source:
         raw = source.read()
@@ -222,7 +230,8 @@ def read_edition(output: Path) -> Report:
     if not isinstance(data, dict) or data.get("status") not in ("issued", "reconstructed", "missed"):
         raise ValueError("Invalid forecast edition")
     if data["status"] == "issued":
-        edition = _IssuedEdition.model_validate_json(raw)
+        edition = IssuedEdition.model_validate_json(raw)
+        _check_issued_times(edition, publication_deadline)
         if not _published_before(state, edition.deadline):
             raise ValueError(f"Forecast publication finished after its deadline: {output}")
         receipt = output.with_name(f"{output.name}.availability.json")
@@ -237,6 +246,53 @@ def read_edition(output: Path) -> Report:
             raise ValueError("Availability receipt does not match the forecast edition")
         data["availability"] = evidence.model_dump(mode="json")
     return data
+
+
+def validate_issued_edition(raw: bytes, *, delivery_date: date,
+                            publication_deadline: datetime | None = None) -> IssuedEdition:
+    """Validate live content against the requested day and the caller's publication deadline."""
+    edition = IssuedEdition.model_validate_json(raw)
+    if edition.delivery_date != delivery_date:
+        raise ValueError("Issued forecast does not match the requested delivery date")
+    _check_issued_times(edition, publication_deadline)
+    return edition
+
+
+def validate_reconstructed_edition(raw: bytes, *, delivery_date: date) -> ReconstructedEdition:
+    """Validate a replay and its historical cutoff for the requested delivery day."""
+    edition = ReconstructedEdition.model_validate_json(raw)
+    if edition.delivery_date != delivery_date:
+        raise ValueError("Reconstructed forecast does not match the requested delivery date")
+    return edition
+
+
+def validate_publication_times(edition: IssuedEdition, *, published_at: datetime,
+                               first_observed_at: datetime) -> None:
+    """Require a completed remote write and validated read by the expected deadline."""
+    if published_at.utcoffset() is None or first_observed_at.utcoffset() is None:
+        raise ValueError("Publication and first-read evidence must be timezone-aware")
+    if published_at > edition.deadline:
+        raise ValueError("Forecast publication finished after its deadline")
+    if first_observed_at > edition.deadline:
+        raise ValueError("Forecast first validated read finished after its deadline")
+    if first_observed_at < max(edition.issued_at, published_at):
+        raise ValueError("Forecast first validated read precedes issuance or publication")
+
+
+def _check_issued_times(edition: IssuedEdition, publication_deadline: datetime | None) -> None:
+    expected = _publication_deadline(cutoff(edition.delivery_date), publication_deadline)
+    if edition.deadline != expected:
+        raise ValueError("Issued forecast deadline does not match the expected publication deadline")
+
+
+def _publication_deadline(information_cutoff: datetime, deadline: datetime | None) -> datetime:
+    if deadline is None:
+        return information_cutoff
+    if deadline.utcoffset() is None:
+        raise ValueError("Publication deadline must be timezone-aware")
+    if deadline < information_cutoff or deadline.astimezone(BERLIN).date() != information_cutoff.astimezone(BERLIN).date():
+        raise ValueError("Publication deadline must be on the issue day at or after the information cutoff")
+    return deadline.astimezone(timezone.utc)
 
 
 def _publish_live(output: Path, payload: Report, deadline: datetime,
@@ -260,6 +316,7 @@ def _published_before(state: os.stat_result, deadline: datetime) -> bool:
     epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
     deadline_ns = ((deadline - epoch) // timedelta(microseconds=1)) * 1_000
     return state.st_nlink == 1 and state.st_ctime_ns < deadline_ns
+
 
 def _write_edition(output: Path, payload: Report) -> None:
     with _stage_edition(output, payload) as staged:
@@ -316,19 +373,15 @@ class _InputManifest(BaseModel):
     prices: list[_SelectedPrice]
 
 
-class _IssuedEdition(BaseModel):
-    """The live forecast file whose first read can establish availability."""
+class _Edition(BaseModel):
+    """Shared scientific output and provenance for live editions and replays."""
 
     model_config = ConfigDict(strict=True, extra="forbid")
 
-    status: Literal["issued"]
-    mode: Literal["live"]
     delivery_date: date
     created_at: AwareDatetime
-    issued_at: AwareDatetime
     deadline: AwareDatetime
     input_cutoff: AwareDatetime
-    input_manifest: _InputManifest
     training_snapshot_id: _Digest
     run_id: _Nonempty
     fit_month: date
@@ -341,21 +394,20 @@ class _IssuedEdition(BaseModel):
     quarters: list[_QuarterForecast]
 
     @model_validator(mode="after")
-    def check_edition(self) -> "_IssuedEdition":
+    def check_edition(self) -> "_Edition":
         day = self.delivery_date
         if self.fit_month != day.replace(day=1):
             raise ValueError("Fit month must match the forecast delivery date")
-        if self.deadline != cutoff(day) or not self.input_cutoff <= self.created_at <= self.issued_at <= self.deadline:
-            raise ValueError("Issued forecast times do not meet the delivery deadline")
         if self.method != MODEL_METHOD or tuple(self.quantiles) != QUANTILES:
-            raise ValueError("Issued forecast must use the configured method and quantiles")
-        require_quarters((row.delivery_utc for row in self.quarters), day, day + timedelta(days=1), "Forecast")
-        self._check_inputs()
+            raise ValueError("Forecast must use the configured method and quantiles")
+        intervals = [row.delivery_utc for row in self.quarters]
+        require_quarters(intervals, day, day + timedelta(days=1), "Forecast")
+        if intervals != sorted(intervals) or any(ts.utcoffset() != timedelta(0) for ts in intervals):
+            raise ValueError("Forecast delivery quarters must be in chronological UTC order")
         return self
 
-    def _check_inputs(self) -> None:
+    def _check_inputs(self, inputs: _InputManifest) -> None:
         day = self.delivery_date
-        inputs = self.input_manifest
         if inputs.policy != FORECAST_POLICY.id or inputs.cutoff != self.input_cutoff:
             raise ValueError("Price evidence policy or cutoff does not match the forecast decision")
         expected = {interval for lag in required_lag_dates(day) for interval in quarters(lag, lag + timedelta(days=1))}
@@ -369,6 +421,44 @@ class _IssuedEdition(BaseModel):
                         or row.interval != price.interval or row.received_at > row.visible_at
                         or row.available_at > inputs.cutoff):
                     raise ValueError(f"Ineligible price evidence for {price.interval}")
+
+
+class IssuedEdition(_Edition):
+    """A live forecast with complete evidence capped at the information cutoff."""
+
+    status: Literal["issued"]
+    mode: Literal["live"]
+    issued_at: AwareDatetime
+    input_manifest: _InputManifest
+
+    @model_validator(mode="after")
+    def check_live_inputs(self) -> "IssuedEdition":
+        if not self.input_cutoff <= self.created_at <= self.issued_at <= self.deadline:
+            raise ValueError("Issued forecast times do not meet the delivery deadline")
+        if self.input_cutoff > cutoff(self.delivery_date):
+            raise ValueError("Issued forecast input cutoff exceeds the information cutoff")
+        self._check_inputs(self.input_manifest)
+        return self
+
+
+class ReconstructedEdition(_Edition):
+    """A forecast replay built from a frozen snapshot or historical archive."""
+
+    status: Literal["reconstructed"]
+    mode: Literal["reconstruction"]
+    issued_at: None
+    snapshot_id: _Digest | None = None
+    input_manifest: _InputManifest | None = None
+
+    @model_validator(mode="after")
+    def check_replay_inputs(self) -> "ReconstructedEdition":
+        if self.deadline != cutoff(self.delivery_date) or self.input_cutoff != self.deadline:
+            raise ValueError("Reconstruction must use the historical information cutoff")
+        if (self.snapshot_id is None) == (self.input_manifest is None):
+            raise ValueError("Reconstruction requires exactly one input source")
+        if self.input_manifest is not None:
+            self._check_inputs(self.input_manifest)
+        return self
 
 
 class _Availability(BaseModel):
