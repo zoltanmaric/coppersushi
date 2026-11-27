@@ -374,6 +374,8 @@ def _validate_remote(settings: Settings, day: date, edition: daily.IssuedEdition
 
 def _receipt(store: Artifacts, settings: Settings, day: date, issue_object: StoredObject, edition: daily.IssuedEdition | daily.ReconstructedEdition) -> Report:
     stored = store.get(_receipt_path(day))
+    if stored.published_at >= settings.deadline(day):
+        raise ValueError(f"First-read receipt reached S3 after the deadline for {day}")
     receipt = ReadReceipt.model_validate_json(stored.data)
     if (receipt.date != day or receipt.edition_version_id != issue_object.pin.version_id
             or receipt.edition_sha256 != issue_object.pin.sha256 or receipt.published_at != issue_object.published_at):

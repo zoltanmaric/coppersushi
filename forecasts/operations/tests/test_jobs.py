@@ -101,6 +101,21 @@ class TestOperations(TestCase):
         with self.assertRaisesRegex(ValueError, "receipt version, digest"):
             jobs.read(self.settings, self.day)
 
+    def test_receipt_write_crossing_deadline_is_a_dated_miss(self) -> None:
+        self._publish_issue()
+        put = self.s3.put_object
+
+        def delayed_receipt(**request: Any) -> dict:
+            if request["Key"].startswith("receipts/"):
+                self.s3.now = self.deadline + timedelta(seconds=1)
+            return put(**request)
+
+        with patch.object(self.s3, "put_object", side_effect=delayed_receipt):
+            with self.assertRaisesRegex(ValueError, "receipt reached S3 after the deadline"):
+                jobs.witness(self.settings, self.day, self.trace)
+        with self.assertRaisesRegex(ValueError, str(self.day)):
+            jobs.read(self.settings, self.day)
+
     def test_late_publication_or_first_get_leave_dated_misses(self) -> None:
         for delay in ("write", "read"):
             with self.subTest(delay=delay):
