@@ -10,7 +10,7 @@ Every forecast uses only information available by its issue deadline. Historical
 
 ### Selection-principle
 
-Replaying an issued forecast uses its saved fit and input editions. Reconstructing at the deadline can select a correction that arrived after issuance. In the [archive issuance implementation](https://github.com/zoltanmaric/coppersushi/blob/692072b7/forecasts/daily.py#L73-L88), live selection starts at the issue attempt's cutoff and replay selects at the deadline. The [issued record](https://github.com/zoltanmaric/coppersushi/blob/692072b7/forecasts/daily.py#L176-L194) identifies the fit manifest, prediction code, input cutoff and selected evidence.
+Replaying an issued forecast uses its saved fit and input editions. Reconstructing at the deadline can select a correction that arrived after issuance. The [daily issue command](../../forecasts/README.md#on-demand-day-ahead-forecast) records the mode, selected cutoff, fit identity and price evidence. An issued forecast's first successful validated read has a separate timestamp. A missed edition retains whether the attempt was live or a reconstruction.
 
 Choose storage from the reads and writes the system needs. Add complexity only for a demonstrated requirement.
 

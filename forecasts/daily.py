@@ -1,6 +1,8 @@
 """Issue or read a day-ahead forecast edition."""
 import argparse
-from datetime import date, datetime, timezone
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from datetime import date, datetime, timedelta, timezone
 import hashlib
 import json
 import os
@@ -8,16 +10,21 @@ from pathlib import Path
 import subprocess
 import sys
 from tempfile import NamedTemporaryFile
-from typing import Annotated
+from typing import Annotated, Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, FiniteFloat, StringConstraints, field_validator
+from pydantic import (
+    AwareDatetime, BaseModel, ConfigDict, Field, FiniteFloat, StringConstraints, field_validator, model_validator,
+)
 
-from coppersushi.pipelines.market_data.resolution import FORECAST_POLICY, ConflictingPrices
-from forecasts.config import QUANTILES, RunConfig
+from coppersushi.pipelines.market_data.resolution import (
+    FORECAST_POLICY, ConflictingPrices, DerivedPrice, PolicyId, PublishedPrice,
+)
+from forecasts.config import MODEL_METHOD, QUANTILES, RunConfig
+from forecasts.inputs.fresh_sources import required_lag_dates
 from forecasts.model.contracts import Reference
 from forecasts.model.coverage import STATIC_INPUT_POLICY
 from forecasts.provenance import digest, source_hashes
-from forecasts.market import BERLIN, cutoff, quarters
+from forecasts.market import BERLIN, cutoff, quarters, require_quarters
 from forecasts.model.prediction import predict_day
 from forecasts.inputs.input_types import Report
 from forecasts.inputs.market_archive import ArchiveHistory
@@ -123,13 +130,18 @@ def issue_day(day: date, snapshot: Path | None, run: Path, output: Path, *, repl
     reader: PriceHistoryReader
     input_evidence: Report
 
-    def record_miss(reason: str, input_evidence: Report) -> bool:
-        _write_edition(output, {
-            "delivery_date": day.isoformat(), "status": "missed",
+    mode = "reconstruction" if replay else "live"
+
+    def missed_edition(reason: str, evidence: Report) -> Report:
+        return {
+            "delivery_date": day.isoformat(), "status": "missed", "mode": mode,
             "recorded_at": datetime.now(timezone.utc).isoformat(), "deadline": deadline.isoformat(),
-            "run_id": manifest.run_id, "run_manifest_sha256": fit_manifest_digest,
-            "reason": reason, **input_evidence,
-        })
+            "input_cutoff": input_cutoff.isoformat(), "run_id": manifest.run_id, "fit_month": fold.isoformat(),
+            "run_manifest_sha256": fit_manifest_digest, "reason": reason, **evidence,
+        }
+
+    def record_miss(reason: str, evidence: Report) -> bool:
+        _write_edition(output, missed_edition(reason, evidence))
         return False
 
     if archive_bucket is not None:
@@ -168,7 +180,8 @@ def issue_day(day: date, snapshot: Path | None, run: Path, output: Path, *, repl
         snapshot_manifest, tables = read_local(snapshot)
         input_evidence = {"snapshot_id": snapshot_manifest["snapshot_id"]}
         reader = InputReader(tables)
-    rows = build_day_features(reader, day, live=not replay, issue_time=started, require_complete=True)
+    rows = build_day_features(reader, day, live=not replay, issue_time=input_cutoff if not replay else started,
+                              require_complete=True)
     forecast = predict_day(rows, models, reference, config)
     created = datetime.now(timezone.utc)
     if not replay and created > deadline:
@@ -176,7 +189,7 @@ def issue_day(day: date, snapshot: Path | None, run: Path, output: Path, *, repl
     source = Path(__file__).resolve().parent
     payload = {
         "delivery_date": day.isoformat(), "status": "reconstructed" if replay else "issued",
-        "mode": "reconstruction" if replay else "live",
+        "mode": mode,
         "created_at": created.isoformat(), "deadline": deadline.isoformat(),
         "input_cutoff": input_cutoff.isoformat(),
         **input_evidence, "training_snapshot_id": config.snapshot_id,
@@ -192,29 +205,24 @@ def issue_day(day: date, snapshot: Path | None, run: Path, output: Path, *, repl
                                                 forecast.ordered["reference"], strict=True)],
     }
     payload["issued_at"] = None if replay else datetime.now(timezone.utc).isoformat()
-    if not _write_edition(output, payload, deadline=None if replay else deadline):
-        return record_miss("deadline_passed_before_publication", input_evidence)
-    return True
-
-
-def _write_edition(output: Path, payload: Report, *, deadline: datetime | None = None) -> bool:
-    """Commit the staged edition once if its issue decision meets the deadline."""
-    with NamedTemporaryFile(mode="w", dir=output.parent, delete_on_close=False) as staging:
-        json.dump(payload, staging, allow_nan=False)
-        staging.close()
-        if deadline is not None and datetime.now(timezone.utc) > deadline:
-            return False
-        os.link(staging.name, output)
+    if replay:
+        _write_edition(output, payload)
         return True
+    return _publish_live(output, payload, deadline, lambda reason: missed_edition(reason, input_evidence))
 
 
 def read_edition(output: Path) -> Report:
-    """Read the edition before recording its first witnessed availability."""
-    raw = output.read_bytes()
+    """Validate the published edition before recording first observed availability."""
+    with output.open("rb") as source:
+        raw = source.read()
+        state = os.fstat(source.fileno())
+        if state.st_nlink != 1 or not os.path.samestat(state, output.stat()):
+            raise ValueError(f"Forecast publication is unfinished or changed during read: {output}")
     data = json.loads(raw)
-    if not isinstance(data, dict) or data.get("status") not in {"issued", "reconstructed", "missed"}:
+    if not isinstance(data, dict) or data.get("status") not in ("issued", "reconstructed", "missed"):
         raise ValueError("Invalid forecast edition")
     if data["status"] == "issued":
+        _IssuedEdition.model_validate_json(raw)
         receipt = output.with_name(f"{output.name}.availability.json")
         sha256 = hashlib.sha256(raw).hexdigest()
         try:
@@ -229,11 +237,137 @@ def read_edition(output: Path) -> Report:
     return data
 
 
+def _publish_live(output: Path, payload: Report, deadline: datetime,
+                  missed: Callable[[str], Report]) -> bool:
+    """Keep the staged link until the final publication attempt has been timed."""
+    with _stage_edition(output, payload) as staged:
+        if datetime.now(timezone.utc) <= deadline:
+            os.link(staged, output)
+            if datetime.now(timezone.utc) <= deadline:
+                return True
+            # A reader cannot witness the provisional edition while the staging link exists.
+            with _stage_edition(output, missed("deadline_passed_during_publication")) as failure:
+                os.replace(failure, output)
+            return False
+    _write_edition(output, missed("deadline_passed_before_publication"))
+    return False
+
+
+def _write_edition(output: Path, payload: Report) -> None:
+    with _stage_edition(output, payload) as staged:
+        os.link(staged, output)
+
+
+@contextmanager
+def _stage_edition(output: Path, payload: Report) -> Iterator[str]:
+    with NamedTemporaryFile(mode="w", dir=output.parent, delete=False) as staging:
+        path = Path(staging.name)
+        try:
+            json.dump(payload, staging, allow_nan=False)
+            staging.close()
+            yield staging.name
+        except BaseException:
+            # An interrupted publisher must leave any provisional edition unreadable.
+            if path.exists() and path.stat().st_nlink == 1:
+                path.unlink()
+            raise
+        else:
+            path.unlink(missing_ok=True)
+
+
+type _Digest = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]
+type _Nonempty = Annotated[str, StringConstraints(pattern=r"\S")]
+type _QuantileValues = Annotated[list[FiniteFloat], Field(min_length=len(QUANTILES), max_length=len(QUANTILES))]
+type _SelectedPrice = Annotated[PublishedPrice | DerivedPrice, Field(discriminator="kind")]
+
+
+class _QuarterForecast(BaseModel):
+    """Model and reference quantiles for one physical delivery quarter."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    delivery_utc: AwareDatetime
+    prices: _QuantileValues
+    reference: _QuantileValues
+
+    @field_validator("prices", "reference")
+    @classmethod
+    def check_order(cls, values: list[float]) -> list[float]:
+        if any(lower > upper for lower, upper in zip(values, values[1:])):
+            raise ValueError("Forecast quantiles must be nondecreasing")
+        return values
+
+
+class _InputManifest(BaseModel):
+    """Resolved lag prices and the cutoff used to select them."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    policy: PolicyId
+    cutoff: AwareDatetime
+    prices: list[_SelectedPrice]
+
+
+class _IssuedEdition(BaseModel):
+    """The live forecast file whose first read can establish availability."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    status: Literal["issued"]
+    mode: Literal["live"]
+    delivery_date: date
+    created_at: AwareDatetime
+    issued_at: AwareDatetime
+    deadline: AwareDatetime
+    input_cutoff: AwareDatetime
+    input_manifest: _InputManifest
+    training_snapshot_id: _Digest
+    run_id: _Nonempty
+    fit_month: date
+    run_manifest_sha256: _Digest
+    prediction_revision: Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{40}$")]
+    source_sha256: Annotated[dict[_Nonempty, _Digest], Field(min_length=1)]
+    pixi_lock_sha256: _Digest
+    quantiles: list[FiniteFloat]
+    method: str
+    quarters: list[_QuarterForecast]
+
+    @model_validator(mode="after")
+    def check_edition(self) -> "_IssuedEdition":
+        day = self.delivery_date
+        if self.fit_month != day.replace(day=1):
+            raise ValueError("Fit month must match the forecast delivery date")
+        if self.deadline != cutoff(day) or not self.input_cutoff <= self.created_at <= self.issued_at <= self.deadline:
+            raise ValueError("Issued forecast times do not meet the delivery deadline")
+        if self.method != MODEL_METHOD or tuple(self.quantiles) != QUANTILES:
+            raise ValueError("Issued forecast must use the configured method and quantiles")
+        require_quarters((row.delivery_utc for row in self.quarters), day, day + timedelta(days=1), "Forecast")
+        self._check_inputs()
+        return self
+
+    def _check_inputs(self) -> None:
+        day = self.delivery_date
+        inputs = self.input_manifest
+        if inputs.policy != FORECAST_POLICY.id or inputs.cutoff != self.input_cutoff:
+            raise ValueError("Price evidence policy or cutoff does not match the forecast decision")
+        expected = {interval for lag in required_lag_dates(day) for interval in quarters(lag, lag + timedelta(days=1))}
+        if len(inputs.prices) != len(expected) or {price.interval for price in inputs.prices} != expected:
+            raise ValueError("Price evidence must cover exactly the required Berlin lag quarters")
+        for price in inputs.prices:
+            if price.zone != "DE-LU" or price.policy_id != inputs.policy or not price.evidence:
+                raise ValueError(f"Missing or inapplicable price evidence for {price.interval}")
+            for row in price.evidence:
+                if (not row.edition_key.strip() or row.publisher not in FORECAST_POLICY.publishers
+                        or row.interval != price.interval or row.received_at > row.visible_at
+                        or row.available_at > inputs.cutoff):
+                    raise ValueError(f"Ineligible price evidence for {price.interval}")
+
+
 class _Availability(BaseModel):
     """First successful read of the content identified by its digest."""
 
     model_config = ConfigDict(extra="forbid")
-    edition_sha256: Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]
+    edition_sha256: _Digest
     first_observed_at: AwareDatetime
 
 
@@ -241,8 +375,8 @@ class _RunManifest(BaseModel):
     """The saved run fields needed to identify and verify a monthly fit."""
 
     model_config = ConfigDict(strict=True)
-    run_id: Annotated[str, StringConstraints(pattern=r"\S")]
-    artifacts: dict[str, Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]]
+    run_id: _Nonempty
+    artifacts: dict[str, _Digest]
     kind: str | None = None
     fit_day: date | None = None
     input_policy: str | None = None
@@ -257,7 +391,7 @@ class _SavedReference(BaseModel):
 
     model_config = ConfigDict(strict=True, extra="forbid")
     medians: dict[str, FiniteFloat]
-    offsets: Annotated[list[FiniteFloat], Field(min_length=len(QUANTILES), max_length=len(QUANTILES))]
+    offsets: _QuantileValues
     calibration_rows: Annotated[int, Field(gt=0)]
     excluded_rows: Annotated[int, Field(ge=0)]
 
