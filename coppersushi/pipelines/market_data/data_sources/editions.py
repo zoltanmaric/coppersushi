@@ -2,11 +2,13 @@
 from collections.abc import Sequence
 from datetime import date, datetime
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from botocore.exceptions import ClientError
 from pandera.errors import SchemaError
 from polars.exceptions import PolarsError
 
+from coppersushi.pipelines.market_data.data_sources.responses import read_attempt
 from coppersushi.pipelines.market_data.data_sources.parquet import SCHEMA_VERSION, decode_table, encode_table
 from coppersushi.pipelines.market_data.edition_models import PriceRow, PublishedEdition, SpreadRow, object_visible_by
 from coppersushi.pipelines.market_data.response_models import ResponseReceipt
@@ -31,7 +33,7 @@ def publish_edition(client: "S3Client", bucket: str, receipt: ResponseReceipt,
 
 
 def read_editions(client: "S3Client", bucket: str, day: date,
-                  cutoff: datetime) -> list[tuple[PublishedEdition, list[PriceRow | SpreadRow]]]:
+                  cutoff: datetime, *, publishers: frozenset[str] | None = None) -> list[tuple[PublishedEdition, list[PriceRow | SpreadRow]]]:
     """Read all eligible editions, including validated tables with zero rows."""
     if cutoff.utcoffset() is None:
         raise ValueError("Edition discovery requires an aware cutoff")
@@ -42,7 +44,15 @@ def read_editions(client: "S3Client", bucket: str, day: date,
             key = item["Key"]
             if not key.endswith(".parquet") or object_visible_by(item["LastModified"]) > cutoff:
                 continue
+            raw_receipt = None
+            if publishers is not None:
+                attempt_id = UUID(key.rsplit("/", 1)[-1].removesuffix(".parquet"))
+                raw_receipt = read_attempt(client, bucket, attempt_id)
+                if raw_receipt.publisher not in publishers:
+                    continue
             receipt, rows = _read_edition(client, bucket, key)
+            if raw_receipt is not None and receipt != raw_receipt:
+                raise ValueError(f"Edition differs from its raw receipt at {key}")
             edition = PublishedEdition(receipt=receipt, key=key, published_at=item["LastModified"])
             if edition.available_at <= cutoff:
                 editions.append((edition, rows))
