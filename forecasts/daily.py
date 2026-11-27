@@ -222,7 +222,9 @@ def read_edition(output: Path) -> Report:
     if not isinstance(data, dict) or data.get("status") not in ("issued", "reconstructed", "missed"):
         raise ValueError("Invalid forecast edition")
     if data["status"] == "issued":
-        _IssuedEdition.model_validate_json(raw)
+        edition = _IssuedEdition.model_validate_json(raw)
+        if not _published_before(state, edition.deadline):
+            raise ValueError(f"Forecast publication finished after its deadline: {output}")
         receipt = output.with_name(f"{output.name}.availability.json")
         sha256 = hashlib.sha256(raw).hexdigest()
         try:
@@ -239,19 +241,25 @@ def read_edition(output: Path) -> Report:
 
 def _publish_live(output: Path, payload: Report, deadline: datetime,
                   missed: Callable[[str], Report]) -> bool:
-    """Keep the staged link until the final publication attempt has been timed."""
+    """Classify the edition using the filesystem time of its final release."""
     with _stage_edition(output, payload) as staged:
-        if datetime.now(timezone.utc) <= deadline:
-            os.link(staged, output)
-            if datetime.now(timezone.utc) <= deadline:
-                return True
-            # A reader cannot witness the provisional edition while the staging link exists.
-            with _stage_edition(output, missed("deadline_passed_during_publication")) as failure:
-                os.replace(failure, output)
+        if datetime.now(timezone.utc) > deadline:
+            _write_edition(output, missed("deadline_passed_before_publication"))
             return False
-    _write_edition(output, missed("deadline_passed_before_publication"))
+        os.link(staged, output)
+    if _published_before(output.stat(), deadline):
+        return True
+    with _stage_edition(output, missed("deadline_passed_during_publication")) as failure:
+        os.replace(failure, output)
     return False
 
+
+def _published_before(state: os.stat_result, deadline: datetime) -> bool:
+    # Unlinking the staging name changes the inode's ctime and leaves the reader's
+    # only link. The cutoff applies to that filesystem change, including a late unlink.
+    epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    deadline_ns = ((deadline - epoch) // timedelta(microseconds=1)) * 1_000
+    return state.st_nlink == 1 and state.st_ctime_ns < deadline_ns
 
 def _write_edition(output: Path, payload: Report) -> None:
     with _stage_edition(output, payload) as staged:

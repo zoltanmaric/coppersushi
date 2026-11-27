@@ -27,7 +27,7 @@ pixi run --locked python -m forecasts.daily --read "$EDITION"
 ```
 
 [Monthly fitting](monthly_fit.py) publishes the bundle. [Daily issuance](daily.py) checks its identity, selects free-source prices visible at issue time and records each price's evidence in the edition. A required price missing before the deadline makes the attempt retryable and reports all affected quarters. A late attempt records a missed edition and exits with status 1. Conflicting archive prices stop the attempt immediately and record a missed edition with the conflicting receipts. After investigating the receipts, use a fresh output path for any manual rerun. The read command validates a live issued edition before recording the first successful read in the adjacent `.availability.json` file.
-The output directory must be on a local filesystem with hard links and atomic rename. A staged live edition stays unavailable to the read command until the publisher confirms the final link completed by the deadline.
+Use a local filesystem that updates the surviving inode's change time when a hard link is removed and supports atomic rename. Keep published editions in place with their file metadata intact. The reader can accept a live edition once the staging name is removed. The inode change time must precede the deadline. The edition's `issued_at` records the publisher's time before the final filesystem operations.
 
 Use `--replay` with the market archive to reconstruct the prices available at the 11:00 cutoff. Use `--replay --snapshot PATH` for historical reconstruction under a frozen snapshot's recorded timing assumptions. The output records reconstruction mode even when required prices are missing. Evaluation uses its pinned snapshot.
 

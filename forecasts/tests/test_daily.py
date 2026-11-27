@@ -1,5 +1,5 @@
 """Saved daily forecast artifacts are checked before loading the input snapshot."""
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from io import StringIO
 import copy
@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from time import sleep
 from typing import TextIO
 import unittest
 from unittest.mock import patch
@@ -224,6 +225,39 @@ class SavedArtifactTests(unittest.TestCase):
                                      ("missed", "live", reason))
                     self.assertNotIn("availability", readback)
 
+    def test_live_output_still_unreadable_at_deadline_is_missed(self) -> None:
+        day = date(2026, 1, 1)
+        deadline = datetime.now(UTC) + timedelta(seconds=2)
+        output = self.saved_run / "output.json"
+        receipt = output.with_name(f"{output.name}.availability.json")
+        unlink = Path.unlink
+
+        def release(staged: Path, *, missing_ok: bool = False) -> None:
+            if not output.exists() or output.stat().st_nlink != 2:
+                unlink(staged, missing_ok=missing_ok)
+                return
+            self.assertLess(datetime.now(UTC), deadline)
+            with self.assertRaisesRegex(ValueError, "unfinished"):
+                self.read_from_cli(output)
+            sleep(max(0, (deadline - datetime.now(UTC)).total_seconds()) + .05)
+            with self.assertRaisesRegex(ValueError, "unfinished"):
+                self.read_from_cli(output)
+            unlink(staged, missing_ok=missing_ok)
+            with self.assertRaisesRegex(ValueError, "finished after its deadline"):
+                self.read_from_cli(output)
+            self.assertFalse(receipt.exists())
+
+        with patch("forecasts.daily.cutoff", return_value=deadline), patch.object(
+            Path, "unlink", autospec=True, side_effect=release,
+        ):
+            with self.assertRaises(SystemExit) as failure:
+                self.make_live_edition(day, deadline - timedelta(seconds=1))
+            self.assertEqual(failure.exception.code, 1)
+            readback = self.read_from_cli(output)
+        self.assertEqual((readback["status"], readback["reason"]),
+                         ("missed", "deadline_passed_during_publication"))
+        self.assertFalse(receipt.exists())
+
     def test_archive_records_missed_only_after_cutoff(self) -> None:
         day = date(2026, 1, 1)
         deadline = cutoff(day)
@@ -329,12 +363,12 @@ class SavedArtifactTests(unittest.TestCase):
 
     def test_live_cli_edition_is_retrievable_with_its_input_and_model_evidence(self) -> None:
         day = date(2026, 3, 29)  # Berlin changes to summer time on this delivery day.
-        deadline = cutoff(day)
+        deadline = datetime.now(UTC) + timedelta(minutes=5)
         selected_at = deadline - timedelta(seconds=1)
-        output, selected = self.make_live_edition(day, selected_at)
         observed = deadline + timedelta(minutes=1)
 
-        with patch("forecasts.daily.datetime", wraps=datetime) as clock:
+        with patch("forecasts.daily.cutoff", return_value=deadline), patch("forecasts.daily.datetime", wraps=datetime) as clock:
+            output, selected = self.make_live_edition(day, selected_at)
             clock.now.return_value = observed
             edition = self.read_from_cli(output)
             clock.now.return_value = observed + timedelta(minutes=1)
@@ -349,12 +383,14 @@ class SavedArtifactTests(unittest.TestCase):
         changed = json.loads(output.read_text())
         changed["quarters"][0]["prices"] = [1.0] * len(QUANTILES)
         output.write_text(json.dumps(changed))
-        with self.assertRaisesRegex(ValueError, "does not match"):
+        with patch("forecasts.daily.cutoff", return_value=deadline), self.assertRaisesRegex(ValueError, "does not match"):
             read_edition(output)
 
     def test_invalid_issued_edition_cannot_create_read_receipt(self) -> None:
         day = date(2026, 1, 1)
-        output, _ = self.make_live_edition(day, cutoff(day) - timedelta(seconds=1))
+        deadline = datetime.now(UTC) + timedelta(minutes=5)
+        with patch("forecasts.daily.cutoff", return_value=deadline):
+            output, _ = self.make_live_edition(day, deadline - timedelta(seconds=1))
         valid = json.loads(output.read_text())
         cases = [
             {"status": "issued"},
@@ -375,7 +411,7 @@ class SavedArtifactTests(unittest.TestCase):
         for index, edition in enumerate(cases):
             with self.subTest(case=index):
                 output.write_text(json.dumps(edition))
-                with self.assertRaises(ValueError):
+                with patch("forecasts.daily.cutoff", return_value=deadline), self.assertRaises(ValueError):
                     self.read_from_cli(output)
                 self.assertFalse(output.with_name(f"{output.name}.availability.json").exists())
 
