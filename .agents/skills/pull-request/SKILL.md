@@ -26,6 +26,20 @@ description: Guides pull request creation, review, stacking, and local cleanup w
 - As soon as you learn a PR merged or closed, remove its local branch and unused worktree. Preserve uncommitted or local-only work and branches still needed by open PRs; report any cleanup blocked by those conditions. Use the worktree manager's archive operation for managed worktrees.
 - When a goldfish reviews a PR touching `.agents/` or any `AGENTS.md`, the critic reads `.agents/skills/AGENTS.md` and the vendor guidelines it links before the diff.
 
+## Run a review
+
+Before running the review, resolve the comparison base and checked-out tip. Use the cumulative tip for a stack. Use the user's exact design or review question. For a general review, ask “Should this PR merge, and what must change first?” Use [model selection](../model-selection/SKILL.md) before selecting the lead and bounded specialist runner. Use [job supervision](../job-supervision/SKILL.md) for the command and choose a new output directory outside the checkout.
+
+```bash
+python3 .agents/skills/pull-request/scripts/review.py \
+  --repo <clean-checked-out-tip> --base <comparison-base> \
+  --question '<exact question>' --output <new-output-directory>
+```
+
+The lead proposes specialists only when an independent investigation would improve the answer. Use `--independent` if the user requests a second assessment. Supply `--specialist '<assignment>'` for an explicitly chosen independent question, repeating it for separate assignments. Use `--lead`, `--lead-model`, `--specialist-runner` and `--specialist-model` to apply the selected runners and models.
+
+Read `final.json` for the answer, evidence and limits. Read `run.json` and the individual answer files for the actual assignments and outcomes. Verify the cited reasoning before relaying the verdict. If a reviewer or handoff check fails, report the affected assignment and error. Keep any completed views available in the review output.
+
 ## Review findings
 
 Review primarily as a Google senior principal engineer: judge whether the PR addresses the right problem, then whether it uses the right architecture. Read the surrounding system and its owning design documents before accepting the proposed framing. Challenge a symptom fix when the cause belongs at a different boundary or level.

@@ -1,0 +1,52 @@
+{
+  "folders": {
+    "head": "dc315771747c55954e1cac1f21c670a2843a49ce",
+    "base": "bec1c51c6070a941f7a0e288132ede03c6b589bb",
+    "question": "Can a reader follow input loading, fitting, prediction and scoring inside forecasts/? Give a verdict on the folder layout and explain which paths you would keep or move.",
+    "routing": "either",
+    "criteria": [
+      "Trace actual files inside forecasts/ through the workflow.",
+      "Explain one concrete ownership decision and its consequence for a reader."
+    ]
+  },
+  "receipt": {
+    "head": "bf3754b6fe115bc85f9740c0dd1c531aedc9729a",
+    "base": "8587ade9d9d7d1d02f04038fa1fefb71961068ab",
+    "question": "Does retaining a response require separate S3 objects for bytes and a receipt? Compare the simplest credible designs and recommend one.",
+    "routing": "either",
+    "criteria": [
+      "Trace a crash between writes, including what a later poll can reconstruct.",
+      "Compare with a single-object design against the requirement and explain the deciding tradeoff. Either recommendation can pass."
+    ]
+  },
+  "independent": {
+    "head": "bf3754b6fe115bc85f9740c0dd1c531aedc9729a",
+    "base": "8587ade9d9d7d1d02f04038fa1fefb71961068ab",
+    "question": "Have two independent reviewers examine this change. Have one trace an interrupted archive write and the other compare the README with the storage implementation. Give me one decision incorporating their evidence.",
+    "routing": "two",
+    "criteria": [
+      "Two distinct assignments actually completed.",
+      "The final decision accounts for evidence from both. Check the individual answers after blind grading."
+    ]
+  },
+  "clean": {
+    "head": "6292e195c26325b9fcc7f8fce607fcb8ab9b7867",
+    "base": "f275900fec690f2d410962ed6d932678716ca2b7",
+    "question": "Check whether StoredResponse can be imported from its model module without an S3 adapter dependency. Does this dependency direction need a change?",
+    "routing": "solo",
+    "criteria": [
+      "Verify the definition and imports at this revision.",
+      "Keep the dependency direction if it meets the requirement. Flag any invented need for a redesign."
+    ]
+  },
+  "parallel": {
+    "head": "dc315771747c55954e1cac1f21c670a2843a49ce",
+    "base": "bec1c51c6070a941f7a0e288132ede03c6b589bb",
+    "question": "Two decisions are holding up this stack. Can a new reader trace training through the Python package? Separately, do the diagrams and links in the offline viewer explain the artifacts the runner emits? Trace both from their own entry points and give a verdict on each.",
+    "routing": "some",
+    "criteria": [
+      "Independent inspection actually ran for at least one of the two substantial questions.",
+      "The final review gives a supported answer for both questions; verify that each citation addresses the relevant decision."
+    ]
+  }
+}

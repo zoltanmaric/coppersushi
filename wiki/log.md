@@ -726,3 +726,7 @@ Distinguished reproducing a saved forecast from [reconstructing at its deadline]
 ## [2026-11-27] ingest | Agent harness engineering
 
 Linked five primary-source digests through [Agent harness engineering](agent-harness-engineering.md), covering tool design, multi-session work and evaluation.
+
+## [2026-11-27] query | Evaluating agent instructions
+
+Added Karpathy’s fixed-evaluation example to the [agent workflow design rationale](agent-workflow-design.md).

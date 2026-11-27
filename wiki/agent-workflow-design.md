@@ -33,6 +33,8 @@ For tool design, session handoffs and outcome grading, see [Agent harness engine
   order; "the most common error of a smart engineer is to optimize a thing that should
   not exist"; if you never add anything back, you didn't delete enough.
 
+Karpathy’s `autoresearch` supplies a concrete example of verification. The agent can change the training code. The evaluation code and per-run time budget stay fixed, so each candidate faces the same comparison. This makes it possible to test what an instruction change buys. Architectural review still requires judgment about the answer. [Experiment instructions, inspected 2026-11-27](https://github.com/karpathy/autoresearch/blob/master/program.md)
+
 ## Key decisions
 
 - **Three independent skills, composed by offer, never auto-chained.** The parts have
