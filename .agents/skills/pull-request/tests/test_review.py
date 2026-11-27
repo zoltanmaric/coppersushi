@@ -47,6 +47,12 @@ if name.startswith('specialist-'):
             assert time.monotonic() < stop, 'The specialists did not start together.'
             time.sleep(0.01)
 if name == 'final':
+    assert 'This reviewer subprocess must not launch additional agents.' in prompt
+    assert 'Keep routing and execution commentary out of the verdict.' in prompt
+    record = json.loads((path.parent / 'run.json').read_text())
+    completed = [item['id'] for item in record['runs'] if item['status'] == 'completed']
+    assert completed[0] == 'lead' and 'specialist-1' in completed
+    assert f'verified completed reviewer IDs: {json.dumps(completed)}.' in prompt
     assert 'Reviewer answers:' in prompt
     assert fixtures['lead']['evidence'][0]['observation'] in prompt
     assert 'specialist-1' in prompt
@@ -123,7 +129,7 @@ class ReviewTest(unittest.TestCase):
         self.assertEqual(self.read("run")["routing"]["assignments"], [])
         self.assertEqual([run["id"] for run in self.read("run")["runs"]], ["lead"])
 
-    def test_routes_independent_assignments_and_reconciles_evidence(self):
+    def test_routes_independent_assignments_and_preserves_provenance_in_synthesis(self):
         assignments = ["Trace the transport failure path.", "Trace the public caller."]
         completed = self.run_cli({
             "lead": lead(*assignments),
@@ -138,7 +144,9 @@ class ReviewTest(unittest.TestCase):
         self.assertEqual(record["routing"]["assignments"], assignments)
         self.assertEqual([run["status"] for run in record["runs"]], ["completed"] * 4)
         self.assertEqual(self.read("specialist-2")["question"], QUESTION)
-        self.assertEqual(len(self.read("final")["handoff"]), 3)
+        final = self.read("final")
+        self.assertEqual(final["verdict"], "Yes.")
+        self.assertEqual(len(final["handoff"]), 3)
 
     def test_explicit_independence_dispatches_even_if_lead_does_not_route(self):
         completed = self.run_cli({"lead": lead(), "specialist-1": answer(),

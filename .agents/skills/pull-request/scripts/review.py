@@ -211,7 +211,8 @@ def review_guidance(baseline_ref):
 
 
 def review_prompt(snapshot, question, output, scope):
-    return f"""Review this public repository without changing files, posting comments, or launching agents.
+    return f"""Review this public repository without changing files or posting comments.
+This reviewer subprocess must not launch additional agents. The review command handles assignments.
 Use tracked files at HEAD {snapshot.head} and compare with base {snapshot.base}.
 `git diff {snapshot.base} {snapshot.head}` is the reviewed comparison.
 The changed-path list is in {output / 'changed-files.txt'}.
@@ -298,6 +299,7 @@ Use no specialist for a straightforward question you can assess on one coherent 
 specialist if a distinct technical concern can be investigated independently and would materially
 improve this specific answer. Target each assignment at that concern. Avoid duplicate reviews
 unless independence is explicitly requested. An empty assignment list means you need no specialist.
+Give the reason for your assignment choices. The review command dispatches the chosen specialists.
 """
         if args.independent:
             routing += "An independent second assessment was requested. Propose at least one focused assignment.\n"
@@ -344,9 +346,12 @@ unless independence is explicitly requested. An empty assignment list means you 
             # specialist set cannot produce a verified final answer.
             return 1
         self.snapshot.verify()
+        completed_ids = [item["id"] for item in self.runs if item["status"] == "completed"]
         run = self.request("final", lead, "Reconcile the lead and specialist answers")
         prompt = f"""{lead_prompt}
 You are the lead reviewer synthesizing the independent answers below. Verify evidence in the tree.
+The review command has verified completed reviewer IDs: {json.dumps(completed_ids)}.
+Keep routing and execution commentary out of the verdict. The review command records it in `run.json`.
 {answer_format}
 In `handoff`, include each source ID once. Explain how its verdict informed or differed from the
 final verdict. Account for every item in each source's evidence list by one-based input index.
