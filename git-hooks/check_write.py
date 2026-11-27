@@ -31,6 +31,14 @@ def absolute(cwd, path):
     return Path(os.path.abspath(cwd / path))
 
 
+def entry_identity(path):
+    try:
+        entry = path.lstat()
+    except (FileNotFoundError, NotADirectoryError):
+        return None
+    return entry.st_dev, entry.st_ino
+
+
 def patch_targets(patch):
     paths = []
     in_update = False
@@ -74,11 +82,21 @@ def check(repo, cwd, paths, owned):
         for entry in listing.split(b"\0")
         if entry.startswith(b"worktree ")
     ]
+    shared_identity = entry_identity(shared)
+    if shared_identity is None:
+        raise WriteBlocked("The shared checkout directory is missing.")
+    linked_identities = {entry_identity(worktree) for worktree in linked} - {None}
 
     def in_shared_checkout(path):
-        return path.is_relative_to(shared) and not any(
-            path.is_relative_to(worktree) for worktree in linked
-        )
+        # Find the nearest checkout even when the destination does not exist
+        # or an existing directory is spelled differently on this filesystem.
+        for ancestor in (path, *path.parents):
+            identity = entry_identity(ancestor)
+            if identity in linked_identities:
+                return False
+            if identity == shared_identity:
+                return True
+        return False
 
     if not any(
         in_shared_checkout(absolute(cwd, path)) or in_shared_checkout((cwd / path).resolve())

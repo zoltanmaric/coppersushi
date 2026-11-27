@@ -87,6 +87,29 @@ class WriteGuardTests(unittest.TestCase):
         alias.symlink_to(self.shared, target_is_directory=True)
         self.assertEqual(self.check_write(str(alias / "new.txt")).returncode, 2)
 
+    def test_shared_symlink_entry_is_guarded_when_target_is_linked(self):
+        alias = self.shared / "linked alias"
+        alias.symlink_to(self.linked, target_is_directory=True)
+        self.assertEqual(self.check_write(str(alias)).returncode, 2)
+
+    def test_shared_checkout_spelled_with_different_case_is_guarded(self):
+        alias = self.shared.with_name(self.shared.name.upper())
+        if not alias.exists():
+            self.skipTest("requires a case-insensitive filesystem")
+        (self.shared / "a.txt").write_text("foreign\n")
+        for name in ("a.txt", "new.txt"):
+            with self.subTest(name=name):
+                blocked = self.check_write(str(alias / name))
+                self.assertEqual(blocked.returncode, 2)
+                self.assertIn("unverified ownership", blocked.stderr)
+
+    def test_linked_checkout_spelled_with_different_case_is_allowed(self):
+        alias = self.linked.with_name(self.linked.name.upper())
+        if not alias.exists():
+            self.skipTest("requires a case-insensitive filesystem")
+        (self.shared / "a.txt").write_text("foreign\n")
+        self.assertEqual(self.check_write(str(alias / "new.txt")).returncode, 0)
+
     def test_remote_advances_beyond_local_tracking_ref(self):
         tracking = self.git(self.shared, "rev-parse", "origin/main")
         self.git(self.linked, "commit", "--allow-empty", "-m", "remote advance")
