@@ -702,3 +702,15 @@ Recorded the [shared theme for Copper Sushi explainers](rule-provenance.md).
 ## [2026-11-25] query | Input availability and actual forecast use
 
 Distinguished S3 publication, publisher read-back and forecast input lineage in the [storage selection principle](price-forecasting/forecast-infrastructure.md#selection-principle).
+
+## [2026-11-25] query | Market edition replay
+
+Recorded how table versions and historical feature joins relate to [reader-visible market editions](price-forecasting/forecast-infrastructure.md#edition-replay).
+
+## [2026-11-25] query | Archive publication timestamps
+
+Recorded the [service-generated timestamps](price-forecasting/forecast-infrastructure.md#edition-replay) available for raw and validated writes.
+
+## [2026-11-27] query | Replaying an issued forecast
+
+Distinguished reproducing a saved forecast from [reconstructing at its deadline](price-forecasting/forecast-infrastructure.md#selection-principle) when an input changes between issuance and the deadline.

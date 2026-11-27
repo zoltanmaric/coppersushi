@@ -10,6 +10,8 @@ Every forecast uses only information available by its issue deadline. Historical
 
 ### Selection-principle
 
+Replaying an issued forecast uses its saved fit and input editions. Reconstructing at the deadline can select a correction that arrived after issuance. In the [archive issuance implementation](https://github.com/zoltanmaric/coppersushi/blob/692072b7/forecasts/daily.py#L73-L88), live selection starts at the issue attempt's cutoff and replay selects at the deadline. The [issued record](https://github.com/zoltanmaric/coppersushi/blob/692072b7/forecasts/daily.py#L176-L194) identifies the fit manifest, prediction code, input cutoff and selected evidence.
+
 Choose storage from the reads and writes the system needs. Add complexity only for a demonstrated requirement.
 
 For a single S3 object, a successful PUT makes the complete object available to subsequent authorized GET and LIST requests. A publisher reading it back witnesses access through the publisher’s credentials. To establish which inputs an issued forecast actually used, retain the edition identifiers from that forecast run. [Amazon S3 consistency model](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html#ConsistencyModel) · [Google Cloud MLOps metadata management](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning#metadata_management)
@@ -55,6 +57,12 @@ The [Pandera models](../../forecasts/inputs/schemas.py) define field types, null
 One file per dataset per snapshot is the starting layout. At the initial data volume, prefer this to daily partitions and compaction jobs. Measure bytes and cold-load time before changing it. A reader loads the fixed files locally and then performs model-specific feature construction in Python. Training and prediction use the same reader and feature functions.
 
 The three dataset names, checked schemas and snapshot manifests provide the initial inventory. Metaflow and MLflow record the snapshot identifier. A separate catalog, input database, feature store and cache service are deferred until a concrete access or discovery need appears.
+
+### Edition replay
+
+Delta Lake supports reading a table at a retained version or timestamp. Historical feature joins in Feast search backwards from each example’s timestamp. For market editions these operations depend on knowing when the validated input became readable. A publisher’s update time can precede that event. The source policy and the delivery interval still determine which committed price observations the consumer may use. [Delta Lake, historical snapshots and retention](https://docs.delta.io/delta-batch/#query-an-older-snapshot-of-a-table-time-travel) · [Feast, point-in-time joins](https://docs.feast.dev/getting-started/concepts/point-in-time-joins) · [Market edition replay example](https://github.com/zoltanmaric/coppersushi/pull/337)
+
+For an archive read directly through S3, an object-created notification carries the object key and the time S3 finished the write request. Retaining those events for raw and validated objects provides two storage timestamps. Collector receipt and downstream use require evidence from those components. SageMaker Feature Store provides a managed analogue for submitted records: it adds service invocation and offline write timestamps alongside the event time supplied by the caller. [S3 event fields](https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-content-structure.html) · [SageMaker offline store fields](https://docs.aws.amazon.com/sagemaker/latest/dg/feature-store-offline.html)
 
 ## Iteration
 
