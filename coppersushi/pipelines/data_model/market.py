@@ -16,13 +16,14 @@ CORE_ZONES: tuple[CoreZone, ...] = get_args(CoreZone)
 
 
 class ElectricityMapsPrice(BaseModel):
-    """One published zonal day-ahead price and its source update time."""
+    """One published zonal day-ahead price and its publisher timestamps."""
 
     model_config = ConfigDict(extra="ignore", allow_inf_nan=False)
 
     zone: StrictStr
     datetime: AwareDatetime
-    updatedAt: AwareDatetime
+    createdAt: AwareDatetime | None = None
+    updatedAt: AwareDatetime | None = None
     value: StrictFloat
     unit: Literal["EUR/MWh"]
     source: StrictStr

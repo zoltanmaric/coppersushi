@@ -109,3 +109,14 @@ def test_retry_preserves_receipt_written_before_optional_http_metadata():
     receipt = save_response(store, "bucket", poll, body, received_at=now, http_status=200)
     assert read_attempt(store, "bucket", poll.attempt_id) == receipt
     assert store.metadata[key] == metadata
+
+
+def test_oversize_response_metadata_identifies_field_before_writing():
+    store = MemoryS3()
+    body = b"upstream error"
+    poll = Poll(attempt_id=uuid4(), publisher="entsoe", dataset="day_ahead_auction_prices",
+                zone="DE-LU", delivery_day=date(2026, 11, 20))
+    with pytest.raises(ValueError, match=r"limit is 2048. Largest field: headers.X-Request-ID"):
+        save_response(store, "bucket", poll, body, received_at=datetime.now(UTC), http_status=503,
+                      headers={"X-Request-ID": "x" * 2048})
+    assert not store.objects

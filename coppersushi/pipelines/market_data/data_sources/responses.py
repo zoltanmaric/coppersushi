@@ -26,10 +26,11 @@ class NoResponseBody(ValueError):
 
 
 def save_response(client: "S3Client", bucket: str, poll: Poll, body: bytes, *,
-                  received_at: datetime, http_status: int) -> ResponseReceipt:
+                  received_at: datetime, http_status: int, request_url: str | None = None,
+                  headers: dict[str, str] | None = None) -> ResponseReceipt:
     """Store the response and return the receipt for the exact bytes committed."""
     receipt = ResponseReceipt(**poll.model_dump(), kind="response", received_at=received_at,
-                              http_status=http_status, body_sha256=sha256(body).hexdigest())
+                              http_status=http_status, request_url=request_url, headers=headers or {}, body_sha256=sha256(body).hexdigest())
     _save_attempt(client, bucket, receipt, body)
     return receipt
 
@@ -108,6 +109,8 @@ def _save_attempt(client: "S3Client", bucket: str, receipt: Receipt, body: bytes
     size = len("receipt") + len(metadata["receipt"])
     if size > 2048:
         largest = max(fields, key=lambda name: len(json.dumps(fields[name], ensure_ascii=True)))
+        if largest == "headers" and receipt.headers:
+            largest += "." + max(receipt.headers, key=lambda key: len(json.dumps({key: receipt.headers[key]})))
         raise ValueError(f"Poll {receipt.attempt_id} ({receipt.publisher}, {receipt.zone}, {receipt.delivery_day}) "
                          f"needs {size} bytes of S3 metadata; limit is 2048. Largest field: {largest}")
     put_once(client, bucket, _receipt_key(receipt.attempt_id), body, metadata=metadata)

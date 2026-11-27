@@ -8,19 +8,26 @@ Suppose a response arrives at 10:58 and its edition reaches S3 at 11:04. An 11:0
 
 ```mermaid
 flowchart TB
-    Caller["Publisher-data caller"]
+    Publishers["Market publishers<br/>e.g. ENTSO-E, SMARD"]
     Consumer["Price consumer"]
     subgraph Market["Market data · Python library"]
+        Caller["Publisher collector"]
         Writer["Archive writer"]
         Resolver["Price resolver"]
     end
     Archive[("Private S3 archive")]
+    Caller -->|Poll for delivery day| Publishers
+    Publishers -->|HTTP response| Caller
+    Caller -->|Publisher retry time| Archive
+    Archive -->|Saved cooldown| Caller
     Caller -->|Response bytes, parsed rows or failure details| Writer
     Writer -->|Raw attempts, validated editions and diagnostics| Archive
     Consumer -->|Delivery day, zones, cutoff and source policy| Resolver
     Archive -->|Receipts, eligible editions and diagnostics| Resolver
     Resolver -->|Quarter-hour prices and evidence, or failure reasons| Consumer
 ```
+
+The [collector](data_sources/collect_market_editions.py) checks the publisher’s saved cooldown before each request. An active cooldown defers the poll.
 
 ## Write and read an edition
 
@@ -34,6 +41,8 @@ Use `read_editions(client, bucket, day, cutoff)` for the validated tables. S3 re
 [`read_response`](data_sources/responses.py) returns the receipt and exact archived bytes, including an empty body or an HTTP error page. A transport failure raises `NoResponseBody` with the recorded reason. A parse failure leaves the raw bytes available for inspection.
 
 [`read_day_diagnostics`](data_sources/responses.py) returns failures recorded by cutoff. A raw receipt alone means the outcome is still unknown.
+
+Each [publisher client](data_sources/collect_market_editions.py) handles one feed. An empty auction series records zero observations. A failed request retains its diagnostics. The collector stores a publisher’s retry time before reading the response body. If the body stalls, the failure receipt retains the HTTP status and safe headers. If a response echoes a credential, the collector redacts it and records a failure.
 
 ## Price selection
 
