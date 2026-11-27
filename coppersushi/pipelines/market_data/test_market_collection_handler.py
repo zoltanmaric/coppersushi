@@ -35,7 +35,7 @@ def test_retry_during_cooldown_reports_its_own_actionable_failure(monkeypatch: p
     def respond(req: Request, timeout: int) -> addinfourl:
         requested.append(req.full_url)
         if malformed_first and len(requested) == 1:
-            fixture = Path(__file__).parents[1] / "fixtures" / "entsoe_missing_resolution.xml"
+            fixture = Path(__file__).parent / "fixtures" / "entsoe_missing_resolution.xml"
             return addinfourl(BytesIO(fixture.read_bytes()), {}, req.full_url, 200)
         raise HTTPError(req.full_url, 429, "throttled", {"Retry-After": "900"}, BytesIO())
 
