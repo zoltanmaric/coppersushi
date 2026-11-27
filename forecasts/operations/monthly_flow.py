@@ -1,16 +1,18 @@
 """Deploy this workflow with Metaflow step-functions create."""
 import os
+from typing import cast
 
-from metaflow import FlowSpec, Parameter, batch, step
+from metaflow import FlowSpec, Parameter, step
+from metaflow import batch  # type: ignore[attr-defined]  # Metaflow registers this decorator at import.
 
 from forecasts.operations.flow_inputs import delivery_date, settings_from_pin, trace
 from forecasts.operations.jobs import fit
 
 
 class DeLuMonthlyFit(FlowSpec):
-    scheduled_at = Parameter("scheduled_at", required=True)
-    scheduled_live = Parameter("scheduled_live", default="no")
-    config_pin = Parameter("config_pin", default=os.environ.get("FORECAST_CONFIG_PIN"))
+    scheduled_at = cast(str, Parameter("scheduled_at", required=True))
+    scheduled_live = cast(str, Parameter("scheduled_live", default="no"))
+    config_pin = cast(str, Parameter("config_pin", default=os.environ.get("FORECAST_CONFIG_PIN")))
 
     @batch(log_driver="awslogs", log_options=["awslogs-group:/coppersushi/forecast-operations/batch", "awslogs-stream-prefix:forecast"],
            cpu=1, memory=4096)

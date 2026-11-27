@@ -15,7 +15,7 @@ The Germany–Luxembourg day-ahead forecast has its own [product package](../for
 
 Read the [forecast stages and connections](../forecasts/web/pipeline.json) directly in the checkout. The viewer renders this definition as its **How it works** diagram. [Open the interactive diagram with a saved run](../forecasts/web/README.md).
 
-Scientific contracts and decisions remain in the design pages linked above. The viewer links to their recorded revisions. Planned cloud execution is described in the [infrastructure decision](price-forecasting/forecast-infrastructure.md#later), separately from the implemented historical pipeline.
+Scientific contracts and decisions remain in the design pages linked above. The viewer links to their recorded revisions. The [cloud execution record](price-forecasting/forecast-infrastructure.md#cloud-execution) covers AWS fit and issue evidence.
 
 ## Research
 

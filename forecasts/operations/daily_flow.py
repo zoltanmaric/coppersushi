@@ -1,10 +1,12 @@
 """Issue and witness a forecast through separate Batch task roles."""
 import os
+from typing import cast
 import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from metaflow import FlowSpec, Parameter, batch, step
+from metaflow import FlowSpec, Parameter, step
+from metaflow import batch  # type: ignore[attr-defined]  # Metaflow registers this decorator at import.
 
 from forecasts.operations.artifacts import MissingArtifact
 from forecasts.operations.flow_inputs import delivery_date, settings_from_pin, trace
@@ -12,10 +14,10 @@ from forecasts.operations.jobs import check, issue, witness
 
 
 class DeLuDailyIssue(FlowSpec):
-    scheduled_at = Parameter("scheduled_at", required=True)
-    scheduled_live = Parameter("scheduled_live", default="no")
-    config_pin = Parameter("config_pin", default=os.environ.get("FORECAST_CONFIG_PIN"))
-    check_only = Parameter("check_only", default="no")
+    scheduled_at = cast(str, Parameter("scheduled_at", required=True))
+    scheduled_live = cast(str, Parameter("scheduled_live", default="no"))
+    config_pin = cast(str, Parameter("config_pin", default=os.environ.get("FORECAST_CONFIG_PIN")))
+    check_only = cast(str, Parameter("check_only", default="no"))
 
     @batch(log_driver="awslogs", log_options=["awslogs-group:/coppersushi/forecast-operations/batch", "awslogs-stream-prefix:forecast"],
            cpu=1, memory=2048)

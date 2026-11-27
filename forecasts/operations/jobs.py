@@ -394,7 +394,7 @@ def _reader_payload(issue_object: StoredObject, fit_report: Report, receipt: Rep
 def _attempt(store: Artifacts, settings: Settings, day: date, step: str, trace: Trace) -> Iterator[Report]:
     started = monotonic()
     path = f"attempts/{day.isoformat()}/{step}-{uuid4()}"
-    report = {"day": day.isoformat(), "step": step, "trace": dict(trace), "attempt_path": path,
+    report: Report = {"day": day.isoformat(), "step": step, "trace": dict(trace), "attempt_path": path,
               "batch_job_id": os.environ.get("AWS_BATCH_JOB_ID"),
               "batch_job_attempt": os.environ.get("AWS_BATCH_JOB_ATTEMPT"),
               "image_digest": settings.image_digest, "snapshot_id": settings.snapshot_id,

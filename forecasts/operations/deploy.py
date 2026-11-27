@@ -6,10 +6,10 @@ import re
 import subprocess
 import sys
 import tarfile
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import boto3
-from pathlib import Path
 
 from forecasts.operations.artifacts import ObjectPin
 from forecasts.operations.flow_inputs import settings_from_pin
@@ -37,7 +37,7 @@ def main() -> None:
     env = {**os.environ, **outputs["metaflow_environment"]["value"], "METAFLOW_BATCH_CONTAINER_IMAGE": image,
            "FORECAST_CONFIG_PIN": pin.model_dump_json(),
            "FORECAST_READER_ROLE": outputs["witness_task_role_arn"]["value"],
-           "PYTHONPATH": str(ROOT)}
+           }
     with TemporaryDirectory() as directory:
         release = Path(directory)
         with subprocess.Popen(["git", "archive", revisions[0], "forecasts", "coppersushi/__init__.py",

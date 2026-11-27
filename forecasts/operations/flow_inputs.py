@@ -27,5 +27,7 @@ def delivery_date(scheduled_at: str) -> date:
 
 
 def trace() -> dict[str, str]:
+    if current.flow_name is None or current.run_id is None or current.pathspec is None:
+        raise RuntimeError("Forecast trace requires a running Metaflow task")
     return {"workflow": current.flow_name, "run": current.run_id, "task": current.pathspec,
             "batch_job": os.environ["AWS_BATCH_JOB_ID"]}
