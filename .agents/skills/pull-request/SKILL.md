@@ -26,21 +26,11 @@ description: Guides pull request creation, review, stacking, and local cleanup w
 - As soon as you learn a PR merged or closed, remove its local branch and unused worktree. Preserve uncommitted or local-only work and branches still needed by open PRs; report any cleanup blocked by those conditions. Use the worktree manager's archive operation for managed worktrees.
 - When a goldfish reviews a PR touching `.agents/` or any `AGENTS.md`, the critic reads `.agents/skills/AGENTS.md` and the vendor guidelines it links before the diff.
 
-## Run a review
+## Choose reviewers
 
-Use the runner for independent reviews, substantial questions that can be investigated separately, or a requested replay. Review a single coherent design question directly unless it needs an independent assessment.
+Review the user's question at the pinned tip. Delegate when the user requests independent review or a separate investigation could change the decision. Give each reviewer the original question and its assigned scope. Carry its verdict and deciding evidence into the final answer.
 
-Check out the reviewed tip and use its merge base with the PR target. For a cumulative stack review, use the top tip and the stack’s trunk comparison base. Use the user's exact design or review question. For a general review, ask “Should this PR merge, and what must change first?” Use [model selection](../model-selection/SKILL.md) before selecting the lead and bounded specialist runner. Use [job supervision](../job-supervision/SKILL.md) for the command and choose a new output directory outside the checkout.
-
-```bash
-python3 .agents/skills/pull-request/scripts/review.py \
-  --repo <clean-checked-out-tip> --base <comparison-base> \
-  --question '<exact question>' --output <new-output-directory>
-```
-
-The lead proposes specialists only when an independent investigation would improve the answer. Use `--independent` if the user requests a second assessment. Supply `--specialist '<assignment>'` for an explicitly chosen independent question, repeating it for separate assignments. Use `--lead`, `--lead-model`, `--specialist-runner` and `--specialist-model` to apply the selected runners and models.
-
-Read `final.json` for the answer, evidence and limits. Read `run.json` and the individual answer files for the actual assignments and outcomes. Verify the cited reasoning before relaying the verdict. If a reviewer or handoff check fails, report the affected assignment and error. Keep any completed views available in the review output.
+For a requested replay or an auditable record of reviewer calls, use the [review runner](../../../evals/pr-review/README.md).
 
 ## Review findings
 

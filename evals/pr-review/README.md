@@ -31,3 +31,19 @@ Try the winning version on an unseen PR before changing the default.
 The single-reviewer control measures answer quality against a fixed starting point.
 Routing scores apply to the candidate. They cannot estimate how often interactive
 Codex or Claude sessions delegated before this workflow existed.
+
+## Review one comparison
+
+For a recorded review, run the following from the harness checkout. Supply a
+clean checkout of the reviewed tip, its merge base with the target, and a new
+output directory outside the checkout.
+
+```sh
+python3 .agents/skills/pull-request/scripts/review.py \
+  --repo <reviewed-checkout> --base <merge-base> \
+  --question '<review question>' --output <new-directory>
+```
+
+Read `final.json` for the verdict and `run.json` for observed calls and failures.
+Use `--independent` to require a second assessment or repeat `--specialist` to
+assign distinct questions. Use `--help` for runner and model selection.
