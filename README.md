@@ -45,7 +45,9 @@ Clone with `GIT_LFS_SKIP_SMUDGE=1` to skip the files, e.g. to run only the tests
 
 ```mermaid
 flowchart TB
-    publishers["Market publishers"] -->|Poll receipts| shared["Market data · private S3 archive"]
+    collector["Market collector · AWS Lambda"] -->|Poll by delivery day| publishers["Market publishers"]
+    publishers -->|Auction prices and border spreads| collector
+    collector -->|Raw receipts and validated editions| shared["Market data · private S3 archive"]
     grid["Grid and constraint data"] --> critical["Critical Elements ⚡️"]
     networks["Solved networks"] -->|Power Flow preparation| power["Power Flow 🍣"]
     power -->|Static results| maps["Copper Sushi maps · CloudFront"]

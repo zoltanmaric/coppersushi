@@ -9,7 +9,7 @@ import logging
 from typing import TYPE_CHECKING
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
-from uuid import uuid4
+from uuid import UUID, uuid4
 from xml.etree.ElementTree import ParseError
 
 from botocore.exceptions import BotoCoreError, ClientError
@@ -44,7 +44,7 @@ _HEADERS = ("Content-Type", "Date", "ETag", "Last-Modified", "Retry-After", "X-R
 
 
 def collect_day(client: "S3Client", bucket: str, publisher: Publisher, delivery_day: date, *,
-                zones: Sequence[AuctionZone] = ("DE-LU",),
+                invocation_id: UUID | None = None, zones: Sequence[AuctionZone] = ("DE-LU",),
                 clock: Callable[[], datetime] = lambda: datetime.now(tz=UTC)) -> tuple[AttemptOutcome, ...]:
     """Poll each requested scope once and report its outcome."""
     if not zones or len(zones) != len(set(zones)):
@@ -57,7 +57,7 @@ def collect_day(client: "S3Client", bucket: str, publisher: Publisher, delivery_
     outcomes: list[AttemptOutcome] = []
     for poll in polls:
         try:
-            check_ready(client, bucket, publisher, clock())
+            check_ready(client, bucket, publisher, clock(), invocation_id)
         except PublisherCoolingDown as pause:
             _LOG.info("poll_deferred publisher=%s zone=%s delivery_day=%s cooldown_attempt=%s retry_at=%s",
                       publisher, poll.zone, delivery_day, pause.attempt, pause.until)
@@ -65,8 +65,9 @@ def collect_day(client: "S3Client", bucket: str, publisher: Publisher, delivery_
                 raise
             break
         _LOG.info("poll_started %s", _scope(poll))
-        outcome = _collect(client, bucket, poll, clock)
+        outcome = _collect(client, bucket, poll, clock, invocation_id)
         if outcome.outcome == "failed":
+            outcome = outcome.model_copy(update={"invocation_id": invocation_id})
             _LOG.error("poll_failed %s reason=%s", _scope(poll), outcome.diagnostic)
             with _archive_write(poll, "save_diagnostic"):
                 save_diagnostic(client, bucket, outcome)
@@ -76,7 +77,8 @@ def collect_day(client: "S3Client", bucket: str, publisher: Publisher, delivery_
     return tuple(outcomes)
 
 
-def _collect(client: "S3Client", bucket: str, poll: Poll, clock: Callable[[], datetime]) -> AttemptOutcome:
+def _collect(client: "S3Client", bucket: str, poll: Poll, clock: Callable[[], datetime],
+             invocation_id: UUID | None) -> AttemptOutcome:
     day = MarketDay.on(poll.delivery_day)
     scope = poll.model_dump()
     secrets: list[bytes] = []
@@ -99,8 +101,8 @@ def _collect(client: "S3Client", bucket: str, poll: Poll, clock: Callable[[], da
             for key in _HEADERS if key in response.headers
         }
         with _archive_write(poll, "save_cooldown", secrets):
-            save_retry_after(client, bucket, poll, status=status, retry_after=headers.get("Retry-After"),
-                         observed_at=clock())
+            retry_at = save_retry_after(client, bucket, poll, status=status, retry_after=headers.get("Retry-After"),
+                                        observed_at=clock(), invocation_id=invocation_id)
         partial = False
         try:
             raw = response.read()
@@ -128,7 +130,8 @@ def _collect(client: "S3Client", bucket: str, poll: Poll, clock: Callable[[], da
         elif status == HTTPStatus.BAD_REQUEST and poll.publisher == "entsoe" and entsoe_auction_prices.no_matching_data(body):
             rows = []
         elif status < 200 or status >= 300:
-            raise ValueError(f"HTTP {status}: {body[:512].decode(errors='replace')}")
+            return AttemptOutcome(**scope, completed_at=clock(), outcome="failed", rows=0, publisher_retry_at=retry_at,
+                                  diagnostic=f"HTTP {status}: {body[:512].decode(errors='replace')}")
         else:
             rows = _PARSE[poll.publisher](body, poll.zone, day)
     except (ValueError, InvalidOperation, ParseError, SchemaError) as error:

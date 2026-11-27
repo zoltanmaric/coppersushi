@@ -20,8 +20,9 @@ from coppersushi.pipelines.market_day import MarketDay
 
 
 class CollectorS3(ArchiveS3):
-    def list_objects_v2(self, *, Bucket, Prefix, StartAfter, MaxKeys):
-        return {"Contents": [{"Key": key} for key in sorted(self.objects) if key.startswith(Prefix) and key > StartAfter][:MaxKeys]}
+    def paginate(self, *, Bucket, Prefix, StartAfter=""):
+        return [{"Contents": [item for item in page["Contents"] if item["Key"] > StartAfter]}
+                for page in super().paginate(Bucket=Bucket, Prefix=Prefix)]
 
 
 def test_entsoe_selects_the_coupled_auction_and_expands_only_a03_points():

@@ -78,7 +78,7 @@ def save_diagnostic(client: "S3Client", bucket: str, outcome: AttemptOutcome) ->
     """Record a diagnosed failure for point-in-time lookup by delivery day."""
     if outcome.outcome != "failed":
         raise ValueError("Only failed attempts have a separate diagnostic")
-    key = f"market-data/outcomes/{outcome.delivery_day}/{outcome.attempt_id}.json"
+    key = _diagnostic_key(outcome)
     put_once(client, bucket, key, outcome.model_dump_json().encode())
 
 
@@ -86,19 +86,42 @@ def read_day_diagnostics(client: "S3Client", bucket: str, delivery_day: date, cu
     """Find a day's diagnosed failures that were visible to the reader by cutoff."""
     if cutoff.utcoffset() is None:
         raise ValueError("A diagnostic lookup requires an aware cutoff")
+    return _read_diagnostics(client, bucket, delivery_day, cutoff=cutoff)
+
+
+def read_invocation_failures(client: "S3Client", bucket: str, delivery_day: date, invocation_id: UUID,
+                             cooldown_attempts: tuple[UUID, ...] = ()) -> list[AttemptOutcome]:
+    """Read actionable failures from earlier executions of the same asynchronous event."""
+    records = _read_diagnostics(client, bucket, delivery_day, invocation_id=invocation_id)
+    unfinished = set(cooldown_attempts).difference(record.attempt_id for record in records)
+    if unfinished:
+        attempts = ", ".join(str(attempt) for attempt in sorted(unfinished))
+        raise RuntimeError(f"Unfinished archive write for {delivery_day}, invocation {invocation_id}, attempts: {attempts}")
+    return [record for record in records if record.publisher_retry_at is None]
+
+
+def _diagnostic_key(outcome: AttemptOutcome) -> str:
+    group = f"{outcome.invocation_id}/" if outcome.invocation_id is not None else ""
+    return f"market-data/outcomes/{outcome.delivery_day}/{group}{outcome.attempt_id}.json"
+
+
+def _read_diagnostics(client: "S3Client", bucket: str, delivery_day: date, *,
+                      cutoff: datetime | None = None, invocation_id: UUID | None = None) -> list[AttemptOutcome]:
     prefix = f"market-data/outcomes/{delivery_day}/"
+    if invocation_id is not None:
+        prefix += f"{invocation_id}/"
     found = []
     pages = client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix)
     for page in pages:
         for item in page.get("Contents", []):
-            if object_visible_by(item["LastModified"]) > cutoff:
+            if cutoff is not None and object_visible_by(item["LastModified"]) > cutoff:
                 continue
             key = item["Key"]
             with client.get_object(Bucket=bucket, Key=key)["Body"] as stream:
                 record = AttemptOutcome.model_validate_json(stream.read())
-            if record.delivery_day != delivery_day or key != f"{prefix}{record.attempt_id}.json":
+            if record.delivery_day != delivery_day or key != _diagnostic_key(record):
                 raise ValueError(f"Attempt index identity mismatch at {key}")
-            if record.outcome == "failed" and record.completed_at <= cutoff:
+            if record.outcome == "failed" and (cutoff is None or record.completed_at <= cutoff):
                 found.append(record)
     return sorted(found, key=lambda outcome: (outcome.completed_at, outcome.attempt_id))
 
