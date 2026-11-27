@@ -7,8 +7,9 @@ from urllib.error import HTTPError
 import pytest
 
 from coppersushi.pipelines.market_data.data_sources import collect_market_editions, electricity_maps_auction_prices, entsoe_auction_prices, jao_border_spreads, smard_auction_prices
+from coppersushi.pipelines.market_data.data_sources.editions import read_editions
 from coppersushi.pipelines.market_data.data_sources.publisher_cooldown import PublisherCoolingDown, check_ready
-from coppersushi.pipelines.market_data.data_sources.responses import read_attempt, read_day_diagnostics
+from coppersushi.pipelines.market_data.data_sources.responses import read_attempt, read_day_diagnostics, read_response
 from coppersushi.pipelines.market_data.test_editions import ArchiveS3, DAY, T, publish
 from coppersushi.pipelines.market_data.test_resolution import first
 from coppersushi.pipelines.market_data.response_models import FailedAttempt
@@ -138,7 +139,11 @@ def test_retry_after_survives_response_read_timeout(monkeypatch, status, headers
     check_ready(store, "test", "jao", now)
 
 
-@pytest.mark.parametrize(("reason", "expected"), [("No matching data found", "empty"), ("Invalid request", "failed")])
+@pytest.mark.parametrize(("reason", "expected"), [
+    ("No matching data found", "empty"),
+    ("No matching data for test-key", "failed"),
+    ("Invalid request", "failed"),
+])
 def test_entsoe_400_keeps_provider_acknowledgement_and_distinguishes_no_data(monkeypatch, reason, expected):
     monkeypatch.setenv("ENTSOE_API_TOKEN", "test-key")
     store = CollectorS3()
@@ -150,9 +155,19 @@ def test_entsoe_400_keeps_provider_acknowledgement_and_distinguishes_no_data(mon
     monkeypatch.setattr(collect_market_editions, "urlopen", acknowledge)
     attempt, = collect_market_editions.collect_day(store, "test", "entsoe", DAY, clock=lambda: T)
     assert attempt.outcome == expected
-    receipt = read_attempt(store, "test", attempt.attempt_id)
-    assert receipt.http_status == 400
-    assert store.objects[f"market-data/attempts/{receipt.attempt_id}"] == body
+    archived = read_response(store, "test", attempt.attempt_id)
+    assert archived.receipt.http_status == 400
+    assert archived.body == body.replace(b"test-key", b"[redacted]")
+    cutoff = T + timedelta(seconds=1)
+    editions = read_editions(store, "test", DAY, cutoff)
+    if expected == "empty":
+        (edition, rows), = editions
+        assert edition.receipt == archived.receipt and rows == []
+    else:
+        assert editions == []
+        assert read_day_diagnostics(store, "test", DAY, cutoff) == [attempt]
+        if "test-key" in reason:
+            assert "redacted" in attempt.diagnostic and "test-key" not in attempt.diagnostic
 
 
 def test_publication_error_correlates_raw_receipt_without_leaking_token(monkeypatch, caplog):

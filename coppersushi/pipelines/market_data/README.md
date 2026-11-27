@@ -8,20 +8,26 @@ Suppose a response arrives at 10:58 and its edition reaches S3 at 11:04. An 11:0
 
 ```mermaid
 flowchart TB
-    Publishers["Market publishers"] -->|HTTP responses| Caller["Publisher collector"]
-    Caller -->|Publisher retry time| Archive
+    Publishers["Market publishers"]
     Consumer["Price consumer"]
     subgraph Market["Market data · Python library"]
+        Caller["Publisher collector"]
         Writer["Archive writer"]
         Resolver["Price resolver"]
     end
     Archive[("Private S3 archive")]
+    Caller -->|Poll for delivery day| Publishers
+    Publishers -->|HTTP response| Caller
+    Caller -->|Publisher retry time| Archive
+    Archive -->|Saved cooldown| Caller
     Caller -->|Response bytes, parsed rows or failure details| Writer
     Writer -->|Raw attempts, validated editions and diagnostics| Archive
     Consumer -->|Delivery day, zones, cutoff and source policy| Resolver
     Archive -->|Receipts, eligible editions and diagnostics| Resolver
     Resolver -->|Quarter-hour prices and evidence, or failure reasons| Consumer
 ```
+
+The [collector](data_sources/collect_market_editions.py) checks the publisher’s saved cooldown before each request. An active cooldown defers the poll.
 
 ## Write and read an edition
 

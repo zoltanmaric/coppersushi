@@ -119,6 +119,8 @@ def _collect(client: "S3Client", bucket: str, poll: Poll, clock: Callable[[], da
                             request_url=request.full_url, headers=headers)
     _LOG.info("raw_saved %s http_status=%d", _scope(poll), status)
     try:
+        if body != raw:
+            raise ValueError("Publisher echoed a credential; original bytes were redacted")
         if partial:
             raise ValueError("HTTP response was truncated during transfer")
         if status == HTTPStatus.NOT_FOUND and poll.publisher == "electricity_maps" and b"No data for zone" in body:
@@ -127,8 +129,6 @@ def _collect(client: "S3Client", bucket: str, poll: Poll, clock: Callable[[], da
             rows = []
         elif status < 200 or status >= 300:
             raise ValueError(f"HTTP {status}: {body[:512].decode(errors='replace')}")
-        elif body != raw:
-            raise ValueError("Publisher echoed a credential; original bytes were redacted")
         else:
             rows = _PARSE[poll.publisher](body, poll.zone, day)
     except (ValueError, InvalidOperation, ParseError, SchemaError) as error:
