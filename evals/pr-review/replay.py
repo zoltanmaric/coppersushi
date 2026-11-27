@@ -34,6 +34,7 @@ def routing_passes(expectation, runs):
 
 def replay(case, output, trials, runner, model):
     output.mkdir(parents=True, exist_ok=False)
+    all_routing_passed = True
     with TemporaryDirectory(prefix="pr-review-") as temp:
         checkout = Path(temp) / "source"
         # A disposable clone keeps local edits and the grader outside the case.
@@ -72,10 +73,13 @@ def replay(case, output, trials, runner, model):
                               "words": len(answer.split())}
                 if mode == "candidate":
                     runs = json.loads((artifacts / "run.json").read_text())["runs"]
-                    key[label]["routing_pass"] = routing_passes(case["routing"], runs)
+                    passed = routing_passes(case["routing"], runs)
+                    key[label]["routing_pass"] = passed
+                    all_routing_passed = all_routing_passed and passed
                 (trial / f"{label}.md").write_text(answer.strip() + "\n")
             (trial / "key.json").write_text(json.dumps(key, indent=2) + "\n")
             print(f"Grade {trial}/A.md and B.md before opening key.json", flush=True)
+    return all_routing_passed
 
 
 if __name__ == "__main__":
@@ -88,4 +92,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.trials < 1 or args.output.resolve().is_relative_to(ROOT):
         parser.error("Use a positive trial count and a new output directory outside the checkout")
-    replay(CASES[args.case], args.output.resolve(), args.trials, args.runner, args.model)
+    passed = replay(CASES[args.case], args.output.resolve(), args.trials, args.runner, args.model)
+    sys.exit(0 if passed else 1)
