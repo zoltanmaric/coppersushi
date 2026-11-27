@@ -28,7 +28,7 @@
 - [Research index](price-forecasting/research/index.md) — proposal status, relationships, recommendation and links to retrospective evidence
 
 - [price-forecasting.md](price-forecasting.md) — independent forecast product, canonical frontend explanation and scientific contracts
-- [price-forecasting/forecast-infrastructure.md](price-forecasting/forecast-infrastructure.md) — S3 snapshots, local execution, wiki research planning and MLflow evidence
+- [price-forecasting/forecast-infrastructure.md](price-forecasting/forecast-infrastructure.md) — S3 snapshots, local research execution, AWS fitting and daily issue evidence
 - [price-forecasting/germany-luxembourg.md](price-forecasting/germany-luxembourg.md) — independent Germany–Luxembourg quarter-hour forecast: agreed CatBoost quantiles, features, issue deadline and operating contract
 - [price-forecasting/data-sources.md](price-forecasting/data-sources.md) — verified price, weather and demand contracts, twelve locations, timing gaps and diagnostic evidence
 - [price-forecasting/evaluation.md](price-forecasting/evaluation.md) — five quantiles, chronological comparisons and first baseline results with calibration limits

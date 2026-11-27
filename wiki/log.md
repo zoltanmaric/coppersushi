@@ -734,3 +734,7 @@ Recorded the [ablation exception](rule-provenance.md) for requests to improve ho
 ## [2026-11-27] decision | Training price evidence
 
 Recorded [historical fallback and cutoff rules](price-forecasting/forecast-infrastructure.md) for monthly training.
+
+## [2026-11-28] decision | AWS forecast authority
+
+The [AWS replay](price-forecasting/forecast-infrastructure.md#cloud-execution) reproduced the November 24 local prices through a versioned monthly fit and a dated S3 read. Live delivery requires a separate, on-time reader receipt.

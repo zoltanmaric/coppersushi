@@ -7,7 +7,6 @@ import json
 from pathlib import Path
 import platform
 import shutil
-import subprocess
 from tempfile import TemporaryDirectory
 
 import boto3
@@ -15,7 +14,7 @@ import polars as pl
 
 from coppersushi.pipelines.market_data.resolution import FORECAST_POLICY
 from forecasts.config import RunConfig, SnapshotId
-from forecasts.provenance import ROOT, digest, source_hashes
+from forecasts.provenance import ROOT, checkout_identity, digest, source_hashes
 from forecasts.market import cutoff
 from forecasts.model.coverage import STATIC_INPUT_POLICY
 from forecasts.model.features import build_features
@@ -83,13 +82,14 @@ def fit_bundle(fit_day: date, snapshot: Path, config: RunConfig, output: Path, *
     if archive_bucket is not None:
         market_day = "coppersushi/pipelines/market_day.py"
         code_hashes[market_day] = digest(ROOT / market_day)
+    revision, exploratory = checkout_identity()
     manifest = {
         "kind": "monthly_fit",
         "model_method": config.model_method,
         "fit_day": fit_day.isoformat(),
         "fit_cutoff_utc": cutoff(fit_day).isoformat(),
-        "code_revision": _git("rev-parse", "HEAD"),
-        "exploratory": bool(_git("status", "--porcelain", "--untracked-files=normal")),
+        "code_revision": revision,
+        "exploratory": exploratory,
         "source_sha256": code_hashes,
         "project_sha256": digest(ROOT / "pyproject.toml"),
         "lock_sha256": digest(ROOT / "pixi.lock"),
@@ -163,10 +163,6 @@ def _fit_day(value: str) -> date:
     if parsed.isoformat() != value or parsed.day != 1:
         raise argparse.ArgumentTypeError("Fit day must use YYYY-MM-01")
     return parsed
-
-
-def _git(*args: str) -> str:
-    return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
 
 
 def _publish(staging: Path, output: Path) -> None:

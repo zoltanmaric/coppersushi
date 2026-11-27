@@ -14,6 +14,24 @@ Forecast the DE–LU auction price for each quarter of tomorrow’s Berlin deliv
 
 The product root holds the public commands and three shared contracts: [run settings](config.py), [Berlin delivery times](market.py), and [source fingerprints](provenance.py). The [registered settings](run-config.json) and [result receipt](reports/evaluation.json) identify the comparison reproduced by the runner and shown by the viewer.
 
+## AWS operations
+
+```mermaid
+flowchart LR
+    scheduler["Berlin schedules"] -->|Scheduled instant| flows["Metaflow · Step Functions"]
+    flows -->|Run jobs| fit["Monthly fit · Fargate"]
+    flows -->|Run jobs| issue["Daily issue · Fargate"]
+    fit -->|Checked bundle and month pointer| store["Forecast operations · private S3"]
+    store -->|Delivery month’s fit| issue
+    issue -->|Dated edition| store
+    store -->|Validated GET| witness["Reader · separate task role"]
+    witness -->|First-read receipt| store
+    click flows "https://github.com/zoltanmaric/coppersushi/blob/main/forecasts/operations/README.md"
+    click store "https://github.com/zoltanmaric/coppersushi/blob/main/forecasts/infra/aws/README.md"
+```
+
+[Retrieve, trace and retry a forecast](operations/README.md) · [AWS infrastructure](infra/aws/README.md)
+
 ## On-demand day-ahead forecast
 
 From the repository root, use the [locked Pixi environment](../README.md#local-installation). The November fit needs a verified training snapshot covering the October 2025 warmup through October 31, 2026. Fit once for that delivery month. Set `DELIVERY_DATE` to the Berlin delivery day and use that month’s fit. Use a new output path for each edition.

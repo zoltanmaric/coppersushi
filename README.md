@@ -55,8 +55,11 @@ flowchart TB
     monitor["Website monitoring"] -->|Checks map pages| maps
     monitor -->|Checks article pages| blog["1.21 Gigawatts"]
     shared -->|Prices and spreads| critical
-    snapshot["Frozen forecast snapshot"] -->|Training and historical evaluation| forecast["DE–LU price forecasts"]
+    snapshot["Frozen forecast snapshot"] -->|Training and historical evaluation| forecast["DE–LU workflows · AWS Batch"]
     shared -->|Training prices, daily issue and replay| forecast
+    forecast -->|Monthly bundles and daily editions| issued["Forecast operations · private S3"]
+    issued -->|Versioned edition and first-read receipt| reader["Forecast reader"]
+    click issued "https://github.com/zoltanmaric/coppersushi/blob/main/forecasts/operations/README.md"
     click shared "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/market_data/README.md"
     click critical "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/cnec/README.md"
     click power "https://github.com/zoltanmaric/coppersushi/blob/main/coppersushi/pipelines/powerflow/README.md"

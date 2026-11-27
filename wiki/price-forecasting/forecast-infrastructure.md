@@ -18,9 +18,7 @@ For a single S3 object, a successful PUT makes the complete object available to 
 
 ## Automation-scope
 
-The foundation runs locally and on demand, with checks in continuous integration. The [forecast runbook](../../forecasts/README.md) documents input selection, monthly fitting, daily issuance, evaluation and reproduction. The [evaluation receipt](../../forecasts/reports/evaluation.json) records the reproduced run and its agreement with daily issuance.
-
-Continuous delivery (CD) and continuous training (CT) are goals for subsequent work. Revisit CD when a pipeline change needs a repeatable release to an identified operating environment. Revisit CT when fresh settled observations justify recurring fits and the team can say what evidence qualifies a candidate for use. Scheduling daily predictions is a separate decision. Set acceptance criteria for each capability in the spec for the stage that introduces it. [Google Cloud’s automation levels](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning#mlops_level_1_ml_pipeline_automation)
+Research evaluation and reproduction run locally. Monthly fitting and daily issuance also run in AWS using the same scientific commands. The [forecast runbook](../../forecasts/README.md) documents both entry points. The [evaluation receipt](../../forecasts/reports/evaluation.json) records the historical comparison.
 
 ## First-stage
 
@@ -78,13 +76,11 @@ MLflow retains accepted executions and scientifically informative failures. Setu
 
 The [forecast-experiment skill](../../.agents/skills/forecast-experiment/SKILL.md) owns the agent procedure. Agents maintain the records manually; workflow automation is planned. No separate research database or service is required.
 
-## Later
+## Cloud-execution
 
-After the local evaluation works, the preferred deployment is Metaflow workflows coordinated by AWS Step Functions, with container jobs on AWS Batch backed by Fargate. Terraform defines the AWS infrastructure; Metaflow deploys the workflow definitions. Keep the forecast package independent of the power-flow application.
+Terraform owns the Fargate queue, private versioned storage, IAM roles and Berlin schedules. Metaflow deploys two linear Step Functions workflows. Each uses the Linux runtime from the Pixi lock and an image identified by digest. The [operations runbook](../../forecasts/operations/README.md) describes the month pointer, dated object, independent first-read receipt and original-date retry.
 
-Metaflow documents Fargate support through its Batch integration. Before adopting this deployment, run a small end-to-end check with pinned dependencies and container image: input loading, task resources, retries, outputs and deadline scheduling. Check CPU/memory combinations and temporary disk needs against Fargate limits; Fargate does not provide GPUs. Evaluate the existing Metaflow Terraform modules before writing infrastructure from scratch, and provision only the services this stage needs.
-
-Decide shared metadata, MLflow hosting and artifact retention then. Verify live price retrieval and deadline handling before claiming daily readiness. This later stage is separate from acceptance of the first local research result.
+The November 2026 AWS replay reproduced all ten prices in each of 96 quarters exactly for the November 24 delivery day. Two concurrent issuances left one dated S3 version. The November 25 attempt failed with 96 missing D−1 prices. Historical agreement proves numerical reproduction for the selected inputs. On-time delivery requires a scheduled live run and an independent reader receipt. [AWS acceptance record](../../specs/forecast-aws.html)
 
 ## Basis
 
