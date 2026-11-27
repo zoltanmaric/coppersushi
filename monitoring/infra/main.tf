@@ -121,7 +121,10 @@ resource "aws_sns_topic_policy" "alerts" {
     Action = "SNS:Publish", Resource = aws_sns_topic.alerts.arn,
     Condition = {
       StringEquals = { "aws:SourceAccount" = data.aws_caller_identity.current.account_id },
-      ArnLike      = { "aws:SourceArn" = "arn:aws:cloudwatch:${var.region}:${data.aws_caller_identity.current.account_id}:alarm:${local.name}-*" }
+      ArnLike = { "aws:SourceArn" = [
+        "arn:aws:cloudwatch:${var.region}:${data.aws_caller_identity.current.account_id}:alarm:${local.name}-*",
+        "arn:aws:cloudwatch:${var.region}:${data.aws_caller_identity.current.account_id}:alarm:coppersushi-market-schedule-dropped",
+      ] }
     }
   }] })
 }

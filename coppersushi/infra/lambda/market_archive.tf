@@ -5,7 +5,7 @@ variable "market_collector_image_uri" {
 }
 
 variable "market_collector_alert_topic_arn" {
-  description = "Same-region SNS topic with a confirmed operator subscription for exhausted collector invocations."
+  description = "Same-region standard SNS topic for dropped schedule deliveries and failed collector invocations."
   type        = string
   default     = null
 }
@@ -47,8 +47,8 @@ resource "aws_iam_role_policy" "market_archive" {
   ] })
   lifecycle {
     precondition {
-      condition     = var.market_collector_alert_topic_arn != null
-      error_message = "Set market_collector_alert_topic_arn when enabling market collection."
+      condition     = try(split(":", var.market_collector_alert_topic_arn)[2] == "sns" && split(":", var.market_collector_alert_topic_arn)[3] == var.region && !endswith(var.market_collector_alert_topic_arn, ".fifo"), false)
+      error_message = "Enable market collection with a standard SNS topic in the collector region."
     }
   }
 }
@@ -93,9 +93,31 @@ resource "aws_iam_role_policy" "market_schedule" {
   }] })
 }
 
+resource "aws_scheduler_schedule_group" "market_archive" {
+  count = var.market_collector_image_uri == null ? 0 : 1
+  name  = "coppersushi-market-archive"
+}
+
+resource "aws_cloudwatch_metric_alarm" "market_schedule_dropped" {
+  count               = var.market_collector_image_uri == null ? 0 : 1
+  alarm_name          = "coppersushi-market-schedule-dropped"
+  alarm_description   = "Poll never started. Market Scheduler exhausted delivery retries before Lambda accepted the event. Inspect the market schedule group and its target permissions."
+  namespace           = "AWS/Scheduler"
+  metric_name         = "InvocationDroppedCount"
+  dimensions          = { ScheduleGroup = aws_scheduler_schedule_group.market_archive[0].name }
+  statistic           = "Sum"
+  period              = 60
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [var.market_collector_alert_topic_arn]
+}
+
 resource "aws_scheduler_schedule" "market_archive" {
   for_each                     = local.market_schedules
   name                         = "coppersushi-market-${each.key}"
+  group_name                   = aws_scheduler_schedule_group.market_archive[0].name
   schedule_expression          = each.value.window.cron
   schedule_expression_timezone = "Europe/Berlin"
   flexible_time_window { mode = "OFF" }
@@ -108,5 +130,5 @@ resource "aws_scheduler_schedule" "market_archive" {
       maximum_retry_attempts       = 2
     }
   }
-  depends_on = [aws_iam_role_policy.market_schedule, aws_lambda_function_event_invoke_config.market_archive]
+  depends_on = [aws_iam_role_policy.market_schedule, aws_lambda_function_event_invoke_config.market_archive, aws_cloudwatch_metric_alarm.market_schedule_dropped]
 }

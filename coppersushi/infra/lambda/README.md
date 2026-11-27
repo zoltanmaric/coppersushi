@@ -205,9 +205,14 @@ delivery day at fifteen-minute intervals from 09:00 to 10:45 Berlin and tomorrow
 at half-hour intervals from 13:00 to 18:30. Each target polls one publisher and
 uses the scheduled date even when dispatch is delayed.
 
-Set `market_collector_alert_topic_arn` to the monitoring stack’s `topic_arn` (or a same-region standard SNS topic with a confirmed operator subscription). An asynchronous invocation that exhausts Lambda’s retries sends its failure record to this topic. Each retry polls again with new attempt IDs. A publisher cooldown logs `poll_deferred` with the earlier attempt ID and retry time. A deferral confirms the pause only.
+Set `market_collector_alert_topic_arn` to a standard SNS topic in the collector region with a confirmed operator subscription. To use the [monitoring topic](../../../monitoring/infra/main.tf), apply its topic policy before enabling the schedules. For another topic, allow `cloudwatch.amazonaws.com` to publish from the exact `coppersushi-market-schedule-dropped` alarm ARN and your account.
 
-Use the notification’s function ARN and request ID to find the invocation in CloudWatch Logs. Trace `poll_started`, `raw_saved`, and the failed operation by attempt ID. A raw receipt alone means “response received; processing outcome unknown.” An `edition_published` event with zero rows identifies a validated empty response.
+| Operator notification | What to check |
+| --- | --- |
+| CloudWatch alarm `coppersushi-market-schedule-dropped` | Scheduler exhausted its delivery retries before Lambda accepted an event. Inspect the `coppersushi-market-archive` schedule group and target permissions. Its [dropped invocation count](https://docs.aws.amazon.com/scheduler/latest/UserGuide/monitoring-cloudwatch.html) covers all four publishers. The alarm sends one notification on entry to ALARM. Further drops count toward the metric while the alarm stays active. |
+| Lambda asynchronous failure record | Lambda accepted the event and exhausted its execution retries. Find the function ARN and request ID in the record. Trace `poll_started`, `raw_saved` and the failed operation by attempt ID in CloudWatch Logs. |
+
+Each fresh poll gets a new attempt ID. During a cooldown the collector makes no publisher request. A Lambda retry uses its [original request ID](https://repost.aws/knowledge-center/lambda-function-async-delays) to find earlier failures from the same invocation. If one zone returned malformed data before another triggered the cooldown, the retry reports the malformed zone and its attempt ID. A cooldown alone yields a deferral. A raw receipt alone means “response received; processing outcome unknown.” An `edition_published` event with zero rows identifies a validated empty response.
 
 To witness a completed delivery day on demand, invoke each publisher's Lambda:
 `aws lambda invoke --function-name coppersushi-trial-market-entsoe --cli-binary-format raw-in-base64-out --payload '{"publisher":"entsoe","delivery_day":"2026-11-20"}' /tmp/market-poll-result.json`.
@@ -218,7 +223,7 @@ for diagnostics; an empty feed and an HTTP failure have distinct outcomes.
 Before switching a consumer to the production archive, record both checks in the rollout notes:
 
 1. Use the first deployed poll that publishes an edition. With the consumer’s production role, call [`read_editions`](../../pipelines/market_data/data_sources/editions.py) for that delivery day and an aware cutoff after the publication second. Find the attempt ID from the collector log. Use [`read_response`](../../pipelines/market_data/data_sources/responses.py) with the edition’s attempt ID and check that the receipt matches the edition and identifies the expected publisher, zone and delivery day. Record the role, day, cutoff, edition key and attempt ID. Keep response bytes private.
-2. Send a clearly labeled rollout test to the configured `market_collector_alert_topic_arn`. Ask the intended on-call operator to confirm receipt of that specific message. Record its SNS message ID and the confirmation time.
+2. When the delivery alarm is OK, send a labeled test through its real action with `aws cloudwatch set-alarm-state --alarm-name coppersushi-market-schedule-dropped --state-value ALARM --state-reason "Rollout test of market schedule delivery alert"` in the collector region. Check the alarm history for successful SNS delivery. Ask the intended operator to confirm the alarm name, test reason and receipt time. This tests the topic policy and subscription. The first scheduled poll separately verifies Scheduler can deliver to Lambda.
 
 Collect the required delivery days before cutting consumers over. An on-demand
 historical poll establishes usability from its actual collection and validation onward.
