@@ -6,6 +6,8 @@
 
 [ArchiveHistory](market_archive.py) supplies daily issuance with the free-source prices the shared archive could serve at the forecast cutoff. Each selected price links to its publisher evidence. For frozen snapshot replay, [InputReader](selection.py) selects eligible revisions under the snapshot’s recorded timing assumptions. Both readers supply the same price-history table to feature calculation. See the [point-in-time contract](../../wiki/price-forecasting/data-sources.md#point-in-time).
 
+Monthly fitting can use [TrainingEditions](training_editions.py) to select archive prices and pin historical snapshot rows for eligible gaps. Its coverage report records the source, interval and cutoff of each selection. [Audit and fit commands](../README.md#on-demand-day-ahead-forecast).
+
 ## Refresh a price snapshot
 
 Run from the repository root. For November 25 delivery, require every Berlin quarter on November 11, 18, 23 and 24 (lags of 14, 7, 2 and 1 days). A missing quarter on a required date stops collection. Use `--start` and `--end-exclusive` for contiguous training history. Choose new paths for the raw archives and snapshot.

@@ -38,7 +38,7 @@ Metaflow's local metadata and artifacts stay on disk. Configure MLflow explicitl
 
 ## Inputs
 
-Training and retrospective evaluation use frozen snapshots. Live issuance selects recent prices from the [market data archive](../../coppersushi/pipelines/market_data/README.md) using the forecast's free-source policy. Its edition pins the price evidence and timestamps. The researcher read records first observed availability separately. The fixed historical snapshot also preserves weather and demand for independent investigations. [Daily issue and read](../../forecasts/README.md#on-demand-day-ahead-forecast)
+Retrospective evaluation uses its frozen snapshot. Monthly fitting supports either a frozen snapshot alone or archive editions with historical snapshot coverage. Live issuance selects recent prices from the [market data archive](../../coppersushi/pipelines/market_data/README.md) using the forecast's free-source policy. Its edition pins the price evidence and timestamps. The researcher read records first observed availability separately. The fixed historical snapshot also preserves weather and demand for independent investigations. [Daily issue and read](../../forecasts/README.md#on-demand-day-ahead-forecast)
 
 Use a small, explicit S3 layout:
 
@@ -56,7 +56,7 @@ A snapshot is a fixed set of input files. Write new object keys for each snapsho
 
 The [Pandera models](../../forecasts/inputs/schemas.py) define field types, nullability, units and row keys. They generate the Arrow storage schemas and manifest descriptions. A [frozen v1 fixture](../../forecasts/inputs/tests/test_schemas.py) checks compatibility. Preserve the timestamps, revisions and evidence required by the [point-in-time contract](data-sources.md#point-in-time); apply that contract when constructing features.
 
-One file per dataset per snapshot is the starting layout. At the initial data volume, prefer this to daily partitions and compaction jobs. Measure bytes and cold-load time before changing it. Snapshot and archive readers apply their own evidence rules, then supply eligible prices to the same feature functions.
+One file per dataset per snapshot is the starting layout. At the initial data volume, prefer this to daily partitions and compaction jobs. Measure bytes and cold-load time before changing it. Snapshot and archive readers apply their own evidence rules, then supply eligible prices to the same feature functions. The training migration permits a pinned snapshot under its recorded timing assumptions when no eligible archive edition exists. Conflicting editions and failed archive reads stop selection. Feature prices use each historical issue cutoff. Labels and reference calibration use the monthly fit cutoff, with earlier fallback medians selected at their historical issue cutoffs. [Reference calibration](../../forecasts/model/reference.py) · [Archive selection](../../coppersushi/pipelines/market_data/README.md#price-selection)
 
 The three dataset names, checked schemas and snapshot manifests provide the initial inventory. Metaflow and MLflow record the snapshot identifier. A separate catalog, input database, feature store and cache service are deferred until a concrete access or discovery need appears.
 

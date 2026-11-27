@@ -6,14 +6,14 @@ import numpy as np
 from pandera.typing.polars import DataFrame
 
 from forecasts.config import QUANTILES, RunConfig
-from forecasts.inputs.selection import InputReader
+from forecasts.inputs.selection import PriceHistoryReader
 from forecasts.market import BERLIN
 from forecasts.model.contracts import FloatArray, Reference
 from forecasts.model.labels import select_labels
 from forecasts.model.tables import Features
 
 
-def fit_reference(reader: InputReader, rows: DataFrame[Features], y: FloatArray,
+def fit_reference(reader: PriceHistoryReader, rows: DataFrame[Features], y: FloatArray,
                   fit_day: date, config: RunConfig) -> Reference:
     """Calibrate five error offsets using eligible training labels only.
 
