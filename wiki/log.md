@@ -722,3 +722,7 @@ Recorded the [service-generated timestamps](price-forecasting/forecast-infrastru
 ## [2026-11-27] query | Replaying an issued forecast
 
 Distinguished reproducing a saved forecast from [reconstructing at its deadline](price-forecasting/forecast-infrastructure.md#selection-principle) when an input changes between issuance and the deadline.
+
+## [2026-11-27] ingest | Agent harness engineering
+
+Linked five primary-source digests through [Agent harness engineering](agent-harness-engineering.md), covering tool design, multi-session work and evaluation.

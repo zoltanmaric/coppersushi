@@ -4,6 +4,8 @@ Design rationale for this repo's agent tooling: the `AGENTS.md` rules `design-fi
 `grill`, `spec`, `goldfish` (in `.agents/skills/`). Distilled 2026-08-19 from four
 public sources and one design conversation.
 
+For tool design, session handoffs and outcome grading, see [Agent harness engineering](agent-harness-engineering.md).
+
 ## Sources
 
 - **Dave Rensin, "Elephants, Goldfish and the New Golden Age of Software Engineering"**
