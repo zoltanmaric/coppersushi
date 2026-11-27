@@ -14,7 +14,7 @@ no new global or skill rule was added.
 
 | Line | Stumble |
 |---|---|
-| `worktrees` | On 2026-11-27, the user reported repeated automatic wiki writes in the shared checkout. One update had to move after the write. The user accepted the race between checking a clean checkout and writing. |
+| `worktrees` | On 2026-11-27, the user reported repeated automatic wiki writes in the shared checkout. One update had to move after the write. The user accepted the race between checking a clean checkout and writing. A later scoped status check missed unrelated untracked files before an automatic wiki edit. The pre-write guard checks the whole shared checkout. |
 | `design-first`: smallest useful change | [#309](https://github.com/zoltanmaric/coppersushi/pull/309) introduced cross-frame resizing before offering a layout that fit the existing frame. The reader accepted scrolling when the notes are open. Earlier reviews of [#189](https://github.com/zoltanmaric/coppersushi/pull/189) and [#193](https://github.com/zoltanmaric/coppersushi/pull/193) also surfaced simpler alternatives late. |
 | Data source filenames | In [#328](https://github.com/zoltanmaric/coppersushi/pull/328), both the Electricity Maps reader and its comparison with SMARD were named `auction_prices.py`. The names hid which publisher each path used. |
 | Publisher timestamps | The November 20 price investigation had to reopen the raw Electricity Maps response because normalization dropped its creation time. The user requested explicit mapping and a regression with different creation and update times. |

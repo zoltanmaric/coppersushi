@@ -42,7 +42,7 @@
 
 - **pragmatic-delegation** — Delegate substantial independent tasks in parallel when the harness permits it and the benefit outweighs coordination overhead. Give each agent a focused brief. Use the [model-selection skill](.agents/skills/model-selection/SKILL.md) before launching a subagent, selecting a reviewer or escalating a model.
 
-- **worktrees** — Before writing in the shared root checkout, including automatic wiki updates, run `git status --short --untracked-files=all`. If any staged, unstaged or untracked change is outside this conversation’s work, use a dedicated worktree. Create worktrees under the gitignored `worktrees/` directory. In a dedicated worktree, skip the root check.
+- **worktrees** — Guard shared-checkout writes, including automatic wiki updates, with the [pre-write check](git-hooks/README.md#before-writing-in-the-shared-checkout). Run it explicitly for shell writes and writes outside the hooked tools. If the check blocks a write, use a dedicated worktree. Create worktrees under the gitignored `worktrees/` directory.
 
 - **required-inputs** — When a required input is missing or a required step fails, mark the affected result as failed and identify the cause and affected records or dates. Use a substitute only within an agreed exception and identify each use in the output. Before proposing an exception, verify the failure and explain why a local fix cannot recover the required result. Capture the available diagnostic evidence at the earliest source boundary we control, and verify that the reason and affected records remain visible when a caller retries, substitutes data, or reports failure.
 

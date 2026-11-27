@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^apply_patch$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=$(git rev-parse --show-toplevel) || exit 2; if [ ! -f \"$root/git-hooks/check_write.py\" ]; then root=$(git worktree list --porcelain | sed -n \"1s/^worktree //p\"); fi; [ -n \"$root\" ] && python3 \"$root/git-hooks/check_write.py\" --hook || exit 2",
+            "timeout": 45
+          }
+        ]
+      }
+    ]
+  }
+}

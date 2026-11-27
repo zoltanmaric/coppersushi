@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^(Write|Edit|MultiEdit|NotebookEdit)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/git-hooks/check_write.py\" --hook || exit 2",
+            "timeout": 45
+          }
+        ]
+      }
+    ]
+  }
+}
